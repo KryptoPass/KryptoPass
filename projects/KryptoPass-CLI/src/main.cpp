@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "include/database.h"
+#include "include/settings.h"
 #include "include/unicode.h"
 #include "include/logger.h"
 #include "include/main.h"
@@ -30,6 +31,31 @@ int main(int argc, char** argv)
         return 1;
     }
 }
+
+
+
+//CREATE TABLE "metadata" (
+//    "version"	TEXT NOT NULL DEFAULT '1.0.0-beta',
+//    "kp_min_version"	TEXT NOT NULL DEFAULT '1.0.0'
+//);
+
+//CREATE TABLE "profiles" (
+//    "id"	INTEGER NOT NULL UNIQUE,
+//    "username"	TEXT NOT NULL,
+//    "create_date"	INTEGER NOT NULL,
+//    "db_path"	TEXT NOT NULL,
+//    "db_timestamp"	INTEGER NOT NULL,
+//    "db_hash"	TEXT NOT NULL,
+//    PRIMARY KEY("id" AUTOINCREMENT)
+//);
+
+
+
+
+
+
+
+
 
 
 //int err;
@@ -102,22 +128,18 @@ int main(int argc, char** argv)
 //sqlite3_close(db);
 //return 0;
 
-        // Abrir un archivo ZIP en modo escritura
+// Abrir un archivo ZIP en modo escritura
 
-    //
+//// Agregar un archivo de texto al archivo ZIP
+//const char* textContent = "¡Hola, Mundo!";
+// 
+//zip_source_t* source = zip_source_buffer(zip, textContent, strlen(textContent), 0);
+//zip_file_add(zip, "hello.txt", source, ZIP_FL_OVERWRITE);
 
+//// Cerrar el archivo ZIP
+//zip_close(zip);
 
-
-    //// Agregar un archivo de texto al archivo ZIP
-    //const char* textContent = "¡Hola, Mundo!";
-    // 
-    //zip_source_t* source = zip_source_buffer(zip, textContent, strlen(textContent), 0);
-    //zip_file_add(zip, "hello.txt", source, ZIP_FL_OVERWRITE);
-
-    //// Cerrar el archivo ZIP
-    //zip_close(zip);
-
-    //std::cout << "¡Archivo ZIP creado exitosamente!" << std::endl;
+//std::cout << "¡Archivo ZIP creado exitosamente!" << std::endl;
 
 
 //Database.kpdb
@@ -224,8 +246,6 @@ int main(int argc, char** argv)
 //const char* env_p = std::getenv("PATH")
 
 //LOCALAPPDATA
-
-
 
 //""
 

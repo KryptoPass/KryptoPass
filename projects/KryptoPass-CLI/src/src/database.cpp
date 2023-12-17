@@ -11,7 +11,8 @@
 const char* EXT_DATABASE_NAME = "Database.kpdb";
 const char* INT_DATABASE_NAME = "KryptoPass.db3";
 
-Database::Database() {
+Database::Database()
+{
 	Shell shell;		// Init Shell Utils
 	Console console;	// Init logger
 
@@ -49,7 +50,8 @@ Database::~Database()
 	}
 }
 
-void Database::create(Shell& shell, Console& console, const char* path) {
+void Database::create(Shell& shell, Console& console, const char* path)
+{
 	int openerr;
 	zip_ = zip_open(path, ZIP_CREATE | ZIP_TRUNCATE, &openerr);
 
@@ -86,7 +88,8 @@ void Database::create(Shell& shell, Console& console, const char* path) {
 	}
 }
 
-void Database::initializeFolders(zip_t* zip) {
+void Database::initializeFolders(zip_t* zip)
+{
 	// Auditing Folders
 	addDir(zip, "Auditing");
 	addDir(zip, "Auditing/Change History");
@@ -108,13 +111,15 @@ void Database::initializeFolders(zip_t* zip) {
 	addDir(zip, "User Interface");
 }
 
-void Database::addDir(zip_t* zip, const std::string& dirName) {
+void Database::addDir(zip_t* zip, const std::string& dirName)
+{
 	if (zip_dir_add(zip, dirName.c_str(), ZIP_FL_ENC_UTF_8) < 0) {
 		throw std::runtime_error("Error adding directory to zip archive");
 	}
 }
 
-std::string Database::createSQLiteDB(Shell& shell, zip_t* zip) {
+std::string Database::createSQLiteDB(Shell& shell, zip_t* zip)
+{
 	auto kpdb = std::filesystem::path(shell.getPath("temp")) / "ARCHIVO TEMPORAL GENIAL";
 	auto kpdbstd = kpdb.string();
 

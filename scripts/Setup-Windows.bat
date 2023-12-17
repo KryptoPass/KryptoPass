@@ -14,7 +14,6 @@ if exist "vendor\vcpkg\vcpkg.exe" (
 
 :continue
 call vendor\Premake\Windows\premake5.exe --file=premake5.lua vs2022
-call vendor\vcpkg\vcpkg.exe integrate install
 pause
 exit
 
@@ -45,7 +44,7 @@ if not exist "libraries/spdlog" (
 )
 
 if not exist "libraries/sqlitecpp" (
-    call vendor\vcpkg\vcpkg.exe install sqlitecpp
+    call vendor\vcpkg\vcpkg.exe install sqlitecpp:x64-windows
     move "vendor\vcpkg\packages\sqlitecpp_x64-windows" "libraries\sqlitecpp"
     move "vendor\vcpkg\packages\sqlite3_x64-windows" "libraries\sqlite3"
 )
@@ -55,6 +54,11 @@ if not exist "libraries/libzip" (
     move "vendor\vcpkg\packages\libzip_x64-windows" "libraries\libzip"
     move "vendor\vcpkg\packages\bzip2_x64-windows" "libraries\bzip2"
     move "vendor\vcpkg\packages\zlib_x64-windows" "libraries\zlib"
+)
+
+if not exist "libraries/jsoncpp" (
+    call vendor\vcpkg\vcpkg.exe install jsoncpp
+    move "vendor\vcpkg\packages\jsoncpp_x64-windows" "libraries\jsoncpp"
 )
 
 goto :continue

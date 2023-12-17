@@ -6,7 +6,7 @@ workspace "KryptoPass"
    -- Workspace-wide build options for MSVC
    filter "system:windows"
       buildoptions {
-         "/MT",               -- Use Static Libs
+         -- "/MT",               -- Use Static Libs
          "/EHsc",             -- Enables standard exception handling (SEH) in C++ code.
          "/Zc:preprocessor",  -- Enables some preprocessor features that are disabled by default in some C++ compilers.
          "/Zc:__cplusplus",   -- Enables some C++ language features that are disabled by default in some C++ compilers.

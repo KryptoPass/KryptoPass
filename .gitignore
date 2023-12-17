@@ -3,7 +3,10 @@
 Binaries/
 Out/
 out/
+build
+build/*
 libraries/*
+libraries
 
 # Files
 *.vcxproj
