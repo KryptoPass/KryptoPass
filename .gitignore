@@ -11,6 +11,8 @@ libraries/*
 *.vcxproj.filters
 *.sln
 *.log
+*.db
+*.db3
 Makefile
 
 # Exclude

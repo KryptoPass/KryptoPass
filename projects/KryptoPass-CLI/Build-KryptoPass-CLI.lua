@@ -2,16 +2,17 @@ project "KryptoPass-CLI"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++20"
-   targetdir "Binaries/%{cfg.buildcfg}"
-   staticruntime "off"
    targetname "KryptoPass"
-
+   --  staticruntime "off"
    files { "src/**.h", "src/**.cpp", "src/**.hpp" }
+   targetdir "../../build/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}"            -- /build/windows-x64/Release/KryptoPass-CLI
+   objdir "../../build/intermediates/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}" -- /build/intermediates/windows-x64/Release/KryptoPass-CLI
 
    includedirs
    {
       "src/include",
       "../KryptoPass-Lib/src/include",
+      
       -- Include Libraries
       "../../libraries/cli11/include",
       "../../libraries/fmt/include",
@@ -48,9 +49,6 @@ project "KryptoPass-CLI"
     "zlib"
    }
 
-  targetdir ("../../out/" .. OutputDir .. "/%{prj.name}")
-  objdir ("../../out/Intermediates/" .. OutputDir .. "/%{prj.name}")
-
   filter "system:windows"
     systemversion "latest"
     defines { "WINDOWS" }
@@ -71,7 +69,3 @@ project "KryptoPass-CLI"
     runtime "Release"
     optimize "On"
     symbols "Off"
-
-
-
--- Usando SQLiteCpp puedes hacerme una base de datos que tenga las siguientes tablas y columnas.
