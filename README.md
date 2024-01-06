@@ -67,3 +67,27 @@ The `Scripts/` directory contains build scripts for Windows and Linux, and the `
 ## License
 
 yuzu is licensed under the GPLv3 (or any later version). Refer to the [LICENSE.txt](https://github.com/yuzu-emu/yuzu/blob/master/LICENSE.txt) file.
+
+
+
+<!--
+  partners.kryptopass.org: Para socios comerciales.
+  blog.kryptopass.org/YYYY-MM-DD/TITLE-OF-PAGE: Para publicaciones de blog y noticias.
+  help.kryptopass.org: Centro de ayuda para clientes.
+  account.kryptopass.org: Para la gestión de cuentas, inicio de sesión, SSO, MFA.
+  api.kryptopass.org: Para la documentación y acceso a tu API pública.
+  region.api.kryptopass.org: Para las APIs divididas por región.
+  api-interna.kryptopass.org: Para tus APIs internas.
+  docs.kryptopass.org: Para toda la documentación del producto.
+  status.kryptopass.org: Para mostrar el estado de los servicios y sistemas en tiempo real.
+  careers.kryptopass.org o kryptopass.org/careers: Para publicar ofertas de trabajo y carreras en tu empresa.
+  learn.kryptopass.org: Para un centro de aprendizaje o recursos educativos.
+  feedback.kryptopass.org: Para recoger comentarios y sugerencias de los usuarios.
+  dev.kryptopass.org: Para los desarrolladores. Aquí puedes proporcionar recursos, documentación y herramientas útiles para los desarrolladores que utilizan tu producto.
+  security.kryptopass.org: Para la política de seguridad y divulgaciones de seguridad.
+  Total: 16 subdominios
+
+  security@kryptopass.org
+  marketing@kryptopass.org
+  support-{theme}-@kryptopass.org
+-->

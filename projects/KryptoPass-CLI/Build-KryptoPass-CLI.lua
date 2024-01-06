@@ -12,8 +12,8 @@ project "KryptoPass-CLI"
 
    includedirs
    {
-      "src/include",
-      "../KryptoPass-Lib/src/include",
+      "src",
+      "../KryptoPass-Lib/include",
       
       -- Include Libraries
       "../../libraries/cli11/include",

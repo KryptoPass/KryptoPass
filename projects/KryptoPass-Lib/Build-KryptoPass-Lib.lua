@@ -3,13 +3,13 @@ project "KryptoPass-Lib"
     language "C++"
     cppdialect "C++20"
     staticruntime "off"
-    files { "src/**.h", "src/**.cpp", "src/**.hpp" }
-    targetdir "../../build/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}"            -- /build/windows-x64/Release/KryptoPass-CLI
-    objdir "../../build/intermediates/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}" -- /build/intermediates/windows-x64/Release/KryptoPass-CLI
+    files { "src/**.c++", "src/**.cpp","src/**.h", "src/**.hpp" }
+    targetdir "../../build/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}"            
+    objdir "../../build/intermediates/%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}/%{prj.name}"
  
     includedirs
     {
-       "src/include",
+       "src",
        -- Include Libraries
        "../../libraries/openssl/include",
     }
