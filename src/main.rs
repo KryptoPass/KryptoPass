@@ -54,3 +54,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+// envelope encryption con key slots versionados
+// KryptoPass Envelope Encryption = KEE

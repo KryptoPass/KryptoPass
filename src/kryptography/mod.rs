@@ -1,6 +1,7 @@
 pub mod backends;
 pub mod checked;
 pub mod errors;
+pub mod kee;
 pub mod support;
 pub mod symmetric;
 pub mod traits;
