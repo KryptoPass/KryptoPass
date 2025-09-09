@@ -16,15 +16,9 @@ impl AeadAlg {
             Self::ChaCha20Poly1305 => "ChaCha20-Poly1305",
         }
     }
+
     pub fn is_supported(self) -> bool {
-        #[cfg(feature = "backend-rustcrypto")]
-        {
-            matches!(self, Self::AesGcm | Self::ChaCha20Poly1305)
-        }
-        #[cfg(feature = "backend-openssl")]
-        {
-            matches!(self, Self::AesGcm /* | Self::ChaCha20Poly1305 si lo implementas */)
-        }
+        crate::kryptography::support::Support::active().aead.contains(&self)
     }
 }
 

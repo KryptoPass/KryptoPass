@@ -12,15 +12,9 @@ impl StreamAlg {
             Self::AesCtr => "AES-CTR",
         }
     }
+
     pub fn is_supported(self) -> bool {
-        #[cfg(feature = "backend-rustcrypto")]
-        {
-            matches!(self, Self::AesCtr)
-        }
-        #[cfg(feature = "backend-openssl")]
-        {
-            false /* implementar cuando corresponda */
-        }
+        crate::kryptography::support::Support::active().stream.contains(&self)
     }
 }
 impl fmt::Display for StreamAlg {

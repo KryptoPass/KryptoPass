@@ -1,9 +1,15 @@
-//! backends/symmetric/openssl_engines.rs
-#![cfg(feature = "backend-openssl")]
-
 use openssl::symm::{Cipher, Crypter, Mode};
 
-use crate::kryptography::errors::{AeadError, BlockModeError, StreamError};
+use crate::kryptography::{
+    Aead, AeadAlg, BlockMode, BlockModeAlg, Stream, StreamAlg,
+    errors::{AeadError, BlockModeError, StreamError},
+};
+
+pub const BACKEND_NAME: &str = "OpenSSL";
+
+pub const AEAD_SUPPORTED: &[AeadAlg] = &[AeadAlg::AesGcm, AeadAlg::ChaCha20Poly1305];
+pub const STREAM_SUPPORTED: &[StreamAlg] = &[StreamAlg::AesCtr];
+pub const BLOCK_SUPPORTED: &[BlockModeAlg] = &[BlockModeAlg::AesCbc];
 
 const TAG_LEN: usize = 16; // GCM/ChaCha20-Poly1305 usan tag de 128 bits
 
@@ -229,5 +235,24 @@ impl super::super::BlockMode for AesCbcEngine {
         }
         openssl::symm::decrypt(Cipher::aes_256_cbc(), key, Some(iv), ct)
             .map_err(|e| BlockModeError::Backend(format!("decrypt: {e}")))
+    }
+}
+
+pub fn make_aead(alg: AeadAlg) -> Option<Box<dyn Aead>> {
+    match alg {
+        AeadAlg::AesGcm => Some(Box::new(super::openssl::AesGcmEngine)),
+        AeadAlg::ChaCha20Poly1305 => Some(Box::new(super::openssl::ChaCha20Poly1305Engine)),
+    }
+}
+
+pub fn make_stream(alg: StreamAlg) -> Option<Box<dyn Stream>> {
+    match alg {
+        StreamAlg::AesCtr => Some(Box::new(super::openssl::AesCtrEngine)),
+    }
+}
+
+pub fn make_block(alg: BlockModeAlg) -> Option<Box<dyn BlockMode>> {
+    match alg {
+        BlockModeAlg::AesCbc => Some(Box::new(super::openssl::AesCbcEngine)),
     }
 }

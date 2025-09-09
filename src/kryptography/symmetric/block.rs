@@ -12,15 +12,9 @@ impl BlockModeAlg {
             Self::AesCbc => "AES-CBC",
         }
     }
+    
     pub fn is_supported(self) -> bool {
-        #[cfg(feature = "backend-rustcrypto")]
-        {
-            matches!(self, Self::AesCbc)
-        }
-        #[cfg(feature = "backend-openssl")]
-        {
-            false /* implementar cuando corresponda */
-        }
+        crate::kryptography::support::Support::active().block.contains(&self)
     }
 }
 impl fmt::Display for BlockModeAlg {
