@@ -2,11 +2,13 @@ use core::fmt;
 use core::str::FromStr;
 use thiserror::Error;
 
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AeadAlg {
     AesGcm,
     ChaCha20Poly1305,
 }
+
 impl AeadAlg {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -25,11 +27,13 @@ impl AeadAlg {
         }
     }
 }
+
 impl fmt::Display for AeadAlg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
+
 #[derive(Debug, Error)]
 #[error("AEAD desconocido: {0}")]
 pub struct ParseAeadAlgError(pub String);

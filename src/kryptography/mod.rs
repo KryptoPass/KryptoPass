@@ -1,20 +1,21 @@
-pub mod aead;
 pub mod backends;
-pub mod block;
-pub mod enums;
+pub mod checked;
 pub mod errors;
-pub mod stream;
 pub mod support;
+pub mod symmetric;
 pub mod traits;
-pub mod utils;
+pub mod types;
+
+pub use aead::AeadAlg;
+pub use block::BlockModeAlg;
+pub use checked::{AeadChecked, BlockModeChecked, StreamChecked};
+pub use stream::StreamAlg;
+pub use symmetric::{aead, block, stream};
+pub use traits::{Aead, BlockMode, Stream};
+pub use types::{Iv16, Key32, Nonce12};
 
 use crate::kryptography::{
-    aead::{AeadAlg, ParseAeadAlgError},
-    block::{BlockModeAlg, ParseBlockAlgError},
-    errors::{AeadError, BlockModeError, FactoryError, StreamError},
-    stream::{ParseStreamAlgError, StreamAlg},
-    traits::{Aead, BlockMode, Stream},
-    utils::{Iv16, Key32, Nonce12},
+    aead::ParseAeadAlgError, block::ParseBlockAlgError, errors::FactoryError, stream::ParseStreamAlgError,
 };
 
 // --- Enforce: exactamente 1 backend activo ---
@@ -49,10 +50,7 @@ impl CryptoFactory {
         {
             match alg {
                 AeadAlg::AesGcm => Ok(Box::new(backends::openssl::AesGcmEngine)),
-                AeadAlg::ChaCha20Poly1305 => Err(FactoryError::NotImplemented {
-                    algo: alg.as_str(),
-                    backend: BACKEND_NAME,
-                }),
+                AeadAlg::ChaCha20Poly1305 => Ok(Box::new(backends::openssl::ChaCha20Poly1305Engine)),
             }
         }
     }
@@ -78,10 +76,7 @@ impl CryptoFactory {
         #[cfg(feature = "backend-openssl")]
         {
             match alg {
-                _ => Err(FactoryError::NotImplemented {
-                    algo: alg.as_str(),
-                    backend: BACKEND_NAME,
-                }),
+                StreamAlg::AesCtr => Ok(Box::new(backends::openssl::AesCtrEngine)),
             }
         }
     }
@@ -109,57 +104,20 @@ impl CryptoFactory {
         #[cfg(feature = "backend-openssl")]
         {
             match alg {
-                _ => Err(FactoryError::NotImplemented {
-                    algo: alg.as_str(),
-                    backend: BACKEND_NAME,
-                }),
+                BlockModeAlg::AesCbc => Ok(Box::new(backends::openssl::AesCbcEngine)),
             }
         }
     }
+
     pub fn try_block_mode_from_str(name: &str) -> Result<Box<dyn BlockMode>, FactoryError> {
         let alg: BlockModeAlg = name.parse().map_err(|e: ParseBlockAlgError| FactoryError::Parse(e.0))?;
         Self::try_block_mode(alg)
     }
 }
 
-/// Cifra AEAD usando tipos fuertes (Key32/Nonce12). Internamente llama al trait con slices.
-pub fn aead_encrypt_checked(
-    engine: &dyn Aead,
-    key: &Key32,
-    nonce: &Nonce12,
-    pt: &[u8],
-    aad: Option<&[u8]>,
-) -> Result<Vec<u8>, AeadError> {
-    engine.encrypt(key.as_ref(), nonce.as_ref(), pt, aad)
-}
-/// Descifra AEAD usando tipos fuertes.
-pub fn aead_decrypt_checked(
-    engine: &dyn Aead,
-    key: &Key32,
-    nonce: &Nonce12,
-    ct: &[u8],
-    aad: Option<&[u8]>,
-) -> Result<Vec<u8>, AeadError> {
-    engine.decrypt(key.as_ref(), nonce.as_ref(), ct, aad)
-}
-/// Aplica keystream con tipos fuertes (AES-CTR: Key32/Iv16)
-pub fn stream_apply_checked(engine: &dyn Stream, key: &Key32, iv: &Iv16, data: &[u8]) -> Result<Vec<u8>, StreamError> {
-    engine.apply_keystream(key.as_ref(), iv.as_ref(), data)
-}
-/// Cifra/Descifra CBC con tipos fuertes (AES-CBC: Key32/Iv16)
-pub fn cbc_encrypt_checked(
-    engine: &dyn BlockMode,
-    key: &Key32,
-    iv: &Iv16,
-    pt: &[u8],
-) -> Result<Vec<u8>, BlockModeError> {
-    engine.encrypt(key.as_ref(), iv.as_ref(), pt)
-}
-pub fn cbc_decrypt_checked(
-    engine: &dyn BlockMode,
-    key: &Key32,
-    iv: &Iv16,
-    ct: &[u8],
-) -> Result<Vec<u8>, BlockModeError> {
-    engine.decrypt(key.as_ref(), iv.as_ref(), ct)
+pub mod prelude {
+    pub use crate::kryptography::checked::{AeadChecked, BlockModeChecked, StreamChecked};
+    pub use crate::kryptography::traits::{Aead, BlockMode, Stream};
+    pub use crate::kryptography::types::{Iv16, Key32, Nonce12};
+    pub use crate::kryptography::{AeadAlg, BlockModeAlg, CryptoFactory, StreamAlg};
 }
