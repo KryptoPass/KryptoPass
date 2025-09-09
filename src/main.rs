@@ -1,29 +1,28 @@
 use anyhow::Result;
-use kryptopass::kryptography::symmetric::{Algorithm, Cipher, CipherSpec, Mode, Padding};
+use kryptopass::kryptography::{
+    CryptoFactory,
+    enums::{AeadAlg, StreamAlg},
+};
 
-// Tipos fuertes para claves/IV
-pub struct Key<const N: usize>(pub [u8; N]);
-pub struct Iv<const N: usize>(pub [u8; N]);
-
+// 5) Uso: el tipo devuelto restringe las operaciones disponibles
 fn main() -> Result<()> {
-    let spec = CipherSpec {
-        algorithm: Algorithm::AES256,
-        key: Key::<32>([0x11; 32]),
-        mode: Mode::CBC {
-            iv: Iv::<16>([0u8; 16]),
-            padding: Padding::Pkcs7,
-        },
-    };
+    let key = [0u8; 32];
+    let nonce = [0u8; 12];
+    let aad = b"hdr";
 
-    let cipher = Cipher::create(spec)?;
-    let ct = cipher.encrypt(b"hola mundo!")?;
-    let pt = cipher.decrypt(&ct)?;
-    assert_eq!(pt.as_slice(), b"hola mundo!");
+    // AEAD: solo existen métodos AEAD
+    let mut aead = CryptoFactory::aead(AeadAlg::AesGcm);
+    let ct = aead.encrypt(&key, &nonce, b"hola", Some(aad))?;
+    let pt = aead.decrypt(&key, &nonce, &ct, Some(aad))?;
+    assert_eq!(pt, b"hola");
+
+    // Cambio “on the fly” a otro AEAD (sigue siendo un handle AEAD)
+    let mut aead = CryptoFactory::aead(AeadAlg::ChaCha20Poly1305);
+    let _ = aead.encrypt(&key, &nonce, b"hola", Some(aad))?;
+
+    // Si quiero un stream, pido un handle Stream (no tendrá métodos AEAD)
+    let mut stream = CryptoFactory::stream(StreamAlg::AesCtr);
+    let _ = stream.apply_keystream(&key, &nonce, b"data")?;
+
     Ok(())
 }
-
-// Modes:
-// Initialization Vector
-// Tweak
-// Nonce
-// Authentication Tag

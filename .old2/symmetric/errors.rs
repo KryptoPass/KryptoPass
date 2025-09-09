@@ -29,6 +29,9 @@ pub enum ModeError {
         expected_bits: usize,
     },
 
+    #[error("Etiqueta inválida (tamaño {got} bytes) para {mode}")]
+    InvalidTag { mode: &'static str, got: usize },
+
     #[error("nonce inválido (tamaño {got} bytes) para {mode}; se esperaba {expected_bits} bits")]
     InvalidNonce {
         mode: &'static str,
@@ -36,24 +39,11 @@ pub enum ModeError {
         expected_bits: usize,
     },
 
-    #[error("tweak debe ser de 128 bits (16 bytes)")]
-    InvalidTweak,
-
-    #[error("XTS requiere clave de 256 bits (AES-128-XTS) o 512 bits (AES-256-XTS)")]
-    InvalidXtsKeySize,
-
-    #[error("para {mode}, la etiqueta no puede superar {max_tag_bytes} bytes")]
-    TagTooLong {
+    #[error("{mode}: {param} inválido (tamaño {got_bits} bits); permitidos: {allowed:?}")]
+    InvalidParameterLength {
         mode: &'static str,
-        max_tag_bytes: usize,
+        param: &'static str,
+        got_bits: usize,
+        allowed: &'static [usize],
     },
-
-    #[error("min_tag_length debe ser >= 4")]
-    MinTagLengthTooSmall,
-
-    #[error("autenticación: la etiqueta debe tener al menos {min} bytes")]
-    TagTooShort { min: usize },
-
-    #[error("GCM: el IV debe tener entre 8 y 128 bytes")]
-    GcmIvOutOfRange,
 }
