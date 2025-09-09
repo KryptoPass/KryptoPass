@@ -1,2 +1,2 @@
-pub mod asymmetric;
-pub mod symmetric;
+#[cfg(feature = "backend-rustcrypto")]
+pub mod rustcrypto;
