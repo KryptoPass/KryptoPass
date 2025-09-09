@@ -12,9 +12,20 @@ use ctr::cipher::{KeyIvInit, StreamCipher};
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 
+use crate::kryptography::Aead as AeadTrait;
+use crate::kryptography::AeadAlg;
+use crate::kryptography::BlockMode;
+use crate::kryptography::BlockModeAlg;
+use crate::kryptography::Stream;
+use crate::kryptography::StreamAlg;
 use crate::kryptography::errors::{AeadError, BlockModeError, StreamError};
 
-/// --- AEAD: AES-GCM (AES-256-GCM, nonce de 96 bits) ---
+pub const BACKEND_NAME: &str = "RustCrypto";
+
+pub const AEAD_SUPPORTED: &[AeadAlg] = &[AeadAlg::AesGcm, AeadAlg::ChaCha20Poly1305];
+pub const STREAM_SUPPORTED: &[StreamAlg] = &[StreamAlg::AesCtr];
+pub const BLOCK_SUPPORTED: &[BlockModeAlg] = &[BlockModeAlg::AesCbc];
+
 pub struct AesGcmEngine;
 
 impl super::super::Aead for AesGcmEngine {
@@ -162,5 +173,24 @@ impl super::super::BlockMode for AesCbcEngine {
             .map_err(|e| BlockModeError::Backend(format!("decrypt: {e}")))?;
 
         Ok(out.to_vec())
+    }
+}
+
+pub fn make_aead(alg: AeadAlg) -> Option<Box<dyn AeadTrait>> {
+    match alg {
+        AeadAlg::AesGcm => Some(Box::new(super::rustcrypto::AesGcmEngine)),
+        AeadAlg::ChaCha20Poly1305 => Some(Box::new(super::rustcrypto::ChaCha20Poly1305Engine)),
+    }
+}
+
+pub fn make_stream(alg: StreamAlg) -> Option<Box<dyn Stream>> {
+    match alg {
+        StreamAlg::AesCtr => Some(Box::new(super::rustcrypto::AesCtrEngine)),
+    }
+}
+
+pub fn make_block(alg: BlockModeAlg) -> Option<Box<dyn BlockMode>> {
+    match alg {
+        BlockModeAlg::AesCbc => Some(Box::new(super::rustcrypto::AesCbcEngine)),
     }
 }

@@ -18,3 +18,29 @@ impl Support {
         }
     }
 }
+
+#[cfg(test)]
+mod sanity {
+    use crate::kryptography::{CryptoFactory, support::Support};
+
+    #[test]
+    fn aead_factory_matches_support() {
+        for &alg in Support::active().aead {
+            CryptoFactory::try_aead(alg).expect("supported AEAD must build");
+        }
+    }
+
+    #[test]
+    fn stream_factory_matches_support() {
+        for &alg in Support::active().stream {
+            CryptoFactory::try_stream(alg).expect("supported Stream must build");
+        }
+    }
+
+    #[test]
+    fn block_factory_matches_support() {
+        for &alg in Support::active().block {
+            CryptoFactory::try_block_mode(alg).expect("supported Block must build");
+        }
+    }
+}

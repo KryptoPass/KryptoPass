@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use anyhow::Result;
-use kryptopass::kryptography::prelude::*;
+use kryptopass::kryptography::{prelude::*, support::Support};
 
 fn demo_aead() -> Result<()> {
     let key = Key32::try_from_slice(&[7u8; 32])?;
@@ -34,8 +36,23 @@ fn demo_stream_and_block_if_supported() -> Result<()> {
     Ok(())
 }
 
+fn print_support() {
+    let s = Support::active();
+    print!("AEAD:");
+    s.aead.iter().for_each(|s| print!("{s}, "));
+    println!();
+    print!("Block:");
+    s.block.iter().for_each(|s| print!("{s}, "));
+    println!();
+    print!("Stream:");
+    s.stream.iter().for_each(|s| print!("{s}, "));
+    println!();
+}
+
 fn main() -> Result<()> {
     demo_aead()?;
     demo_stream_and_block_if_supported()?;
+    print_support();
+
     Ok(())
 }
