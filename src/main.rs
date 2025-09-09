@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use kryptopass::kryptography::{prelude::*, support::Support};
 
