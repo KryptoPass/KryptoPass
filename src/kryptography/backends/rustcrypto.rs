@@ -66,7 +66,6 @@ impl super::super::Aead for AesGcmEngine {
     }
 }
 
-/// --- AEAD: ChaCha20-Poly1305 (key 256 bits, nonce 96 bits) ---
 pub struct ChaCha20Poly1305Engine;
 
 impl super::super::Aead for ChaCha20Poly1305Engine {
@@ -107,7 +106,6 @@ impl super::super::Aead for ChaCha20Poly1305Engine {
     }
 }
 
-/// --- Stream: AES-CTR (AES-256-CTR, IV de 128 bits) ---
 pub struct AesCtrEngine;
 
 impl super::super::Stream for AesCtrEngine {
@@ -128,7 +126,6 @@ impl super::super::Stream for AesCtrEngine {
     }
 }
 
-/// --- BlockMode: AES-CBC (AES-256-CBC con PKCS#7, IV 128 bits) ---
 pub struct AesCbcEngine;
 
 impl super::super::BlockMode for AesCbcEngine {
