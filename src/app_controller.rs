@@ -10,26 +10,26 @@ pub mod qobject {
     }
 
     extern "RustQt" {
-        /// Application state exposed to the QML presentation layer.
+        /// Shell demo state exposed to the QML presentation layer.
         #[qobject]
         #[qml_element]
-        #[qproperty(QString, bridge_status)]
-        #[qproperty(QString, active_section)]
-        #[qproperty(i32, health_checks)]
-        #[qproperty(bool, bridge_ready)]
+        #[qproperty(QString, bridge_status, cxx_name = "bridgeStatus")]
+        #[qproperty(QString, active_section, cxx_name = "activeSection")]
+        #[qproperty(i32, health_checks, cxx_name = "healthChecks")]
+        #[qproperty(bool, bridge_ready, cxx_name = "bridgeReady")]
         type AppController = super::AppControllerRust;
 
-        /// Runs a small round trip through the Rust/Qt bridge.
+        /// Records a bridge health check and publishes the verification status.
         #[qinvokable]
         #[cxx_name = "runHealthCheck"]
         fn run_health_check(self: Pin<&mut Self>);
 
-        /// Changes the section selected by the QML shell.
+        /// Applies the section requested by the QML shell and publishes the navigation status.
         #[qinvokable]
         #[cxx_name = "selectSection"]
         fn select_section(self: Pin<&mut Self>, section: &QString);
 
-        /// Restores the initial demonstration state.
+        /// Restores the initial demo state: home section, zero checks, and ready bridge.
         #[qinvokable]
         #[cxx_name = "resetDemo"]
         fn reset_demo(self: Pin<&mut Self>);

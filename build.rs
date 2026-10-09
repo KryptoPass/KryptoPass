@@ -3,10 +3,12 @@ use cxx_qt_build::{CxxQtBuilder, QmlModule};
 fn main() {
     let qml_module = QmlModule::new("org.kryptopass.desktop")
         .qml_file("qml/Main.qml")
-        .qml_file("qml/components/InfoCard.qml")
-        .qml_file("qml/components/KpButton.qml")
-        .qml_file("qml/components/NavItem.qml")
-        .qml_file("qml/components/StatusChip.qml");
+        .depends([
+            "QtQuick",
+            "QtQuick.Controls",
+            "QtQuick.Layouts",
+            "org.kde.kirigami",
+        ]);
 
     CxxQtBuilder::new_qml_module(qml_module)
         // Qt QML requires Qt Network on some platforms, including macOS.
