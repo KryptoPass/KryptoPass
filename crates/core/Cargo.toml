@@ -1,0 +1,11 @@
+[package]
+name = "kryptopass-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "KryptoPass shared domain logic (vaults, crypto contracts)"
+publish = false
+
+[lints]
+workspace = true

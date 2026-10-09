@@ -21,7 +21,7 @@ need_stdout = true
 command = ["just", "lint"]
 need_stdout = true
 default_watch = false
-watch = ["qml", "build.rs", "src"]
+watch = ["crates"]
 
 [keybindings]
 q = "job:qmllint"

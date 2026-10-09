@@ -1,19 +1,17 @@
-[package]
-name = "kryptopass-desktop"
+[workspace]
+resolver = "2"
+members = ["crates/desktop", "crates/core"]
+# Por defecto solo la app; el resto con --workspace / -p.
+default-members = ["crates/desktop"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "GPL-3.0-or-later"
 description = "KryptoPass desktop application built with Rust, CXX-Qt, and QML"
-publish = false
-
-[workspace]
-# Workspace raíz de un solo miembro (este crate). Cuando se extraiga una
-# lib (p. ej. `core`), se registra aquí como miembro: `members = [...]`
-# y sus deps/lints cuelgan de [workspace.*].
-
-[lints]
-workspace = true
+# Nota: homepage/repository/documentation se centralizan aquí cuando se
+# confirmen las URLs oficiales; app_info los lee con option_env!.
 
 [workspace.lints.clippy]
 dbg_macro = "warn"
@@ -21,14 +19,5 @@ todo = "warn"
 unwrap_used = "warn"
 expect_used = "warn"
 
-[dependencies]
-cxx = "1.0"
-cxx-qt = "0.10"
-cxx-qt-lib = { version = "0.10", features = ["qt_full"] }
-
-[build-dependencies]
-cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
-
 [profile.release]
 lto = "thin"
-strip = "symbols"

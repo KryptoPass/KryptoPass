@@ -3,7 +3,7 @@
 #   just verify   -> fmt + check + clippy + lint + test
 #   just smoke    -> arranque offscreen, falla ante errores QML
 #   just watch    -> bacon en fondo (job check)
-#   bacon qmllint -> vigila qml/ y pasa qmllint en cada cambio
+#   bacon qmllint -> vigila crates/ y pasa qmllint en cada cambio
 
 set shell := ["bash", "-uc"]
 
@@ -15,6 +15,16 @@ qml_local := "target/cxxqt/qml_modules"
 _default:
     @just --list
 
+alias r := run
+
+# Corre la app en ventana (pásale args: `just run -- --help`).
+run *args:
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}
+
+# Loop de dev: bacon recompila y relanza al guardar.
+dev:
+    bacon run
+
 # Formato Rust: debe pasar sin diff.
 fmt:
     cargo fmt --check
@@ -23,13 +33,17 @@ fmt:
 check:
     cargo check
 
+# Compila (reenvía flags a cargo: `just build --release`).
+build *args: check
+    cargo build {{ args }}
+
 # Lints Rust como errores.
 clippy:
     cargo clippy --all-targets -- -D warnings
 
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
 lint: check
-    qmllint -I {{ qml_local }} -I {{ qml_system }} $(find qml -name '*.qml')
+    qmllint -I {{ qml_local }} -I {{ qml_system }} $(find crates/desktop/ui/qml -name '*.qml')
 
 # Tests Rust (el agente de tests usa los suyos; esto es lo general).
 test:
@@ -46,6 +60,10 @@ smoke: check
         exit 1
     fi
     echo "smoke: arranque offscreen limpio"
+
+# Genera archivos de instalación desde Cargo.toml (no editar gen/ a mano).
+gen-install:
+    python3 packaging/gen_install.py
 
 # Puerta completa rápida (sin lanzar la app).
 verify: fmt check clippy lint test
