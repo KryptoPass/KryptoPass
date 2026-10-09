@@ -1,0 +1,27 @@
+# Bacon — chequeo continuo en fondo.
+# `bacon` (job check) | `bacon clippy` | `bacon test` | `bacon qmllint`
+# Sin analyzer dedicado para qmllint: se muestra la salida tal cual
+# y el fallo lo marca el exit code (!= 0 ante cualquier warning).
+
+default_job = "check"
+
+[jobs.check]
+command = ["cargo", "check"]
+need_stdout = false
+
+[jobs.clippy]
+command = ["cargo", "clippy", "--all-targets", "--", "-D", "warnings"]
+need_stdout = false
+
+[jobs.test]
+command = ["cargo", "test"]
+need_stdout = true
+
+[jobs.qmllint]
+command = ["just", "lint"]
+need_stdout = true
+default_watch = false
+watch = ["qml", "build.rs", "src"]
+
+[keybindings]
+q = "job:qmllint"
