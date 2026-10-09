@@ -3,9 +3,23 @@ name = "kryptopass-desktop"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-or-later"
 description = "KryptoPass desktop application built with Rust, CXX-Qt, and QML"
 publish = false
+
+[workspace]
+# Workspace raíz de un solo miembro (este crate). Cuando se extraiga una
+# lib (p. ej. `core`), se registra aquí como miembro: `members = [...]`
+# y sus deps/lints cuelgan de [workspace.*].
+
+[lints]
+workspace = true
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
 
 [dependencies]
 cxx = "1.0"

@@ -1,0 +1,3 @@
+# Clippy project configuration. Kept minimal on purpose: lints live in
+# Cargo.toml ([workspace.lints]); add here only what needs tuning
+# (e.g. disallowed-methods) when it actually hurts.
