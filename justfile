@@ -19,7 +19,7 @@ _default:
 alias r := run
 
 # Corre la app en ventana (pásale args: `just run -- --help`).
-run *args:
+run *args: install-dev-desktop
     LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}
 
 # Loop de dev: bacon recompila y relanza al guardar.
@@ -70,6 +70,13 @@ smoke: build
 # Genera archivos de instalación desde Cargo.toml (no editar gen/ a mano).
 gen-install:
     python3 packaging/gen_install.py
+
+# Instala una entrada reversible en el directorio de aplicaciones del usuario.
+install-dev-desktop:
+    python3 packaging/dev_desktop.py install
+
+uninstall-dev-desktop:
+    python3 packaging/dev_desktop.py uninstall
 
 # Puerta completa rápida (sin lanzar la app).
 verify: fmt check clippy lint test

@@ -17,6 +17,13 @@ need_stdout = false
 command = ["cargo", "test"]
 need_stdout = true
 
+[jobs.run]
+command = ["just", "run"]
+need_stdout = true
+default_watch = true
+background = false
+watch = ["crates", ".cargo", "packaging", "justfile"]
+
 [jobs.qmllint]
 command = ["just", "lint"]
 need_stdout = true
