@@ -1,4 +1,4 @@
-# Componentes del prototipo de escritorio
+# Componentes del escritorio
 
 La aplicación conserva un único módulo, `org.kryptopass.desktop`. Todos los
 archivos QML de `crates/desktop/ui/qml/` se registran en
@@ -6,9 +6,9 @@ archivos QML de `crates/desktop/ui/qml/` se registran en
 
 ## Ventana y coordinación
 
-`Main.qml` posee los stores, la sección activa, las acciones con sus atajos y
-el estado de revelado. Conecta las señales de los paneles y diálogos con las
-operaciones existentes. Los componentes reciben sus dependencias mediante
+`Main.qml` posee los stores, la sección activa y las acciones con sus atajos.
+Conecta las señales de los paneles y diálogos con las operaciones del
+controlador. Los componentes reciben sus dependencias mediante
 propiedades explícitas; no buscan IDs privados de la ventana.
 
 | Componente | Responsabilidad |
@@ -32,17 +32,45 @@ componentes que ya existían conservan sus contextos anteriores.
 ## Formularios y diálogos
 
 `SecretEditor` y `FolderEditor` mantienen el borrador y el foco de sus campos.
-`MoveEntryDialog` mantiene la selección de destino. Sus señales entregan los
-datos a la ventana, que llama a las operaciones del mock. Los diálogos de
-eliminación solicitan confirmación y la ventana ejecuta la operación.
+El editor del elemento solicita una proyección temporal al controlador y
+conserva el borrador hasta la confirmación del guardado. Cerrar con cambios
+pendientes requiere confirmar su descarte. `PasswordGenerator` recoge las
+opciones y solicita la generación al core; QML no genera aleatoriedad.
 
-`AboutDialog` contiene la información del prototipo y `KeyErrorDialog` presenta
+`FolderEditor` edita título, icono y color como un único borrador.
+`FolderAppearancePicker` agrupa las cuadrículas de colores e iconos del tema.
+`FolderIcon` comparte las variantes simbólicas, el tamaño y el contraste de
+los iconos entre el editor, su selector y la navegación. No aplica una máscara
+a iconos completos del tema; conserva sus detalles y los nombres persistidos.
+`FolderPicker` selecciona carpetas por ID y comparte su presentación entre
+el editor de carpetas, el editor de elementos y el diálogo de movimiento.
+Su texto se dibuja una sola vez, sobre el marco nativo KDE del botón, sin
+superponer un segundo texto al fondo de un `ComboBox` nativo.
+
+`MoveEntryDialog` mantiene la selección de destino. Los diálogos de
+eliminación solicitan confirmación y la ventana ejecuta la operación. Las
+mutaciones actualizan la lista después de la persistencia, no al solicitarse.
+
+`AboutDialog` contiene la información de la aplicación y `KeyErrorDialog` presenta
 el error observable del controlador. La demo Markdown y los componentes de
 detalle existentes mantienen sus contratos.
 
-`MockStore` sigue siendo un prototipo con datos ficticios en memoria. Esta
-separación no lo convierte en un servicio de bóveda ni añade persistencia o
-cifrado. Las operaciones reales de GnuPG continúan en Rust.
+`SecretStore` adapta únicamente metadatos de `SecretsController` para la
+búsqueda, ordenación, selección y navegación. `MockStore` conserva fixtures
+del prototipo y no participa en el flujo persistente.
+
+## Contenido persistente
+
+El core define `SecretContent`, el sobre versionado y `SecretsService`.
+`infrastructure/sqlite_storage.rs` implementa transacciones y revisiones;
+`infrastructure/openpgp.rs` cifra y descifra con GPGME; `app_paths.rs` resuelve
+el directorio privado usando la identidad suministrada por la aplicación.
+
+`SecretsController` coordina trabajos fuera del hilo de Qt y publica tres
+superficies separadas: metadatos de lista, detalle temporal y editor temporal.
+La lista no contiene campos descifrados. Revelar contraseña y copiar usuario
+o contraseña son acciones independientes. El contrato completo está en
+[`SECRET_DATA_CONTRACT.md`](SECRET_DATA_CONTRACT.md).
 
 ## Proyección Rust de claves
 

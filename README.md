@@ -18,16 +18,35 @@ información sensible con tranquilidad.
 KryptoPass Desktop está creciendo paso a paso. Estamos construyendo una base
 sólida para que la experiencia final sea rápida, confiable y agradable de usar.
 
-### Prototipo de interfaz KDE
+### Gestión de credenciales y notas
 
 `just run` abre una interfaz de tres paneles: carpetas, elementos y detalle.
-Permite crear subcarpetas, renombrarlas, crear y editar elementos, moverlos,
-buscar por título o notas, marcar favoritos y usar la papelera.
+Permite crear subcarpetas, renombrarlas, crear y editar credenciales y notas,
+moverlas, buscar por nombre, carpeta o tipo, ordenar, marcar favoritos y usar
+la papelera. Las credenciales tienen nombre, usuario, contraseña, URL y notas;
+la contraseña comienza oculta y se puede copiar por separado del usuario.
+Las carpetas admiten título, icono del tema KDE y color, con selección visual
+en cuadrículas y una vista previa. «Sin color» conserva la apariencia del tema
+y es el valor inicial de las carpetas nuevas. Su apariencia se conserva al
+volver a abrir la aplicación; las carpetas antiguas que aún no tenían estos
+metadatos reciben valores por defecto.
 
-Los datos iniciales y las llaves A/B/C son ficticios. `MockStore.qml` mantiene
-arrays en memoria; los cambios se pierden al cerrar. Esta vista no cifra,
-no persiste y no utiliza el keyring real. Texto y binario son opciones del
-mock de contenido, sin cambiar todavía el modelo semántico del core.
+`SecretStore.qml` presenta los metadatos de `SecretsController`. El contenido
+se codifica con un contrato JSON versionado y se cifra con OpenPGP antes de
+guardarse en SQLite. Los nombres, carpetas y huellas de destinatarios son
+metadatos sin cifrar; usuario, contraseña, URL y notas pertenecen al payload
+cifrado. La base se guarda en el directorio de datos propio de la aplicación.
+
+Para guardar se necesita al menos una clave de GnuPG válida para cifrado.
+El formulario utiliza el llavero existente y respeta la política de confianza
+de GnuPG; la aplicación no crea claves automáticamente. Los datos ficticios
+de `MockStore.qml` no se importan al almacenamiento real.
+
+El generador permite elegir longitud, clases de caracteres y exclusiones;
+obtiene aleatoriedad del sistema operativo. Los guardados se confirman tras
+el commit, y un fallo conserva el borrador. La edición usa revisiones para
+rechazar sobrescrituras de formularios antiguos. Cerrar con cambios pendientes
+solicita confirmación para descartarlos.
 
 Mover un elemento conserva sus destinatarios. Eliminar una carpeta lleva
 sus elementos y subcarpetas al nivel superior. La papelera permite restaurar
@@ -119,8 +138,23 @@ y natural. Menos ruido. Más control. Más confianza.
 - [Reglas para agentes y colaboradores](AGENTS.md)
 - [Arquitectura de la experiencia](docs/QT6_UI_ARCHITECTURE_SPEC.md)
 - [Responsabilidades de los componentes actuales](docs/COMPONENT_BOUNDARIES.md)
+- [Contrato de almacenamiento, recuperación y presentación](docs/SECRET_DATA_CONTRACT.md)
 - [Notas de Qt 6](docs/QT6_NOTES.md)
 - [Notas de integración CXX-Qt y QML](docs/CXX_QT_QML_NOTES.md)
+
+## Desarrollo local
+
+`just run` y `bacon run` preparan una entrada de desarrollo en el directorio
+de aplicaciones XDG del usuario, con el mismo ID que anuncia Qt. Esto permite
+al portal encontrar la identidad de la aplicación al ejecutar desde el repo.
+El lanzador apunta al binario de depuración del directorio de compilación que
+informa Cargo. No reemplaza una entrada existente que pertenezca a una instalación
+normal. `just install-dev-desktop` prepara únicamente la entrada y
+`just uninstall-dev-desktop` retira únicamente la entrada marcada como desarrollo.
+
+En GNU Linux x86_64, la configuración del proyecto selecciona LLD para evitar
+que CXX-Qt elija Gold. El toolchain Rust actual utiliza su copia incluida de
+LLD; los toolchains anteriores que no la incluyen necesitan LLD en el sistema.
 
 ---
 
