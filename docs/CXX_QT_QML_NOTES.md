@@ -120,7 +120,7 @@ El URI de CMake tiene que ser exactamente el URI de `QmlModule` en `build.rs`.
 ### Herramientas de QML
 
 CXX-Qt genera `.qmltypes` y un `qmldir` en el árbol de build. Usarlos evita que
-el IDE trate `AppController` como un tipo desconocido:
+el IDE trate `ShellController` o `KeyringController` como tipos desconocidos:
 
 ```bash
 qmllint -I target/cxxqt/qml_modules qml/Main.qml
@@ -468,7 +468,8 @@ anotaciones de firma por defecto; esto detecta llamadas incompatibles antes.
 
 Un componente QML debe ser una caja negra con propiedades, señales y funciones
 pequeñas. No depender de IDs internos del consumidor. `KpButton.qml` debe saber
-qué dibuja y emitir `clicked`; no debe conocer `AppController`.
+qué dibuja y emitir `clicked`; no debe conocer `ShellController` ni un adapter
+de feature concreto.
 
 Cuando una dependencia es externa, hacerla `required`. Si un componente empieza a
 tener muchos modos y lógica imperativa, dividirlo o mover la lógica a Rust.

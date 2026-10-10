@@ -605,7 +605,7 @@ incremental:
 
 ### Fase A — contratos
 
-1. Mantener `AppController` como adapter de shell.
+1. Mantener `ShellController` como adapter de shell y crear controllers por feature.
 2. Extraer `Theme`, `Metrics` y `Typography` sin cambiar la apariencia.
 3. Renombrar comandos y properties para que expresen intención/estado.
 4. Prohibir nuevos context properties y acceso a filesystem desde QML.
