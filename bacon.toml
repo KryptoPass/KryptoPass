@@ -23,5 +23,11 @@ need_stdout = true
 default_watch = false
 watch = ["crates"]
 
+[jobs.smoke]
+command = ["just", "smoke"]
+need_stdout = true
+default_watch = false
+watch = ["crates"]
+
 [keybindings]
 q = "job:qmllint"

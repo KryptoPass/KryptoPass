@@ -1,76 +1,58 @@
-# AGENTS.md — KryptoPass Desktop
+# KryptoPass Desktop — guía de trabajo
 
-## 1. Dónde buscar según la tarea
+App de escritorio en Rust + CXX-Qt + QML (Kirigami). QML presenta,
+Rust decide y ejecuta. Nada de secretos en QML: solo estado observable.
 
-Siempre leer primero `README.md` y este archivo.
+## Puertas: just manda, bacon vigila
 
-- **Rust, CXX-Qt, QObject, bridge, señales, propiedades o threading:** leer
-  `docs/CXX_QT_QML_NOTES.md`; después revisar `Cargo.toml`, `build.rs` y los
-  archivos asignados de `src/`.
-- **Qt 6, QML, Qt Quick, Controls, módulos, recursos o deployment:** leer
-  `docs/QT6_NOTES.md`; revisar después los `.qml` y `build.rs` relacionados.
-- **Arquitectura de UI, componentes, design system, features, adapters,
-  navegación o modelos:** leer `docs/QT6_UI_ARCHITECTURE_SPEC.md`; revisar
-  después `qml/` y `src/` únicamente en las rutas asignadas.
-- **Build, empaquetado o plugins:** leer `docs/QT6_NOTES.md` y
-  `docs/CXX_QT_QML_NOTES.md`; revisar `Cargo.toml`, `build.rs` y la configuración
-  asignada.
-- **Documentación:** leer `README.md` y el documento técnico que se va a
-  modificar. No cambiar código para documentar una idea.
-
-Rutas actuales importantes:
-
-```text
-src/main.rs             arranque Qt/QML
-src/app_controller.rs   QObject CXX-Qt actual
-qml/Main.qml            raíz de la UI
-qml/components/         componentes QML existentes
-build.rs                bridge y módulo QML generado
-target/                 salida generada; nunca editar
+```bash
+just verify   # fmt + check + clippy + lint + test (puerta rápida)
+just smoke    # arranque offscreen, falla ante errores QML
+just ready    # verify + árbol limpio (gate pre-push)
+bacon         # check continuo en fondo
+bacon qmllint # o tecla q: lint QML en cada cambio (vigila crates/)
 ```
 
-## 2. Instrucciones de trabajo y tests
+`cargo lint` y `cargo format` existen como alias, pero `just` es la
+referencia. Si agregas un chequeo nuevo, dale receta en el `justfile`
+y job en `bacon.toml`, no un comando suelto en un doc.
 
-- Antes de editar, indicar objetivo, archivos permitidos, plan breve y comando
-  de verificación. No ampliar el alcance sin aprobación explícita.
-- El **agente de implementación** escribe únicamente código de producto. Tiene
-  prohibido crear, editar, borrar o mover tests, fixtures, snapshots o
-  configuración de tests. Si hace falta un test, debe solicitar un agente de
-  tests separado.
-- El **agente de tests** recibe una asignación explícita para un solo
-  comportamiento y un solo archivo, por ejemplo:
-  `tests/assigned/KP-TEST-042.rs` o `tests/assigned/tst_KP-TEST-042.qml`.
-- El agente de tests debe entregar primero un plan y esperar aprobación
-  explícita. Sin aprobación no puede escribir.
-- El agente de tests solo puede leer la documentación y los archivos de
-  producción mínimos indicados en su asignación. Tiene prohibido abrir, listar,
-  comparar o usar otros tests.
-- El agente de tests tiene prohibido modificar código de producción, `build.rs`,
-  `Cargo.toml`, documentación u otros tests. Si necesita uno de esos cambios,
-  se detiene y lo reporta; otro agente hará la modificación con un plan nuevo.
-- El agente de tests solo ejecuta su prueba individual:
+## Reglas del bridge Rust/QML
 
-  ```bash
-  cargo test --test <target_asignado> <filtro_asignado>
-  ```
+- Cada `.qml` debe estar en `build.rs` (`QmlModule::qml_file`); si falta,
+  el build muere con `Could not canonicalize path`.
+- `lint` corre tras `check` para que los `.qmltypes` estén frescos.
+  Con tipos viejos salen fantasmas (`bridgeStatus not found,
+  did you mean bridge_status?`).
+- Nombres QML explícitos con `cxx_name` (sin conversión automática
+  snake→camel). Lo que QML lee debe existir en los tipos generados.
+- Estilo fijo en código (`org.kde.desktop` salvo `QT_QUICK_CONTROLS_STYLE`);
+  locale UTF-8 en entorno (`LANG=C.UTF-8 LC_ALL=C.UTF-8`).
 
-  o, para Qt Quick Test ya configurado:
+## Nombres e identidad
 
-  ```bash
-  <runner> -platform offscreen -input <archivo_asignado.qml> <función>
-  ```
+- Todo ID público usa DNS inverso `org.kryptopass.*`: módulo QML,
+  `.desktop`, metainfo, futuros plugins y D-Bus. Sin excepciones.
+- La identidad (nombre, versión, org) vive en `Cargo.toml` y se lee vía
+  `app_info`; nada la duplica en `.rs`, `.qml` o instaladores.
 
-- No ejecutar la suite completa desde el agente de implementación ni desde el
-  agente de tests individual. La suite completa la ejecuta el coordinador o
-  revisor al integrar.
-- Si el test falla por un defecto del producto, el agente de tests entrega la
-  evidencia y se detiene; nunca parchea el código.
-- Validaciones generales permitidas al agente de implementación:
+## Reparto de agentes
 
-  ```bash
-  cargo fmt --check
-  cargo check
-  cargo clippy --all-targets -- -D warnings
-  qmllint -I target/cxxqt/qml_modules qml/Main.qml qml/components/*.qml
-  ```
+- El **agente de implementación** toca producto. Antes de editar declara
+  objetivo, archivos, plan y verificación. Sin aprobación no amplía alcance.
+- Los **tests** los escribe un agente de tests con asignación explícita
+  (un comportamiento, un archivo). Implementación no crea ni toca tests.
+- Los **revisores** (skills de `comment-quality`) solo leen y reportan
+  veredictos; nunca editan. Sin permiso de escritura no hay promesa:
+  dáselo estructuralmente en el prompt del subagente.
 
+## Skills locales
+
+En `.agents/skills/`: `rust-comment-quality`, `qml-comment-quality`,
+`commit-quality`. Se cargan bajo demanda; úsalas para revisiones y
+mensajes de commit (Conventional Commits).
+
+## Commits
+
+Un cambio coherente por commit, mensaje en imperativo que describa el
+resultado. `just ready` en verde antes de commitear.

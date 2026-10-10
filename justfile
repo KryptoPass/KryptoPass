@@ -9,8 +9,9 @@ set shell := ["bash", "-uc"]
 
 # Qt QML import path del sistema (Kirigami vive ahí).
 qml_system := `qmake6 -query QT_INSTALL_QML`
-# Tipos generados por CXX-Qt para nuestro módulo (AppController, ...).
+# Tipos generados por CXX-Qt para nuestro módulo (ShellController, KeyringController, ...).
 qml_local := "target/cxxqt/qml_modules"
+qml_tools := `qmake6 -query QT_HOST_BINS`
 
 _default:
     @just --list
@@ -43,20 +44,25 @@ clippy:
 
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
 lint: check
-    qmllint -I {{ qml_local }} -I {{ qml_system }} $(find crates/desktop/ui/qml -name '*.qml')
+    {{ qml_tools }}/qmllint -I {{ qml_local }} -I {{ qml_system }} $(find crates/desktop/ui/qml -name '*.qml')
 
 # Tests Rust (el agente de tests usa los suyos; esto es lo general).
 test:
     cargo test
 
 # Smoke offscreen: arranca y falla si el log trae errores QML.
-smoke: check
+smoke: build
     #!/usr/bin/env bash
     set -uo pipefail
-    out=$(timeout 10 bash -c 'QT_QPA_PLATFORM=offscreen LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run 2>&1')
+    out=$(timeout 10 bash -c 'QT_QPA_PLATFORM=offscreen QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 exec target/debug/kryptopass-desktop' 2>&1)
+    status=$?
     echo "$out" | tail -n 8
-    if echo "$out" | grep -Ei "not installed|Unable to assign|failed to load|Unknown style|QQmlApplicationEngine failed" >/dev/null; then
+    if echo "$out" | grep -Ei "not installed|Unable to assign|failed to load|Unknown style|QQmlApplicationEngine failed|Invalid property assignment|Cannot assign|ReferenceError|TypeError|Binding loop" >/dev/null; then
         echo "smoke: errores QML detectados"
+        exit 1
+    fi
+    if [ "$status" -ne 124 ]; then
+        echo "smoke: la app terminó antes de completar el arranque (status $status)"
         exit 1
     fi
     echo "smoke: arranque offscreen limpio"
