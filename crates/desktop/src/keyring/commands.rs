@@ -1,6 +1,22 @@
 //! Plain Rust commands for the local OpenPGP keyring.
 
+#[path = "edit.rs"]
+mod edit;
+#[path = "files.rs"]
+mod files;
+#[path = "operations.rs"]
+mod operations;
+#[path = "request.rs"]
+mod request;
+
 use kryptopass_core::{KeyInfo, Keyring};
+
+pub use request::OperationOutcome;
+
+/// Executes a typed keyring-management operation from the desktop bridge.
+pub fn execute_operation(request_json: &str) -> Result<OperationOutcome, String> {
+    operations::execute_operation(request_json)
+}
 
 /// Lists public OpenPGP metadata without exposing GPGME to the UI layer.
 pub fn list_keys() -> Result<Vec<KeyInfo>, String> {

@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 libc = "0.2"
-gpgme = "0.11"
+gpgme = { version = "0.11", features = ["v1_15"] }
 rusqlite = { version = "0.40.2", default-features = false }
 serde = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }

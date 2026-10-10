@@ -33,12 +33,19 @@ fn key_record(key: &KeyInfo) -> Value {
     let identity = preferred_identity(key);
     let (validity_code, validity_label) = validity_presentation(identity);
     let status = status_presentation(key.revoked, key.expired, key.disabled, key.invalid);
+    let can_encrypt = has_usable_subkey(key, |subkey| subkey.can_encrypt);
+    let can_sign = has_usable_subkey(key, |subkey| subkey.can_sign);
+    let can_certify = primary_can_certify(key);
+    let can_authenticate = has_usable_subkey(key, |subkey| subkey.can_authenticate);
 
     json!({
         "id": key.fingerprint,
         "title": identity_title(identity),
         "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
         "hasSecret": key.has_secret,
+        "canEncrypt": can_encrypt,
+        "canCertify": can_certify,
+        "capabilities": capabilities(can_encrypt, can_sign, can_certify, can_authenticate),
         "validity": validity_label,
         "validityCode": validity_code,
         "status": status.label,
@@ -47,6 +54,30 @@ fn key_record(key: &KeyInfo) -> Value {
         "subkeys": subkey_records(key),
         "signatures": signature_records(key),
     })
+}
+
+fn has_usable_subkey(key: &KeyInfo, capability: impl Fn(&SubkeyInfo) -> bool) -> bool {
+    key_is_usable(key)
+        && key
+            .subkeys
+            .iter()
+            .any(|subkey| subkey_is_usable(subkey) && capability(subkey))
+}
+
+fn primary_can_certify(key: &KeyInfo) -> bool {
+    key_is_usable(key)
+        && key
+            .subkeys
+            .first()
+            .is_some_and(|subkey| subkey_is_usable(subkey) && subkey.can_certify)
+}
+
+fn key_is_usable(key: &KeyInfo) -> bool {
+    !key.revoked && !key.expired && !key.disabled && !key.invalid
+}
+
+fn subkey_is_usable(subkey: &SubkeyInfo) -> bool {
+    !subkey.revoked && !subkey.expired && !subkey.disabled && !subkey.invalid
 }
 
 fn preferred_identity(key: &KeyInfo) -> Option<&UserIdInfo> {
@@ -80,10 +111,14 @@ fn validity_presentation(identity: Option<&UserIdInfo>) -> (&'static str, &'stat
 }
 
 fn subkey_records(key: &KeyInfo) -> Vec<Value> {
-    key.subkeys.iter().map(subkey_record).collect()
+    key.subkeys
+        .iter()
+        .enumerate()
+        .map(|(index, subkey)| subkey_record(subkey, index == 0))
+        .collect()
 }
 
-fn subkey_record(subkey: &SubkeyInfo) -> Value {
+fn subkey_record(subkey: &SubkeyInfo, is_primary: bool) -> Value {
     let status = status_presentation(
         subkey.revoked,
         subkey.expired,
@@ -93,6 +128,7 @@ fn subkey_record(subkey: &SubkeyInfo) -> Value {
 
     json!({
         "fingerprint": subkey.fingerprint,
+        "isPrimary": is_primary,
         "algorithm": subkey.algorithm,
         "expiresAt": subkey.expires_at,
         "capabilities": capabilities(
@@ -159,13 +195,23 @@ fn status_presentation(
 }
 
 fn identity_records(key: &KeyInfo) -> Vec<Value> {
-    key.user_ids.iter().map(identity_record).collect()
+    let primary_identity = key
+        .user_ids
+        .iter()
+        .position(|identity| !identity.revoked && !identity.invalid);
+
+    key.user_ids
+        .iter()
+        .enumerate()
+        .map(|(index, identity)| identity_record(identity, Some(index) == primary_identity))
+        .collect()
 }
 
-fn identity_record(identity: &UserIdInfo) -> Value {
+fn identity_record(identity: &UserIdInfo, primary: bool) -> Value {
     let (code, label) = validity_presentation(Some(identity));
     json!({
         "id": identity.id,
+        "primary": primary,
         "revoked": identity.revoked,
         "invalid": identity.invalid,
         "validity": label,

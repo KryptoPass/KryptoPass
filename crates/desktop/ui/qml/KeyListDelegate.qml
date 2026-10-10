@@ -7,12 +7,13 @@ import org.kde.kirigami as Kirigami
 Controls.ItemDelegate {
     id: root
     required property var entry
+    readonly property string statusText: entry?.status || ""
     text: entry.title
     icon.name: "user-identity"
     icon.width: Kirigami.Units.iconSizes.large
     icon.height: Kirigami.Units.iconSizes.large
     padding: Kirigami.Units.largeSpacing
-    Accessible.description: qsTr("%1. %2. %3. Huella: %4").arg(entry.email || qsTr("Sin correo electrónico")).arg(entry.status).arg(entry.validity || qsTr("Identidad sin verificar")).arg(entry.id)
+    Accessible.description: qsTr("%1. %2. %3. Huella: %4").arg(entry.email || qsTr("Sin correo electrónico")).arg(root.statusText).arg(entry.validity || qsTr("Identidad sin verificar")).arg(entry.id)
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
 
@@ -70,7 +71,7 @@ Controls.ItemDelegate {
                 KeyStatus {
                     Layout.maximumWidth: parent.width / 2
                     code: root.entry.statusCode || ""
-                    text: root.entry.status
+                    text: root.statusText
                     selected: root.highlighted || root.down
                 }
             }

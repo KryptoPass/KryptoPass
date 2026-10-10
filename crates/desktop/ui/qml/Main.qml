@@ -32,7 +32,7 @@ Controls.ApplicationWindow {
     property string closeMessage: ""
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
     readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || editor.savePending || folderEditor.pending
-    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || editor.savePending || folderEditor.pending
+    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
     readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError)
         || (folderEditor.opened && !!folderEditor.saveError)
         || (moveDialog.opened && !!moveDialog.operationError)
@@ -61,6 +61,7 @@ Controls.ApplicationWindow {
         if (showKeys) {
             store.controller.selectEntry("");
             keys.controller.refreshKeys();
+            keys.contactsController.refreshContacts();
         } else {
             store.controller.selectEntry(store.selectedId);
         }
@@ -126,6 +127,8 @@ Controls.ApplicationWindow {
             keyErrorDialog.close();
         if (backupDialog.opened)
             backupDialog.close();
+        if (mainKeyOperationDialog.opened)
+            mainKeyOperationDialog.close();
 
         if (!editor.opened || editor.waitingForEditor) {
             completeSensitiveTransition();
@@ -356,11 +359,27 @@ Controls.ApplicationWindow {
     }
     Controls.Action {
         id: refreshKeys
-        text: qsTr("Actualizar claves")
+        text: qsTr("Recargar llavero")
         icon.name: "view-refresh"
-        enabled: root.keysMode && !keys.controller.busy
+        enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
         shortcut: "F5"
         onTriggered: keys.controller.refreshKeys()
+    }
+    Controls.Action {
+        id: createKey
+        text: qsTr("Crear clave OpenPGP…")
+        icon.name: "document-new"
+        enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
+        shortcut: "Ctrl+Shift+K"
+        onTriggered: mainKeyOperationDialog.openFor("create")
+    }
+    Controls.Action {
+        id: importKey
+        text: qsTr("Importar clave OpenPGP…")
+        icon.name: "document-import"
+        enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
+        shortcut: "Ctrl+Shift+I"
+        onTriggered: mainKeyOperationDialog.openFor("import")
     }
     Controls.Action {
         id: copyFingerprint
@@ -384,6 +403,17 @@ Controls.ApplicationWindow {
             }
             Controls.MenuItem {
                 action: newFolder
+            }
+            Controls.MenuSeparator {
+                visible: root.keysMode
+            }
+            Controls.MenuItem {
+                action: createKey
+                visible: root.keysMode
+            }
+            Controls.MenuItem {
+                action: importKey
+                visible: root.keysMode
             }
             Controls.MenuItem {
                 action: refreshKeys
@@ -507,7 +537,7 @@ Controls.ApplicationWindow {
     Controls.ToolButton {
         id: toolbarSizeHint
         visible: false
-        text: qsTr("Actualizar claves")
+        text: qsTr("Recargar llavero")
         icon.name: "view-refresh"
     }
 
@@ -526,6 +556,19 @@ Controls.ApplicationWindow {
         handle: SplitterHandle {}
 
         SidebarPane {
+            entryDraggingEnabled: !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
+            onFolderMoveRequested: function(folderId, parentId, beforeId) {
+                if (root.mutationsBlocked || store.controller.locked || editor.opened || editor.waitingForEditor)
+                    return;
+                root.beginOperation("moveFolder", folderId);
+                store.controller.moveFolder(folderId, parentId, beforeId);
+            }
+            onEntryMoveRequested: function(entryId, folderId) {
+                if (root.mutationsBlocked || store.controller.locked || editor.opened || editor.waitingForEditor)
+                    return;
+                root.beginOperation("move", entryId);
+                store.updateEntry(entryId, { folder: folderId });
+            }
             keysMode: root.keysMode
             activeStore: root.activeStore
             storeAdapter: store
@@ -590,6 +633,20 @@ Controls.ApplicationWindow {
                             visible: root.keysMode
                         }
                         Controls.ToolButton {
+                            action: createKey
+                            visible: root.keysMode
+                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                            Controls.ToolTip.visible: hovered || visualFocus
+                            Controls.ToolTip.text: text
+                        }
+                        Controls.ToolButton {
+                            action: importKey
+                            visible: root.keysMode
+                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                            Controls.ToolTip.visible: hovered || visualFocus
+                            Controls.ToolTip.text: text
+                        }
+                        Controls.ToolButton {
                             action: lockVaultAction
                             display: Controls.AbstractButton.IconOnly
                             Controls.ToolTip.visible: hovered || visualFocus
@@ -597,11 +654,11 @@ Controls.ApplicationWindow {
                             Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                         Controls.BusyIndicator {
-                            visible: root.keysMode && keys.controller.busy
+                            visible: root.keysMode && (keys.controller.busy || keys.controller.operationBusy)
                             running: visible
                             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                             Layout.preferredHeight: width
-                            Accessible.name: qsTr("Actualizando claves de GnuPG")
+                            Accessible.name: keys.controller.operationBusy ? qsTr("Procesando operación OpenPGP") : qsTr("Actualizando claves de GnuPG")
                         }
                     }
                 }
@@ -658,6 +715,7 @@ Controls.ApplicationWindow {
                     orientation: Qt.Horizontal
                     handle: SplitterHandle {}
                     EntryListPane {
+                        entryDraggingEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
                         keysMode: root.keysMode
                         activeStore: root.activeStore
                         storeAdapter: store
@@ -685,6 +743,7 @@ Controls.ApplicationWindow {
                         keysMode: root.keysMode
                         storeAdapter: store
                         keyStore: keys
+                        keyOperationDialog: mainKeyOperationDialog
                         revealed: root.revealed
                         headerHeight: root.panelHeaderHeight
                         editAction: editEntry
@@ -762,7 +821,7 @@ Controls.ApplicationWindow {
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
         externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened
-                           || deleteEntryDialog.opened || deleteFolderDialog.opened
+                           || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
                            || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
@@ -822,6 +881,10 @@ Controls.ApplicationWindow {
         onOpenVaultRequested: function(path) {
             Qt.callLater(function() { root.requestActiveVault(path); });
         }
+    }
+    KeyOperationDialog {
+        id: mainKeyOperationDialog
+        keyStore: keys
     }
     AboutDialog {
         id: aboutDialog

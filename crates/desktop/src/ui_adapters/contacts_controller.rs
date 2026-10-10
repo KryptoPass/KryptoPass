@@ -148,21 +148,42 @@ impl qobject::ContactsController {
             .filter(|fingerprint| is_full_fingerprint(fingerprint))
             .map(|fingerprint| fingerprint.to_ascii_uppercase())
             .collect();
-        let candidates: QStringList = self
-            .contact_records()
-            .iter()
-            .filter_map(|record| {
-                let value: serde_json::Value = serde_json::from_str(&String::from(record)).ok()?;
-                let fingerprint = value.get("openPgpFingerprint")?.as_str()?;
-                if is_full_fingerprint(fingerprint)
-                    && allowed.contains(&fingerprint.to_ascii_uppercase())
-                {
-                    Some(QString::from(fingerprint.to_ascii_uppercase()))
-                } else {
-                    None
+        let mut candidates = QStringList::default();
+        let mut seen = std::collections::HashSet::new();
+        for record in self.contact_records().iter() {
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(&String::from(record)) else {
+                continue;
+            };
+
+            let mut contact_fingerprints = Vec::new();
+            if let Some(fingerprints) = value
+                .get("openPgpFingerprints")
+                .and_then(serde_json::Value::as_array)
+            {
+                contact_fingerprints.extend(
+                    fingerprints
+                        .iter()
+                        .filter_map(serde_json::Value::as_str)
+                        .map(str::to_owned),
+                );
+            }
+            if let Some(fingerprint) = value
+                .get("openPgpFingerprint")
+                .and_then(serde_json::Value::as_str)
+            {
+                contact_fingerprints.push(fingerprint.to_owned());
+            }
+
+            for fingerprint in contact_fingerprints {
+                if !is_full_fingerprint(&fingerprint) {
+                    continue;
                 }
-            })
-            .collect();
+                let normalized = fingerprint.to_ascii_uppercase();
+                if allowed.contains(&normalized) && seen.insert(normalized.clone()) {
+                    candidates.append(QString::from(normalized));
+                }
+            }
+        }
         if candidates.is_empty() {
             self.as_mut().set_error_message(QString::from(
                 "Actualiza KDE Contacts. No hay contactos vinculados a las claves válidas disponibles.",

@@ -10,6 +10,7 @@ Controls.Pane {
     required property bool keysMode
     required property SecretStore storeAdapter
     required property KeyStore keyStore
+    required property KeyOperationDialog keyOperationDialog
     required property bool revealed
     required property real headerHeight
     required property Controls.Action editAction
@@ -55,7 +56,24 @@ Controls.Pane {
                     level: 3
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode ? qsTr("Propiedades de la clave") : qsTr("Detalle")
+                    text: root.keysMode
+                        ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
+                           ? qsTr("Propiedades de la clave")
+                           : root.keyStore.scope === "contacts" ? qsTr("Agenda de destinatarios") : qsTr("Contactos de KDE Contacts"))
+                        : qsTr("Detalle")
+                }
+                Controls.ToolButton {
+                    visible: root.keysMode && root.keyStore.scope === "contacts"
+                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible
+                        ? qsTr("Volver a la clave") : qsTr("Ver agenda")
+                    icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
+                        ? "view-certificate" : "view-pim-contacts"
+                    Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
+                        ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de destinatarios")
+                    onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected
+                        ? !root.keyStore.contactsOverviewVisible : true
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
                     visible: !root.keysMode && !!root.selected && !root.selected.trashed
@@ -101,8 +119,21 @@ Controls.Pane {
             id: keyDetail
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.keysMode && !root.editing
+            visible: root.keysMode && !root.editing && !!root.keyStore.selected
+                && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
             selectedKey: root.keyStore.selected
+            keyStore: root.keyStore
+            operationDialog: root.keyOperationDialog
+        }
+
+        KeyContactsOverview {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.margins: Kirigami.Units.largeSpacing
+            visible: root.keysMode && !root.editing
+                && (!root.keyStore.selected || (root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible))
+            keyStore: root.keyStore
+            operationDialog: root.keyOperationDialog
         }
 
         Controls.ScrollView {
@@ -224,9 +255,9 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         anchors.verticalCenterOffset: root.headerHeight / 2
-        visible: !root.editing && (root.keysMode ? !root.keyStore.selected : !root.selected)
-        icon.name: root.keysMode ? "view-certificate" : "document-encrypt"
-        text: root.keysMode ? qsTr("Ninguna clave seleccionada") : qsTr("Ningún elemento seleccionado")
-        explanation: root.keysMode ? qsTr("Selecciona una clave para ver sus identidades, subclaves y firmas.") : qsTr("Selecciona un elemento de la lista para ver su contenido.")
+        visible: !root.editing && !root.keysMode && !root.selected
+        icon.name: "document-encrypt"
+        text: qsTr("Ningún elemento seleccionado")
+        explanation: qsTr("Selecciona un elemento de la lista para ver su contenido.")
     }
 }
