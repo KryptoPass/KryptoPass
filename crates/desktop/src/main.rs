@@ -1,4 +1,5 @@
 mod app_info;
+mod infrastructure;
 mod keyring;
 mod markdown;
 mod qt;
