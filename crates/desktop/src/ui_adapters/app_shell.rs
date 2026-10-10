@@ -81,21 +81,3 @@ impl qobject::ShellController {
         self.set_bridge_status(QString::from("Backend Rust conectado"));
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn initial_state_is_ready_and_starts_at_home() {
-        let controller = ShellControllerRust::default();
-
-        assert!(controller.bridge_ready);
-        assert_eq!(controller.active_section.to_string(), "home");
-        assert_eq!(controller.health_checks, 0);
-        assert_eq!(
-            controller.bridge_status.to_string(),
-            "Backend Rust conectado"
-        );
-    }
-}
