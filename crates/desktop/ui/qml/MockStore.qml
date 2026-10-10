@@ -125,7 +125,7 @@ QtObject {
     readonly property var folderRows: {
         const result = [];
         const walk = (parent, depth) => {
-            for (const folder of folders.filter(f => f.parent === parent)) {
+            for (const folder of folders.filter(f => f.parent === parent).sort((a, b) => a.name.localeCompare(b.name))) {
                 result.push({
                     id: folder.id,
                     name: folder.name,

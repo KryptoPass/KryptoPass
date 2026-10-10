@@ -517,6 +517,7 @@ dependencies = [
  "cxx-qt-build",
  "cxx-qt-lib",
  "kryptopass-core",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "zeroize",

@@ -4,6 +4,12 @@ fn main() {
     let qml_module = QmlModule::new("org.kryptopass.desktop")
         .qml_file("ui/qml/Main.qml")
         .qml_file("ui/qml/MockStore.qml")
+        .qml_file("ui/qml/KeyStore.qml")
+        .qml_file("ui/qml/KeyDetail.qml")
+        .qml_file("ui/qml/KeyListDelegate.qml")
+        .qml_file("ui/qml/KeyStatus.qml")
+        .qml_file("ui/qml/KeyAvatar.qml")
+        .qml_file("ui/qml/IdentityValidity.qml")
         .qml_file("ui/qml/MarkdownView.qml")
         .qml_file("ui/qml/MarkdownDemo.qml")
         .depends([

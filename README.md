@@ -25,7 +25,7 @@ Permite crear subcarpetas, renombrarlas, crear y editar elementos, moverlos,
 buscar por título o notas, marcar favoritos y usar la papelera.
 
 Los datos iniciales y las llaves A/B/C son ficticios. `MockStore.qml` mantiene
-arrays en memoria; los cambios se pierden al cerrar. Este prototipo no cifra,
+arrays en memoria; los cambios se pierden al cerrar. Esta vista no cifra,
 no persiste y no utiliza el keyring real. Texto y binario son opciones del
 mock de contenido, sin cambiar todavía el modelo semántico del core.
 
@@ -33,6 +33,34 @@ Mover un elemento conserva sus destinatarios. Eliminar una carpeta lleva
 sus elementos y subcarpetas al nivel superior. La papelera permite restaurar
 elementos antes de eliminarlos definitivamente. Atajos: Ctrl+N (elemento),
 Ctrl+Shift+N (carpeta), Ctrl+F (buscar), F2 (editar), Supr (papelera).
+
+### Consulta de claves GnuPG
+
+El selector de la barra lateral permite cambiar entre **Carpetas** y
+**Claves**. La segunda sección consulta metadatos reales del llavero del
+usuario, sin modificar las claves ni exponer material privado.
+
+Las claves se ordenan por nombre, con correo y huella como desempate. La
+lista separa identidad, correo, huella abreviada y estado; el detalle conserva
+la huella completa, identidades, clave principal, subclaves y certificaciones.
+«Copiar huella» copia el identificador completo sin espacios. F5 actualiza
+los metadatos; los errores se presentan con reintento y detalles consultables.
+
+La validez se muestra únicamente en la sección «Identidades», antes de la
+huella, con el texto a la izquierda y una escala continua de solo lectura
+al extremo derecho. El relleno usa un degradado horizontal sin borde ni
+divisiones que se funde con el fondo desde un inicio transparente y alcanza
+el color de acento en el nivel total. Las etiquetas distinguen los niveles
+marginal, pleno y total, sin porcentajes ni controles deslizantes.
+«Sin verificar» queda sin relleno; las identidades no válidas o revocadas
+se distinguen por su texto.
+Es la validez informada por GnuPG, no la confianza en el propietario como
+certificador ni el estado de la clave.
+El avatar admite una imagen opcional con icono de respaldo; la lectura de
+fotos desde OpenPGP aún no está implementada.
+
+Los controles usan el estilo KDE y sus fuentes, colores y bordes. El editor
+desplaza el formulario cuando no cabe y mantiene visibles sus botones.
 
 ### Markdown experimental
 

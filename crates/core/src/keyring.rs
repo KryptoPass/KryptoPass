@@ -20,7 +20,11 @@ impl fmt::Debug for Keyring {
 impl Keyring {
     /// Opens the user's default OpenPGP keyring.
     pub fn open() -> Result<Self, KeyringError> {
-        let context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+        let mut context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)
+            .map_err(KeyringError::backend)?;
+
+        context
+            .add_key_list_mode(gpgme::KeyListMode::WITH_SECRET | gpgme::KeyListMode::SIGS)
             .map_err(KeyringError::backend)?;
 
         Ok(Self { context })
@@ -93,6 +97,7 @@ impl Keyring {
 pub struct KeyInfo {
     pub fingerprint: String,
     pub user_ids: Vec<UserIdInfo>,
+    pub subkeys: Vec<SubkeyInfo>,
     pub has_secret: bool,
     pub can_encrypt: bool,
     pub can_sign: bool,
@@ -120,6 +125,7 @@ impl KeyInfo {
         Ok(Self {
             fingerprint,
             user_ids,
+            subkeys: key.subkeys().map(SubkeyInfo::from_gpgme).collect(),
             has_secret: key.has_secret(),
             can_encrypt: key.can_encrypt(),
             can_sign: key.can_sign(),
@@ -136,6 +142,7 @@ impl KeyInfo {
 /// Public metadata for one identity attached to an OpenPGP key.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UserIdInfo {
+    pub signatures: Vec<CertificationInfo>,
     /// The complete user ID as stored by GnuPG, for example `Ada <ada@example.org>`.
     pub id: String,
     pub name: Option<String>,
@@ -154,6 +161,10 @@ impl UserIdInfo {
             .ok_or(KeyringError::MissingUserId)?;
 
         Ok(Self {
+            signatures: user_id
+                .signatures()
+                .map(CertificationInfo::from_gpgme)
+                .collect(),
             id,
             name: user_id
                 .name_raw()
@@ -168,6 +179,76 @@ impl UserIdInfo {
             revoked: user_id.is_revoked(),
             invalid: user_id.is_invalid(),
         })
+    }
+}
+
+/// Public parameters for a primary key or subkey; never includes private bytes.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SubkeyInfo {
+    pub fingerprint: String,
+    pub algorithm: String,
+    pub expires_at: Option<u64>,
+    pub can_encrypt: bool,
+    pub can_sign: bool,
+    pub can_certify: bool,
+    pub can_authenticate: bool,
+    pub revoked: bool,
+    pub expired: bool,
+    pub disabled: bool,
+    pub invalid: bool,
+}
+
+impl SubkeyInfo {
+    fn from_gpgme(key: gpgme::Subkey<'_>) -> Self {
+        Self {
+            fingerprint: key
+                .fingerprint_raw()
+                .map(|v| v.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            algorithm: key
+                .algorithm_name()
+                .unwrap_or_else(|_| format!("{:?}", key.algorithm())),
+            expires_at: key
+                .expiration_time()
+                .and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|v| v.as_secs()),
+            can_encrypt: key.can_encrypt(),
+            can_sign: key.can_sign(),
+            can_certify: key.can_certify(),
+            can_authenticate: key.can_authenticate(),
+            revoked: key.is_revoked(),
+            expired: key.is_expired(),
+            disabled: key.is_disabled(),
+            invalid: key.is_invalid(),
+        }
+    }
+}
+
+/// A recorded certification on a user ID, without implying identity verification.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CertificationInfo {
+    pub signer_key_id: String,
+    pub signer: String,
+    pub revoked: bool,
+    pub expired: bool,
+    pub invalid: bool,
+}
+
+impl CertificationInfo {
+    fn from_gpgme(signature: gpgme::UserIdSignature<'_>) -> Self {
+        Self {
+            signer_key_id: signature
+                .signer_key_id_raw()
+                .map(|v| v.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            signer: signature
+                .signer_user_id_raw()
+                .map(|v| v.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            revoked: signature.is_revocation(),
+            expired: signature.is_expired(),
+            invalid: signature.is_invalid(),
+        }
     }
 }
 
