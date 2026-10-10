@@ -37,6 +37,20 @@ Controls.Dialog {
         operationError = message || qsTr("No se pudo generar la contraseña. Revisa las opciones e inténtalo de nuevo.");
     }
 
+    function clearSensitiveState() {
+        if (generating)
+            return;
+        operationError = "";
+        excludedField.clear();
+        close();
+    }
+
+    onClosed: {
+        operationError = "";
+        if (!generating)
+            excludedField.clear();
+    }
+
     contentItem: ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 

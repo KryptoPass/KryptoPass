@@ -19,7 +19,6 @@ Controls.Pane {
     property bool loaded: false
     property bool waitingForEditor: false
     property bool savePending: false
-    property bool recipientTouched: false
     property bool dirty: false
     property bool externalModalOpen: false
     property string baselineJson: ""
@@ -37,6 +36,9 @@ Controls.Pane {
     signal saveRequested(string draftJson)
     signal generatePasswordRequested()
     signal windowCloseApproved()
+    signal vaultLockApproved()
+    signal vaultLockCancelled()
+    signal navigationCancelled()
 
     visible: opened
     padding: 0
@@ -74,19 +76,6 @@ Controls.Pane {
 
     function updateDirty() {
         dirty = loaded && baselineJson !== JSON.stringify(currentDraft());
-    }
-
-    function setDefaultRecipients() {
-        const updateBaseline = loaded && !dirty;
-        const ownRecipients = keyStore.entries
-                .filter(key => key.hasSecret && key.statusCode === "valid" && key.subkeys.some(subkey => subkey.statusCode === "valid" && subkey.capabilities.includes("Cifrar")))
-                .map(key => key.id);
-        recipientChooser.selectedFingerprints = ownRecipients;
-        if (loaded) {
-            if (updateBaseline)
-                baselineJson = JSON.stringify(currentDraft());
-            updateDirty();
-        }
     }
 
     function requestEntry(id) {
@@ -144,10 +133,7 @@ Controls.Pane {
         loginFields.passwordVisible = false;
         noteFields.value = draft.kind === "note" ? draft.value || "" : "";
         noteFields.notes = draft.kind === "note" ? draft.notes || "" : "";
-        recipientTouched = false;
         recipientChooser.selectedFingerprints = Array.isArray(draft.recipients) ? draft.recipients.slice() : [];
-        if (!entryId && recipientChooser.selectedFingerprints.length === 0)
-            setDefaultRecipients();
 
         waitingForEditor = false;
         loaded = true;
@@ -199,6 +185,18 @@ Controls.Pane {
         }
     }
 
+    function requestVaultLock() {
+        if (saving || savePending || waitingForEditor || storeAdapter.controller.editorBusy)
+            return;
+        if (dirty) {
+            discardAction = "lock";
+            discardDialog.open();
+        } else {
+            closeAndClear();
+            vaultLockApproved();
+        }
+    }
+
     function acceptDiscard() {
         const action = discardAction;
         const nextId = pendingEntryId;
@@ -211,6 +209,8 @@ Controls.Pane {
             requestEntry(nextId);
         else if (action === "window")
             windowCloseApproved();
+        else if (action === "lock")
+            vaultLockApproved();
         else if (action === "navigate" && navigation)
             navigation();
     }
@@ -235,7 +235,6 @@ Controls.Pane {
         noteFields.value = "";
         noteFields.notes = "";
         recipientChooser.selectedFingerprints = [];
-        recipientTouched = false;
         opened = false;
         pendingNavigation = null;
         storeAdapter.controller.clearEditor();
@@ -300,15 +299,6 @@ Controls.Pane {
             } else if (editor.waitingForEditor && !editor.storeAdapter.controller.editorBusy) {
                 editor.waitingForEditor = false;
             }
-        }
-    }
-
-    Connections {
-        target: editor.keyStore
-
-        function onEntriesChanged() {
-            if (editor.loaded && !editor.entryId && !editor.recipientTouched && recipientChooser.selectedFingerprints.length === 0)
-                editor.setDefaultRecipients();
         }
     }
 
@@ -453,7 +443,6 @@ Controls.Pane {
                         enabled: !editor.saving && !editor.savePending
                         keyStore: editor.keyStore
                         onSelectionChanged: function(fingerprints) {
-                            editor.recipientTouched = true;
                             editor.updateDirty();
                         }
                     }
@@ -507,6 +496,10 @@ Controls.Pane {
             editor.acceptDiscard();
         }
         onRejected: {
+            if (editor.discardAction === "navigate")
+                editor.navigationCancelled();
+            if (editor.discardAction === "lock")
+                editor.vaultLockCancelled();
             editor.discardAction = "";
             editor.pendingEntryId = "";
             editor.pendingNavigation = null;

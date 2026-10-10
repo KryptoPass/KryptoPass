@@ -1,5 +1,6 @@
 //! SQLite storage for encrypted secret payloads and public organizing metadata.
 
+use std::collections::HashSet;
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::Path;
@@ -17,6 +18,7 @@ use rusqlite::{
 use uuid::Uuid;
 
 use super::MAX_CIPHERTEXT_BYTES;
+use super::backup::{MAX_BACKUP_PLAINTEXT_BYTES, MAX_BACKUP_RECIPIENTS, MAX_BACKUP_ROWS};
 
 const SCHEMA_VERSION: i64 = 2;
 const APPLICATION_ID: i64 = 0x4b50_5331;
@@ -30,14 +32,33 @@ pub struct SqliteStorage {
 impl SqliteStorage {
     /// Opens the encrypted store, creating its schema if this is a new file.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref();
-        ensure_database_parent(path)?;
+        Self::open_internal(path.as_ref(), true)
+    }
+
+    /// Opens an existing encrypted store without creating the file or parent.
+    pub fn open_existing(path: impl AsRef<Path>) -> Result<Self> {
+        Self::open_internal(path.as_ref(), false)
+    }
+
+    fn open_internal(path: &Path, create: bool) -> Result<Self> {
+        if create {
+            ensure_database_parent(path)?;
+        } else {
+            ensure_existing_database_parent(path)?;
+        }
         ensure_database_file_is_safe(path)?;
+        if !create {
+            prevalidate_existing_database(path)?;
+        }
 
         let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
             | OpenFlags::SQLITE_OPEN_NO_MUTEX
             | OpenFlags::SQLITE_OPEN_NOFOLLOW;
+        let flags = if create {
+            flags | OpenFlags::SQLITE_OPEN_CREATE
+        } else {
+            flags
+        };
         let mut connection = Connection::open_with_flags(path, flags)
             .map_err(|_| anyhow::anyhow!("could not open the encrypted store"))?;
         connection
@@ -75,6 +96,123 @@ impl SqliteStorage {
             .commit()
             .context("could not finish reading store metadata")?;
         Ok((folders, secrets))
+    }
+
+    /// Reads the complete encrypted store under one bounded SQLite snapshot.
+    pub(crate) fn backup_snapshot(&self) -> Result<(Vec<Folder>, Vec<Secret>)> {
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .context("could not read the encrypted store for backup")?;
+        validate_backup_read_budget(&transaction)?;
+        let folders = read_folders(&transaction)?;
+        let secrets = read_secrets(&transaction)?;
+        transaction
+            .commit()
+            .context("could not finish reading the encrypted backup")?;
+        Ok((folders, secrets))
+    }
+
+    /// Imports a validated backup into a newly created, empty store atomically.
+    pub(crate) fn import_backup_snapshot(
+        &mut self,
+        folders: &[Folder],
+        secrets: &[Secret],
+    ) -> Result<()> {
+        validate_backup_snapshot(folders, secrets)?;
+
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .context("could not begin backup restore")?;
+        let nonempty: bool = transaction
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM folders) OR EXISTS(SELECT 1 FROM secrets) \
+                 OR EXISTS(SELECT 1 FROM folder_recipients) OR EXISTS(SELECT 1 FROM secret_recipients)",
+                [],
+                |row| row.get(0),
+            )
+            .context("could not inspect the restore destination")?;
+        ensure!(!nonempty, "backup restore destination is not empty");
+
+        // Insert folders as roots first so input ordering does not matter.
+        for folder in folders {
+            transaction
+                .execute(
+                    "INSERT INTO folders(id, parent_id, name, icon, color) \
+                     VALUES (?1, NULL, ?2, ?3, ?4)",
+                    params![
+                        folder.id.0.to_string(),
+                        &folder.name,
+                        folder.appearance.icon(),
+                        folder.appearance.color(),
+                    ],
+                )
+                .map_err(|_| anyhow::anyhow!("could not restore folder metadata"))?;
+            replace_folder_recipients(&transaction, folder.id, folder.default_recipients.as_ref())?;
+        }
+
+        // Reuse the storage hierarchy check; every link update is rolled back
+        // if a missing parent or cycle is encountered.
+        for folder in folders {
+            if let Some(parent_id) = folder.parent_id {
+                validate_parent(&transaction, folder.id, Some(parent_id))?;
+                transaction
+                    .execute(
+                        "UPDATE folders SET parent_id = ?1 WHERE id = ?2",
+                        params![parent_id.0.to_string(), folder.id.0.to_string()],
+                    )
+                    .map_err(|_| anyhow::anyhow!("could not restore folder hierarchy"))?;
+            }
+        }
+
+        for secret in secrets {
+            if let Some(folder_id) = secret.folder_id {
+                ensure_folder_exists(&transaction, folder_id)?;
+            }
+            transaction
+                .execute(
+                    "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        secret.id.0.to_string(),
+                        secret.folder_id.map(|id| id.0.to_string()),
+                        &secret.title,
+                        secret.kind.as_str(),
+                        secret.favorite,
+                        secret.trashed,
+                        &secret.ciphertext,
+                        i64::try_from(secret.revision)
+                            .context("backup secret revision is invalid")?,
+                    ],
+                )
+                .map_err(|_| anyhow::anyhow!("could not restore encrypted secret"))?;
+            replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
+        }
+
+        transaction
+            .commit()
+            .context("could not finish restoring the encrypted store")
+    }
+
+    /// Checkpoints and closes an imported store before its database file is published.
+    pub(crate) fn finish_for_backup_publish(self) -> Result<()> {
+        let checkpoint: (i64, i64, i64) = self
+            .connection
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .context("could not checkpoint the restored store")?;
+        ensure!(checkpoint.0 == 0, "could not checkpoint the restored store");
+        self.connection
+            .pragma_update(None, "journal_mode", "DELETE")
+            .context("could not finalize the restored store")?;
+        self.connection
+            .pragma_update(None, "synchronous", "FULL")
+            .context("could not configure the restored store")?;
+        self.connection
+            .close()
+            .map_err(|_| anyhow::anyhow!("could not close the restored store"))
     }
 }
 
@@ -723,6 +861,49 @@ fn ensure_schema_is_readable(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Checks an existing vault using a read-only connection before any writable
+/// connection, pragma changes, migration, or permission adjustment occurs.
+fn prevalidate_existing_database(path: &Path) -> Result<()> {
+    let connection = Connection::open_with_flags(
+        path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY
+            | OpenFlags::SQLITE_OPEN_NO_MUTEX
+            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )
+    .map_err(|_| anyhow::anyhow!("existing file is not a readable KryptoPass store"))?;
+    let application_id = pragma_i64(&connection, "application_id")?;
+    let version = pragma_i64(&connection, "user_version")?;
+    ensure!(
+        application_id == APPLICATION_ID,
+        "existing file is not a KryptoPass store"
+    );
+    ensure!(
+        matches!(version, 1 | SCHEMA_VERSION),
+        "existing store schema version is unsupported"
+    );
+
+    if version == 1 {
+        connection
+            .prepare("SELECT id, parent_id, name FROM folders LIMIT 0")
+            .and_then(|_| {
+                connection.prepare(
+                    "SELECT id, folder_id, title, kind, favorite, trashed, ciphertext, revision \
+                     FROM secrets LIMIT 0",
+                )
+            })
+            .and_then(|_| {
+                connection.prepare("SELECT folder_id, fingerprint FROM folder_recipients LIMIT 0")
+            })
+            .and_then(|_| {
+                connection.prepare("SELECT secret_id, fingerprint FROM secret_recipients LIMIT 0")
+            })
+            .map_err(|_| anyhow::anyhow!("existing store schema is corrupt or unsupported"))?;
+    } else {
+        ensure_schema_is_readable(&connection)?;
+    }
+    Ok(())
+}
+
 fn pragma_i64(connection: &Connection, name: &str) -> Result<i64> {
     connection
         .pragma_query_value(None, name, |row| row.get(0))
@@ -967,6 +1148,133 @@ fn validate_secret(secret: &Secret) -> Result<()> {
     Ok(())
 }
 
+fn validate_backup_read_budget(connection: &Connection) -> Result<()> {
+    let (rows, recipients, bytes): (i64, i64, i64) = connection
+        .query_row(
+            "SELECT
+                 (SELECT COUNT(*) FROM folders) + (SELECT COUNT(*) FROM secrets),
+                 (SELECT COUNT(*) FROM folder_recipients) + (SELECT COUNT(*) FROM secret_recipients),
+                 (SELECT COALESCE(SUM(length(CAST(name AS BLOB)) + length(CAST(icon AS BLOB)) + length(CAST(color AS BLOB))), 0) FROM folders)
+                 + (SELECT COALESCE(SUM(length(CAST(title AS BLOB)) + length(CAST(kind AS BLOB)) + length(ciphertext)), 0) FROM secrets)
+                 + (SELECT COALESCE(SUM(length(CAST(fingerprint AS BLOB))), 0) FROM folder_recipients)
+                 + (SELECT COALESCE(SUM(length(CAST(fingerprint AS BLOB))), 0) FROM secret_recipients)",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .context("could not measure backup size")?;
+    ensure!(
+        rows >= 0 && rows as usize <= MAX_BACKUP_ROWS,
+        "store contains too many records for a backup"
+    );
+    ensure!(
+        recipients >= 0 && recipients as usize <= MAX_BACKUP_RECIPIENTS,
+        "store contains too many recipient records for a backup"
+    );
+    ensure!(
+        bytes >= 0 && bytes as u64 <= MAX_BACKUP_PLAINTEXT_BYTES as u64,
+        "store exceeds the maximum backup payload size"
+    );
+    Ok(())
+}
+
+fn validate_backup_snapshot(folders: &[Folder], secrets: &[Secret]) -> Result<()> {
+    ensure!(
+        folders.len().saturating_add(secrets.len()) <= MAX_BACKUP_ROWS,
+        "backup contains too many records"
+    );
+
+    let folder_ids = folders
+        .iter()
+        .map(|folder| folder.id)
+        .collect::<HashSet<_>>();
+    ensure!(
+        folder_ids.len() == folders.len(),
+        "backup has duplicate folder ids"
+    );
+    let secret_ids = secrets
+        .iter()
+        .map(|secret| secret.id)
+        .collect::<HashSet<_>>();
+    ensure!(
+        secret_ids.len() == secrets.len(),
+        "backup has duplicate secret ids"
+    );
+
+    let mut recipients = 0usize;
+    let mut bytes = 0usize;
+    for folder in folders {
+        validate_folder(folder)?;
+        ensure!(
+            folder.name.len() <= 256,
+            "backup folder name exceeds the maximum size"
+        );
+        if let Some(parent_id) = folder.parent_id {
+            ensure!(
+                folder_ids.contains(&parent_id),
+                "backup folder parent is missing"
+            );
+        }
+        if let Some(default_recipients) = &folder.default_recipients {
+            ensure!(
+                !default_recipients.as_slice().is_empty(),
+                "backup folder recipients are invalid"
+            );
+            recipients = recipients.saturating_add(default_recipients.as_slice().len());
+            bytes = bytes.saturating_add(
+                default_recipients
+                    .as_slice()
+                    .iter()
+                    .map(|fingerprint| fingerprint.as_str().len())
+                    .sum::<usize>(),
+            );
+        }
+        bytes = bytes
+            .saturating_add(folder.name.len())
+            .saturating_add(folder.appearance.icon().len())
+            .saturating_add(folder.appearance.color().len());
+    }
+
+    for secret in secrets {
+        validate_secret(secret)?;
+        ensure!(
+            secret.title.len() <= 512,
+            "backup secret title exceeds the maximum size"
+        );
+        ensure!(
+            secret.revision <= i64::MAX as u64,
+            "backup secret revision is invalid"
+        );
+        if let Some(folder_id) = secret.folder_id {
+            ensure!(
+                folder_ids.contains(&folder_id),
+                "backup secret folder is missing"
+            );
+        }
+        recipients = recipients.saturating_add(secret.recipients.as_slice().len());
+        bytes = bytes
+            .saturating_add(secret.title.len())
+            .saturating_add(secret.kind.as_str().len())
+            .saturating_add(secret.ciphertext.len())
+            .saturating_add(
+                secret
+                    .recipients
+                    .as_slice()
+                    .iter()
+                    .map(|fingerprint| fingerprint.as_str().len())
+                    .sum::<usize>(),
+            );
+    }
+    ensure!(
+        recipients <= MAX_BACKUP_RECIPIENTS,
+        "backup contains too many recipients"
+    );
+    ensure!(
+        bytes <= MAX_BACKUP_PLAINTEXT_BYTES,
+        "backup exceeds the maximum payload size"
+    );
+    Ok(())
+}
+
 fn parse_kind(value: &str) -> Result<SecretKind> {
     SecretKind::parse(value).map_err(|error| match error {
         DomainError::UnsupportedSecretKind => {
@@ -1030,6 +1338,20 @@ fn ensure_database_parent(path: &Path) -> Result<()> {
         set_private_directory_permissions(&directory, &metadata)?;
     }
     Ok(())
+}
+
+fn ensure_existing_database_parent(path: &Path) -> Result<()> {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let directory =
+        open_directory(parent).context("existing store parent must be a real private directory")?;
+    let metadata = directory
+        .metadata()
+        .context("could not inspect the existing store parent")?;
+    ensure_owned_by_process(&metadata)?;
+    ensure_private_directory(&metadata)
 }
 
 fn ensure_database_file_is_safe(path: &Path) -> Result<()> {

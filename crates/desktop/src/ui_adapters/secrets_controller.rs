@@ -1,7 +1,11 @@
 use std::pin::Pin;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 
 use cxx_qt::{CxxQtType, Threading};
-use cxx_qt_lib::{QString, QStringList};
+use cxx_qt_lib::{QString, QStringList, QUrl};
 use kryptopass_core::{
     FolderAppearance, FolderId, PasswordOptions, SecretContent, SecretId, SecretsService, Storage,
     generate_password as generate_secure_password,
@@ -21,9 +25,11 @@ pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("cxx-qt-lib/qstringlist.h");
+        include!("cxx-qt-lib/qurl.h");
 
         type QString = cxx_qt_lib::QString;
         type QStringList = cxx_qt_lib::QStringList;
+        type QUrl = cxx_qt_lib::QUrl;
     }
 
     extern "RustQt" {
@@ -40,11 +46,24 @@ pub mod qobject {
         #[qproperty(bool, detail_busy, cxx_name = "detailBusy", READ, NOTIFY)]
         #[qproperty(bool, editor_busy, cxx_name = "editorBusy", READ, NOTIFY)]
         #[qproperty(bool, saving, READ, NOTIFY)]
+        #[qproperty(bool, locked, READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
 
         #[qinvokable]
         #[cxx_name = "loadStore"]
         fn load_store(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "setActiveVault"]
+        fn set_active_vault(self: Pin<&mut Self>, path: &QUrl);
+        #[qinvokable]
+        #[cxx_name = "lockVault"]
+        fn lock_vault(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "unlockVault"]
+        fn unlock_vault(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "clearSensitiveState"]
+        fn clear_sensitive_state(self: Pin<&mut Self>);
         #[qinvokable]
         #[cxx_name = "selectEntry"]
         fn select_entry(self: Pin<&mut Self>, id: &QString);
@@ -124,6 +143,12 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "operationSucceeded"]
         fn operation_succeeded(self: Pin<&mut Self>);
+        #[qsignal]
+        #[cxx_name = "vaultLocked"]
+        fn vault_locked(self: Pin<&mut Self>);
+        #[qsignal]
+        #[cxx_name = "vaultActivated"]
+        fn vault_activated(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for SecretsController {}
@@ -143,16 +168,20 @@ pub struct SecretsControllerRust {
     detail_busy: bool,
     editor_busy: bool,
     saving: bool,
+    locked: bool,
     selected_entry: Option<SecretId>,
     detail_content: Option<SecretContent>,
     password_revealed: bool,
     editor_session: Option<EditorSession>,
     load_operation: u64,
+    active_vault_operation: u64,
     selection_operation: u64,
     selection_worker_active: bool,
+    selection_cancel_epoch: Arc<AtomicU64>,
     /// Rapid UI changes replace this request while the active decrypt finishes.
     pending_selection: Option<(SecretId, u64)>,
     editor_operation: u64,
+    editor_cancel_epoch: Arc<AtomicU64>,
 }
 
 impl Default for SecretsControllerRust {
@@ -169,15 +198,19 @@ impl Default for SecretsControllerRust {
             detail_busy: false,
             editor_busy: false,
             saving: false,
+            locked: true,
             selected_entry: None,
             detail_content: None,
             password_revealed: false,
             editor_session: None,
             load_operation: 0,
+            active_vault_operation: 0,
             selection_operation: 0,
             selection_worker_active: false,
+            selection_cancel_epoch: Arc::new(AtomicU64::new(0)),
             pending_selection: None,
             editor_operation: 0,
+            editor_cancel_epoch: Arc::new(AtomicU64::new(0)),
         }
     }
 }
@@ -238,14 +271,118 @@ impl qobject::SecretsController {
         );
     }
 
+    pub fn set_active_vault(mut self: Pin<&mut Self>, path: &QUrl) {
+        if *self.busy() || *self.saving() {
+            self.as_mut()
+                .fail("Espera a que termine la operación actual antes de cambiar de bóveda.");
+            return;
+        }
+
+        let Some(local_path) = path.to_local_file() else {
+            self.as_mut()
+                .fail("Selecciona un archivo local de bóveda existente.");
+            return;
+        };
+        let path = std::path::PathBuf::from(local_path.to_string());
+        if !path.is_absolute() {
+            self.as_mut()
+                .fail("Selecciona un archivo local de bóveda existente.");
+            return;
+        }
+
+        let operation = {
+            let mut state = self.as_mut().rust_mut();
+            state.active_vault_operation = state.active_vault_operation.wrapping_add(1);
+            state.load_operation = state.load_operation.wrapping_add(1);
+            state.active_vault_operation
+        };
+        self.as_mut().clear_sensitive_state_contents();
+        self.as_mut().set_locked(true);
+        self.as_mut().vault_locked();
+        self.as_mut().clear_error();
+        self.as_mut().set_busy(true);
+        self.as_mut()
+            .set_status(QString::from("Validando la bóveda restaurada…"));
+
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || activate_store_snapshot(path),
+            move |mut controller, result| {
+                if controller.as_ref().rust().active_vault_operation != operation {
+                    return;
+                }
+                controller.as_mut().set_busy(false);
+                match result {
+                    Ok((snapshot, durable)) => {
+                        controller.as_mut().publish_snapshot(snapshot);
+                        let status = if durable {
+                            "Bóveda restaurada lista. Desbloquéala para acceder a sus secretos."
+                        } else {
+                            "Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia."
+                        };
+                        controller.as_mut().set_status(QString::from(status));
+                        controller.as_mut().vault_activated();
+                    }
+                    Err(_) => controller
+                        .as_mut()
+                        .fail("No se pudo abrir la bóveda restaurada. La bóveda activa no cambió."),
+                }
+            },
+        );
+    }
+
+    pub fn lock_vault(mut self: Pin<&mut Self>) {
+        if *self.busy() || *self.saving() {
+            self.as_mut()
+                .fail("Espera a que termine el guardado antes de bloquear la bóveda.");
+            return;
+        }
+        self.as_mut().clear_sensitive_state_contents();
+        self.as_mut().clear_error();
+        self.as_mut().set_locked(true);
+        self.as_mut().set_status(QString::from("Bóveda bloqueada"));
+        self.as_mut().vault_locked();
+    }
+
+    pub fn unlock_vault(mut self: Pin<&mut Self>) {
+        if *self.busy() || *self.saving() {
+            self.as_mut()
+                .fail("Espera a que termine la operación antes de acceder a la bóveda.");
+            return;
+        }
+        self.as_mut().clear_error();
+        self.as_mut().set_locked(false);
+        self.as_mut().set_status(QString::from(
+            "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
+        ));
+    }
+
+    pub fn clear_sensitive_state(mut self: Pin<&mut Self>) {
+        if *self.busy() || *self.saving() {
+            return;
+        }
+        self.as_mut().clear_sensitive_state_contents();
+        self.as_mut().set_locked(true);
+        self.as_mut().vault_locked();
+    }
+
     pub fn select_entry(mut self: Pin<&mut Self>, id: &QString) {
         let id = id.to_string();
         let operation = {
             let mut state = self.as_mut().rust_mut();
             state.selection_operation = state.selection_operation.wrapping_add(1);
+            state
+                .selection_cancel_epoch
+                .store(state.selection_operation, Ordering::Release);
             state.selection_operation
         };
         self.as_mut().clear_detail();
+
+        if *self.locked() {
+            self.as_mut().rust_mut().pending_selection = None;
+            self.as_mut().set_detail_busy(false);
+            return;
+        }
 
         if id.is_empty() {
             self.as_mut().rust_mut().pending_selection = None;
@@ -273,11 +410,18 @@ impl qobject::SecretsController {
     }
 
     fn start_selection_read(self: Pin<&mut Self>, secret_id: SecretId, operation: u64) {
+        let cancel_epoch = self.as_ref().rust().selection_cancel_epoch.clone();
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || {
+            move || -> anyhow::Result<Option<SecretContent>> {
                 let service = open_service()?;
-                service.read_content(secret_id)
+                let content = service.read_content(secret_id)?;
+                if cancel_epoch.load(Ordering::Acquire) == operation {
+                    Ok(Some(content))
+                } else {
+                    drop(content);
+                    Ok(None)
+                }
             },
             move |mut controller, result| {
                 let pending = {
@@ -302,7 +446,7 @@ impl qobject::SecretsController {
 
                 controller.as_mut().set_detail_busy(false);
                 match result {
-                    Ok(content) => {
+                    Ok(Some(content)) => {
                         let detail = content_projection(secret_id, &content, false);
                         match detail {
                             Ok(detail) => {
@@ -319,6 +463,7 @@ impl qobject::SecretsController {
                                 .fail_detail("No se pudo mostrar el contenido del elemento."),
                         }
                     }
+                    Ok(None) => (),
                     Err(_) => controller
                         .as_mut()
                         .fail_detail("No se pudo abrir el contenido del elemento."),
@@ -328,7 +473,7 @@ impl qobject::SecretsController {
     }
 
     pub fn open_entry(mut self: Pin<&mut Self>, id: &QString) {
-        if *self.saving() {
+        if *self.saving() || *self.locked() {
             return;
         }
         let id = id.to_string();
@@ -358,9 +503,18 @@ impl qobject::SecretsController {
         self.as_mut()
             .set_status(QString::from("Abriendo elemento…"));
 
+        let cancel_epoch = self.as_ref().rust().editor_cancel_epoch.clone();
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || load_editor_entry(secret_id),
+            move || -> anyhow::Result<Option<OpenedEntry>> {
+                let entry = load_editor_entry(secret_id)?;
+                if cancel_epoch.load(Ordering::Acquire) == operation {
+                    Ok(Some(entry))
+                } else {
+                    drop(entry);
+                    Ok(None)
+                }
+            },
             move |mut controller, result| {
                 if controller.as_ref().rust().editor_operation != operation {
                     return;
@@ -368,7 +522,7 @@ impl qobject::SecretsController {
 
                 controller.as_mut().set_editor_busy(false);
                 match result {
-                    Ok(entry) => {
+                    Ok(Some(entry)) => {
                         let draft = editor_projection(&entry);
                         match draft {
                             Ok(draft) => {
@@ -390,6 +544,7 @@ impl qobject::SecretsController {
                                 .fail_detail("No se pudo preparar el elemento para editarlo."),
                         }
                     }
+                    Ok(None) => (),
                     Err(_) => controller
                         .as_mut()
                         .fail_detail("No se pudo abrir el elemento para editarlo."),
@@ -399,6 +554,11 @@ impl qobject::SecretsController {
     }
 
     pub fn save_entry(mut self: Pin<&mut Self>, draft_json: &QString) {
+        if *self.locked() {
+            self.as_mut()
+                .fail("Desbloquea la bóveda antes de guardar un elemento.");
+            return;
+        }
         if *self.busy() {
             return;
         }
@@ -475,6 +635,9 @@ impl qobject::SecretsController {
     }
 
     pub fn toggle_password(mut self: Pin<&mut Self>) {
+        if *self.locked() || *self.busy() {
+            return;
+        }
         let (id, revealed) = {
             let mut state = self.as_mut().rust_mut();
             let Some(id) = state.selected_entry else {
@@ -502,6 +665,9 @@ impl qobject::SecretsController {
     }
 
     pub fn copy_username(self: Pin<&mut Self>) {
+        if *self.locked() || *self.busy() {
+            return;
+        }
         let value = {
             let object = self.as_ref();
             let state = object.rust();
@@ -520,6 +686,9 @@ impl qobject::SecretsController {
     }
 
     pub fn copy_password(self: Pin<&mut Self>) {
+        if *self.locked() || *self.busy() {
+            return;
+        }
         let value = {
             let object = self.as_ref();
             let state = object.rust();
@@ -663,6 +832,9 @@ impl qobject::SecretsController {
             return;
         };
 
+        // Invalidate an outstanding read before deleting, rather than waiting
+        // for the mutation callback to remove its plaintext projection.
+        self.as_mut().invalidate_selection();
         self.as_mut().start_mutation(
             "Eliminando elemento…",
             false,
@@ -713,6 +885,11 @@ impl qobject::SecretsController {
         symbols: bool,
         excluded: &QString,
     ) {
+        if *self.locked() {
+            self.as_mut()
+                .fail("Desbloquea la bóveda antes de generar una contraseña.");
+            return;
+        }
         let Ok(length) = usize::try_from(length) else {
             self.as_mut().fail("No se pudo generar la contraseña.");
             return;
@@ -773,6 +950,11 @@ impl qobject::SecretsController {
     ) where
         Work: FnOnce() -> anyhow::Result<MutationResult> + Send + 'static,
     {
+        if *self.locked() {
+            self.as_mut()
+                .fail("Desbloquea la bóveda antes de modificarla.");
+            return;
+        }
         if *self.busy() {
             return;
         }
@@ -913,10 +1095,33 @@ impl qobject::SecretsController {
         self.as_mut().set_detail_json(QString::default());
     }
 
+    fn clear_sensitive_state_contents(mut self: Pin<&mut Self>) {
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.selection_operation = state.selection_operation.wrapping_add(1);
+            state
+                .selection_cancel_epoch
+                .store(state.selection_operation, Ordering::Release);
+            state.pending_selection = None;
+            state.editor_operation = state.editor_operation.wrapping_add(1);
+            state
+                .editor_cancel_epoch
+                .store(state.editor_operation, Ordering::Release);
+            state.editor_session = None;
+        }
+        self.as_mut().clear_detail();
+        self.as_mut().set_detail_busy(false);
+        self.as_mut().set_editor_json(QString::default());
+        self.as_mut().set_editor_busy(false);
+    }
+
     fn invalidate_selection(mut self: Pin<&mut Self>) {
         {
             let mut state = self.as_mut().rust_mut();
             state.selection_operation = state.selection_operation.wrapping_add(1);
+            state
+                .selection_cancel_epoch
+                .store(state.selection_operation, Ordering::Release);
             state.pending_selection = None;
         }
         self.as_mut().clear_detail();
@@ -931,6 +1136,9 @@ impl qobject::SecretsController {
     fn begin_editor_operation(mut self: Pin<&mut Self>) -> u64 {
         let mut state = self.as_mut().rust_mut();
         state.editor_operation = state.editor_operation.wrapping_add(1);
+        state
+            .editor_cancel_epoch
+            .store(state.editor_operation, Ordering::Release);
         state.editor_operation
     }
 }
@@ -963,6 +1171,13 @@ impl qobject::SecretsController {
             self.saving_changed();
         }
     }
+
+    fn set_locked(mut self: Pin<&mut Self>, value: bool) {
+        if *self.locked() != value {
+            self.as_mut().rust_mut().locked = value;
+            self.locked_changed();
+        }
+    }
 }
 
 fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
@@ -993,8 +1208,7 @@ struct EntryMetadata {
 }
 
 fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
-    let path = app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
-    let storage = SqliteStorage::open(path)?;
+    let storage = open_storage()?;
     let mut secret = storage
         .find_secret(id)?
         .ok_or_else(|| anyhow::anyhow!("secret does not exist"))?;
@@ -1014,9 +1228,7 @@ fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
 }
 
 fn open_service() -> anyhow::Result<SecretsService<SqliteStorage, GnuPgOpenPgp>> {
-    let path = app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
-    let storage = SqliteStorage::open(path)?;
-    Ok(SecretsService::new(storage, GnuPgOpenPgp))
+    Ok(SecretsService::new(open_storage()?, GnuPgOpenPgp))
 }
 
 fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
@@ -1024,10 +1236,26 @@ fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
 }
 
 fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
-    let path = app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
-    let storage = SqliteStorage::open(path)?;
+    let storage = open_storage()?;
     let (folders, secrets) = storage.read_snapshot()?;
     Ok(store_snapshot(folders, secrets))
+}
+
+fn activate_store_snapshot(path: std::path::PathBuf) -> anyhow::Result<(StoreSnapshot, bool)> {
+    let storage = SqliteStorage::open_existing(&path)?;
+    let (folders, secrets) = storage.read_snapshot()?;
+    let snapshot = store_snapshot(folders, secrets);
+    let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
+    Ok((snapshot, durable))
+}
+
+fn open_storage() -> anyhow::Result<SqliteStorage> {
+    let app_id = crate::app_info::APP.desktop_file_id;
+    if let Some(path) = app_paths::active_vault_path(app_id)? {
+        SqliteStorage::open_existing(path)
+    } else {
+        SqliteStorage::open(app_paths::database_path(app_id)?)
+    }
 }
 
 fn snapshot_after_mutation() -> Result<StoreSnapshot, ()> {

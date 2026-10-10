@@ -132,11 +132,11 @@ pub(super) fn prepare_save(
     for fingerprint in draft.recipients.drain(..) {
         recipients.push(KeyFingerprint::parse(&fingerprint)?);
     }
-    let recipients = if recipients.is_empty() {
-        RecipientSelection::FolderDefault
-    } else {
-        RecipientSelection::Explicit(RecipientSet::new(recipients)?)
-    };
+    anyhow::ensure!(
+        !recipients.is_empty(),
+        "at least one explicit recipient is required"
+    );
+    let recipients = RecipientSelection::Explicit(RecipientSet::new(recipients)?);
 
     let content = match draft.kind.as_str() {
         "login" if draft.value.0.is_empty() => SecretContent::Login(LoginContent {

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kryptopass.desktop as Backend
 
 Controls.ApplicationWindow {
     id: root
@@ -26,9 +27,18 @@ Controls.ApplicationWindow {
     property bool allowClose: false
     property string pendingOperation: ""
     property string pendingOperationId: ""
+    property string pendingSensitiveAction: ""
+    property url pendingVaultPath: ""
     property string closeMessage: ""
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
-    readonly property bool mutationsBlocked: storeOperationBusy || editor.savePending || folderEditor.pending
+    readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || editor.savePending || folderEditor.pending
+    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || editor.savePending || folderEditor.pending
+    readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError)
+        || (folderEditor.opened && !!folderEditor.saveError)
+        || (moveDialog.opened && !!moveDialog.operationError)
+        || (deleteEntryDialog.opened && !!deleteEntryDialog.operationError)
+        || (deleteFolderDialog.opened && !!deleteFolderDialog.operationError)
+        || (passwordGenerator.opened && !!passwordGenerator.operationError)
     readonly property var activeStore: keysMode ? keys : store
     function selectSection(showKeys) {
         if (keysMode === showKeys)
@@ -59,6 +69,92 @@ Controls.ApplicationWindow {
         pendingOperation = name;
         pendingOperationId = id || "";
     }
+    function cancelSensitiveTransition() {
+        pendingSensitiveAction = "";
+        pendingVaultPath = "";
+    }
+    function unlockVault() {
+        store.controller.unlockVault();
+        if (!keysMode)
+            store.controller.selectEntry(store.selectedId);
+    }
+    function requestLock() {
+        if (store.controller.locked) {
+            unlockVault();
+            return;
+        }
+        if (sensitiveTransitionBlocked || passwordGenerator.generating) {
+            showCloseMessage(qsTr("Espera a que termine la operación actual antes de bloquear la bóveda."));
+            return;
+        }
+        pendingSensitiveAction = "lock";
+        pendingVaultPath = "";
+        continueSensitiveTransition();
+    }
+    function requestActiveVault(path) {
+        if (sensitiveTransitionBlocked || passwordGenerator.generating) {
+            showCloseMessage(qsTr("Espera a que termine la operación actual antes de cambiar de bóveda."));
+            return;
+        }
+        pendingSensitiveAction = "switch";
+        pendingVaultPath = path;
+        continueSensitiveTransition();
+    }
+    function continueSensitiveTransition() {
+        if (pendingSensitiveAction === "lock" && folderEditor.opened) {
+            folderEditor.requestVaultLock();
+            return;
+        }
+        if (pendingSensitiveAction === "switch" && folderEditor.opened) {
+            folderEditor.requestVaultSwitch();
+            return;
+        }
+
+        if (passwordGenerator.opened)
+            passwordGenerator.clearSensitiveState();
+        if (moveDialog.opened)
+            moveDialog.close();
+        if (deleteEntryDialog.opened)
+            deleteEntryDialog.close();
+        if (deleteFolderDialog.opened)
+            deleteFolderDialog.close();
+        if (aboutDialog.opened)
+            aboutDialog.close();
+        if (markdownDemo.opened)
+            markdownDemo.close();
+        if (keyErrorDialog.opened)
+            keyErrorDialog.close();
+        if (backupDialog.opened)
+            backupDialog.close();
+
+        if (!editor.opened || editor.waitingForEditor) {
+            completeSensitiveTransition();
+            return;
+        }
+        editor.guardNavigation(function() { root.completeSensitiveTransition(); });
+    }
+    function completeSensitiveTransition() {
+        if (sensitiveTransitionBlocked || passwordGenerator.generating) {
+            cancelSensitiveTransition();
+            showCloseMessage(qsTr("Espera a que termine la operación actual antes de continuar."));
+            return;
+        }
+        const action = pendingSensitiveAction;
+        const path = pendingVaultPath;
+        cancelSensitiveTransition();
+        if (action === "lock" || action === "switch")
+            editor.closeAndClear();
+        if (action === "lock") {
+            if (folderEditor.opened)
+                folderEditor.clearAndClose();
+            if (passwordGenerator.opened)
+                passwordGenerator.clearSensitiveState();
+            secureClipboard.clearOwned();
+            store.controller.lockVault();
+        } else if (action === "switch") {
+            store.controller.setActiveVault(path);
+        }
+    }
     function failPendingOperation() {
         if (pendingOperation === "generate")
             passwordGenerator.rejectGeneration(store.controller.errorMessage);
@@ -66,23 +162,26 @@ Controls.ApplicationWindow {
         pendingOperationId = "";
     }
     function showCloseMessage(message) {
-        closeMessage = message;
-        closeMessageTimer.restart();
-        if (editor.opened)
-            editor.saveError = message;
-        if (folderEditor.opened)
-            folderEditor.saveError = message;
-        if (moveDialog.opened)
-            moveDialog.operationError = message;
-        if (deleteEntryDialog.opened)
-            deleteEntryDialog.operationError = message;
-        if (deleteFolderDialog.opened)
-            deleteFolderDialog.operationError = message;
+        closeMessage = "";
         if (passwordGenerator.opened)
             passwordGenerator.operationError = message;
+        else if (folderEditor.opened)
+            folderEditor.saveError = message;
+        else if (moveDialog.opened)
+            moveDialog.operationError = message;
+        else if (deleteEntryDialog.opened)
+            deleteEntryDialog.operationError = message;
+        else if (deleteFolderDialog.opened)
+            deleteFolderDialog.operationError = message;
+        else if (editor.opened)
+            editor.saveError = message;
+        else {
+            closeMessage = message;
+            closeMessageTimer.restart();
+        }
     }
     function approveWindowClose() {
-        if (mutationsBlocked) {
+        if (sensitiveTransitionBlocked) {
             showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
             return;
         }
@@ -91,7 +190,8 @@ Controls.ApplicationWindow {
             folderEditor.clearAndClose();
         if (passwordGenerator.opened)
             passwordGenerator.close();
-        store.controller.selectEntry("");
+        store.controller.clearSensitiveState();
+        secureClipboard.clearOwned();
         allowClose = true;
         close();
     }
@@ -103,10 +203,11 @@ Controls.ApplicationWindow {
     }
     onClosing: function(close) {
         if (root.allowClose) {
-            store.controller.selectEntry("");
+            store.controller.clearSensitiveState();
+            secureClipboard.clearOwned();
             return;
         }
-        if (root.mutationsBlocked || passwordGenerator.generating) {
+        if (root.sensitiveTransitionBlocked || passwordGenerator.generating) {
             close.accepted = false;
             root.showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
             return;
@@ -116,7 +217,13 @@ Controls.ApplicationWindow {
             root.showCloseMessage(qsTr("Guarda o descarta los cambios de carpeta antes de salir."));
             return;
         }
-        if (editor.opened || editor.waitingForEditor || editor.loaded) {
+        if (editor.waitingForEditor) {
+            close.accepted = false;
+            editor.closeAndClear();
+            root.approveWindowClose();
+            return;
+        }
+        if (editor.opened || editor.loaded) {
             close.accepted = false;
             if (passwordGenerator.opened)
                 passwordGenerator.close();
@@ -127,7 +234,8 @@ Controls.ApplicationWindow {
             folderEditor.clearAndClose();
         if (passwordGenerator.opened)
             passwordGenerator.close();
-        store.controller.selectEntry("");
+        store.controller.clearSensitiveState();
+        secureClipboard.clearOwned();
     }
     Timer {
         id: closeMessageTimer
@@ -159,13 +267,7 @@ Controls.ApplicationWindow {
     }
     Connections {
         target: store.controller
-        function onClipboardRequested(value) {
-            clipboardBuffer.text = value;
-            clipboardBuffer.selectAll();
-            clipboardBuffer.copy();
-            clipboardBuffer.deselect();
-            clipboardBuffer.text = "";
-        }
+        function onClipboardRequested(value) { secureClipboard.copySensitive(value); }
         function onPasswordGenerated(value) {
             if (root.pendingOperation !== "generate")
                 return;
@@ -191,22 +293,37 @@ Controls.ApplicationWindow {
         function onOperationFailed() {
             if (store.controller.busy)
                 return;
+            if (root.pendingSensitiveAction === "switch")
+                root.cancelSensitiveTransition();
             root.failPendingOperation();
+        }
+        function onVaultLocked() {
+            secureClipboard.clearOwned();
+            editor.closeAndClear();
+            if (folderEditor.opened)
+                folderEditor.clearAndClose();
+            if (passwordGenerator.opened)
+                passwordGenerator.clearSensitiveState();
+        }
+        function onVaultActivated() {
+            root.keysMode = false;
+            store.scope = "all";
+            store.query = "";
+            store.selectedId = "";
+            search.text = "";
         }
     }
 
-    Controls.TextArea {
-        id: clipboardBuffer
-        visible: false
-        textFormat: TextEdit.PlainText
-        Accessible.ignored: true
+    Backend.SensitiveClipboard {
+        id: secureClipboard
+        objectName: "sensitiveClipboard"
     }
 
     Controls.Action {
         id: newEntry
         text: qsTr("Nuevo elemento…")
         icon.name: "document-new"
-        enabled: !root.keysMode && !root.mutationsBlocked
+        enabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked
         shortcut: StandardKey.New
         onTriggered: editor.openEntry(null)
     }
@@ -214,7 +331,7 @@ Controls.ApplicationWindow {
         id: editEntry
         text: qsTr("Editar…")
         icon.name: "document-edit"
-        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: "F2"
         onTriggered: editor.openEntry(store.selected)
     }
@@ -222,7 +339,7 @@ Controls.ApplicationWindow {
         id: trashEntry
         text: qsTr("Mover a la papelera")
         icon.name: "user-trash"
-        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: StandardKey.Delete
         onTriggered: {
             root.beginOperation("trash", store.selectedId);
@@ -233,7 +350,7 @@ Controls.ApplicationWindow {
         id: newFolder
         text: qsTr("Nueva carpeta…")
         icon.name: "folder-new"
-        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked
+        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked
         shortcut: "Ctrl+Shift+N"
         onTriggered: folderEditor.openFolder(false)
     }
@@ -252,6 +369,13 @@ Controls.ApplicationWindow {
         enabled: root.keysMode && !!keys.selected
         onTriggered: entryDetailPane.copySelectedFingerprint()
     }
+    Controls.Action {
+        id: lockVaultAction
+        text: store.controller.locked ? qsTr("Desbloquear bóveda") : qsTr("Bloquear bóveda")
+        icon.name: store.controller.locked ? "object-unlocked" : "object-locked"
+        enabled: !root.sensitiveTransitionBlocked && !passwordGenerator.generating
+        onTriggered: root.requestLock()
+    }
     menuBar: Controls.MenuBar {
         Controls.Menu {
             title: qsTr("&Archivo")
@@ -264,6 +388,17 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 action: refreshKeys
                 visible: root.keysMode
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
+                text: qsTr("Crear backup cifrado…")
+                enabled: !root.mutationsBlocked
+                onTriggered: backupDialog.openForExport()
+            }
+            Controls.MenuItem {
+                text: qsTr("Restaurar backup…")
+                enabled: !root.mutationsBlocked
+                onTriggered: backupDialog.openForRestore()
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
@@ -287,6 +422,34 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 action: copyFingerprint
                 visible: root.keysMode
+            }
+            Controls.MenuSeparator {}
+            Controls.Menu {
+                title: qsTr("Autolimpieza del portapapeles")
+                Controls.MenuItem {
+                    text: qsTr("Desactivada")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 0
+                    onTriggered: secureClipboard.autoClearSeconds = 0
+                }
+                Controls.MenuItem {
+                    text: qsTr("15 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 15
+                    onTriggered: secureClipboard.autoClearSeconds = 15
+                }
+                Controls.MenuItem {
+                    text: qsTr("30 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 30
+                    onTriggered: secureClipboard.autoClearSeconds = 30
+                }
+                Controls.MenuItem {
+                    text: qsTr("60 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 60
+                    onTriggered: secureClipboard.autoClearSeconds = 60
+                }
             }
         }
         Controls.Menu {
@@ -326,6 +489,10 @@ Controls.ApplicationWindow {
                 onTriggered: {
                     root.selectScope(false, "trash");
                 }
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
+                action: lockVaultAction
             }
         }
         Controls.Menu {
@@ -371,11 +538,11 @@ Controls.ApplicationWindow {
                 root.selectScope(root.keysMode, scopeId);
             }
             onRenameFolderRequested: {
-                if (!root.mutationsBlocked)
+                if (!root.mutationsBlocked && !store.controller.locked)
                     editor.guardNavigation(function() { folderEditor.openFolder(true); });
             }
             onDeleteFolderRequested: {
-                if (!root.mutationsBlocked)
+                if (!root.mutationsBlocked && !store.controller.locked)
                     editor.guardNavigation(function() { deleteFolderDialog.openForSelected(); });
             }
         }
@@ -422,6 +589,13 @@ Controls.ApplicationWindow {
                             action: refreshKeys
                             visible: root.keysMode
                         }
+                        Controls.ToolButton {
+                            action: lockVaultAction
+                            display: Controls.AbstractButton.IconOnly
+                            Controls.ToolTip.visible: hovered || visualFocus
+                            Controls.ToolTip.text: text
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                        }
                         Controls.BusyIndicator {
                             visible: root.keysMode && keys.controller.busy
                             running: visible
@@ -433,7 +607,7 @@ Controls.ApplicationWindow {
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
-                    visible: root.keysMode && !!keys.controller.loadError
+                    visible: root.keysMode && !!keys.controller.loadError && !keyErrorDialog.opened
                     position: Kirigami.InlineMessage.Position.Header
                     type: Kirigami.MessageType.Error
                     text: qsTr("No se pudieron cargar las claves de GnuPG.")
@@ -453,7 +627,14 @@ Controls.ApplicationWindow {
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
-                    visible: !root.keysMode && !!store.controller.errorMessage
+                    visible: !!secureClipboard.errorMessage
+                    position: Kirigami.InlineMessage.Position.Header
+                    type: Kirigami.MessageType.Error
+                    text: secureClipboard.errorMessage
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: !!store.controller.errorMessage && !root.localStoreErrorVisible && !root.closeMessage
                     position: Kirigami.InlineMessage.Position.Header
                     type: Kirigami.MessageType.Error
                     text: store.controller.errorMessage
@@ -462,7 +643,12 @@ Controls.ApplicationWindow {
                             text: qsTr("Reintentar")
                             icon.name: "view-refresh"
                             enabled: !root.storeOperationBusy
-                            onTriggered: store.controller.loadStore()
+                            onTriggered: {
+                                if (store.selectedId && !store.controller.locked)
+                                    store.controller.selectEntry(store.selectedId);
+                                else
+                                    store.controller.loadStore();
+                            }
                         }
                     ]
                 }
@@ -505,19 +691,19 @@ Controls.ApplicationWindow {
                         trashAction: trashEntry
                         copyFingerprintAction: copyFingerprint
                         onFavoriteToggleRequested: {
-                            if (root.mutationsBlocked)
+                            if (root.mutationsBlocked || store.controller.locked)
                                 return;
                             root.beginOperation("favorite", store.selectedId);
                             store.updateEntry(store.selectedId, { favorite: !store.selected.favorite });
                         }
                         onRestoreRequested: {
-                            if (root.mutationsBlocked)
+                            if (root.mutationsBlocked || store.controller.locked)
                                 return;
                             root.beginOperation("restore", store.selectedId);
                             store.updateEntry(store.selectedId, { trashed: false });
                         }
                         onPermanentDeleteRequested: {
-                            if (!root.mutationsBlocked)
+                            if (!root.mutationsBlocked && !store.controller.locked)
                                 deleteEntryDialog.openForSelected();
                         }
                         onRevealToggleRequested: {
@@ -552,7 +738,7 @@ Controls.ApplicationWindow {
                             color: Kirigami.Theme.disabledTextColor
                         }
                         Controls.BusyIndicator {
-                            visible: !root.keysMode && root.storeOperationBusy
+                            visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy)
                             running: visible
                             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                             Layout.preferredHeight: width
@@ -577,7 +763,7 @@ Controls.ApplicationWindow {
         focusedItem: root.activeFocusItem
         externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened
                            || deleteEntryDialog.opened || deleteFolderDialog.opened
-                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened
+                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }
@@ -585,6 +771,7 @@ Controls.ApplicationWindow {
         onWindowCloseApproved: {
             root.approveWindowClose();
         }
+        onNavigationCancelled: root.cancelSensitiveTransition()
     }
     FolderEditor {
         id: folderEditor
@@ -592,6 +779,10 @@ Controls.ApplicationWindow {
         onSaveRequested: function (folderId, name, parentId, icon, color) {
             store.saveFolder(folderId, name, parentId, icon, color);
         }
+        onVaultLockApproved: root.continueSensitiveTransition()
+        onVaultLockCancelled: root.cancelSensitiveTransition()
+        onVaultSwitchApproved: root.continueSensitiveTransition()
+        onVaultSwitchCancelled: root.cancelSensitiveTransition()
     }
     MoveEntryDialog {
         id: moveDialog
@@ -623,6 +814,13 @@ Controls.ApplicationWindow {
         onGenerateRequested: function(length, lowercase, uppercase, digits, symbols, excluded) {
             root.beginOperation("generate", "");
             store.controller.generatePassword(length, lowercase, uppercase, digits, symbols, excluded);
+        }
+    }
+    BackupDialog {
+        id: backupDialog
+        keyStore: keys
+        onOpenVaultRequested: function(path) {
+            Qt.callLater(function() { root.requestActiveVault(path); });
         }
     }
     AboutDialog {

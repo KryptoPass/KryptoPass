@@ -63,7 +63,7 @@ Controls.Pane {
                     icon.name: "rating"
                     checkable: true
                     checked: root.selected?.favorite || false
-                    enabled: !root.storeAdapter.controller.busy
+                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                     onClicked: root.favoriteToggleRequested()
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
@@ -154,24 +154,17 @@ Controls.Pane {
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
-                    visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
+                    visible: !!root.selected && root.storeAdapter.controller.locked
                     type: Kirigami.MessageType.Information
-                    text: qsTr("Descifrando el contenido del elemento…")
+                    text: qsTr("La bóveda está bloqueada. Desbloquéala para abrir este elemento.")
                 }
 
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
-                    visible: !root.selectedDetail && !root.storeAdapter.controller.detailBusy && !!root.storeAdapter.controller.errorMessage
-                    type: Kirigami.MessageType.Error
-                    text: root.storeAdapter.controller.errorMessage
-                    actions: [
-                        Kirigami.Action {
-                            text: qsTr("Reintentar")
-                            icon.name: "view-refresh"
-                            onTriggered: root.retryDetailRequested()
-                        }
-                    ]
+                    visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
+                    type: Kirigami.MessageType.Information
+                    text: qsTr("Descifrando el contenido del elemento…")
                 }
 
                 SecretDetail {
@@ -213,13 +206,13 @@ Controls.Pane {
                     Controls.Button {
                         text: qsTr("Restaurar")
                         icon.name: "edit-undo"
-                        enabled: !root.storeAdapter.controller.busy
+                        enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                         onClicked: root.restoreRequested()
                     }
                     Controls.Button {
                         text: qsTr("Eliminar definitivamente…")
                         icon.name: "edit-delete"
-                        enabled: !root.storeAdapter.controller.busy
+                        enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                         onClicked: root.permanentDeleteRequested()
                     }
                 }

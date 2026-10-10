@@ -17,9 +17,9 @@ const DEFAULT_STYLE: &str = "org.kde.desktop";
 fn main() {
     init_tracing();
 
-    let mut application = QGuiApplication::new();
+    let mut application = ui_adapters::application::new();
     let Some(mut app) = application.as_mut() else {
-        tracing::error!("Failed to initialize QGuiApplication");
+        tracing::error!("Failed to initialize QApplication");
         return;
     };
 

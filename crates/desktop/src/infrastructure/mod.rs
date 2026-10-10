@@ -1,6 +1,7 @@
 //! Adapters for persistent storage and operating-system cryptography.
 
 pub mod app_paths;
+pub mod backup;
 pub mod openpgp;
 pub mod sqlite_storage;
 

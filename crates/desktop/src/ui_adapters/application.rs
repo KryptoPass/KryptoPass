@@ -1,0 +1,24 @@
+use cxx_qt_lib::{QByteArray, QGuiApplication, QVector};
+
+#[cxx::bridge(namespace = "kryptopass")]
+mod ffi {
+    unsafe extern "C++" {
+        include!("cxx-qt-lib/qguiapplication.h");
+        #[namespace = ""]
+        type QGuiApplication = cxx_qt_lib::QGuiApplication;
+        include!("cxx-qt-lib/core/qvector/qvector_QByteArray.h");
+        #[namespace = ""]
+        type QVector_QByteArray = cxx_qt_lib::QVector<cxx_qt_lib::QByteArray>;
+        include!("native/application.h");
+        #[rust_name = "new_application"]
+        fn newApplication(args: &QVector_QByteArray) -> UniquePtr<QGuiApplication>;
+    }
+}
+
+pub fn new() -> cxx::UniquePtr<QGuiApplication> {
+    let mut args = QVector::<QByteArray>::default();
+    for arg in std::env::args() {
+        args.append(QByteArray::from(arg.as_bytes()));
+    }
+    ffi::new_application(&args)
+}

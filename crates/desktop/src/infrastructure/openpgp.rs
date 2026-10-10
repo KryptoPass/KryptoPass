@@ -8,6 +8,8 @@ use zeroize::Zeroizing;
 
 use super::MAX_CIPHERTEXT_BYTES;
 
+const MAX_BOUNDED_INITIAL_CAPACITY: usize = 64 * 1024;
+
 /// GPGME adapter that creates an isolated context for each operation.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GnuPgOpenPgp;
@@ -27,7 +29,28 @@ impl OpenPgp for GnuPgOpenPgp {
     }
 
     fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
-        ensure_payload_size(plaintext.len(), MAX_CONTENT_BYTES, "secret content")?;
+        self.encrypt_bounded(
+            plaintext,
+            recipients,
+            MAX_CONTENT_BYTES,
+            MAX_CIPHERTEXT_BYTES,
+        )
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+        self.decrypt_bounded(ciphertext, MAX_CIPHERTEXT_BYTES, MAX_CONTENT_BYTES)
+    }
+}
+
+impl GnuPgOpenPgp {
+    pub(crate) fn encrypt_bounded(
+        &self,
+        plaintext: &[u8],
+        recipients: &RecipientSet,
+        maximum_plaintext: usize,
+        maximum_ciphertext: usize,
+    ) -> Result<Vec<u8>> {
+        ensure_payload_size(plaintext.len(), maximum_plaintext, "secret content")?;
         if recipients.as_slice().is_empty() {
             bail!("at least one OpenPGP recipient is required");
         }
@@ -39,7 +62,7 @@ impl OpenPgp for GnuPgOpenPgp {
             .map(|fingerprint| load_encryption_key(&mut context, fingerprint))
             .collect::<Result<Vec<_>>>()?;
 
-        let mut ciphertext = BoundedWriter::new(MAX_CIPHERTEXT_BYTES);
+        let mut ciphertext = BoundedWriter::new(maximum_ciphertext);
         let mut output = Data::from_writer(&mut ciphertext)
             .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
         let encryption_result = context.encrypt_with_flags(
@@ -58,21 +81,36 @@ impl OpenPgp for GnuPgOpenPgp {
         Ok(ciphertext.into_bytes())
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    pub(crate) fn decrypt_bounded(
+        &self,
+        ciphertext: &[u8],
+        maximum_ciphertext: usize,
+        maximum_plaintext: usize,
+    ) -> Result<Zeroizing<Vec<u8>>> {
         if ciphertext.is_empty() {
             bail!("OpenPGP ciphertext is empty");
         }
 
-        ensure_payload_size(ciphertext.len(), MAX_CIPHERTEXT_BYTES, "encrypted payload")?;
+        ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
 
         let mut context = open_context()?;
-        let mut plaintext = BoundedWriter::with_capacity(MAX_CONTENT_BYTES, MAX_CONTENT_BYTES);
+        let mut plaintext = BoundedWriter::with_capacity(
+            maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
+            maximum_plaintext,
+        );
         let mut output = Data::from_writer(&mut plaintext)
             .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
-        context
+        let result = context
             .decrypt(ciphertext, &mut output)
             .map_err(|_| anyhow::anyhow!("OpenPGP decryption failed"))?;
         drop(output);
+
+        if result.is_legacy_cipher_no_mdc() {
+            bail!("legacy OpenPGP ciphertext without integrity protection is not accepted");
+        }
+        if result.unsupported_algorithm_raw().is_some() {
+            bail!("OpenPGP ciphertext uses an unsupported algorithm");
+        }
 
         Ok(Zeroizing::new(plaintext.into_bytes()))
     }
@@ -161,10 +199,15 @@ fn load_encryption_key(context: &mut Context, fingerprint: &KeyFingerprint) -> R
         .fingerprint()
         .map_err(|_| anyhow::anyhow!("selected OpenPGP recipient has an invalid identity"))?;
 
+    let has_usable_encryption_subkey = key
+        .subkeys()
+        .any(|subkey| subkey.can_encrypt() && !subkey.is_bad());
+
     if !stored_fingerprint.eq_ignore_ascii_case(fingerprint.as_str())
         || key.protocol() != Protocol::OpenPgp
         || key.is_bad()
         || !key.can_encrypt()
+        || !has_usable_encryption_subkey
     {
         bail!("selected OpenPGP recipient cannot encrypt");
     }

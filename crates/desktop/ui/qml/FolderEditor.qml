@@ -16,6 +16,7 @@ Controls.Dialog {
     property string baselineJson: ""
     property string saveError: ""
     property bool pending: false
+    property string sensitiveClearAction: ""
     readonly property bool dirty: baselineJson !== JSON.stringify({
         id: folderId,
         name: folderNameField.text,
@@ -26,6 +27,10 @@ Controls.Dialog {
     readonly property bool canSave: !pending && !storeAdapter.controller.busy && folderNameField.text.trim().length > 0 && dirty
 
     signal saveRequested(string folderId, string name, string parentId, string icon, string color)
+    signal vaultLockApproved()
+    signal vaultLockCancelled()
+    signal vaultSwitchApproved()
+    signal vaultSwitchCancelled()
 
     anchors.centerIn: parent
     width: Math.min(340, parent.width - Kirigami.Units.gridUnit * 4)
@@ -74,10 +79,45 @@ Controls.Dialog {
     function requestClose() {
         if (pending || storeAdapter.controller.busy)
             return;
+        sensitiveClearAction = "";
         if (dirty)
             discardDialog.open();
         else
             close();
+    }
+
+    function requestVaultLock() {
+        requestSensitiveClear("lock");
+    }
+
+    function requestVaultSwitch() {
+        requestSensitiveClear("switch");
+    }
+
+    function requestSensitiveClear(action) {
+        if (pending || storeAdapter.controller.busy)
+            return;
+        sensitiveClearAction = action;
+        if (dirty) {
+            discardDialog.open();
+        } else {
+            clearAndClose();
+            emitSensitiveClearApproved(action);
+        }
+    }
+
+    function emitSensitiveClearApproved(action) {
+        if (action === "lock")
+            vaultLockApproved();
+        else if (action === "switch")
+            vaultSwitchApproved();
+    }
+
+    function emitSensitiveClearCancelled(action) {
+        if (action === "lock")
+            vaultLockCancelled();
+        else if (action === "switch")
+            vaultSwitchCancelled();
     }
 
     function clearAndClose() {
@@ -309,8 +349,16 @@ Controls.Dialog {
         title: qsTr("Descartar cambios")
         standardButtons: Controls.Dialog.Discard | Controls.Dialog.Cancel
         onDiscarded: {
+            const action = folderEditor.sensitiveClearAction;
+            folderEditor.sensitiveClearAction = "";
             discardDialog.close();
             folderEditor.clearAndClose();
+            folderEditor.emitSensitiveClearApproved(action);
+        }
+        onRejected: {
+            const action = folderEditor.sensitiveClearAction;
+            folderEditor.sensitiveClearAction = "";
+            folderEditor.emitSensitiveClearCancelled(action);
         }
         Controls.Label {
             width: Math.min(folderEditor.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 28)
