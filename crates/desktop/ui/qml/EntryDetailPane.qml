@@ -16,6 +16,9 @@ Controls.Pane {
     required property Controls.Action trashAction
     required property Controls.Action copyFingerprintAction
 
+    property bool editing: false
+    property alias editorHost: editorHost
+
     readonly property var selected: storeAdapter.selected
     readonly property var selectedDetail: storeAdapter.detail && selected
             && storeAdapter.detail.id === selected.id ? storeAdapter.detail : null
@@ -41,6 +44,7 @@ Controls.Pane {
         spacing: 0
 
         PanelHeader {
+            visible: !root.editing
             Layout.fillWidth: true
             headerHeight: root.headerHeight
             contentItem: RowLayout {
@@ -86,17 +90,24 @@ Controls.Pane {
             }
         }
 
+        Item {
+            id: editorHost
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.editing
+        }
+
         KeyDetail {
             id: keyDetail
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.keysMode
+            visible: root.keysMode && !root.editing
             selectedKey: root.keyStore.selected
         }
 
         Controls.ScrollView {
             id: detailScroll
-            visible: !root.keysMode && !!root.selected
+            visible: !root.editing && !root.keysMode && !!root.selected
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
@@ -220,7 +231,7 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         anchors.verticalCenterOffset: root.headerHeight / 2
-        visible: root.keysMode ? !root.keyStore.selected : !root.selected
+        visible: !root.editing && (root.keysMode ? !root.keyStore.selected : !root.selected)
         icon.name: root.keysMode ? "view-certificate" : "document-encrypt"
         text: root.keysMode ? qsTr("Ninguna clave seleccionada") : qsTr("Ningún elemento seleccionado")
         explanation: root.keysMode ? qsTr("Selecciona una clave para ver sus identidades, subclaves y firmas.") : qsTr("Selecciona un elemento de la lista para ver su contenido.")

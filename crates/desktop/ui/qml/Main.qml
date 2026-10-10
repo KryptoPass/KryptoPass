@@ -33,6 +33,19 @@ Controls.ApplicationWindow {
     function selectSection(showKeys) {
         if (keysMode === showKeys)
             return;
+        editor.guardNavigation(function() { root.applySection(showKeys); });
+    }
+    function selectScope(showKeys, scopeId) {
+        if (keysMode === showKeys && activeStore.scope === scopeId)
+            return;
+        editor.guardNavigation(function() {
+            root.applySection(showKeys);
+            root.activeStore.selectScope(scopeId);
+        });
+    }
+    function applySection(showKeys) {
+        if (keysMode === showKeys)
+            return;
         keysMode = showKeys;
         search.text = activeStore.query;
         if (showKeys) {
@@ -201,7 +214,7 @@ Controls.ApplicationWindow {
         id: editEntry
         text: qsTr("Editar…")
         icon.name: "document-edit"
-        enabled: !root.keysMode && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: "F2"
         onTriggered: editor.openEntry(store.selected)
     }
@@ -209,7 +222,7 @@ Controls.ApplicationWindow {
         id: trashEntry
         text: qsTr("Mover a la papelera")
         icon.name: "user-trash"
-        enabled: !root.keysMode && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: StandardKey.Delete
         onTriggered: {
             root.beginOperation("trash", store.selectedId);
@@ -220,7 +233,7 @@ Controls.ApplicationWindow {
         id: newFolder
         text: qsTr("Nueva carpeta…")
         icon.name: "folder-new"
-        enabled: !root.keysMode && !root.mutationsBlocked
+        enabled: !root.keysMode && !editor.opened && !root.mutationsBlocked
         shortcut: "Ctrl+Shift+N"
         onTriggered: folderEditor.openFolder(false)
     }
@@ -299,22 +312,19 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 text: qsTr("Todos los elementos")
                 onTriggered: {
-                    root.selectSection(false);
-                    store.selectScope("all");
+                    root.selectScope(false, "all");
                 }
             }
             Controls.MenuItem {
                 text: qsTr("Favoritos")
                 onTriggered: {
-                    root.selectSection(false);
-                    store.selectScope("favorites");
+                    root.selectScope(false, "favorites");
                 }
             }
             Controls.MenuItem {
                 text: qsTr("Papelera")
                 onTriggered: {
-                    root.selectSection(false);
-                    store.selectScope("trash");
+                    root.selectScope(false, "trash");
                 }
             }
         }
@@ -358,15 +368,15 @@ Controls.ApplicationWindow {
                 root.selectSection(showKeys);
             }
             onScopeSelectionRequested: function (scopeId) {
-                root.activeStore.selectScope(scopeId);
+                root.selectScope(root.keysMode, scopeId);
             }
             onRenameFolderRequested: {
                 if (!root.mutationsBlocked)
-                    folderEditor.openFolder(true);
+                    editor.guardNavigation(function() { folderEditor.openFolder(true); });
             }
             onDeleteFolderRequested: {
                 if (!root.mutationsBlocked)
-                    deleteFolderDialog.openForSelected();
+                    editor.guardNavigation(function() { deleteFolderDialog.openForSelected(); });
             }
         }
 
@@ -384,6 +394,7 @@ Controls.ApplicationWindow {
                         spacing: Kirigami.Units.smallSpacing
                         Kirigami.SearchField {
                             id: search
+                            enabled: !editor.opened
                             Layout.fillWidth: true
                             Layout.maximumWidth: Kirigami.Units.gridUnit * 22
                             placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
@@ -468,15 +479,23 @@ Controls.ApplicationWindow {
                         scopeTitle: root.scopeTitle
                         headerHeight: root.panelHeaderHeight
                         onSelectionRequested: function (entryId) {
-                            root.activeStore.selectedId = entryId;
+                            if (root.activeStore.selectedId === entryId)
+                                return;
+                            editor.guardNavigation(function() {
+                                root.activeStore.selectedId = entryId;
+                            });
                         }
                         onEntryOpenRequested: function (entry) {
                             if (!root.mutationsBlocked)
-                                editor.openEntry(entry);
+                                editor.guardNavigation(function() {
+                                    store.selectedId = entry.id;
+                                    editor.openEntry(entry);
+                                });
                         }
                     }
                     EntryDetailPane {
                         id: entryDetailPane
+                        editing: editor.opened
                         keysMode: root.keysMode
                         storeAdapter: store
                         keyStore: keys
@@ -550,11 +569,15 @@ Controls.ApplicationWindow {
     }
     SecretEditor {
         id: editor
+        parent: entryDetailPane.editorHost
+        anchors.fill: parent
         storeAdapter: store
         keyStore: keys
-        windowWidth: root.width
+        headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: passwordGenerator.opened
+        externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened
+                           || deleteEntryDialog.opened || deleteFolderDialog.opened
+                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }

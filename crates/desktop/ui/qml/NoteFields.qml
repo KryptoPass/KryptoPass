@@ -10,10 +10,11 @@ ColumnLayout {
     property string value: ""
     property string notes: ""
 
-    spacing: Kirigami.Units.smallSpacing
+    spacing: 8
 
     Controls.Label {
         text: qsTr("Contenido")
+        font.weight: Font.DemiBold
     }
     Controls.TextArea {
         Layout.fillWidth: true
@@ -28,11 +29,13 @@ ColumnLayout {
     }
 
     Controls.Label {
+        Layout.topMargin: 16
         text: qsTr("Notas")
+        font.weight: Font.DemiBold
     }
     Controls.TextArea {
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
+        Layout.preferredHeight: Math.max(implicitHeight, 80)
         text: root.notes
         Accessible.name: qsTr("Notas de la nota segura")
         placeholderText: qsTr("Añade contexto opcional.")

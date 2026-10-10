@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-Controls.GroupBox {
+ColumnLayout {
     id: chooser
 
     required property KeyStore keyStore
@@ -15,8 +15,7 @@ Controls.GroupBox {
 
     signal selectionChanged(var fingerprints)
 
-    padding: Kirigami.Units.smallSpacing
-    title: qsTr("Acceso")
+    spacing: 8
 
     function setChecked(fingerprint, checked) {
         const next = selectedFingerprints.filter(candidate => candidate !== fingerprint);
@@ -26,8 +25,14 @@ Controls.GroupBox {
         selectionChanged(next);
     }
 
-    contentItem: ColumnLayout {
-        spacing: Kirigami.Units.smallSpacing
+    Controls.Label {
+        text: qsTr("Claves autorizadas")
+        font.weight: Font.DemiBold
+    }
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: 8
 
         Controls.Label {
             Layout.fillWidth: true
@@ -39,26 +44,82 @@ Controls.GroupBox {
         Repeater {
             model: chooser.encryptableKeys
 
-            delegate: Controls.CheckBox {
+            delegate: ColumnLayout {
+                id: keyRow
                 required property var modelData
                 Layout.fillWidth: true
-                checked: chooser.selectedFingerprints.includes(modelData.id)
-                text: modelData.title + (modelData.email ? " · " + modelData.email : "") + "\n" + modelData.id
-                Accessible.name: qsTr("Destinatario %1, huella %2").arg(modelData.title).arg(modelData.id)
-                onToggled: chooser.setChecked(modelData.id, checked)
+                Layout.minimumWidth: 0
+                spacing: 4
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Controls.CheckBox {
+                        id: keyCheck
+                        checked: chooser.selectedFingerprints.includes(keyRow.modelData.id)
+                        Accessible.name: qsTr("Autorizar %1, %2, huella %3").arg(keyRow.modelData.title).arg(keyRow.modelData.email || "").arg(keyRow.modelData.id)
+                        onToggled: chooser.setChecked(keyRow.modelData.id, checked)
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 2
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: keyRow.modelData.title
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            visible: !!keyRow.modelData.email
+                            text: keyRow.modelData.email || ""
+                            textFormat: Text.PlainText
+                            color: Kirigami.Theme.disabledTextColor
+                            wrapMode: Text.WrapAnywhere
+                        }
+                    }
+                    Controls.ToolButton {
+                        id: keyDetails
+                        text: checked ? qsTr("Ocultar detalles de la clave") : qsTr("Ver detalles de la clave")
+                        icon.name: checked ? "arrow-up" : "arrow-down"
+                        display: Controls.AbstractButton.IconOnly
+                        checkable: true
+                        Accessible.name: qsTr("%1: %2").arg(text).arg(keyRow.modelData.title)
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: keyCheck.implicitWidth + 8
+                    visible: keyDetails.checked
+                    text: qsTr("Huella OpenPGP: %1").arg(keyRow.modelData.id)
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: Kirigami.Theme.disabledTextColor
+                }
             }
         }
 
         Repeater {
             model: chooser.unavailableFingerprints
 
-            delegate: Controls.CheckBox {
+            delegate: RowLayout {
+                id: unavailableRow
                 required property string modelData
                 Layout.fillWidth: true
-                checked: chooser.selectedFingerprints.includes(modelData)
-                text: qsTr("%1 · sin clave válida para cifrar").arg(modelData)
-                Accessible.name: qsTr("Destinatario original no disponible, huella %1").arg(modelData)
-                onToggled: chooser.setChecked(modelData, checked)
+                spacing: 8
+                Controls.CheckBox {
+                    checked: chooser.selectedFingerprints.includes(unavailableRow.modelData)
+                    Accessible.name: qsTr("Destinatario original no disponible, huella %1").arg(unavailableRow.modelData)
+                    onToggled: chooser.setChecked(unavailableRow.modelData, checked)
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    text: qsTr("%1 · sin clave válida para cifrar").arg(unavailableRow.modelData)
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                }
             }
         }
 
