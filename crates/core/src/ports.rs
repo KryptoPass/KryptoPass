@@ -28,6 +28,15 @@ pub trait Storage {
 
     fn replace_folder(&mut self, folder: Folder) -> Result<()>;
 
+    /// Moves a folder before a destination sibling, or appends when `before` is
+    /// absent. Must reject cycles and invalid anchors without changing the store.
+    fn move_folder(
+        &mut self,
+        id: FolderId,
+        destination: Option<FolderId>,
+        before: Option<FolderId>,
+    ) -> Result<()>;
+
     fn remove_secret(&mut self, id: SecretId) -> Result<()>;
 
     /// Removes the folder and atomically reparents its children and secrets to

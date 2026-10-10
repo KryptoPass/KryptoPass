@@ -54,7 +54,7 @@ QtObject {
     readonly property var folderRows: {
         const rows = [];
         const visited = Object.create(null);
-        const orderedFolders = folders.slice().sort((left, right) => left.name.localeCompare(right.name, undefined, {
+        const orderedFolders = folders.slice().sort((left, right) => (left.position - right.position) || left.name.localeCompare(right.name, undefined, {
             sensitivity: "base",
             numeric: true
         }) || left.id.localeCompare(right.id));
@@ -78,6 +78,23 @@ QtObject {
         };
         walk("", 0);
         return rows;
+    }
+
+    function canMoveFolder(id, parentId) {
+        if (!folders.some(folder => folder.id === id))
+            return false;
+        let current = parentId;
+        const visited = Object.create(null);
+        while (current) {
+            if (current === id || visited[current])
+                return false;
+            visited[current] = true;
+            const folder = folders.find(candidate => candidate.id === current);
+            if (!folder)
+                return false;
+            current = folder.parent || "";
+        }
+        return true;
     }
 
     function parseRecords(records) {

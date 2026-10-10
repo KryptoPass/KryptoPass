@@ -13,6 +13,7 @@ Controls.Pane {
     required property KeyStore keyStore
     required property string scopeTitle
     required property real headerHeight
+    property bool entryDraggingEnabled: false
 
     // The shell owns adapter mutations and the editor dialog; this pane reports user intent.
     signal selectionRequested(string entryId)
@@ -106,6 +107,60 @@ Controls.Pane {
                             onDoubleClicked: {
                                 if (!root.keysMode && !modelData.trashed && !root.storeAdapter.controller.busy)
                                     root.entryOpenRequested(modelData);
+                            }
+                            DragHandler {
+                                id: entryDrag
+                                target: null
+                                acceptedButtons: Qt.LeftButton
+                                enabled: root.entryDraggingEnabled && !entryDelegate.modelData.trashed
+                                function positionPreview() {
+                                    const point = entryDelegate.mapToItem(dragPreview.parent, centroid.position.x, centroid.position.y);
+                                    dragPreview.x = point.x;
+                                    dragPreview.y = point.y;
+                                }
+                                onActiveTranslationChanged: {
+                                    if (active)
+                                        positionPreview();
+                                }
+                                onActiveChanged: {
+                                    if (active) {
+                                        positionPreview();
+                                        dragPreview.Drag.active = true;
+                                    } else if (dragPreview.Drag.active) {
+                                        dragPreview.Drag.drop();
+                                        dragPreview.Drag.active = false;
+                                    }
+                                }
+                            }
+                            Shortcut {
+                                sequence: "Esc"
+                                enabled: dragPreview.Drag.active
+                                onActivated: dragPreview.Drag.cancel()
+                            }
+                            Rectangle {
+                                id: dragPreview
+                                parent: Controls.Overlay.overlay
+                                readonly property string entryId: entryDelegate.modelData.id
+                                readonly property var storeAdapter: root.storeAdapter
+                                visible: Drag.active
+                                z: 1000
+                                width: dragLabel.implicitWidth + 24
+                                height: dragLabel.implicitHeight + 16
+                                radius: 6
+                                color: Kirigami.Theme.backgroundColor
+                                border.color: Kirigami.Theme.highlightColor
+                                Drag.source: dragPreview
+                                Drag.keys: ["org.kryptopass.entry"]
+                                Drag.supportedActions: Qt.MoveAction
+                                Drag.proposedAction: Qt.MoveAction
+                                Controls.Label {
+                                    id: dragLabel
+                                    anchors.centerIn: parent
+                                    text: entryDelegate.text
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                    width: Math.min(implicitWidth, 240)
+                                }
                             }
                             Keys.onReturnPressed: clicked()
                             Keys.onEnterPressed: clicked()

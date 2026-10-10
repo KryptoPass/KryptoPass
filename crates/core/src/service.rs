@@ -72,6 +72,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         self.storage.insert_folder(Folder {
             id,
             parent_id,
+            sort_position: 0,
             name,
             appearance,
             default_recipients,
@@ -307,6 +308,16 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
                 .context("parent folder does not exist")?;
         }
         self.storage.remove_folder(id)
+    }
+
+    /// Moves a whole subtree; storage validates hierarchy and ordering atomically.
+    pub fn move_folder(
+        &mut self,
+        id: FolderId,
+        destination: Option<FolderId>,
+        before: Option<FolderId>,
+    ) -> Result<()> {
+        self.storage.move_folder(id, destination, before)
     }
 
     pub fn remove_secret(&mut self, id: SecretId) -> Result<()> {

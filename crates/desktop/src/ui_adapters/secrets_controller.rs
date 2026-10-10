@@ -96,6 +96,14 @@ pub mod qobject {
             color: &QString,
         );
         #[qinvokable]
+        #[cxx_name = "moveFolder"]
+        fn move_folder(
+            self: Pin<&mut Self>,
+            id: &QString,
+            parent_id: &QString,
+            before_id: &QString,
+        );
+        #[qinvokable]
         #[cxx_name = "moveEntry"]
         fn move_entry(self: Pin<&mut Self>, id: &QString, folder_id: &QString);
         #[qinvokable]
@@ -772,6 +780,47 @@ impl qobject::SecretsController {
                 Ok(MutationResult {
                     snapshot,
                     signal: MutationSignal::FolderSaved(saved_id.0.to_string()),
+                    editor_operation: None,
+                })
+            },
+        );
+    }
+
+    pub fn move_folder(
+        mut self: Pin<&mut Self>,
+        id: &QString,
+        parent_id: &QString,
+        before_id: &QString,
+    ) {
+        if *self.busy() || *self.locked() {
+            return;
+        }
+        let Some(id) = parse_folder_id(&id.to_string()) else {
+            self.as_mut().fail("La carpeta seleccionada no es válida.");
+            return;
+        };
+        let optional_id = |value: &QString| -> anyhow::Result<Option<FolderId>> {
+            let value = value.to_string();
+            if value.is_empty() {
+                Ok(None)
+            } else {
+                parse_folder_id(&value)
+                    .map(Some)
+                    .ok_or_else(|| anyhow::anyhow!("invalid folder"))
+            }
+        };
+        let (Ok(parent), Ok(before)) = (optional_id(parent_id), optional_id(before_id)) else {
+            self.as_mut().fail("La carpeta de destino no es válida.");
+            return;
+        };
+        self.as_mut().start_mutation(
+            "Moviendo carpeta…", false,
+            "No se pudo mover la carpeta. No puede colocarse dentro de sí misma ni de sus descendientes.",
+            move || {
+                open_service()?.move_folder(id, parent, before)?;
+                Ok(MutationResult {
+                    snapshot: snapshot_after_mutation(),
+                    signal: MutationSignal::None,
                     editor_operation: None,
                 })
             },

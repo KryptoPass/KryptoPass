@@ -20,7 +20,7 @@ use super::GnuPgOpenPgp;
 use super::sqlite_storage::SqliteStorage;
 
 const BACKUP_FORMAT: &str = "org.kryptopass.backup";
-const BACKUP_VERSION: u32 = 1;
+const BACKUP_VERSION: u32 = 2;
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const MAX_RECIPIENTS_PER_RECORD: usize = 64;
 const MAX_SELECTED_RECIPIENTS: usize = 256;
@@ -169,6 +169,8 @@ struct BackupDocument {
 struct BackupFolder {
     id: String,
     parent_id: Option<String>,
+    #[serde(default)]
+    sort_position: i64,
     name: String,
     icon: String,
     color: String,
@@ -290,6 +292,7 @@ fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<Zeroiz
                 .map(|folder| BackupFolder {
                     id: folder.id.0.to_string(),
                     parent_id: folder.parent_id.map(|id| id.0.to_string()),
+                    sort_position: folder.sort_position,
                     name: folder.name,
                     icon: folder.appearance.icon().to_owned(),
                     color: folder.appearance.color().to_owned(),
@@ -380,7 +383,7 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
     let document: BackupDocument =
         serde_json::from_slice(bytes).context("backup document is invalid")?;
     ensure!(
-        document.format == BACKUP_FORMAT && document.version == BACKUP_VERSION,
+        document.format == BACKUP_FORMAT && matches!(document.version, 1 | BACKUP_VERSION),
         "backup format or version is unsupported"
     );
     ensure!(
@@ -411,6 +414,7 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
         folders.push(Folder {
             id,
             parent_id,
+            sort_position: folder.sort_position,
             name: folder.name,
             appearance,
             default_recipients,
@@ -481,6 +485,7 @@ fn validate_domain_records(folders: &[Folder], secrets: &[Secret]) -> Result<()>
     let mut recipient_count = 0usize;
     let mut raw_bytes = 0usize;
     for folder in folders {
+        ensure!(folder.sort_position >= 0, "backup folder order is invalid");
         ensure!(
             !folder.name.trim().is_empty() && folder.name.len() <= 256,
             "backup folder name is invalid"
@@ -1054,3 +1059,7 @@ impl Drop for TemporaryFile {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "backup_order_tests.rs"]
+mod backup_order_tests;

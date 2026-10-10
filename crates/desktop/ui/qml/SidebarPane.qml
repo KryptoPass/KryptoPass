@@ -13,6 +13,10 @@ Controls.Pane {
     required property real headerHeight
     required property Controls.Action newFolderAction
 
+    property bool entryDraggingEnabled: false
+    signal entryMoveRequested(string entryId, string folderId)
+    signal folderMoveRequested(string folderId, string parentId, string beforeId)
+
     signal sectionSelectionRequested(bool showKeys)
     signal scopeSelectionRequested(string scopeId)
     signal renameFolderRequested()
@@ -131,10 +135,41 @@ Controls.Pane {
                 }
             }
         }
-        Kirigami.ListSectionHeader {
+        Item {
             Layout.fillWidth: true
+            implicitHeight: folderSectionHeader.implicitHeight
             visible: !root.keysMode
-            text: qsTranslate("Main", "Mis carpetas")
+            Kirigami.ListSectionHeader {
+                id: folderSectionHeader
+                anchors.fill: parent
+                text: rootFolderDrop.containsDrag ? qsTr("Mover al nivel principal") : qsTranslate("Main", "Mis carpetas")
+            }
+            DropArea {
+                id: rootFolderDrop
+                anchors.fill: parent
+                enabled: root.entryDraggingEnabled && !root.keysMode
+                keys: ["org.kryptopass.folder"]
+                function acceptsSource(source) {
+                    return !!source && source.storeAdapter === root.storeAdapter
+                            && root.storeAdapter.canMoveFolder(source.folderId, "");
+                }
+                function sourceFolderId(source) { return source.folderId; }
+                onEntered: function(drag) { drag.accepted = acceptsSource(drag.source); }
+                onDropped: function(drop) {
+                    if (!enabled || !acceptsSource(drop.source))
+                        return;
+                    const sourceId = sourceFolderId(drop.source);
+                    drop.accept(Qt.MoveAction);
+                    root.folderMoveRequested(sourceId, "", "");
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    visible: rootFolderDrop.containsDrag
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Kirigami.Theme.highlightColor
+                }
+            }
         }
         Controls.ScrollView {
             Layout.fillWidth: true
@@ -152,6 +187,17 @@ Controls.Pane {
                     itemCount: root.activeStore.count(modelData.id)
                     width: folderList.width
                     scopeId: modelData.id
+                    acceptsEntryDrop: root.entryDraggingEnabled && !root.keysMode
+                    dropStore: root.storeAdapter
+                    onEntryDropped: function(entryId, folderId) {
+                        root.entryMoveRequested(entryId, folderId);
+                    }
+                    folderDraggingEnabled: root.entryDraggingEnabled && !root.keysMode
+                    acceptsFolderDrop: folderDraggingEnabled
+                    parentFolderId: modelData.parent
+                    onFolderDropped: function(folderId, parentId, beforeId) {
+                        root.folderMoveRequested(folderId, parentId, beforeId);
+                    }
                     depth: modelData.depth
                     folderColor: modelData.color || "transparent"
                     text: modelData.name

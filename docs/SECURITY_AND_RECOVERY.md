@@ -52,12 +52,26 @@ entorno no proporciona una sesión Plasma aislada con Klipper, por lo que
 el historial de Klipper y las sesiones X11/Wayland reales quedan pendientes
 de comprobación manual. No se declara compatibilidad verificada con ellas.
 
-## Backup v1 y restauración
+## Carpetas y orden manual
+
+Las carpetas tienen orden persistente entre hermanos. Arrastrar una carpeta
+al centro de otra la convierte en subcarpeta; los bordes superior e inferior
+insertan antes o después del destino. Soltar sobre «Mis carpetas» devuelve
+la carpeta al nivel principal. Los hijos, nietos y secretos conservan sus
+vínculos; mover no cambia destinatarios ni vuelve a cifrar credenciales.
+
+SQLite valida el padre y la posición en una misma transacción y rechaza
+movimientos dentro de la propia carpeta o de cualquiera de sus descendientes.
+El esquema 3 migra las bóvedas anteriores conservando su orden alfabético
+inicial; las carpetas nuevas se agregan al final del grupo de hermanos.
+
+## Backup v2 y restauración
 
 El archivo `.kpb` es un mensaje OpenPGP. Su contenido es un documento JSON
-con `format: "org.kryptopass.backup"`, `version: 1`, `folders` y `secrets`.
+con `format: "org.kryptopass.backup"`, `version: 2`, `folders` y `secrets`.
 También quedan cifrados los nombres, la jerarquía, las apariencias, los
-destinatarios, los favoritos, la papelera y las revisiones. Los ciphertexts
+destinatarios, los favoritos, la papelera y las revisiones. El orden manual de las carpetas también se conserva. Se siguen aceptando
+backups v1, cuyas carpetas carecen de posiciones explícitas. Los ciphertexts
 originales se transportan en base64; no se vuelven a cifrar individualmente.
 
 Exportar toma una instantánea consistente en una transacción de lectura.
@@ -66,7 +80,7 @@ ciphertext, con permisos 0600. Se sincroniza antes del rename atómico.
 Si el archivo ya se publicó pero falla la sincronización del directorio,
 la interfaz informa publicación con durabilidad no confirmada.
 
-Los límites de v1 son 64 MiB para el documento descifrado, 128 MiB + 256 KiB
+Los límites del formato son 64 MiB para el documento descifrado, 128 MiB + 256 KiB
 para el contenedor, 10 000 registros en total, 100 000 referencias a claves,
 64 destinatarios por registro y 256 destinatarios para el contenedor.
 Excederlos produce un error, sin exportación parcial.

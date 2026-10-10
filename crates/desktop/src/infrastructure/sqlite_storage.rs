@@ -20,7 +20,7 @@ use uuid::Uuid;
 use super::MAX_CIPHERTEXT_BYTES;
 use super::backup::{MAX_BACKUP_PLAINTEXT_BYTES, MAX_BACKUP_RECIPIENTS, MAX_BACKUP_ROWS};
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 const APPLICATION_ID: i64 = 0x4b50_5331;
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -139,13 +139,14 @@ impl SqliteStorage {
         for folder in folders {
             transaction
                 .execute(
-                    "INSERT INTO folders(id, parent_id, name, icon, color) \
-                     VALUES (?1, NULL, ?2, ?3, ?4)",
+                    "INSERT INTO folders(id, parent_id, name, icon, color, sort_position) \
+                     VALUES (?1, NULL, ?2, ?3, ?4, ?5)",
                     params![
                         folder.id.0.to_string(),
                         &folder.name,
                         folder.appearance.icon(),
                         folder.appearance.color(),
+                        folder.sort_position,
                     ],
                 )
                 .map_err(|_| anyhow::anyhow!("could not restore folder metadata"))?;
@@ -287,8 +288,9 @@ impl Storage for SqliteStorage {
 
         transaction
             .execute(
-                "INSERT INTO folders(id, parent_id, name, icon, color) \
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO folders(id, parent_id, name, icon, color, sort_position) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, \
+                    (SELECT COALESCE(MAX(sort_position), -1) + 1 FROM folders WHERE parent_id IS ?2))",
                 params![
                     folder.id.0.to_string(),
                     folder.parent_id.map(|id| id.0.to_string()),
@@ -482,6 +484,62 @@ impl Storage for SqliteStorage {
             .context("could not finish folder update")
     }
 
+    fn move_folder(
+        &mut self,
+        id: FolderId,
+        destination: Option<FolderId>,
+        before: Option<FolderId>,
+    ) -> Result<()> {
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .context("could not begin folder move")?;
+        let folder = load_folder(&transaction, id)?.context("folder does not exist")?;
+        validate_parent(&transaction, id, destination)?;
+        ensure!(
+            before != Some(id),
+            "folder cannot be its own ordering anchor"
+        );
+        if let Some(anchor) = before {
+            let anchor =
+                load_folder(&transaction, anchor)?.context("ordering anchor does not exist")?;
+            ensure!(
+                anchor.parent_id == destination,
+                "ordering anchor has a different parent"
+            );
+        }
+        let mut siblings = read_folders(&transaction)?
+            .into_iter()
+            .filter(|folder| folder.parent_id == destination && folder.id != id)
+            .map(|folder| folder.id)
+            .collect::<Vec<_>>();
+        let position = match before {
+            Some(anchor) => siblings
+                .iter()
+                .position(|candidate| *candidate == anchor)
+                .context("ordering anchor does not exist")?,
+            None => siblings.len(),
+        };
+        siblings.insert(position, id);
+        transaction.execute(
+            "UPDATE folders SET parent_id = ?1 WHERE id = ?2",
+            params![
+                destination.map(|parent| parent.0.to_string()),
+                id.0.to_string()
+            ],
+        )?;
+        persist_folder_order(&transaction, &siblings)?;
+        if folder.parent_id != destination {
+            let former_siblings = read_folders(&transaction)?
+                .into_iter()
+                .filter(|candidate| candidate.parent_id == folder.parent_id)
+                .map(|candidate| candidate.id)
+                .collect::<Vec<_>>();
+            persist_folder_order(&transaction, &former_siblings)?;
+        }
+        transaction.commit().context("could not finish folder move")
+    }
+
     fn remove_secret(&mut self, id: SecretId) -> Result<()> {
         let transaction = self
             .connection
@@ -510,6 +568,22 @@ impl Storage for SqliteStorage {
             .optional()
             .map_err(|_| anyhow::anyhow!("could not read folder"))?
             .ok_or_else(|| anyhow::anyhow!("folder does not exist"))?;
+
+        let folders = read_folders(&transaction)?;
+        let parent = parent_id.as_deref().map(parse_folder_id).transpose()?;
+        let mut remaining_order = Vec::new();
+        for sibling in folders.iter().filter(|folder| folder.parent_id == parent) {
+            if sibling.id == id {
+                remaining_order.extend(
+                    folders
+                        .iter()
+                        .filter(|folder| folder.parent_id == Some(id))
+                        .map(|folder| folder.id),
+                );
+            } else {
+                remaining_order.push(sibling.id);
+            }
+        }
 
         transaction
             .execute(
@@ -541,17 +615,28 @@ impl Storage for SqliteStorage {
             .execute("DELETE FROM folders WHERE id = ?1", [id.0.to_string()])
             .map_err(|_| anyhow::anyhow!("could not delete folder"))?;
         ensure!(changed == 1, "folder does not exist");
+        persist_folder_order(&transaction, &remaining_order)?;
         transaction
             .commit()
             .context("could not finish folder deletion")
     }
 }
 
+fn persist_folder_order(transaction: &Transaction<'_>, siblings: &[FolderId]) -> Result<()> {
+    for (position, id) in siblings.iter().enumerate() {
+        transaction.execute(
+            "UPDATE folders SET sort_position = ?1 WHERE id = ?2",
+            params![i64::try_from(position)?, id.0.to_string()],
+        )?;
+    }
+    Ok(())
+}
+
 fn read_folders(connection: &Connection) -> Result<Vec<Folder>> {
     let mut statement = connection
         .prepare(
-            "SELECT id, parent_id, name, icon, color \
-             FROM folders ORDER BY name COLLATE NOCASE, id",
+            "SELECT id, parent_id, name, icon, color, sort_position \
+             FROM folders ORDER BY sort_position, name COLLATE NOCASE, id",
         )
         .context("could not read folder metadata")?;
     let rows = statement
@@ -562,6 +647,7 @@ fn read_folders(connection: &Connection) -> Result<Vec<Folder>> {
                 name: row.get(2)?,
                 icon: row.get(3)?,
                 color: row.get(4)?,
+                sort_position: row.get(5)?,
             })
         })
         .context("could not read folder metadata")?;
@@ -578,6 +664,7 @@ fn read_folders(connection: &Connection) -> Result<Vec<Folder>> {
         folders.push(Folder {
             id,
             parent_id,
+            sort_position: raw.sort_position,
             name: raw.name,
             appearance: parse_folder_appearance(&raw.icon, &raw.color)?,
             default_recipients,
@@ -728,7 +815,7 @@ fn column_data_error(index: usize, column_type: Type, message: &'static str) -> 
 
 fn initialize_schema(connection: &mut Connection) -> Result<()> {
     let version = pragma_i64(connection, "user_version")?;
-    if matches!(version, 0 | 1) {
+    if matches!(version, 0..=2) {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not initialize the encrypted store")?;
@@ -768,6 +855,14 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                     "database file is not a KryptoPass store",
                 );
                 migrate_schema_v1_to_v2(&transaction)?;
+                migrate_schema_v2_to_v3(&transaction)?;
+            }
+            2 => {
+                ensure!(
+                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
+                    "database file is not a KryptoPass store"
+                );
+                migrate_schema_v2_to_v3(&transaction)?;
             }
             SCHEMA_VERSION => {}
             _ => bail!("store schema version is unsupported"),
@@ -799,6 +894,21 @@ fn migrate_schema_v1_to_v2(transaction: &Transaction<'_>) -> Result<()> {
         )
         .map_err(|_| anyhow::anyhow!("could not migrate folder appearance metadata"))?;
     transaction
+        .pragma_update(None, "user_version", 2)
+        .context("could not version the encrypted store")
+}
+
+fn migrate_schema_v2_to_v3(transaction: &Transaction<'_>) -> Result<()> {
+    transaction.execute_batch(
+        "ALTER TABLE folders ADD COLUMN sort_position INTEGER NOT NULL DEFAULT 0
+             CHECK(sort_position >= 0 AND typeof(sort_position) = 'integer');
+         WITH ordered AS (
+             SELECT id, ROW_NUMBER() OVER (PARTITION BY parent_id ORDER BY name COLLATE NOCASE, id) - 1 AS position
+             FROM folders
+         )
+         UPDATE folders SET sort_position = (SELECT position FROM ordered WHERE ordered.id = folders.id);"
+    ).context("could not migrate folder order")?;
+    transaction
         .pragma_update(None, "user_version", SCHEMA_VERSION)
         .context("could not version the encrypted store")
 }
@@ -812,6 +922,7 @@ fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
                  name TEXT NOT NULL CHECK(length(trim(name)) > 0),
                  icon TEXT NOT NULL DEFAULT 'folder',
                  color TEXT NOT NULL DEFAULT 'transparent',
+                 sort_position INTEGER NOT NULL DEFAULT 0 CHECK(sort_position >= 0 AND typeof(sort_position) = 'integer'),
                  CHECK(parent_id IS NULL OR parent_id <> id)
              );
              CREATE TABLE folder_recipients (
@@ -844,7 +955,7 @@ fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
 
 fn ensure_schema_is_readable(connection: &Connection) -> Result<()> {
     connection
-        .prepare("SELECT id, parent_id, name, icon, color FROM folders LIMIT 0")
+        .prepare("SELECT id, parent_id, name, icon, color, sort_position FROM folders LIMIT 0")
         .and_then(|_| {
             connection.prepare(
                 "SELECT id, folder_id, title, kind, favorite, trashed, ciphertext, revision \
@@ -878,11 +989,11 @@ fn prevalidate_existing_database(path: &Path) -> Result<()> {
         "existing file is not a KryptoPass store"
     );
     ensure!(
-        matches!(version, 1 | SCHEMA_VERSION),
+        matches!(version, 1 | 2 | SCHEMA_VERSION),
         "existing store schema version is unsupported"
     );
 
-    if version == 1 {
+    if version == 1 || version == 2 {
         connection
             .prepare("SELECT id, parent_id, name FROM folders LIMIT 0")
             .and_then(|_| {
@@ -913,7 +1024,7 @@ fn pragma_i64(connection: &Connection, name: &str) -> Result<i64> {
 fn load_folder(connection: &Connection, id: FolderId) -> Result<Option<Folder>> {
     let raw = connection
         .query_row(
-            "SELECT id, parent_id, name, icon, color FROM folders WHERE id = ?1",
+            "SELECT id, parent_id, name, icon, color, sort_position FROM folders WHERE id = ?1",
             [id.0.to_string()],
             |row| {
                 Ok(RawFolder {
@@ -922,6 +1033,7 @@ fn load_folder(connection: &Connection, id: FolderId) -> Result<Option<Folder>> 
                     name: row.get(2)?,
                     icon: row.get(3)?,
                     color: row.get(4)?,
+                    sort_position: row.get(5)?,
                 })
             },
         )
@@ -934,6 +1046,7 @@ fn load_folder(connection: &Connection, id: FolderId) -> Result<Option<Folder>> 
         Ok(Folder {
             id,
             parent_id,
+            sort_position: raw.sort_position,
             name: raw.name,
             appearance: parse_folder_appearance(&raw.icon, &raw.color)?,
             default_recipients,
@@ -1121,6 +1234,7 @@ fn validate_parent(
 }
 
 fn validate_folder(folder: &Folder) -> Result<()> {
+    ensure!(folder.sort_position >= 0, "folder order is invalid");
     ensure!(
         !folder.name.trim().is_empty(),
         "folder name cannot be empty"
@@ -1514,6 +1628,7 @@ struct RawFolder {
     name: String,
     icon: String,
     color: String,
+    sort_position: i64,
 }
 
 #[derive(Debug)]
@@ -1538,3 +1653,7 @@ struct RawSecretMetadata {
     trashed: i64,
     revision: i64,
 }
+
+#[cfg(test)]
+#[path = "folder_move_tests.rs"]
+mod folder_move_tests;

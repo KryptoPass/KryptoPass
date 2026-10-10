@@ -42,6 +42,7 @@ pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>)
                 "id": folder.id.0.to_string(),
                 "parent": folder.parent_id.map_or_else(String::new, |id| id.0.to_string()),
                 "name": folder.name,
+                "position": folder.sort_position,
                 "icon": folder.appearance.icon(),
                 "color": folder.appearance.color(),
             })

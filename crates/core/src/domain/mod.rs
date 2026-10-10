@@ -160,6 +160,8 @@ impl Default for FolderAppearance {
 pub struct Folder {
     pub id: FolderId,
     pub parent_id: Option<FolderId>,
+    /// Persistent order among siblings.
+    pub sort_position: i64,
     pub name: String,
     pub appearance: FolderAppearance,
     /// Copied into a new secret at creation time; does not re-encrypt existing secrets.
