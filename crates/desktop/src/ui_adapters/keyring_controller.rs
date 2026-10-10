@@ -2,6 +2,8 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use std::pin::Pin;
 
+use super::keyring_projection::{key_records, key_summaries};
+
 #[cxx_qt::bridge]
 pub mod qobject {
     unsafe extern "C++" {
@@ -57,100 +59,6 @@ impl Default for KeyringControllerRust {
             load_error: QString::default(),
         }
     }
-}
-
-fn key_summaries(keys: Vec<kryptopass_core::KeyInfo>) -> (QStringList, i32) {
-    let key_count = i32::try_from(keys.len()).unwrap_or(i32::MAX);
-    let summaries = keys
-        .into_iter()
-        .map(|key| {
-            let identity = key
-                .user_ids
-                .first()
-                .map(|user_id| user_id.id.as_str())
-                .unwrap_or("Sin identidad");
-
-            QString::from(format!("{identity}\n{}", key.fingerprint))
-        })
-        .collect();
-
-    (summaries, key_count)
-}
-
-// Serialize only public display metadata across the QML boundary.
-fn key_records(keys: &[kryptopass_core::KeyInfo]) -> QStringList {
-    use serde_json::json;
-    keys.iter().map(|key| {
-        let identity = key.user_ids.iter().find(|uid| !uid.revoked && !uid.invalid).or_else(|| key.user_ids.first());
-        let title = identity.and_then(|uid| uid.name.as_deref()).filter(|v| !v.is_empty()).unwrap_or("Sin nombre");
-        let validity = |uid: Option<&kryptopass_core::UserIdInfo>| {
-            use kryptopass_core::KeyValidity;
-            match uid {
-                Some(uid) if uid.revoked => ("revoked", "Identidad revocada"),
-                Some(uid) if uid.invalid => ("invalid", "Identidad inválida"),
-                Some(uid) => match uid.validity {
-                    KeyValidity::Unknown => ("unknown", "Sin verificar"),
-                    KeyValidity::Undefined => ("undefined", "Sin verificar"),
-                    KeyValidity::Never => ("never", "No válida según GnuPG"),
-                    KeyValidity::Marginal => ("marginal", "Validez marginal según GnuPG"),
-                    KeyValidity::Full => ("full", "Validez plena según GnuPG"),
-                    KeyValidity::Ultimate => ("ultimate", "Validez absoluta según GnuPG"),
-                },
-                None => ("unknown", "Sin verificar"),
-            }
-        };
-        let (validity_code, validity_label) = validity(identity);
-        let capabilities = |encrypt: bool, sign: bool, certify: bool, authenticate: bool| {
-            [(encrypt, "Cifrar"), (sign, "Firmar"), (certify, "Certificar"), (authenticate, "Autenticar")]
-                .into_iter().filter_map(|(enabled, name)| enabled.then_some(name)).collect::<Vec<_>>()
-        };
-        let status = |revoked: bool, expired: bool, disabled: bool, invalid: bool| {
-            if revoked { "Revocada" } else if expired { "Caducada" } else if disabled { "Deshabilitada" } else if invalid { "Inválida" } else { "Vigente" }
-        };
-        let status_code = |revoked: bool, expired: bool, disabled: bool, invalid: bool| {
-            if revoked { "revoked" } else if expired { "expired" } else if disabled { "disabled" } else if invalid { "invalid" } else { "valid" }
-        };
-        let subkeys = key.subkeys.iter().map(|subkey| json!({
-            "fingerprint": subkey.fingerprint,
-            "algorithm": subkey.algorithm,
-            "expiresAt": subkey.expires_at,
-            "capabilities": capabilities(subkey.can_encrypt, subkey.can_sign, subkey.can_certify, subkey.can_authenticate),
-            "status": status(subkey.revoked, subkey.expired, subkey.disabled, subkey.invalid),
-            "statusCode": status_code(subkey.revoked, subkey.expired, subkey.disabled, subkey.invalid),
-        })).collect::<Vec<_>>();
-        let identities = key.user_ids.iter().map(|uid| {
-            let (code, label) = validity(Some(uid));
-            json!({
-            "id": uid.id,
-            "revoked": uid.revoked,
-            "invalid": uid.invalid,
-            "validity": label,
-            "validityCode": code,
-        })}).collect::<Vec<_>>();
-        let signatures = key.user_ids.iter().flat_map(|uid| uid.signatures.iter().filter_map(|sig| {
-            // Self-certifications belong to the key structure, not third-party endorsements.
-            if !sig.signer_key_id.is_empty() && key.fingerprint.ends_with(&sig.signer_key_id) { return None; }
-            Some(json!({
-                "identity": uid.id,
-                "signer": sig.signer,
-                "keyId": sig.signer_key_id,
-                "status": if sig.revoked { "Revocación registrada" } else if sig.expired { "Caducada" } else if sig.invalid { "Inválida" } else { "Certificación registrada" },
-            }))
-        })).collect::<Vec<_>>();
-        QString::from(json!({
-            "id": key.fingerprint,
-            "title": title,
-            "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
-            "hasSecret": key.has_secret,
-            "validity": validity_label,
-            "validityCode": validity_code,
-            "status": status(key.revoked, key.expired, key.disabled, key.invalid),
-            "statusCode": status_code(key.revoked, key.expired, key.disabled, key.invalid),
-            "identities": identities,
-            "subkeys": subkeys,
-            "signatures": signatures,
-        }).to_string())
-    }).collect()
 }
 
 impl qobject::KeyringController {
