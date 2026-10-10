@@ -11,35 +11,127 @@ Controls.ApplicationWindow {
     minimumWidth: 900
     minimumHeight: 580
     visible: true
-    title: qsTr("KryptoPass — Demostración")
+    title: Qt.application.name
     LayoutMirroring.enabled: Qt.locale().textDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
-    MockStore {
+    SecretStore {
         id: store
-        objectName: "mockStore"
+        objectName: "secretStore"
     }
     KeyStore {
         id: keys
         objectName: "keyStore"
     }
     property bool keysMode: false
+    property bool allowClose: false
+    property string pendingOperation: ""
+    property string pendingOperationId: ""
+    property string closeMessage: ""
+    readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
+    readonly property bool mutationsBlocked: storeOperationBusy || editor.savePending || folderEditor.pending
     readonly property var activeStore: keysMode ? keys : store
     function selectSection(showKeys) {
         if (keysMode === showKeys)
             return;
-        revealed = false;
         keysMode = showKeys;
         search.text = activeStore.query;
-        if (showKeys)
+        if (showKeys) {
+            store.controller.selectEntry("");
             keys.controller.refreshKeys();
+        } else {
+            store.controller.selectEntry(store.selectedId);
+        }
     }
-    property bool revealed: false
+    function beginOperation(name, id) {
+        pendingOperation = name;
+        pendingOperationId = id || "";
+    }
+    function failPendingOperation() {
+        if (pendingOperation === "generate")
+            passwordGenerator.rejectGeneration(store.controller.errorMessage);
+        pendingOperation = "";
+        pendingOperationId = "";
+    }
+    function showCloseMessage(message) {
+        closeMessage = message;
+        closeMessageTimer.restart();
+        if (editor.opened)
+            editor.saveError = message;
+        if (folderEditor.opened)
+            folderEditor.saveError = message;
+        if (moveDialog.opened)
+            moveDialog.operationError = message;
+        if (deleteEntryDialog.opened)
+            deleteEntryDialog.operationError = message;
+        if (deleteFolderDialog.opened)
+            deleteFolderDialog.operationError = message;
+        if (passwordGenerator.opened)
+            passwordGenerator.operationError = message;
+    }
+    function approveWindowClose() {
+        if (mutationsBlocked) {
+            showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
+            return;
+        }
+        editor.closeAndClear();
+        if (folderEditor.opened)
+            folderEditor.clearAndClose();
+        if (passwordGenerator.opened)
+            passwordGenerator.close();
+        store.controller.selectEntry("");
+        allowClose = true;
+        close();
+    }
+    readonly property bool revealed: store.detail ? store.detail.passwordRevealed : false
     readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Destinatarios") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
+    Component.onCompleted: {
+        store.controller.loadStore();
+        keys.controller.refreshKeys();
+    }
+    onClosing: function(close) {
+        if (root.allowClose) {
+            store.controller.selectEntry("");
+            return;
+        }
+        if (root.mutationsBlocked || passwordGenerator.generating) {
+            close.accepted = false;
+            root.showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
+            return;
+        }
+        if (folderEditor.opened && folderEditor.dirty) {
+            close.accepted = false;
+            root.showCloseMessage(qsTr("Guarda o descarta los cambios de carpeta antes de salir."));
+            return;
+        }
+        if (editor.opened || editor.waitingForEditor || editor.loaded) {
+            close.accepted = false;
+            if (passwordGenerator.opened)
+                passwordGenerator.close();
+            editor.requestWindowClose();
+            return;
+        }
+        if (folderEditor.opened)
+            folderEditor.clearAndClose();
+        if (passwordGenerator.opened)
+            passwordGenerator.close();
+        store.controller.selectEntry("");
+    }
+    Timer {
+        id: closeMessageTimer
+        interval: 5000
+        onTriggered: root.closeMessage = ""
+    }
+    Kirigami.InlineMessage {
+        z: 1000
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 40)
+        visible: !!root.closeMessage
+        type: Kirigami.MessageType.Warning
+        text: root.closeMessage
+    }
     Connections {
         target: store
-        function onSelectedIdChanged() {
-            root.revealed = false;
-        }
         function onQueryChanged() {
             if (!root.keysMode && search.text !== store.query)
                 search.text = store.query;
@@ -52,12 +144,56 @@ Controls.ApplicationWindow {
                 search.text = keys.query;
         }
     }
+    Connections {
+        target: store.controller
+        function onClipboardRequested(value) {
+            clipboardBuffer.text = value;
+            clipboardBuffer.selectAll();
+            clipboardBuffer.copy();
+            clipboardBuffer.deselect();
+            clipboardBuffer.text = "";
+        }
+        function onPasswordGenerated(value) {
+            if (root.pendingOperation !== "generate")
+                return;
+            root.pendingOperation = "";
+            root.pendingOperationId = "";
+            editor.applyGeneratedPassword(value);
+            passwordGenerator.acceptGenerated();
+        }
+        function onOperationSucceeded() {
+            const operation = root.pendingOperation;
+            const operationId = root.pendingOperationId;
+            root.pendingOperation = "";
+            root.pendingOperationId = "";
+            if (operation === "restore") {
+                store.scope = "all";
+                store.query = "";
+                if (store.selectedId !== operationId)
+                    store.selectedId = operationId;
+                else if (operationId)
+                    store.controller.selectEntry(operationId);
+            }
+        }
+        function onOperationFailed() {
+            if (store.controller.busy)
+                return;
+            root.failPendingOperation();
+        }
+    }
+
+    Controls.TextArea {
+        id: clipboardBuffer
+        visible: false
+        textFormat: TextEdit.PlainText
+        Accessible.ignored: true
+    }
 
     Controls.Action {
         id: newEntry
         text: qsTr("Nuevo elemento…")
         icon.name: "document-new"
-        enabled: !root.keysMode
+        enabled: !root.keysMode && !root.mutationsBlocked
         shortcut: StandardKey.New
         onTriggered: editor.openEntry(null)
     }
@@ -65,7 +201,7 @@ Controls.ApplicationWindow {
         id: editEntry
         text: qsTr("Editar…")
         icon.name: "document-edit"
-        enabled: !root.keysMode && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: "F2"
         onTriggered: editor.openEntry(store.selected)
     }
@@ -73,20 +209,18 @@ Controls.ApplicationWindow {
         id: trashEntry
         text: qsTr("Mover a la papelera")
         icon.name: "user-trash"
-        enabled: !root.keysMode && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
         shortcut: StandardKey.Delete
         onTriggered: {
-            store.updateEntry(store.selectedId, {
-                trashed: true
-            });
-            store.selectedId = store.visibleEntries.length ? store.visibleEntries[0].id : "";
+            root.beginOperation("trash", store.selectedId);
+            store.updateEntry(store.selectedId, { trashed: true });
         }
     }
     Controls.Action {
         id: newFolder
         text: qsTr("Nueva carpeta…")
         icon.name: "folder-new"
-        enabled: !root.keysMode
+        enabled: !root.keysMode && !root.mutationsBlocked
         shortcut: "Ctrl+Shift+N"
         onTriggered: folderEditor.openFolder(false)
     }
@@ -226,8 +360,14 @@ Controls.ApplicationWindow {
             onScopeSelectionRequested: function (scopeId) {
                 root.activeStore.selectScope(scopeId);
             }
-            onRenameFolderRequested: folderEditor.openFolder(true)
-            onDeleteFolderRequested: deleteFolderDialog.open()
+            onRenameFolderRequested: {
+                if (!root.mutationsBlocked)
+                    folderEditor.openFolder(true);
+            }
+            onDeleteFolderRequested: {
+                if (!root.mutationsBlocked)
+                    deleteFolderDialog.openForSelected();
+            }
         }
 
         Controls.Pane {
@@ -300,6 +440,21 @@ Controls.ApplicationWindow {
                         }
                     ]
                 }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: !root.keysMode && !!store.controller.errorMessage
+                    position: Kirigami.InlineMessage.Position.Header
+                    type: Kirigami.MessageType.Error
+                    text: store.controller.errorMessage
+                    actions: [
+                        Kirigami.Action {
+                            text: qsTr("Reintentar")
+                            icon.name: "view-refresh"
+                            enabled: !root.storeOperationBusy
+                            onTriggered: store.controller.loadStore()
+                        }
+                    ]
+                }
                 Controls.SplitView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -316,7 +471,8 @@ Controls.ApplicationWindow {
                             root.activeStore.selectedId = entryId;
                         }
                         onEntryOpenRequested: function (entry) {
-                            editor.openEntry(entry);
+                            if (!root.mutationsBlocked)
+                                editor.openEntry(entry);
                         }
                     }
                     EntryDetailPane {
@@ -329,17 +485,28 @@ Controls.ApplicationWindow {
                         editAction: editEntry
                         trashAction: trashEntry
                         copyFingerprintAction: copyFingerprint
-                        onFavoriteToggleRequested: store.updateEntry(store.selectedId, {
-                            favorite: !store.selected.favorite
-                        })
-                        onRestoreRequested: {
-                            store.updateEntry(store.selectedId, {
-                                trashed: false
-                            });
-                            store.selectScope("all");
+                        onFavoriteToggleRequested: {
+                            if (root.mutationsBlocked)
+                                return;
+                            root.beginOperation("favorite", store.selectedId);
+                            store.updateEntry(store.selectedId, { favorite: !store.selected.favorite });
                         }
-                        onPermanentDeleteRequested: deleteEntryDialog.open()
-                        onRevealToggleRequested: root.revealed = !root.revealed
+                        onRestoreRequested: {
+                            if (root.mutationsBlocked)
+                                return;
+                            root.beginOperation("restore", store.selectedId);
+                            store.updateEntry(store.selectedId, { trashed: false });
+                        }
+                        onPermanentDeleteRequested: {
+                            if (!root.mutationsBlocked)
+                                deleteEntryDialog.openForSelected();
+                        }
+                        onRevealToggleRequested: {
+                            store.controller.togglePassword();
+                        }
+                        onCopyUsernameRequested: store.controller.copyUsername()
+                        onCopyPasswordRequested: store.controller.copyPassword()
+                        onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
                     }
                 }
                 PanelFooter {
@@ -350,19 +517,27 @@ Controls.ApplicationWindow {
                         Controls.Label {
                             Layout.maximumWidth: parent.width * 0.6
                             elide: Text.ElideRight
+                            textFormat: Text.PlainText
                             text: root.keysMode ? qsTr("%1 claves · %2").arg(keys.visibleEntries.length).arg(root.scopeTitle) : qsTr("%1 elementos · %2").arg(store.visibleEntries.length).arg(root.scopeTitle)
                         }
                         Item {
                             Layout.fillWidth: true
                         }
                         Controls.Label {
-                            visible: root.keysMode
+                            visible: true
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
                             horizontalAlignment: Text.AlignRight
                             elide: Text.ElideRight
-                            text: keys.controller.status
+                            text: root.keysMode ? keys.controller.status : store.controller.status
                             color: Kirigami.Theme.disabledTextColor
+                        }
+                        Controls.BusyIndicator {
+                            visible: !root.keysMode && root.storeOperationBusy
+                            running: visible
+                            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                            Layout.preferredHeight: width
+                            Accessible.name: qsTr("Procesando la bóveda")
                         }
                     }
                 }
@@ -376,32 +551,38 @@ Controls.ApplicationWindow {
     SecretEditor {
         id: editor
         storeAdapter: store
+        keyStore: keys
         windowWidth: root.width
         focusedItem: root.activeFocusItem
-        onSaveRequested: function (entryId, folderId, title, kind, format, value, notes, recipients, details) {
-            store.saveEntry(entryId, folderId, title, kind, format, value, notes, recipients, details);
+        externalModalOpen: passwordGenerator.opened
+        onSaveRequested: function (draftJson) {
+            store.controller.saveEntry(draftJson);
+        }
+        onGeneratePasswordRequested: passwordGenerator.openGenerator()
+        onWindowCloseApproved: {
+            root.approveWindowClose();
         }
     }
     FolderEditor {
         id: folderEditor
         storeAdapter: store
-        onSaveRequested: function (folderId, name, parentId) {
-            store.saveFolder(folderId, name, parentId);
+        onSaveRequested: function (folderId, name, parentId, icon, color) {
+            store.saveFolder(folderId, name, parentId, icon, color);
         }
     }
     MoveEntryDialog {
         id: moveDialog
         storeAdapter: store
         onMoveRequested: function (entryId, folderId) {
-            store.updateEntry(entryId, {
-                folder: folderId
-            });
+            root.beginOperation("move", entryId);
+            store.updateEntry(entryId, { folder: folderId });
         }
     }
     DeleteFolderDialog {
         id: deleteFolderDialog
         storeAdapter: store
         onDeleteRequested: function (folderId) {
+            root.beginOperation("removeFolder", folderId);
             store.removeFolder(folderId);
         }
     }
@@ -409,7 +590,16 @@ Controls.ApplicationWindow {
         id: deleteEntryDialog
         storeAdapter: store
         onDeleteRequested: function (entryId) {
+            root.beginOperation("removeEntry", entryId);
             store.removeEntry(entryId);
+        }
+    }
+    PasswordGenerator {
+        id: passwordGenerator
+        windowWidth: root.width
+        onGenerateRequested: function(length, lowercase, uppercase, digits, symbols, excluded) {
+            root.beginOperation("generate", "");
+            store.controller.generatePassword(length, lowercase, uppercase, digits, symbols, excluded);
         }
     }
     AboutDialog {

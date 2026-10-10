@@ -11,6 +11,7 @@ Controls.ItemDelegate {
     required property int itemCount
     required property string scopeId
     property int depth: 0
+    property string folderColor: ""
 
     signal scopeSelected(string scopeId)
 
@@ -18,16 +19,26 @@ Controls.ItemDelegate {
     rightPadding: Kirigami.Units.largeSpacing
     highlighted: selectedScope === scopeId
     onClicked: root.scopeSelected(scopeId)
+
     contentItem: RowLayout {
-        Kirigami.IconTitleSubtitle {
+        FolderIcon {
+            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+            Layout.preferredHeight: width
+            iconName: root.icon.name
+            colorValue: root.folderColor || "transparent"
+            highlighted: root.highlighted || root.down
+        }
+        Controls.Label {
             Layout.fillWidth: true
-            title: root.text
-            icon: icon.fromControlsIcon(root.icon)
-            selected: root.highlighted || root.down
+            text: root.text
+            textFormat: Text.PlainText
+            elide: Text.ElideRight
+            color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
             font: root.font
         }
         Controls.Label {
             text: root.itemCount
+            textFormat: Text.PlainText
             color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
         }
     }

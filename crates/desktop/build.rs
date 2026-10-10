@@ -11,7 +11,15 @@ fn main() {
         .qml_file("ui/qml/EntryListPane.qml")
         .qml_file("ui/qml/EntryDetailPane.qml")
         .qml_file("ui/qml/SecretEditor.qml")
+        .qml_file("ui/qml/SecretStore.qml")
+        .qml_file("ui/qml/LoginFields.qml")
+        .qml_file("ui/qml/NoteFields.qml")
+        .qml_file("ui/qml/RecipientsChooser.qml")
+        .qml_file("ui/qml/PasswordGenerator.qml")
         .qml_file("ui/qml/FolderEditor.qml")
+        .qml_file("ui/qml/FolderAppearancePicker.qml")
+        .qml_file("ui/qml/FolderIcon.qml")
+        .qml_file("ui/qml/FolderPicker.qml")
         .qml_file("ui/qml/MoveEntryDialog.qml")
         .qml_file("ui/qml/DeleteFolderDialog.qml")
         .qml_file("ui/qml/DeleteEntryDialog.qml")
@@ -41,6 +49,7 @@ fn main() {
             "src/ui_adapters/app_shell.rs",
             "src/ui_adapters/keyring_controller.rs",
             "src/ui_adapters/markdown_document.rs",
+            "src/ui_adapters/secrets_controller.rs",
         ])
         .build();
 }

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
@@ -6,85 +7,224 @@ import org.kde.kirigami as Kirigami
 Controls.Dialog {
     id: editor
     objectName: "entryEditor"
-    required property MockStore storeAdapter
+
+    required property SecretStore storeAdapter
+    required property KeyStore keyStore
     required property real windowWidth
     required property Item focusedItem
-    signal saveRequested(string entryId, string folderId, string title, string kind, string format, string value, string notes, string recipients, var details)
+
     property string entryId: ""
-    property bool passwordVisible: false
-    readonly property int sectionSpacing: Kirigami.Units.smallSpacing
-    readonly property int sectionPadding: Kirigami.Units.smallSpacing
+    property string draftFolderId: ""
+    property var revision: null
+    property bool loaded: false
+    property bool waitingForEditor: false
+    property bool savePending: false
+    property bool recipientTouched: false
+    property bool dirty: false
+    property bool externalModalOpen: false
+    property string baselineJson: ""
+    property string requestedId: ""
+    property string pendingEntryId: ""
+    property string discardAction: ""
+    property string saveError: ""
+
+    readonly property bool saving: storeAdapter.controller.saving
+    readonly property bool canSave: loaded && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection
+
+    signal saveRequested(string draftJson)
+    signal generatePasswordRequested()
+    signal windowCloseApproved()
+
     anchors.centerIn: parent
-    width: Math.min(680, editor.windowWidth - Kirigami.Units.gridUnit * 4)
+    width: Math.min(Kirigami.Units.gridUnit * 44, windowWidth - Kirigami.Units.gridUnit * 4)
     height: Math.min(implicitHeight, parent.height - Kirigami.Units.gridUnit * 4)
     modal: true
-    title: entryId ? qsTranslate("Main", "Editar elemento") : qsTranslate("Main", "Nuevo elemento")
-    standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
-    function entryDetail(entry, name) {
-        return entry && entry.details && entry.details[name] ? entry.details[name] : "";
+    focus: true
+    closePolicy: Controls.Popup.NoAutoClose
+    title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
+
+    function currentDraft() {
+        const isNote = kindField.currentValue === "note";
+        return {
+            id: entryId,
+            folder: draftFolderId,
+            title: titleField.text,
+            kind: kindField.currentValue || "login",
+            username: isNote ? "" : loginFields.username,
+            password: isNote ? "" : loginFields.password,
+            url: isNote ? "" : loginFields.url,
+            notes: isNote ? noteFields.notes : loginFields.notes,
+            value: isNote ? noteFields.value : "",
+            recipients: recipientChooser.selectedFingerprints.slice(),
+            revision: entryId ? revision : null
+        };
     }
-    function currentDetails() {
-        switch (kindField.currentValue) {
-        case "card":
-            return {
-                cardNumber: cardNumberField.text,
-                cardHolder: cardHolderField.text,
-                expiry: cardExpiryField.text,
-                cvv: cardCvvField.text
-            };
-        case "identity":
-            return {
-                fullName: identityNameField.text,
-                document: identityDocumentField.text,
-                birthDate: identityBirthDateField.text,
-                email: identityEmailField.text,
-                phone: identityPhoneField.text
-            };
-        case "login":
-            return {
-                url: loginUrlField.text,
-                username: loginUsernameField.text,
-                password: loginPasswordField.text
-            };
-        default:
-            return {};
+
+    function updateDirty() {
+        dirty = loaded && baselineJson !== JSON.stringify(currentDraft());
+    }
+
+    function setDefaultRecipients() {
+        const updateBaseline = loaded && !dirty;
+        const ownRecipients = keyStore.entries
+                .filter(key => key.hasSecret && key.statusCode === "valid" && key.subkeys.some(subkey => subkey.statusCode === "valid" && subkey.capabilities.includes("Cifrar")))
+                .map(key => key.id);
+        recipientChooser.selectedFingerprints = ownRecipients;
+        if (loaded) {
+            if (updateBaseline)
+                baselineJson = JSON.stringify(currentDraft());
+            updateDirty();
         }
     }
-    function currentValue() {
-        return kindField.currentValue === "note" ? valueField.text : "";
+
+    function requestEntry(id) {
+        requestedId = id;
+        waitingForEditor = true;
+        storeAdapter.controller.openEntry(id);
     }
+
     function openEntry(entry) {
-        entryId = entry ? entry.id : "";
-        titleField.text = entry ? entry.title : "";
-        valueField.text = entry ? entry.value : "";
-        notesField.text = entry ? entry.notes : "";
-        const kind = entry?.kind || "note";
-        kindField.currentIndex = Math.max(0, kindField.model.findIndex(k => k.id === kind));
-        formatField.currentIndex = entry?.format === "Binario" ? 1 : 0;
-        passwordVisible = false;
-        cardNumberField.text = entryDetail(entry, "cardNumber");
-        cardHolderField.text = entryDetail(entry, "cardHolder");
-        cardExpiryField.text = entryDetail(entry, "expiry");
-        cardCvvField.text = entryDetail(entry, "cvv");
-        identityNameField.text = entryDetail(entry, "fullName");
-        identityDocumentField.text = entryDetail(entry, "document");
-        identityBirthDateField.text = entryDetail(entry, "birthDate");
-        identityEmailField.text = entryDetail(entry, "email");
-        identityPhoneField.text = entryDetail(entry, "phone");
-        loginUrlField.text = entryDetail(entry, "url");
-        loginUsernameField.text = entryDetail(entry, "username");
-        loginPasswordField.text = entryDetail(entry, "password");
-        folderField.currentIndex = Math.max(0, folderField.model.findIndex(f => f.id === (entry ? entry.folder : editor.storeAdapter.scope)));
-        const recipients = entry ? entry.recipients : "Llave A";
-        keyA.checked = recipients.includes("Llave A");
-        keyB.checked = recipients.includes("Llave B");
-        keyC.checked = recipients.includes("Llave C");
-        open();
-        titleField.forceActiveFocus();
+        const nextId = entry ? entry.id : "";
+        if (saving)
+            return;
+        if (waitingForEditor) {
+            requestEntry(nextId);
+            return;
+        }
+        if (storeAdapter.controller.editorBusy)
+            return;
+        if (opened && loaded && nextId === entryId)
+            return;
+        if (opened && dirty) {
+            pendingEntryId = nextId;
+            discardAction = "switch";
+            discardDialog.open();
+            return;
+        }
+        if (opened)
+            closeAndClear();
+        requestEntry(nextId);
     }
+
+    function acceptEditorReady() {
+        if (!waitingForEditor)
+            return;
+        let draft;
+        try {
+            draft = JSON.parse(storeAdapter.controller.editorJson);
+        } catch (error) {
+            waitingForEditor = false;
+            return;
+        }
+        const resultId = draft.id || "";
+        if (resultId !== requestedId)
+            return;
+
+        entryId = resultId;
+        draftFolderId = draft.folder || "";
+        revision = draft.revision === undefined ? null : draft.revision;
+        titleField.text = draft.title || "";
+        kindField.currentIndex = Math.max(0, kindField.model.findIndex(option => option.id === (draft.kind === "note" ? "note" : "login")));
+        loginFields.username = draft.username || "";
+        loginFields.password = draft.password || "";
+        loginFields.url = draft.url || "";
+        loginFields.notes = draft.kind === "note" ? "" : draft.notes || "";
+        loginFields.passwordVisible = false;
+        noteFields.value = draft.kind === "note" ? draft.value || "" : "";
+        noteFields.notes = draft.kind === "note" ? draft.notes || "" : "";
+        recipientTouched = false;
+        recipientChooser.selectedFingerprints = Array.isArray(draft.recipients) ? draft.recipients.slice() : [];
+        if (!entryId && recipientChooser.selectedFingerprints.length === 0)
+            setDefaultRecipients();
+
+        waitingForEditor = false;
+        loaded = true;
+        baselineJson = JSON.stringify(currentDraft());
+        dirty = false;
+        open();
+        Qt.callLater(titleField.forceActiveFocus);
+        Qt.callLater(ensureFocusVisible);
+    }
+
+    function submit() {
+        if (!canSave)
+            return;
+        savePending = true;
+        saveError = "";
+        saveRequested(JSON.stringify(currentDraft()));
+    }
+
+    function applyGeneratedPassword(value) {
+        if (!opened || !loaded || kindField.currentValue !== "login")
+            return;
+        loginFields.password = value;
+        updateDirty();
+    }
+
+    function requestClose() {
+        if (saving || storeAdapter.controller.editorBusy)
+            return;
+        if (dirty) {
+            discardAction = "close";
+            discardDialog.open();
+        } else {
+            closeAndClear();
+        }
+    }
+
+    function requestWindowClose() {
+        if (saving || storeAdapter.controller.editorBusy)
+            return;
+        if (dirty) {
+            discardAction = "window";
+            discardDialog.open();
+        } else {
+            closeAndClear();
+            windowCloseApproved();
+        }
+    }
+
+    function acceptDiscard() {
+        const action = discardAction;
+        const nextId = pendingEntryId;
+        discardAction = "";
+        pendingEntryId = "";
+        closeAndClear();
+        if (action === "switch")
+            requestEntry(nextId);
+        else if (action === "window")
+            windowCloseApproved();
+    }
+
+    function closeAndClear() {
+        savePending = false;
+        waitingForEditor = false;
+        loaded = false;
+        dirty = false;
+        baselineJson = "";
+        requestedId = "";
+        entryId = "";
+        draftFolderId = "";
+        revision = null;
+        saveError = "";
+        titleField.text = "";
+        loginFields.username = "";
+        loginFields.password = "";
+        loginFields.url = "";
+        loginFields.notes = "";
+        loginFields.passwordVisible = false;
+        noteFields.value = "";
+        noteFields.notes = "";
+        recipientChooser.selectedFingerprints = [];
+        recipientTouched = false;
+        if (opened)
+            close();
+        storeAdapter.controller.clearEditor();
+    }
+
     function ensureFocusVisible() {
         const flickable = editorScroll.contentItem as Flickable;
-        const item = editor.focusedItem;
+        const item = focusedItem;
         if (!item || !flickable)
             return;
         const position = item.mapToItem(flickable.contentItem, 0, 0);
@@ -95,324 +235,218 @@ Controls.Dialog {
         else if (bottom > flickable.contentY + flickable.height)
             flickable.contentY = Math.max(0, bottom - flickable.height);
     }
+
     onFocusedItemChanged: {
-        if (editor.opened)
-            Qt.callLater(editor.ensureFocusVisible);
+        if (opened)
+            Qt.callLater(ensureFocusVisible);
     }
-    onOpened: {
-        standardButton(Controls.Dialog.Save).text = entryId ? qsTranslate("Main", "Guardar cambios") : qsTranslate("Main", "Crear elemento");
-        standardButton(Controls.Dialog.Cancel).text = qsTranslate("Main", "Cancelar");
-        standardButton(Controls.Dialog.Save).enabled = Qt.binding(() => titleField.text.trim().length > 0 && (keyA.checked || keyB.checked || keyC.checked));
-        Qt.callLater(ensureFocusVisible);
+
+    Shortcut {
+        sequences: [StandardKey.Cancel]
+        context: Qt.WindowShortcut
+        enabled: editor.opened && !editor.externalModalOpen && !discardDialog.opened && !folderField.menuOpen
+        onActivated: editor.requestClose()
     }
-    onAccepted: editor.saveRequested(entryId, folderField.currentValue, titleField.text, kindField.currentValue, formatField.currentText, currentValue(), notesField.text, [keyA.checked ? "Llave A" : "", keyB.checked ? "Llave B" : "", keyC.checked ? "Llave C" : ""].filter(Boolean).join(", "), currentDetails())
+
+    Connections {
+        target: editor.storeAdapter.controller
+
+        function onEditorReady() {
+            editor.acceptEditorReady();
+        }
+
+        function onEntrySaved(id) {
+            if (!editor.savePending || (editor.entryId && id !== editor.entryId))
+                return;
+            editor.savePending = false;
+            editor.closeAndClear();
+        }
+
+        function onOperationFailed() {
+            if (editor.savePending && !editor.storeAdapter.controller.saving) {
+                editor.savePending = false;
+                editor.saveError = editor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar el elemento.");
+            } else if (editor.waitingForEditor && !editor.storeAdapter.controller.editorBusy) {
+                editor.waitingForEditor = false;
+            }
+        }
+    }
+
+    Connections {
+        target: editor.keyStore
+
+        function onEntriesChanged() {
+            if (editor.loaded && !editor.entryId && !editor.recipientTouched && recipientChooser.selectedFingerprints.length === 0)
+                editor.setDefaultRecipients();
+        }
+    }
+
     contentItem: Controls.ScrollView {
         id: editorScroll
         objectName: "entryEditorScroll"
-        implicitHeight: editorContent.implicitHeight
+        implicitHeight: Math.min(editorForm.implicitHeight + Kirigami.Units.largeSpacing * 2, editor.windowWidth * 0.72)
         contentWidth: availableWidth
         clip: true
+
         Controls.Pane {
-            id: editorContent
+            id: formPane
             width: editorScroll.availableWidth
             leftPadding: Kirigami.Units.largeSpacing
             rightPadding: Kirigami.Units.largeSpacing
             topPadding: Kirigami.Units.smallSpacing
             bottomPadding: Kirigami.Units.largeSpacing
             background: null
-            implicitHeight: entryForm.implicitHeight + topPadding + bottomPadding
+
             ColumnLayout {
-                id: entryForm
-                width: editorContent.availableWidth
-                spacing: editor.sectionSpacing
-                Controls.Label {
+                id: editorForm
+                width: formPane.availableWidth
+                spacing: Kirigami.Units.largeSpacing
+
+                Kirigami.InlineMessage {
                     Layout.fillWidth: true
-                    text: qsTranslate("Main", "Los campos se adaptan al tipo de elemento que estás editando.")
-                    color: Kirigami.Theme.disabledTextColor
-                    wrapMode: Text.Wrap
+                    visible: !!editor.saveError
+                    type: Kirigami.MessageType.Error
+                    text: editor.saveError
                 }
+
                 Controls.GroupBox {
                     Layout.fillWidth: true
-                    padding: editor.sectionPadding
-                    title: qsTranslate("Main", "Datos del elemento")
+                    enabled: !editor.saving && !editor.savePending
+                    title: qsTr("Datos del elemento")
                     contentItem: ColumnLayout {
                         spacing: Kirigami.Units.smallSpacing
                         Controls.Label {
-                            text: qsTranslate("Main", "Nombre")
+                            text: qsTr("Nombre")
                         }
                         Controls.TextField {
                             id: titleField
                             Layout.fillWidth: true
-                            Accessible.name: qsTranslate("Main", "Nombre del elemento")
-                            placeholderText: qsTranslate("Main", "Ej. Correo personal")
+                            Accessible.name: qsTr("Nombre del elemento")
+                            placeholderText: qsTr("Ej. Correo personal")
+                            onTextEdited: editor.updateDirty()
                         }
                         RowLayout {
                             Layout.fillWidth: true
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Controls.Label {
-                                    text: qsTranslate("Main", "Tipo")
+                                    text: qsTr("Tipo")
                                 }
                                 Controls.ComboBox {
                                     id: kindField
                                     Layout.fillWidth: true
-                                    Accessible.name: qsTranslate("Main", "Tipo de elemento")
                                     model: editor.storeAdapter.kindOptions
                                     textRole: "name"
                                     valueRole: "id"
+                                    Accessible.name: qsTr("Tipo de elemento")
+                                    onActivated: editor.updateDirty()
                                 }
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Controls.Label {
-                                    text: qsTranslate("Main", "Carpeta")
+                                    text: qsTr("Carpeta")
                                 }
-                                Controls.ComboBox {
+                                FolderPicker {
                                     id: folderField
                                     Layout.fillWidth: true
-                                    Accessible.name: qsTranslate("Main", "Carpeta del elemento")
-                                    model: [
-                                        {
-                                            id: "",
-                                            name: qsTranslate("Main", "Sin carpeta")
-                                        }
-                                    ].concat(editor.storeAdapter.folderRows)
-                                    textRole: "name"
-                                    valueRole: "id"
+                                    folderRows: editor.storeAdapter.folderRows
+                                    selectedId: editor.draftFolderId
+                                    accessibleLabel: qsTr("Carpeta del elemento")
+                                    onFolderSelected: function(folderId) {
+                                        editor.draftFolderId = folderId;
+                                        editor.updateDirty();
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
                 Controls.GroupBox {
                     Layout.fillWidth: true
-                    padding: editor.sectionPadding
-                    title: kindField.currentValue === "note" ? qsTranslate("Main", "Contenido") : qsTranslate("Main", "Datos de %1").arg(editor.storeAdapter.kindName(kindField.currentValue))
+                    enabled: !editor.saving && !editor.savePending
+                    title: kindField.currentValue === "note" ? qsTr("Contenido") : qsTr("Datos de acceso")
                     contentItem: StackLayout {
-                        id: typedFields
-                        Layout.fillWidth: true
-                        currentIndex: kindField.currentIndex
-                        ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Label {
-                                text: qsTranslate("Main", "Número de tarjeta")
-                            }
-                            Controls.TextField {
-                                id: cardNumberField
-                                Layout.fillWidth: true
-                                placeholderText: qsTranslate("Main", "0000 0000 0000 0000")
-                            }
-                            Controls.Label {
-                                text: qsTranslate("Main", "Titular")
-                            }
-                            Controls.TextField {
-                                id: cardHolderField
-                                Layout.fillWidth: true
-                                placeholderText: qsTranslate("Main", "NOMBRE APELLIDO")
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "Vencimiento")
-                                    }
-                                    Controls.TextField {
-                                        id: cardExpiryField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "MM/AA")
-                                    }
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "CVV")
-                                    }
-                                    Controls.TextField {
-                                        id: cardCvvField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "123")
-                                    }
-                                }
-                            }
+                        currentIndex: kindField.currentValue === "note" ? 1 : 0
+                        LoginFields {
+                            id: loginFields
+                            Layout.fillWidth: true
+                            onUsernameChanged: editor.updateDirty()
+                            onPasswordChanged: editor.updateDirty()
+                            onUrlChanged: editor.updateDirty()
+                            onNotesChanged: editor.updateDirty()
+                            onGeneratePasswordRequested: editor.generatePasswordRequested()
                         }
-                        ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Label {
-                                text: qsTranslate("Main", "Nombre completo")
-                            }
-                            Controls.TextField {
-                                id: identityNameField
-                                Layout.fillWidth: true
-                                placeholderText: qsTranslate("Main", "Nombre de la persona")
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "Documento")
-                                    }
-                                    Controls.TextField {
-                                        id: identityDocumentField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "Número de documento")
-                                    }
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "Fecha de nacimiento")
-                                    }
-                                    Controls.TextField {
-                                        id: identityBirthDateField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "AAAA-MM-DD")
-                                    }
-                                }
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "Correo")
-                                    }
-                                    Controls.TextField {
-                                        id: identityEmailField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "correo@example.test")
-                                    }
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Controls.Label {
-                                        text: qsTranslate("Main", "Teléfono")
-                                    }
-                                    Controls.TextField {
-                                        id: identityPhoneField
-                                        Layout.fillWidth: true
-                                        placeholderText: qsTranslate("Main", "Número de teléfono")
-                                    }
-                                }
-                            }
-                        }
-                        ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Label {
-                                text: qsTranslate("Main", "Sitio web")
-                            }
-                            Controls.TextField {
-                                id: loginUrlField
-                                Layout.fillWidth: true
-                                placeholderText: qsTranslate("Main", "https://ejemplo.test")
-                            }
-                            Controls.Label {
-                                text: qsTranslate("Main", "Usuario")
-                            }
-                            Controls.TextField {
-                                id: loginUsernameField
-                                Layout.fillWidth: true
-                            }
-                            Controls.Label {
-                                text: qsTranslate("Main", "Contraseña")
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Controls.TextField {
-                                    id: loginPasswordField
-                                    Layout.fillWidth: true
-                                    echoMode: editor.passwordVisible ? TextInput.Normal : TextInput.Password
-                                }
-                                Controls.ToolButton {
-                                    checkable: true
-                                    checked: editor.passwordVisible
-                                    display: Controls.AbstractButton.IconOnly
-                                    icon.name: editor.passwordVisible ? "view-hidden" : "view-visible"
-                                    Accessible.name: editor.passwordVisible ? qsTranslate("Main", "Ocultar contraseña") : qsTranslate("Main", "Mostrar contraseña")
-                                    Controls.ToolTip.visible: hovered
-                                    Controls.ToolTip.text: Accessible.name
-                                    onClicked: editor.passwordVisible = !editor.passwordVisible
-                                }
-                            }
-                        }
-                        ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Controls.Label {
-                                    Layout.fillWidth: true
-                                    text: qsTranslate("Main", "Formato")
-                                }
-                                Controls.ComboBox {
-                                    id: formatField
-                                    Accessible.name: qsTranslate("Main", "Formato del contenido")
-                                    model: [qsTranslate("Main", "Texto"), qsTranslate("Main", "Binario")]
-                                }
-                            }
-                            Controls.Label {
-                                text: formatField.currentIndex === 1 ? qsTranslate("Main", "Bytes de demostración (hexadecimal)") : qsTranslate("Main", "Contenido de demostración")
-                            }
-                            Controls.ScrollView {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 160
-                                Controls.TextArea {
-                                    id: valueField
-                                    Accessible.name: qsTranslate("Main", "Contenido de demostración")
-                                    wrapMode: TextEdit.Wrap
-                                    selectByMouse: true
-                                }
-                            }
+                        NoteFields {
+                            id: noteFields
+                            Layout.fillWidth: true
+                            onValueChanged: editor.updateDirty()
+                            onNotesChanged: editor.updateDirty()
                         }
                     }
                 }
-                ColumnLayout {
+
+                RecipientsChooser {
+                    id: recipientChooser
                     Layout.fillWidth: true
-                    spacing: editor.sectionSpacing
-                    Controls.Label {
-                        text: qsTranslate("Main", "Notas")
-                    }
-                    Controls.TextArea {
-                        id: notesField
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
-                        Accessible.name: qsTranslate("Main", "Notas del elemento")
-                        placeholderText: qsTranslate("Main", "Añade contexto opcional para reconocer este elemento.")
-                        wrapMode: TextEdit.Wrap
-                        selectByMouse: true
-                    }
-                }
-                Controls.GroupBox {
-                    Layout.fillWidth: true
-                    padding: editor.sectionPadding
-                    title: qsTranslate("Main", "Acceso")
-                    contentItem: ColumnLayout {
-                        spacing: Kirigami.Units.smallSpacing
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: qsTranslate("Main", "Selecciona las llaves que podrán abrir este elemento.")
-                            color: Kirigami.Theme.disabledTextColor
-                            wrapMode: Text.Wrap
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.CheckBox {
-                                id: keyA
-                                text: qsTranslate("Main", "Llave A")
-                            }
-                            Controls.CheckBox {
-                                id: keyB
-                                text: qsTranslate("Main", "Llave B")
-                            }
-                            Controls.CheckBox {
-                                id: keyC
-                                text: qsTranslate("Main", "Llave C")
-                            }
-                        }
+                    enabled: !editor.saving && !editor.savePending
+                    keyStore: editor.keyStore
+                    onSelectionChanged: function(fingerprints) {
+                        editor.recipientTouched = true;
+                        editor.updateDirty();
                     }
                 }
             }
+        }
+    }
+
+    footer: RowLayout {
+        spacing: Kirigami.Units.smallSpacing
+        Controls.Label {
+            Layout.fillWidth: true
+            visible: editor.dirty
+            text: qsTr("Cambios sin guardar")
+            color: Kirigami.Theme.neutralTextColor
+        }
+        Controls.BusyIndicator {
+            visible: editor.saving
+            running: visible
+            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+            Layout.preferredHeight: width
+            Accessible.name: qsTr("Guardando elemento")
+        }
+        Controls.Button {
+            text: qsTr("Cancelar")
+            enabled: !editor.saving && !editor.savePending && !editor.storeAdapter.controller.editorBusy
+            onClicked: editor.requestClose()
+        }
+        Controls.Button {
+            text: editor.saving ? qsTr("Guardando…") : editor.entryId ? qsTr("Guardar cambios") : qsTr("Crear elemento")
+            icon.name: "document-save"
+            enabled: editor.canSave
+            onClicked: editor.submit()
+        }
+    }
+
+    Controls.Dialog {
+        id: discardDialog
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Descartar cambios")
+        standardButtons: Controls.Dialog.Discard | Controls.Dialog.Cancel
+        onDiscarded: {
+            discardDialog.close();
+            editor.acceptDiscard();
+        }
+        onRejected: {
+            editor.discardAction = "";
+            editor.pendingEntryId = "";
+        }
+        Controls.Label {
+            width: Math.min(editor.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 28)
+            text: qsTr("Hay cambios sin guardar. Si continúas, se descartarán.")
+            wrapMode: Text.Wrap
         }
     }
 }

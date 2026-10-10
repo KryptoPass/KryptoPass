@@ -9,7 +9,7 @@ Controls.Pane {
 
     required property bool keysMode
     required property var activeStore
-    required property MockStore storeAdapter
+    required property SecretStore storeAdapter
     required property KeyStore keyStore
     required property string scopeTitle
     required property real headerHeight
@@ -30,11 +30,26 @@ Controls.Pane {
         PanelHeader {
             Layout.fillWidth: true
             headerHeight: root.headerHeight
-            contentItem: Kirigami.Heading {
-                level: 3
-                text: root.scopeTitle
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
+            contentItem: RowLayout {
+                Kirigami.Heading {
+                    Layout.fillWidth: true
+                    level: 3
+                    text: root.scopeTitle
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Controls.ToolButton {
+                    visible: !root.keysMode
+                    checkable: true
+                    checked: root.storeAdapter.sortDescending
+                    text: checked ? qsTr("Z a A") : qsTr("A a Z")
+                    icon.name: checked ? "view-sort-descending" : "view-sort-ascending"
+                    Accessible.name: checked ? qsTr("Orden descendente") : qsTr("Orden ascendente")
+                    onToggled: root.storeAdapter.sortDescending = checked
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: qsTr("Cambiar orden por nombre")
+                }
             }
         }
         Controls.ScrollView {
@@ -89,7 +104,7 @@ Controls.Pane {
                                 entryList.forceActiveFocus();
                             }
                             onDoubleClicked: {
-                                if (!root.keysMode && !modelData.trashed)
+                                if (!root.keysMode && !modelData.trashed && !root.storeAdapter.controller.busy)
                                     root.entryOpenRequested(modelData);
                             }
                             Keys.onReturnPressed: clicked()
@@ -128,8 +143,18 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         visible: entryList.count === 0
-        icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.activeStore.query ? "edit-find" : root.keysMode ? "view-certificate" : "document-new"
-        text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.keyStore.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
-        explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.keyStore.query ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.query ? qsTranslate("Main", "Prueba con otro título o nota.") : qsTranslate("Main", "Crea un elemento para empezar.")
+        icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.activeStore.query ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.errorMessage ? "dialog-error" : "document-new"
+        text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.keyStore.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.controller.busy ? qsTranslate("Main", "Actualizando elementos…") : root.storeAdapter.controller.errorMessage ? qsTranslate("Main", "No se pudo cargar la bóveda") : root.storeAdapter.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
+        explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.keyStore.query ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.controller.errorMessage ? root.storeAdapter.controller.errorMessage : root.storeAdapter.controller.busy ? qsTranslate("Main", "Consultando el almacenamiento local cifrado.") : root.storeAdapter.query ? qsTranslate("Main", "Prueba con otro título, carpeta o tipo.") : qsTranslate("Main", "Crea un elemento para empezar.")
+    }
+    Controls.Button {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.verticalCenter
+        anchors.topMargin: Kirigami.Units.gridUnit * 5
+        visible: entryList.count === 0 && (root.keysMode ? !!root.keyStore.controller.loadError : !!root.storeAdapter.controller.errorMessage)
+        text: qsTr("Reintentar")
+        icon.name: "view-refresh"
+        enabled: root.keysMode ? !root.keyStore.controller.busy : !root.storeAdapter.controller.busy
+        onClicked: root.keysMode ? root.keyStore.controller.refreshKeys() : root.storeAdapter.controller.loadStore()
     }
 }

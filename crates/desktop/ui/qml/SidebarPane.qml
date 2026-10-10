@@ -9,7 +9,7 @@ Controls.Pane {
 
     required property bool keysMode
     required property var activeStore
-    required property MockStore storeAdapter
+    required property SecretStore storeAdapter
     required property real headerHeight
     required property Controls.Action newFolderAction
 
@@ -153,8 +153,9 @@ Controls.Pane {
                     width: folderList.width
                     scopeId: modelData.id
                     depth: modelData.depth
+                    folderColor: modelData.color || "transparent"
                     text: modelData.name
-                    icon.name: root.storeAdapter.scope === modelData.id ? "folder-open" : "folder"
+                    icon.name: modelData.icon || "folder"
                     onScopeSelected: function(scopeId) {
                         root.scopeSelectionRequested(scopeId);
                     }
@@ -169,10 +170,10 @@ Controls.Pane {
             contentItem: RowLayout {
                 Controls.ToolButton {
                     visible: !root.keysMode
-                    text: qsTranslate("Main", "Renombrar carpeta")
+                    text: qsTranslate("Main", "Editar carpeta")
                     icon.name: "edit-rename"
                     display: Controls.AbstractButton.IconOnly
-                    enabled: !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
+                    enabled: !root.storeAdapter.controller.busy && !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
                     onClicked: root.renameFolderRequested()
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.text: text
@@ -183,7 +184,7 @@ Controls.Pane {
                     text: qsTranslate("Main", "Eliminar carpeta")
                     icon.name: "edit-delete"
                     display: Controls.AbstractButton.IconOnly
-                    enabled: !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
+                    enabled: !root.storeAdapter.controller.busy && !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
                     onClicked: root.deleteFolderRequested()
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.text: text

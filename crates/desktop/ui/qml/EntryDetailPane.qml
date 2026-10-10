@@ -8,7 +8,7 @@ Controls.Pane {
     id: root
 
     required property bool keysMode
-    required property MockStore storeAdapter
+    required property SecretStore storeAdapter
     required property KeyStore keyStore
     required property bool revealed
     required property real headerHeight
@@ -16,10 +16,17 @@ Controls.Pane {
     required property Controls.Action trashAction
     required property Controls.Action copyFingerprintAction
 
+    readonly property var selected: storeAdapter.selected
+    readonly property var selectedDetail: storeAdapter.detail && selected
+            && storeAdapter.detail.id === selected.id ? storeAdapter.detail : null
+
     signal favoriteToggleRequested()
     signal restoreRequested()
     signal permanentDeleteRequested()
     signal revealToggleRequested()
+    signal copyUsernameRequested()
+    signal copyPasswordRequested()
+    signal retryDetailRequested()
 
     function copySelectedFingerprint() {
         keyDetail.copyFingerprint();
@@ -28,9 +35,11 @@ Controls.Pane {
     Controls.SplitView.fillWidth: true
     Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 21
     padding: 0
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
         PanelHeader {
             Layout.fillWidth: true
             headerHeight: root.headerHeight
@@ -42,17 +51,17 @@ Controls.Pane {
                     level: 3
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode ? qsTranslate("Main", "Propiedades de la clave") : qsTranslate("Main", "Detalle")
+                    text: root.keysMode ? qsTr("Propiedades de la clave") : qsTr("Detalle")
                 }
                 Controls.ToolButton {
-                    visible: !root.keysMode
-                    text: qsTranslate("Main", "Favorito")
+                    visible: !root.keysMode && !!root.selected && !root.selected.trashed
+                    text: qsTr("Favorito")
                     icon.name: "rating"
                     checkable: true
-                    checked: root.storeAdapter.selected?.favorite || false
-                    enabled: root.editAction.enabled
+                    checked: root.selected?.favorite || false
+                    enabled: !root.storeAdapter.controller.busy
                     onClicked: root.favoriteToggleRequested()
-                    Controls.ToolTip.visible: hovered
+                    Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
@@ -61,9 +70,9 @@ Controls.Pane {
                 }
                 Controls.ToolButton {
                     action: root.trashAction
-                    visible: !root.keysMode
+                    visible: !root.keysMode && !!root.selected && !root.selected.trashed
                     display: Controls.AbstractButton.IconOnly
-                    Controls.ToolTip.visible: hovered
+                    Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
@@ -76,6 +85,7 @@ Controls.Pane {
                 }
             }
         }
+
         KeyDetail {
             id: keyDetail
             Layout.fillWidth: true
@@ -83,25 +93,29 @@ Controls.Pane {
             visible: root.keysMode
             selectedKey: root.keyStore.selected
         }
+
         Controls.ScrollView {
-            visible: !root.keysMode
+            id: detailScroll
+            visible: !root.keysMode && !!root.selected
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
             clip: true
+
             ColumnLayout {
-                width: parent.width
+                width: detailScroll.availableWidth
                 spacing: Kirigami.Units.largeSpacing
-                visible: !!root.storeAdapter.selected
+
                 Kirigami.Separator {
                     Layout.fillWidth: true
                 }
+
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     spacing: Kirigami.Units.largeSpacing
                     Kirigami.Icon {
-                        source: root.storeAdapter.kindIcon(root.storeAdapter.selected?.kind || "note")
+                        source: root.storeAdapter.kindIcon(root.selected?.kind || "note")
                         Layout.preferredWidth: Kirigami.Units.iconSizes.large
                         Layout.preferredHeight: width
                     }
@@ -112,83 +126,103 @@ Controls.Pane {
                         Kirigami.Heading {
                             Layout.fillWidth: true
                             level: 2
-                            text: root.storeAdapter.selected?.title || ""
+                            text: root.selected?.title || ""
+                            textFormat: Text.PlainText
                             wrapMode: Text.Wrap
                         }
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: qsTranslate("Main", "%1 · %2 · %3").arg(root.storeAdapter.folderName(root.storeAdapter.selected?.folder || "")).arg(root.storeAdapter.kindName(root.storeAdapter.selected?.kind || "note")).arg(root.storeAdapter.selected?.format || "")
+                            text: qsTr("%1 · %2").arg(root.storeAdapter.folderName(root.selected?.folder || "")).arg(root.storeAdapter.kindName(root.selected?.kind || "note"))
+                            textFormat: Text.PlainText
                             color: Kirigami.Theme.disabledTextColor
                             elide: Text.ElideRight
                         }
                     }
                 }
+
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    Layout.margins: Kirigami.Units.largeSpacing
+                    visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
+                    type: Kirigami.MessageType.Information
+                    text: qsTr("Descifrando el contenido del elemento…")
+                }
+
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    Layout.margins: Kirigami.Units.largeSpacing
+                    visible: !root.selectedDetail && !root.storeAdapter.controller.detailBusy && !!root.storeAdapter.controller.errorMessage
+                    type: Kirigami.MessageType.Error
+                    text: root.storeAdapter.controller.errorMessage
+                    actions: [
+                        Kirigami.Action {
+                            text: qsTr("Reintentar")
+                            icon.name: "view-refresh"
+                            onTriggered: root.retryDetailRequested()
+                        }
+                    ]
+                }
+
                 SecretDetail {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
-                    entry: root.storeAdapter.selected
+                    visible: !!root.selectedDetail
+                    detail: root.selectedDetail
                     revealed: root.revealed
                     onRevealToggled: root.revealToggleRequested()
-                    onCopyRequested: function(value) {
-                        copyBuffer.text = value;
-                        copyBuffer.selectAll();
-                        copyBuffer.copy();
-                        copyBuffer.deselect();
-                    }
+                    onCopyUsernameRequested: root.copyUsernameRequested()
+                    onCopyPasswordRequested: root.copyPasswordRequested()
                 }
-                Controls.TextArea {
-                    id: copyBuffer
-                    visible: false
-                    textFormat: TextEdit.PlainText
-                }
+
                 Kirigami.Separator {
                     Layout.fillWidth: true
                 }
+
                 Kirigami.Heading {
                     Layout.leftMargin: Kirigami.Units.largeSpacing
                     level: 3
-                    text: qsTranslate("Main", "Información del elemento")
+                    text: qsTr("Información del elemento")
                 }
+
                 Kirigami.FormLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     Controls.Label {
-                        Kirigami.FormData.label: qsTranslate("Main", "Destinatarios:")
-                        text: root.storeAdapter.selected?.recipients || ""
-                        wrapMode: Text.Wrap
+                        Kirigami.FormData.label: qsTr("Destinatarios:")
                         Layout.fillWidth: true
-                    }
-                    Controls.Label {
-                        Kirigami.FormData.label: qsTranslate("Main", "Notas:")
-                        text: root.storeAdapter.selected?.notes || qsTranslate("Main", "Sin notas")
-                        wrapMode: Text.Wrap
-                        Layout.fillWidth: true
+                        text: root.selected ? (root.selected.recipients || []).join(", ") : ""
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WrapAnywhere
                     }
                 }
+
                 ColumnLayout {
                     Layout.margins: Kirigami.Units.largeSpacing
-                    visible: root.storeAdapter.selected?.trashed || false
+                    visible: root.selected?.trashed || false
                     Controls.Button {
-                        text: qsTranslate("Main", "Restaurar")
+                        text: qsTr("Restaurar")
                         icon.name: "edit-undo"
+                        enabled: !root.storeAdapter.controller.busy
                         onClicked: root.restoreRequested()
                     }
                     Controls.Button {
-                        text: qsTranslate("Main", "Eliminar definitivamente…")
+                        text: qsTr("Eliminar definitivamente…")
                         icon.name: "edit-delete"
+                        enabled: !root.storeAdapter.controller.busy
                         onClicked: root.permanentDeleteRequested()
                     }
                 }
             }
         }
     }
+
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         anchors.verticalCenterOffset: root.headerHeight / 2
-        visible: root.keysMode ? !root.keyStore.selected : !root.storeAdapter.selected
+        visible: root.keysMode ? !root.keyStore.selected : !root.selected
         icon.name: root.keysMode ? "view-certificate" : "document-encrypt"
-        text: root.keysMode ? qsTranslate("Main", "Ninguna clave seleccionada") : qsTranslate("Main", "Ningún elemento seleccionado")
-        explanation: root.keysMode ? qsTranslate("Main", "Selecciona una clave para ver sus identidades, subclaves y firmas.") : qsTranslate("Main", "Selecciona un elemento de la lista para ver su contenido.")
+        text: root.keysMode ? qsTr("Ninguna clave seleccionada") : qsTr("Ningún elemento seleccionado")
+        explanation: root.keysMode ? qsTr("Selecciona una clave para ver sus identidades, subclaves y firmas.") : qsTr("Selecciona un elemento de la lista para ver su contenido.")
     }
 }

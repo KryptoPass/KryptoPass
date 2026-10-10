@@ -4,3 +4,5 @@ pub mod app_shell;
 pub mod keyring_controller;
 mod keyring_projection;
 pub mod markdown_document;
+pub mod secrets_controller;
+mod secrets_projection;
