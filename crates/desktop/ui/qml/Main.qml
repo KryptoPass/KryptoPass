@@ -325,15 +325,11 @@ Controls.ApplicationWindow {
                                 Controls.MenuItem {
                                     text: qsTr("Carpetas")
                                     icon.name: "folder"
-                                    checkable: true
-                                    checked: !root.keysMode
                                     onTriggered: root.selectSection(false)
                                 }
                                 Controls.MenuItem {
                                     text: qsTr("Claves")
                                     icon.name: "view-certificate"
-                                    checkable: true
-                                    checked: root.keysMode
                                     onTriggered: root.selectSection(true)
                                 }
                             }
@@ -461,9 +457,30 @@ Controls.ApplicationWindow {
                     Layout.fillWidth: true
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.smallSpacing
+                        Kirigami.SearchField {
+                            id: search
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: Kirigami.Units.gridUnit * 22
+                            placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
+                            onTextChanged: root.activeStore.query = text
+                        }
+                        Item {
+                            Layout.fillWidth: true
+                        }
                         Controls.ToolButton {
                             action: newEntry
                             visible: !root.keysMode
+                        }
+                        Controls.ToolButton {
+                            visible: !root.keysMode && !!store.selected && !store.selected.trashed
+                            text: qsTr("Mover a otra carpeta…")
+                            icon.name: "folder-move"
+                            enabled: editEntry.enabled
+                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                            onClicked: moveDialog.openMove()
+                            Controls.ToolTip.visible: hovered || visualFocus
+                            Controls.ToolTip.text: text
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                         Controls.ToolButton {
                             action: refreshKeys
@@ -475,16 +492,6 @@ Controls.ApplicationWindow {
                             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                             Layout.preferredHeight: width
                             Accessible.name: qsTr("Actualizando claves de GnuPG")
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                        Kirigami.SearchField {
-                            id: search
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: Kirigami.Units.gridUnit * 22
-                            placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
-                            onTextChanged: root.activeStore.query = text
                         }
                     }
                 }
@@ -570,7 +577,7 @@ Controls.ApplicationWindow {
                                                 focus: true
                                                 readonly property var modelData: rowLoader.modelData
                                                 text: modelData.title
-                                                icon.name: modelData.format === "Binario" ? "application-octet-stream" : "document-encrypt"
+                                                icon.name: store.kindIcon(modelData.kind)
                                                 icon.width: Kirigami.Units.iconSizes.smallMedium
                                                 icon.height: Kirigami.Units.iconSizes.smallMedium
                                                 highlighted: root.activeStore.selectedId === modelData.id
@@ -599,7 +606,7 @@ Controls.ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         textFormat: Text.PlainText
                                                         title: entryDelegate.text
-                                                        subtitle: store.folderName(entryDelegate.modelData.folder)
+                                                        subtitle: qsTr("%1 · %2").arg(store.folderName(entryDelegate.modelData.folder)).arg(store.kindName(entryDelegate.modelData.kind))
                                                         selected: entryDelegate.highlighted || entryDelegate.down
                                                         font: entryDelegate.font
                                                         subtitleFont: entryDelegate.font
@@ -698,59 +705,54 @@ Controls.ApplicationWindow {
                                     width: parent.width
                                     spacing: Kirigami.Units.largeSpacing
                                     visible: !!store.selected
-                                    Kirigami.Heading {
-                                        Layout.fillWidth: true
-                                        Layout.margins: Kirigami.Units.largeSpacing
-                                        Layout.bottomMargin: 0
-                                        level: 2
-                                        text: store.selected?.title || ""
-                                        wrapMode: Text.Wrap
-                                    }
-                                    Controls.Label {
-                                        Layout.fillWidth: true
-                                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                                        Layout.rightMargin: Kirigami.Units.largeSpacing
-                                        text: qsTr("%1 · %2").arg(store.folderName(store.selected?.folder || "")).arg(store.selected?.format || "")
-                                        color: Kirigami.Theme.disabledTextColor
-                                        elide: Text.ElideRight
-                                    }
                                     Kirigami.Separator {
                                         Layout.fillWidth: true
                                     }
-                                    ColumnLayout {
+                                    RowLayout {
                                         Layout.fillWidth: true
                                         Layout.margins: Kirigami.Units.largeSpacing
                                         spacing: Kirigami.Units.largeSpacing
-                                        Kirigami.Heading {
-                                            level: 3
-                                            text: qsTr("Contenido")
+                                        Kirigami.Icon {
+                                            source: store.kindIcon(store.selected?.kind || "note")
+                                            Layout.preferredWidth: Kirigami.Units.iconSizes.large
+                                            Layout.preferredHeight: width
                                         }
-                                        Controls.TextArea {
-                                            id: contentPreview
+                                        ColumnLayout {
                                             Layout.fillWidth: true
-                                            Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 3)
-                                            readOnly: true
-                                            selectByMouse: true
-                                            wrapMode: TextEdit.Wrap
-                                            text: root.revealed ? store.selected?.value || "" : qsTr("Contenido oculto")
-                                        }
-                                        RowLayout {
-                                            Controls.Button {
-                                                text: root.revealed ? qsTr("Ocultar") : qsTr("Mostrar")
-                                                icon.name: root.revealed ? "view-hidden" : "view-visible"
-                                                onClicked: root.revealed = !root.revealed
+                                            Layout.minimumWidth: 0
+                                            spacing: 0
+                                            Kirigami.Heading {
+                                                Layout.fillWidth: true
+                                                level: 2
+                                                text: store.selected?.title || ""
+                                                wrapMode: Text.Wrap
                                             }
-                                            Controls.Button {
-                                                text: qsTr("Copiar")
-                                                icon.name: "edit-copy"
-                                                enabled: root.revealed
-                                                onClicked: {
-                                                    contentPreview.selectAll();
-                                                    contentPreview.copy();
-                                                    contentPreview.deselect();
-                                                }
+                                            Controls.Label {
+                                                Layout.fillWidth: true
+                                                text: qsTr("%1 · %2 · %3").arg(store.folderName(store.selected?.folder || "")).arg(store.kindName(store.selected?.kind || "note")).arg(store.selected?.format || "")
+                                                color: Kirigami.Theme.disabledTextColor
+                                                elide: Text.ElideRight
                                             }
                                         }
+                                    }
+                                    SecretDetail {
+                                        id: secretDetail
+                                        Layout.fillWidth: true
+                                        Layout.margins: Kirigami.Units.largeSpacing
+                                        entry: store.selected
+                                        revealed: root.revealed
+                                        onRevealToggled: root.revealed = !root.revealed
+                                        onCopyRequested: {
+                                            copyBuffer.text = value;
+                                            copyBuffer.selectAll();
+                                            copyBuffer.copy();
+                                            copyBuffer.deselect();
+                                        }
+                                    }
+                                    Controls.TextArea {
+                                        id: copyBuffer
+                                        visible: false
+                                        textFormat: TextEdit.PlainText
                                     }
                                     Kirigami.Separator {
                                         Layout.fillWidth: true
@@ -775,14 +777,6 @@ Controls.ApplicationWindow {
                                             wrapMode: Text.Wrap
                                             Layout.fillWidth: true
                                         }
-                                    }
-                                    Controls.Button {
-                                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                                        text: qsTr("Mover a otra carpeta…")
-                                        icon.name: "folder-move"
-                                        enabled: editEntry.enabled
-                                        visible: !store.selected?.trashed
-                                        onClicked: moveDialog.openMove()
                                     }
                                     ColumnLayout {
                                         Layout.margins: Kirigami.Units.largeSpacing
@@ -830,11 +824,12 @@ Controls.ApplicationWindow {
                             Layout.fillWidth: true
                         }
                         Controls.Label {
+                            visible: root.keysMode
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
                             horizontalAlignment: Text.AlignRight
                             elide: Text.ElideRight
-                            text: root.keysMode ? keys.controller.status : qsTr("Demostración en memoria · sin persistencia")
+                            text: keys.controller.status
                             color: Kirigami.Theme.disabledTextColor
                         }
                     }
@@ -850,18 +845,69 @@ Controls.ApplicationWindow {
         id: editor
         objectName: "entryEditor"
         property string entryId: ""
+        property bool passwordVisible: false
+        readonly property int sectionSpacing: Kirigami.Units.smallSpacing
+        readonly property int sectionPadding: Kirigami.Units.smallSpacing
         anchors.centerIn: parent
-        width: Math.min(600, root.width - 60)
-        height: Math.min(implicitHeight, parent.height - Kirigami.Units.largeSpacing * 4)
+        width: Math.min(680, root.width - Kirigami.Units.gridUnit * 4)
+        height: Math.min(implicitHeight, parent.height - Kirigami.Units.gridUnit * 4)
         modal: true
         title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
         standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
+        function entryDetail(entry, name) {
+            return entry && entry.details && entry.details[name] ? entry.details[name] : "";
+        }
+        function currentDetails() {
+            switch (kindField.currentValue) {
+            case "card":
+                return {
+                    cardNumber: cardNumberField.text,
+                    cardHolder: cardHolderField.text,
+                    expiry: cardExpiryField.text,
+                    cvv: cardCvvField.text
+                };
+            case "identity":
+                return {
+                    fullName: identityNameField.text,
+                    document: identityDocumentField.text,
+                    birthDate: identityBirthDateField.text,
+                    email: identityEmailField.text,
+                    phone: identityPhoneField.text
+                };
+            case "login":
+                return {
+                    url: loginUrlField.text,
+                    username: loginUsernameField.text,
+                    password: loginPasswordField.text
+                };
+            default:
+                return {};
+            }
+        }
+        function currentValue() {
+            return kindField.currentValue === "note" ? valueField.text : "";
+        }
         function openEntry(entry) {
             entryId = entry ? entry.id : "";
             titleField.text = entry ? entry.title : "";
             valueField.text = entry ? entry.value : "";
             notesField.text = entry ? entry.notes : "";
+            const kind = entry?.kind || "note";
+            kindField.currentIndex = Math.max(0, kindField.model.findIndex(k => k.id === kind));
             formatField.currentIndex = entry?.format === "Binario" ? 1 : 0;
+            passwordVisible = false;
+            cardNumberField.text = entryDetail(entry, "cardNumber");
+            cardHolderField.text = entryDetail(entry, "cardHolder");
+            cardExpiryField.text = entryDetail(entry, "expiry");
+            cardCvvField.text = entryDetail(entry, "cvv");
+            identityNameField.text = entryDetail(entry, "fullName");
+            identityDocumentField.text = entryDetail(entry, "document");
+            identityBirthDateField.text = entryDetail(entry, "birthDate");
+            identityEmailField.text = entryDetail(entry, "email");
+            identityPhoneField.text = entryDetail(entry, "phone");
+            loginUrlField.text = entryDetail(entry, "url");
+            loginUsernameField.text = entryDetail(entry, "username");
+            loginPasswordField.text = entryDetail(entry, "password");
             folderField.currentIndex = Math.max(0, folderField.model.findIndex(f => f.id === (entry ? entry.folder : store.scope)));
             const recipients = entry ? entry.recipients : "Llave A";
             keyA.checked = recipients.includes("Llave A");
@@ -871,13 +917,12 @@ Controls.ApplicationWindow {
             titleField.forceActiveFocus();
         }
         function ensureFocusVisible() {
-            let item = root.activeFocusItem;
-            while (item && item.parent !== entryForm)
-                item = item.parent;
             const flickable = editorScroll.contentItem as Flickable;
+            const item = root.activeFocusItem;
             if (!item || !flickable)
                 return;
-            const top = item.y;
+            const position = item.mapToItem(flickable.contentItem, 0, 0);
+            const top = position.y;
             const bottom = top + item.height;
             if (top < flickable.contentY)
                 flickable.contentY = top;
@@ -892,98 +937,318 @@ Controls.ApplicationWindow {
             }
         }
         onOpened: {
+            standardButton(Controls.Dialog.Save).text = entryId ? qsTr("Guardar cambios") : qsTr("Crear elemento");
+            standardButton(Controls.Dialog.Cancel).text = qsTr("Cancelar");
             standardButton(Controls.Dialog.Save).enabled = Qt.binding(() => titleField.text.trim().length > 0 && (keyA.checked || keyB.checked || keyC.checked));
             Qt.callLater(ensureFocusVisible);
         }
-        onAccepted: store.saveEntry(entryId, folderField.currentValue, titleField.text, formatField.currentText, valueField.text, notesField.text, [keyA.checked ? "Llave A" : "", keyB.checked ? "Llave B" : "", keyC.checked ? "Llave C" : ""].filter(Boolean).join(", "))
+        onAccepted: store.saveEntry(entryId, folderField.currentValue, titleField.text, kindField.currentValue, formatField.currentText, currentValue(), notesField.text, [keyA.checked ? "Llave A" : "", keyB.checked ? "Llave B" : "", keyC.checked ? "Llave C" : ""].filter(Boolean).join(", "), currentDetails())
         contentItem: Controls.ScrollView {
             id: editorScroll
             objectName: "entryEditorScroll"
-            implicitHeight: entryForm.implicitHeight
+            implicitHeight: editorContent.implicitHeight
             contentWidth: availableWidth
             clip: true
-            ColumnLayout {
-                id: entryForm
+            Controls.Pane {
+                id: editorContent
                 width: editorScroll.availableWidth
-                spacing: Kirigami.Units.smallSpacing
-                Controls.Label {
-                    text: qsTr("Título:")
-                }
-                Controls.TextField {
-                    id: titleField
-                    Layout.fillWidth: true
-                    Accessible.name: qsTr("Título del elemento")
-                    placeholderText: qsTr("Nombre del elemento")
-                }
-                RowLayout {
-                    Controls.Label {
-                        text: qsTr("Carpeta:")
-                    }
-                    Controls.ComboBox {
-                        id: folderField
-                        Layout.fillWidth: true
-                        Accessible.name: qsTr("Carpeta del elemento")
-                        model: [
-                            {
-                                id: "",
-                                name: qsTr("Sin carpeta")
-                            }
-                        ].concat(store.folderRows)
-                        textRole: "name"
-                        valueRole: "id"
-                    }
-                    Controls.ComboBox {
-                        id: formatField
-                        Accessible.name: qsTr("Formato del contenido")
-                        model: [qsTr("Texto"), qsTr("Binario")]
-                    }
-                }
-                Controls.Label {
-                    text: formatField.currentIndex === 1 ? qsTr("Bytes de demostración (hexadecimal):") : qsTr("Contenido de demostración:")
-                }
-                Controls.ScrollView {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 160
-                    Controls.TextArea {
-                        id: valueField
-                        Accessible.name: qsTr("Contenido de demostración")
-                        wrapMode: TextEdit.Wrap
-                        selectByMouse: true
-                    }
-                }
-                Controls.Label {
-                    text: qsTr("Notas:")
-                }
-                Controls.TextField {
-                    id: notesField
-                    Layout.fillWidth: true
-                    Accessible.name: qsTr("Notas del elemento")
-                }
-                Controls.GroupBox {
-                    title: qsTr("Llaves de demostración")
-                    Layout.fillWidth: true
-                    contentItem: ColumnLayout {
+                leftPadding: Kirigami.Units.largeSpacing
+                rightPadding: Kirigami.Units.largeSpacing
+                topPadding: Kirigami.Units.smallSpacing
+                bottomPadding: Kirigami.Units.largeSpacing
+                background: null
+                implicitHeight: entryForm.implicitHeight + topPadding + bottomPadding
+                ColumnLayout {
+                    id: entryForm
+                        width: editorContent.availableWidth
+                        spacing: editor.sectionSpacing
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: qsTr("Cualquiera de las llaves seleccionadas podrá abrir el elemento.")
+                            text: qsTr("Los campos se adaptan al tipo de elemento que estás editando.")
+                            color: Kirigami.Theme.disabledTextColor
                             wrapMode: Text.Wrap
                         }
-                        Flow {
+                        Controls.GroupBox {
                             Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.CheckBox {
-                                id: keyA
-                                text: qsTr("Llave A")
-                            }
-                            Controls.CheckBox {
-                                id: keyB
-                                text: qsTr("Llave B")
-                            }
-                            Controls.CheckBox {
-                                id: keyC
-                                text: qsTr("Llave C")
+                            padding: editor.sectionPadding
+                            title: qsTr("Datos del elemento")
+                            contentItem: ColumnLayout {
+                                spacing: Kirigami.Units.smallSpacing
+                                Controls.Label {
+                                    text: qsTr("Nombre")
+                                }
+                                Controls.TextField {
+                                    id: titleField
+                                    Layout.fillWidth: true
+                                    Accessible.name: qsTr("Nombre del elemento")
+                                    placeholderText: qsTr("Ej. Correo personal")
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Controls.Label {
+                                            text: qsTr("Tipo")
+                                        }
+                                        Controls.ComboBox {
+                                            id: kindField
+                                            Layout.fillWidth: true
+                                            Accessible.name: qsTr("Tipo de elemento")
+                                            model: store.kindOptions
+                                            textRole: "name"
+                                            valueRole: "id"
+                                        }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        Controls.Label {
+                                            text: qsTr("Carpeta")
+                                        }
+                                        Controls.ComboBox {
+                                            id: folderField
+                                            Layout.fillWidth: true
+                                            Accessible.name: qsTr("Carpeta del elemento")
+                                            model: [
+                                                {
+                                                    id: "",
+                                                    name: qsTr("Sin carpeta")
+                                                }
+                                            ].concat(store.folderRows)
+                                            textRole: "name"
+                                            valueRole: "id"
+                                        }
+                                    }
+                                }
                             }
                         }
+                        Controls.GroupBox {
+                            Layout.fillWidth: true
+                            padding: editor.sectionPadding
+                            title: kindField.currentValue === "note" ? qsTr("Contenido") : qsTr("Datos de %1").arg(store.kindName(kindField.currentValue))
+                            contentItem: StackLayout {
+                                id: typedFields
+                                Layout.fillWidth: true
+                                implicitHeight: currentItem ? currentItem.implicitHeight : 0
+                                currentIndex: kindField.currentIndex
+                                ColumnLayout {
+                                    spacing: Kirigami.Units.smallSpacing
+                                    Controls.Label {
+                                        text: qsTr("Número de tarjeta")
+                                    }
+                                    Controls.TextField {
+                                        id: cardNumberField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("0000 0000 0000 0000")
+                                    }
+                                    Controls.Label {
+                                        text: qsTr("Titular")
+                                    }
+                                    Controls.TextField {
+                                        id: cardHolderField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("NOMBRE APELLIDO")
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("Vencimiento")
+                                            }
+                                            Controls.TextField {
+                                                id: cardExpiryField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("MM/AA")
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("CVV")
+                                            }
+                                            Controls.TextField {
+                                                id: cardCvvField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("123")
+                                            }
+                                        }
+                                    }
+                                }
+                                ColumnLayout {
+                                    spacing: Kirigami.Units.smallSpacing
+                                    Controls.Label {
+                                        text: qsTr("Nombre completo")
+                                    }
+                                    Controls.TextField {
+                                        id: identityNameField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("Nombre de la persona")
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("Documento")
+                                            }
+                                            Controls.TextField {
+                                                id: identityDocumentField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("Número de documento")
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("Fecha de nacimiento")
+                                            }
+                                            Controls.TextField {
+                                                id: identityBirthDateField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("AAAA-MM-DD")
+                                            }
+                                        }
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("Correo")
+                                            }
+                                            Controls.TextField {
+                                                id: identityEmailField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("correo@example.test")
+                                            }
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            Controls.Label {
+                                                text: qsTr("Teléfono")
+                                            }
+                                            Controls.TextField {
+                                                id: identityPhoneField
+                                                Layout.fillWidth: true
+                                                placeholderText: qsTr("Número de teléfono")
+                                            }
+                                        }
+                                    }
+                                }
+                                ColumnLayout {
+                                    spacing: Kirigami.Units.smallSpacing
+                                    Controls.Label {
+                                        text: qsTr("Sitio web")
+                                    }
+                                    Controls.TextField {
+                                        id: loginUrlField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("https://ejemplo.test")
+                                    }
+                                    Controls.Label {
+                                        text: qsTr("Usuario")
+                                    }
+                                    Controls.TextField {
+                                        id: loginUsernameField
+                                        Layout.fillWidth: true
+                                    }
+                                    Controls.Label {
+                                        text: qsTr("Contraseña")
+                                    }
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Controls.TextField {
+                                            id: loginPasswordField
+                                            Layout.fillWidth: true
+                                            echoMode: editor.passwordVisible ? TextInput.Normal : TextInput.Password
+                                        }
+                                        Controls.ToolButton {
+                                            checkable: true
+                                            checked: editor.passwordVisible
+                                            display: Controls.AbstractButton.IconOnly
+                                            icon.name: editor.passwordVisible ? "view-hidden" : "view-visible"
+                                            Accessible.name: editor.passwordVisible ? qsTr("Ocultar contraseña") : qsTr("Mostrar contraseña")
+                                            Controls.ToolTip.visible: hovered
+                                            Controls.ToolTip.text: Accessible.name
+                                            onClicked: editor.passwordVisible = !editor.passwordVisible
+                                        }
+                                    }
+                                }
+                                ColumnLayout {
+                                    spacing: Kirigami.Units.smallSpacing
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Controls.Label {
+                                            Layout.fillWidth: true
+                                            text: qsTr("Formato")
+                                        }
+                                        Controls.ComboBox {
+                                            id: formatField
+                                            Accessible.name: qsTr("Formato del contenido")
+                                            model: [qsTr("Texto"), qsTr("Binario")]
+                                        }
+                                    }
+                                    Controls.Label {
+                                        text: formatField.currentIndex === 1 ? qsTr("Bytes de demostración (hexadecimal)") : qsTr("Contenido de demostración")
+                                    }
+                                    Controls.ScrollView {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 160
+                                        Controls.TextArea {
+                                            id: valueField
+                                            Accessible.name: qsTr("Contenido de demostración")
+                                            wrapMode: TextEdit.Wrap
+                                            selectByMouse: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: editor.sectionSpacing
+                            Controls.Label {
+                                text: qsTr("Notas")
+                            }
+                            Controls.TextArea {
+                                id: notesField
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
+                                Accessible.name: qsTr("Notas del elemento")
+                                placeholderText: qsTr("Añade contexto opcional para reconocer este elemento.")
+                                wrapMode: TextEdit.Wrap
+                                selectByMouse: true
+                            }
+                        }
+                        Controls.GroupBox {
+                            Layout.fillWidth: true
+                            padding: editor.sectionPadding
+                            title: qsTr("Acceso")
+                            contentItem: ColumnLayout {
+                                spacing: Kirigami.Units.smallSpacing
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Selecciona las llaves que podrán abrir este elemento.")
+                                    color: Kirigami.Theme.disabledTextColor
+                                    wrapMode: Text.Wrap
+                                }
+                                Flow {
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+                                    Controls.CheckBox {
+                                        id: keyA
+                                        text: qsTr("Llave A")
+                                    }
+                                    Controls.CheckBox {
+                                        id: keyB
+                                        text: qsTr("Llave B")
+                                    }
+                                    Controls.CheckBox {
+                                        id: keyC
+                                        text: qsTr("Llave C")
+                                    }
+                                }
+                            }
                     }
                 }
             }

@@ -10,6 +10,7 @@ fn main() {
         .qml_file("ui/qml/KeyStatus.qml")
         .qml_file("ui/qml/KeyAvatar.qml")
         .qml_file("ui/qml/IdentityValidity.qml")
+        .qml_file("ui/qml/SecretDetail.qml")
         .qml_file("ui/qml/MarkdownView.qml")
         .qml_file("ui/qml/MarkdownDemo.qml")
         .depends([
