@@ -118,6 +118,7 @@ y natural. Menos ruido. Más control. Más confianza.
 
 - [Reglas para agentes y colaboradores](AGENTS.md)
 - [Arquitectura de la experiencia](docs/QT6_UI_ARCHITECTURE_SPEC.md)
+- [Responsabilidades de los componentes actuales](docs/COMPONENT_BOUNDARIES.md)
 - [Notas de Qt 6](docs/QT6_NOTES.md)
 - [Notas de integración CXX-Qt y QML](docs/CXX_QT_QML_NOTES.md)
 
