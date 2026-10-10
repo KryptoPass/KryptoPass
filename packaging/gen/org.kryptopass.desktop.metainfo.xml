@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.kryptopass.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>KryptoPass</name>
+  <summary>KryptoPass desktop application built with Rust, CXX-Qt, and QML</summary>
+  <description>
+    <p>KryptoPass desktop application built with Rust, CXX-Qt, and QML</p>
+  </description>
+  <launchable type="desktop-id">org.kryptopass.desktop.desktop</launchable>
+  <provides>
+    <binary>kryptopass-desktop</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-10-09"/>
+  </releases>
+</component>

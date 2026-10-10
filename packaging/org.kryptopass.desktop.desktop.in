@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=@APP_NAME@
+GenericName=Credential vault
+Comment=@APP_COMMENT@
+Exec=@APP_BIN@
+Icon=@APP_ICON@
+Terminal=false
+Categories=Utility;Security;
+StartupNotify=true

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=KryptoPass
+GenericName=Credential vault
+Comment=KryptoPass desktop application built with Rust, CXX-Qt, and QML
+Exec=kryptopass-desktop
+Icon=org.kryptopass.desktop
+Terminal=false
+Categories=Utility;Security;
+StartupNotify=true
