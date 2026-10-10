@@ -192,18 +192,34 @@ pub struct RenderState {
 create_formatter!(QtFormatter<RenderState>, {
     NodeValue::SpoileredText => |context, node, entering| {
         let index = context.user.indices[&(node as *const _ as usize)];
+
         if entering {
             context.user.visible.push(index);
+
             if !context.user.revealed.contains(&index) {
                 let url = action(context.user.revision, index);
-                let color = context.user.theme.link.clone();
-                write!(context, "<a style=\"color:{color}\" href=\"{url}\">[Mostrar spoiler {}]</a>", index + 1)?;
+                let background = context.user.theme.border.clone();
+
+                // Máscara fija: no revela la longitud del secreto.
+                const MASK: &str = "████████████";
+
+                write!(
+                    context,
+                    concat!(
+                        "<a href=\"{}\" style=\"",
+                        "background-color:{};",
+                        "color:{};",
+                        "text-decoration:none;",
+                        "\">{}</a>"
+                    ),
+                    url,
+                    background,
+                    background,
+                    MASK
+                )?;
+
                 return Ok(ChildRendering::Skip);
             }
-        } else if context.user.revealed.contains(&index) {
-            let url = action(context.user.revision, index);
-            let color = context.user.theme.link.clone();
-            write!(context, " <a style=\"color:{color}\" href=\"{url}\">[Ocultar spoiler {}]</a>", index + 1)?;
         }
     },
     NodeValue::Highlight => |context, entering| {

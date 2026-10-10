@@ -76,7 +76,9 @@ Controls.Control {
             Accessible.name: qsTr("Documento Markdown")
             onLinkActivated: link => root.document.activateLink(link)
             HoverHandler {
-                cursorShape: textView.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor
+                cursorShape: textView.hoveredLink
+                    ? Qt.PointingHandCursor
+                    : Qt.IBeamCursor
             }
         }
         Controls.Label {
@@ -85,22 +87,6 @@ Controls.Control {
             text: root.document?.error || ""
             color: Kirigami.Theme.negativeTextColor
             wrapMode: Text.Wrap
-        }
-        Flow {
-            Layout.fillWidth: true
-            spacing: Kirigami.Units.smallSpacing
-            visible: root.spoilerActions.length > 0
-            Repeater {
-                model: root.spoilerActions
-                delegate: Controls.Button {
-                    required property string modelData
-                    required property int index
-                    readonly property bool revealed: root.revealedActions.includes(modelData)
-                    text: revealed ? qsTr("Ocultar spoiler %1").arg(index + 1) : qsTr("Mostrar spoiler %1").arg(index + 1)
-                    icon.name: revealed ? "view-hidden" : "view-visible"
-                    onClicked: root.document.activateLink(modelData)
-                }
-            }
         }
     }
 }
