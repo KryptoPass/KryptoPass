@@ -9,44 +9,65 @@ Item {
     property string colorValue: "transparent"
     property bool highlighted: false
     property bool monochrome: false
-    property color foregroundColor: foregroundFor(colorValue)
+    readonly property color foregroundColor: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
+                                             ? "#ffffff" : "#000000"
 
     readonly property bool hasTint: colorValue.length > 0 && colorValue !== "transparent"
     readonly property string sourceName: {
         switch (iconName) {
         case "folder": return "folder-symbolic";
         case "user-home": return "go-home";
-        case "applications-office": return "applications-office-symbolic";
+        case "applications-office": return "view-bank-symbolic";
         case "applications-games": return "applications-games-symbolic";
         case "preferences-system": return "configure";
-        case "office-address-book": return "address-book-new";
+        case "office-address-book": return "view-pim-contacts-symbolic";
         case "text-x-generic": return "document-new";
         case "folder-favorites": return "starred";
-        case "wallet-open": return "wallet-open";
-        case "view-calendar": return "view-calendar";
+        case "wallet-open": return "wallet-open-symbolic";
+        case "view-calendar": return "view-calendar-symbolic";
+        case "user-identity": return "user-identity-symbolic";
+        case "view-financial-account-credit-card": return "view-financial-account-credit-card-symbolic";
+        case "applications-education": return "applications-education-symbolic";
+        case "headphones": return "headphones-symbolic";
+        case "mail-message": return "mail-message-symbolic";
+        case "globe": return "globe-symbolic";
+        case "cloudstatus": return "cloudstatus-symbolic";
+        case "network-server": return "network-server-symbolic";
+        case "security-high": return "firewall-applet-shields_up-symbolic";
+        case "dialog-password": return "lock-symbolic";
+        case "format-text-code": return "format-text-code-symbolic";
+        case "utilities-terminal": return "utilities-terminal-symbolic";
+        case "phone": return "phone-symbolic";
+        case "camera-photo": return "camera-photo-symbolic";
         default: return iconName || "folder-symbolic";
         }
     }
     readonly property bool maskableIcon: [
         "folder-symbolic",
         "go-home",
-        "applications-office-symbolic",
+        "view-bank-symbolic",
         "applications-games-symbolic",
         "configure",
-        "address-book-new",
+        "view-pim-contacts-symbolic",
         "document-new",
         "starred",
-        "wallet-open",
-        "view-calendar"
+        "wallet-open-symbolic",
+        "view-calendar-symbolic",
+        "user-identity-symbolic",
+        "view-financial-account-credit-card-symbolic",
+        "applications-education-symbolic",
+        "headphones-symbolic",
+        "mail-message-symbolic",
+        "globe-symbolic",
+        "cloudstatus-symbolic",
+        "network-server-symbolic",
+        "firewall-applet-shields_up-symbolic",
+        "lock-symbolic",
+        "format-text-code-symbolic",
+        "utilities-terminal-symbolic",
+        "phone-symbolic",
+        "camera-photo-symbolic"
     ].includes(sourceName)
-
-    function foregroundFor(colorValue) {
-        if (!colorValue || colorValue === "transparent")
-            return highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor;
-        const color = Qt.color(colorValue);
-        const luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-        return luminance > 0.55 ? "#202020" : "#ffffff";
-    }
 
     implicitWidth: Kirigami.Units.iconSizes.smallMedium
     implicitHeight: Kirigami.Units.iconSizes.smallMedium

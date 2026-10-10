@@ -28,9 +28,10 @@ Controls.Dialog {
     signal saveRequested(string folderId, string name, string parentId, string icon, string color)
 
     anchors.centerIn: parent
-    width: Math.min(460, parent.width - Kirigami.Units.gridUnit * 4)
+    width: Math.min(340, parent.width - Kirigami.Units.gridUnit * 4)
     height: Math.min(implicitHeight, parent.height - Kirigami.Units.gridUnit * 4)
     padding: 0
+    spacing: 0
     modal: true
     closePolicy: Controls.Popup.NoAutoClose
     title: folderId ? qsTr("Editar carpeta") : qsTr("Nueva carpeta")
@@ -115,25 +116,45 @@ Controls.Dialog {
         }
     }
 
-    contentItem: Controls.ScrollView {
-        id: folderScroll
-        implicitWidth: folderForm.implicitWidth + 40
-        implicitHeight: Math.min(folderForm.implicitHeight + 36,
-                                 Math.max(Kirigami.Units.gridUnit * 12,
-                                          folderEditor.parent.height - Kirigami.Units.gridUnit * 8))
-        contentWidth: availableWidth
-        clip: true
+    header: Controls.Pane {
+        leftPadding: 20
+        rightPadding: 20
+        topPadding: 12
+        bottomPadding: 0
+        background: null
+
+        contentItem: RowLayout {
+            spacing: 8
+
+            Kirigami.Heading {
+                Layout.fillWidth: true
+                level: 2
+                text: folderEditor.title
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+            }
+            Controls.ToolButton {
+                icon.name: "window-close-symbolic"
+                text: qsTr("Cerrar")
+                display: Controls.AbstractButton.IconOnly
+                enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
+                onClicked: folderEditor.requestClose()
+            }
+        }
+    }
+
+    contentItem: ColumnLayout {
+        spacing: 0
 
         Controls.Pane {
-            width: folderScroll.availableWidth
+            Layout.fillWidth: true
             leftPadding: 20
             rightPadding: 20
-            topPadding: 16
+            topPadding: 8
             bottomPadding: 20
             background: null
 
             contentItem: ColumnLayout {
-                id: folderForm
                 spacing: 20
 
                 Kirigami.InlineMessage {
@@ -143,32 +164,32 @@ Controls.Dialog {
                     text: folderEditor.saveError
                 }
 
-                RowLayout {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 20
+                    spacing: 8
 
-                    FolderIcon {
-                        Layout.preferredWidth: 40
-                        Layout.alignment: Qt.AlignBottom
-                        Layout.preferredHeight: 40
-                        iconName: folderEditor.folderIcon
-                        colorValue: folderEditor.folderColor
+                    Controls.Label {
+                        text: qsTr("Nombre")
                     }
-
-                    ColumnLayout {
+                    RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: 12
 
-                        Controls.Label {
-                            text: qsTr("Nombre")
-                        }
                         Controls.TextField {
                             id: folderNameField
                             Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
                             enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                             Accessible.name: qsTr("Nombre de la carpeta")
                             placeholderText: qsTr("Nombre de la carpeta")
                             onTextEdited: folderEditor.saveError = ""
+                        }
+                        FolderIcon {
+                            Layout.preferredWidth: 40
+                            Layout.preferredHeight: 40
+                            Layout.alignment: Qt.AlignVCenter
+                            iconName: folderEditor.folderIcon
+                            colorValue: folderEditor.folderColor
                         }
                     }
                 }
@@ -195,13 +216,45 @@ Controls.Dialog {
                         }
                     }
                 }
+            }
+        }
 
-                FolderAppearancePicker {
+        Controls.ScrollView {
+            id: appearanceScroll
+            objectName: "folderAppearanceScroll"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 0
+            Layout.preferredHeight: Math.min(280, appearancePane.implicitHeight)
+            contentWidth: availableWidth
+            contentHeight: appearancePane.implicitHeight
+            clip: true
+            Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+
+            Controls.Pane {
+                id: appearancePane
+                width: appearanceScroll.availableWidth
+                leftPadding: 20
+                rightPadding: 20
+                topPadding: 0
+                bottomPadding: 12
+                background: null
+
+                contentItem: FolderAppearancePicker {
                     id: folderAppearance
-                    Layout.fillWidth: true
                     enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                     selectedIcon: folderEditor.folderIcon
                     selectedColor: folderEditor.folderColor
+                    onRevealRequested: function(top, height) {
+                        const flickable = appearanceScroll.contentItem as Flickable;
+                        if (!flickable)
+                            return;
+                        if (top < flickable.contentY)
+                            flickable.contentY = top;
+                        else if (top + height > flickable.contentY + flickable.height)
+                            flickable.contentY = Math.min(top + height - flickable.height,
+                                                         Math.max(0, flickable.contentHeight - flickable.height));
+                    }
                     onIconSelected: function(iconName) {
                         folderEditor.folderIcon = iconName;
                         folderEditor.saveError = "";
@@ -216,7 +269,11 @@ Controls.Dialog {
     }
 
     footer: Controls.Pane {
-        padding: 16
+        leftPadding: 20
+        rightPadding: 20
+        topPadding: 8
+        bottomPadding: 8
+        background: null
 
         contentItem: RowLayout {
             spacing: 8

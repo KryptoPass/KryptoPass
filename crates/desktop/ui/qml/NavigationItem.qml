@@ -22,8 +22,9 @@ Controls.ItemDelegate {
 
     contentItem: RowLayout {
         FolderIcon {
-            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-            Layout.preferredHeight: width
+            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
+            Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
+            Layout.alignment: Qt.AlignVCenter
             iconName: root.icon.name
             colorValue: root.folderColor || "transparent"
             highlighted: root.highlighted || root.down

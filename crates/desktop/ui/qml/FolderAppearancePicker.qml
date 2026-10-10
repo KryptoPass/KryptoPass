@@ -12,35 +12,67 @@ ColumnLayout {
 
     readonly property int cellSize: 40
     readonly property int cellSpacing: 12
+    readonly property color selectionAccent: Kirigami.Theme.highlightColor
+
+    component SelectionBackground: Rectangle {
+        required property Controls.ToolButton control
+
+        radius: 5
+        color: control.checked ? Qt.alpha(picker.selectionAccent, 0.14)
+                               : control.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
+        border.width: 1
+        border.color: control.checked || control.activeFocus ? picker.selectionAccent : "transparent"
+    }
 
     readonly property var colorOptions: [
         { value: "transparent", name: qsTr("Sin color") },
-        { value: "#a775ff", name: qsTr("Violeta") },
-        { value: "#f28c8c", name: qsTr("Coral") },
-        { value: "#f4d66d", name: qsTr("Amarillo") },
-        { value: "#87c796", name: qsTr("Verde") },
-        { value: "#82a9ee", name: qsTr("Azul") },
-        { value: "#e78bd6", name: qsTr("Rosa") },
-        { value: "#cf5b72", name: qsTr("Frambuesa") },
-        { value: "#e1a25b", name: qsTr("Naranja") },
-        { value: "#d8d8da", name: qsTr("Gris") },
-        { value: "#80d5dc", name: qsTr("Turquesa") }
+        { value: "#da4453", name: qsTr("Rojo") },
+        { value: "#d76d4b", name: qsTr("Coral") },
+        { value: "#d56800", name: qsTr("Naranja") },
+        { value: "#b88a20", name: qsTr("Ámbar") },
+        { value: "#259653", name: qsTr("Verde") },
+        { value: "#159d84", name: qsTr("Turquesa") },
+        { value: "#258ec0", name: qsTr("Azul") },
+        { value: "#7375d4", name: qsTr("Índigo") },
+        { value: "#9b59b6", name: qsTr("Violeta") },
+        { value: "#e85d9e", name: qsTr("Rosa") },
+        { value: "#818d8e", name: qsTr("Gris") }
     ]
     readonly property var iconOptions: [
         { value: "folder", name: qsTr("Carpeta") },
         { value: "user-home", name: qsTr("Inicio") },
         { value: "applications-office", name: qsTr("Trabajo") },
-        { value: "wallet-open", name: qsTr("Billetera") },
+        { value: "user-identity", name: qsTr("Personal") },
         { value: "folder-favorites", name: qsTr("Favoritos") },
-        { value: "preferences-system", name: qsTr("Sistema") },
         { value: "office-address-book", name: qsTr("Contactos") },
+        { value: "wallet-open", name: qsTr("Billetera") },
+        { value: "view-financial-account-credit-card", name: qsTr("Tarjetas") },
         { value: "view-calendar", name: qsTr("Calendario") },
-        { value: "text-x-generic", name: qsTr("Documento") },
-        { value: "applications-games", name: qsTr("Entretenimiento") }
+        { value: "text-x-generic", name: qsTr("Documentos") },
+        { value: "applications-education", name: qsTr("Estudios") },
+        { value: "headphones", name: qsTr("Música") },
+        { value: "mail-message", name: qsTr("Correo") },
+        { value: "globe", name: qsTr("Internet") },
+        { value: "cloudstatus", name: qsTr("Nube") },
+        { value: "network-server", name: qsTr("Servidores") },
+        { value: "security-high", name: qsTr("Seguridad") },
+        { value: "dialog-password", name: qsTr("Contraseñas") },
+        { value: "format-text-code", name: qsTr("Desarrollo") },
+        { value: "utilities-terminal", name: qsTr("Terminal") },
+        { value: "phone", name: qsTr("Teléfono") },
+        { value: "camera-photo", name: qsTr("Fotos") },
+        { value: "applications-games", name: qsTr("Juegos") },
+        { value: "preferences-system", name: qsTr("Sistema") }
     ]
 
     signal iconSelected(string iconName)
     signal colorSelected(string colorValue)
+    signal revealRequested(real top, real height)
+
+    function revealButton(button: Item) {
+        const position = button.mapToItem(picker, 0, 0);
+        revealRequested(position.y, button.height);
+    }
 
     spacing: 8
     opacity: enabled ? 1 : 0.45
@@ -75,6 +107,11 @@ ColumnLayout {
                 text: ""
                 Accessible.name: modelData.name
                 Accessible.description: checked ? qsTr("Color seleccionado") : qsTr("Seleccionar color")
+                focusPolicy: Qt.StrongFocus
+                onActiveFocusChanged: {
+                    if (activeFocus)
+                        picker.revealButton(colorButton);
+                }
                 onClicked: picker.colorSelected(modelData.value)
 
                 contentItem: Item {
@@ -96,27 +133,23 @@ ColumnLayout {
                         visible: colorButton.modelData.value === "transparent"
                         color: "transparent"
                         border.width: 1
-                        border.color: colorButton.checked ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                        border.color: Kirigami.Theme.textColor
 
                         Rectangle {
                             anchors.centerIn: parent
                             width: 24
                             height: 1
                             rotation: -45
-                            color: colorButton.checked ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                            color: Kirigami.Theme.textColor
                         }
                     }
                 }
 
-                background: Rectangle {
-                    radius: 5
-                    color: colorButton.checked ? Qt.alpha(Kirigami.Theme.highlightColor, 0.14)
-                                               : colorButton.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
-                    border.width: 1
-                    border.color: colorButton.checked || colorButton.activeFocus ? Kirigami.Theme.highlightColor : "transparent"
+                background: SelectionBackground {
+                    control: colorButton
                 }
 
-                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.visible: hovered || activeFocus
                 Controls.ToolTip.text: modelData.name
                 Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
             }
@@ -154,6 +187,11 @@ ColumnLayout {
                 text: ""
                 Accessible.name: modelData.name
                 Accessible.description: checked ? qsTr("Icono seleccionado") : qsTr("Seleccionar icono")
+                focusPolicy: Qt.StrongFocus
+                onActiveFocusChanged: {
+                    if (activeFocus)
+                        picker.revealButton(iconButton);
+                }
                 onClicked: picker.iconSelected(modelData.value)
 
                 contentItem: Item {
@@ -163,19 +201,14 @@ ColumnLayout {
                         height: width
                         iconName: iconButton.modelData.value
                         monochrome: true
-                        foregroundColor: iconButton.checked ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
                     }
                 }
 
-                background: Rectangle {
-                    radius: 5
-                    color: iconButton.checked ? Qt.alpha(Kirigami.Theme.highlightColor, 0.14)
-                                              : iconButton.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
-                    border.width: 1
-                    border.color: iconButton.checked || iconButton.activeFocus ? Kirigami.Theme.highlightColor : "transparent"
+                background: SelectionBackground {
+                    control: iconButton
                 }
 
-                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.visible: hovered || activeFocus
                 Controls.ToolTip.text: modelData.name
                 Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
             }
