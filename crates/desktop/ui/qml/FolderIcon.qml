@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import org.kryptopass.desktop as Desktop
 import org.kde.kirigami as Kirigami
 
 Item {
@@ -9,8 +10,9 @@ Item {
     property string colorValue: "transparent"
     property bool highlighted: false
     property bool monochrome: false
-    readonly property color foregroundColor: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
-                                             ? "#ffffff" : "#000000"
+    readonly property bool darkTheme: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
+    readonly property color foregroundColor: darkTheme ? "#ffffff" : "#000000"
+    readonly property color displayColor: Desktop.FolderPalette.displayColor(colorValue, darkTheme)
 
     readonly property bool hasTint: colorValue.length > 0 && colorValue !== "transparent"
     readonly property string sourceName: {
@@ -79,7 +81,7 @@ Item {
         anchors.centerIn: parent
         radius: width / 2
         visible: root.hasTint
-        color: root.hasTint ? root.colorValue : "transparent"
+        color: root.hasTint ? root.displayColor : "transparent"
     }
 
     Kirigami.Icon {

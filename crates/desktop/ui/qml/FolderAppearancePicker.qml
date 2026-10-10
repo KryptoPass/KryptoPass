@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import org.kryptopass.desktop as Desktop
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
@@ -24,20 +25,8 @@ ColumnLayout {
         border.color: control.checked || control.activeFocus ? picker.selectionAccent : "transparent"
     }
 
-    readonly property var colorOptions: [
-        { value: "transparent", name: qsTr("Sin color") },
-        { value: "#da4453", name: qsTr("Rojo") },
-        { value: "#d76d4b", name: qsTr("Coral") },
-        { value: "#d56800", name: qsTr("Naranja") },
-        { value: "#b88a20", name: qsTr("Ámbar") },
-        { value: "#259653", name: qsTr("Verde") },
-        { value: "#159d84", name: qsTr("Turquesa") },
-        { value: "#258ec0", name: qsTr("Azul") },
-        { value: "#7375d4", name: qsTr("Índigo") },
-        { value: "#9b59b6", name: qsTr("Violeta") },
-        { value: "#e85d9e", name: qsTr("Rosa") },
-        { value: "#818d8e", name: qsTr("Gris") }
-    ]
+    readonly property bool darkTheme: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
+    readonly property var colorOptions: Desktop.FolderPalette.options
     readonly property var iconOptions: [
         { value: "folder", name: qsTr("Carpeta") },
         { value: "user-home", name: qsTr("Inicio") },
@@ -103,7 +92,7 @@ ColumnLayout {
                 Layout.maximumHeight: picker.cellSize
                 checkable: true
                 autoExclusive: true
-                checked: modelData.value === picker.selectedColor
+                checked: modelData.value === Desktop.FolderPalette.canonicalColor(picker.selectedColor)
                 text: ""
                 Accessible.name: modelData.name
                 Accessible.description: checked ? qsTr("Color seleccionado") : qsTr("Seleccionar color")
@@ -121,7 +110,7 @@ ColumnLayout {
                         width: 24
                         height: width
                         radius: width / 2
-                        color: colorButton.modelData.value
+                        color: Desktop.FolderPalette.displayColor(colorButton.modelData.value, picker.darkTheme)
                         border.width: 1
                         border.color: Qt.alpha(Kirigami.Theme.textColor, 0.22)
                     }

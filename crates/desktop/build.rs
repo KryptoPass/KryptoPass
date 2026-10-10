@@ -1,4 +1,4 @@
-use cxx_qt_build::{CxxQtBuilder, QmlModule};
+use cxx_qt_build::{CxxQtBuilder, QmlFile, QmlModule};
 
 fn main() {
     let qml_module = QmlModule::new("org.kryptopass.desktop")
@@ -19,6 +19,7 @@ fn main() {
         .qml_file("ui/qml/FolderEditor.qml")
         .qml_file("ui/qml/FolderAppearancePicker.qml")
         .qml_file("ui/qml/FolderIcon.qml")
+        .qml_file(QmlFile::from("ui/qml/FolderPalette.qml").singleton(true))
         .qml_file("ui/qml/FolderPicker.qml")
         .qml_file("ui/qml/MoveEntryDialog.qml")
         .qml_file("ui/qml/DeleteFolderDialog.qml")
