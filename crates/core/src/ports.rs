@@ -3,10 +3,17 @@
 use anyhow::Result;
 use zeroize::Zeroizing;
 
-use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId};
+use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId, SecretMetadata};
 
 /// Persistence boundary for the local secret store.
 pub trait Storage {
+    fn list_folders(&self) -> Result<Vec<Folder>>;
+
+    fn list_secrets(&self) -> Result<Vec<Secret>>;
+
+    /// Reads list metadata without loading encrypted payload bytes.
+    fn list_secret_metadata(&self) -> Result<Vec<SecretMetadata>>;
+
     fn find_folder(&self, id: FolderId) -> Result<Option<Folder>>;
 
     fn find_secret(&self, id: SecretId) -> Result<Option<Secret>>;
@@ -15,18 +22,33 @@ pub trait Storage {
 
     fn insert_secret(&mut self, secret: Secret) -> Result<()>;
 
+    /// Replaces one secret only when its currently stored revision matches
+    /// `expected_revision`, then persists the next revision atomically.
+    fn replace_secret(&mut self, secret: Secret, expected_revision: u64) -> Result<()>;
+
+    fn replace_folder(&mut self, folder: Folder) -> Result<()>;
+
+    fn remove_secret(&mut self, id: SecretId) -> Result<()>;
+
+    /// Removes the folder and atomically reparents its children and secrets to
+    /// its former parent (or to the root when it had no parent). Reparented
+    /// secrets must receive a new revision so open edits become stale.
+    fn remove_folder(&mut self, id: FolderId) -> Result<()>;
+
     fn move_secret(&mut self, id: SecretId, destination: Option<FolderId>) -> Result<()>;
 
-    /// Must atomically replace ciphertext and its recipient metadata.
+    /// Must atomically replace ciphertext and recipient metadata only when the
+    /// stored revision matches `expected_revision`, then increment the revision.
     fn replace_encryption(
         &mut self,
         id: SecretId,
         ciphertext: Vec<u8>,
         recipients: RecipientSet,
+        expected_revision: u64,
     ) -> Result<()>;
 }
 
-/// OpenPGP capability boundary. Implemented by the GnuPG adapter later.
+/// OpenPGP capability boundary for recipient validation, encryption and decryption.
 pub trait OpenPgp {
     fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()>;
 

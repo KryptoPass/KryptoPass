@@ -1,5 +1,7 @@
 //! Core entities and value objects for the local secret store.
 
+pub mod content;
+
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -11,6 +13,15 @@ pub enum DomainError {
 
     #[error("at least one recipient is required")]
     EmptyRecipients,
+
+    #[error("unsupported secret kind")]
+    UnsupportedSecretKind,
+
+    #[error("invalid folder icon identifier")]
+    InvalidFolderIcon,
+
+    #[error("invalid folder color")]
+    InvalidFolderColor,
 }
 
 /// Stable identifier for a folder in the local secret store.
@@ -90,12 +101,67 @@ impl RecipientSet {
     }
 }
 
+/// A folder's display appearance. The icon is a theme icon name, not a path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderAppearance {
+    icon: String,
+    color: String,
+}
+
+impl FolderAppearance {
+    /// Creates an appearance from a theme icon name and a color.
+    ///
+    /// Colors may be `transparent` or six-digit RGB hex values; hex values are
+    /// stored in lowercase.
+    pub fn new(icon: String, color: String) -> Result<Self, DomainError> {
+        if icon.is_empty()
+            || icon.len() > 128
+            || !icon
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        {
+            return Err(DomainError::InvalidFolderIcon);
+        }
+
+        let color = if color == "transparent" {
+            color
+        } else if color.len() == 7
+            && color.starts_with('#')
+            && color.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit)
+        {
+            color.to_ascii_lowercase()
+        } else {
+            return Err(DomainError::InvalidFolderColor);
+        };
+
+        Ok(Self { icon, color })
+    }
+
+    pub fn icon(&self) -> &str {
+        &self.icon
+    }
+
+    pub fn color(&self) -> &str {
+        &self.color
+    }
+}
+
+impl Default for FolderAppearance {
+    fn default() -> Self {
+        Self {
+            icon: "folder".to_owned(),
+            color: "transparent".to_owned(),
+        }
+    }
+}
+
 /// A logical folder. Folders organize secrets; they are not crypto boundaries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Folder {
     pub id: FolderId,
     pub parent_id: Option<FolderId>,
     pub name: String,
+    pub appearance: FolderAppearance,
     /// Copied into a new secret at creation time; does not re-encrypt existing secrets.
     pub default_recipients: Option<RecipientSet>,
 }
@@ -108,6 +174,55 @@ pub enum SecretKind {
     Totp,
     SshKey,
     SecureNote,
+    Card,
+    Identity,
+}
+
+impl SecretKind {
+    /// Stable storage identifier for this kind. These identifiers are part of
+    /// the encrypted payload contract and must not depend on Rust variant names.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Login => "login",
+            Self::ApiToken => "api-token",
+            Self::Totp => "totp",
+            Self::SshKey => "ssh-key",
+            Self::SecureNote => "note",
+            Self::Card => "card",
+            Self::Identity => "identity",
+        }
+    }
+
+    /// Parses a stable storage identifier without accepting lossy aliases.
+    pub fn parse(value: &str) -> Result<Self, DomainError> {
+        match value {
+            "login" => Ok(Self::Login),
+            "api-token" => Ok(Self::ApiToken),
+            "totp" => Ok(Self::Totp),
+            "ssh-key" => Ok(Self::SshKey),
+            "note" => Ok(Self::SecureNote),
+            "card" => Ok(Self::Card),
+            "identity" => Ok(Self::Identity),
+            _ => Err(DomainError::UnsupportedSecretKind),
+        }
+    }
+}
+
+/// Public metadata used to list and organize a secret without loading its payload.
+///
+/// The encrypted content is deliberately absent; callers that need to decrypt
+/// or replace a secret must use [`Secret`] instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SecretMetadata {
+    pub id: SecretId,
+    pub folder_id: Option<FolderId>,
+    pub title: String,
+    pub kind: SecretKind,
+    pub recipients: RecipientSet,
+    pub favorite: bool,
+    pub trashed: bool,
+    /// Monotonic optimistic-concurrency token for metadata and ciphertext.
+    pub revision: u64,
 }
 
 /// An encrypted secret. Plaintext must not be stored in this entity.
@@ -119,4 +234,8 @@ pub struct Secret {
     pub kind: SecretKind,
     pub recipients: RecipientSet,
     pub ciphertext: Vec<u8>,
+    pub favorite: bool,
+    pub trashed: bool,
+    /// Monotonic optimistic-concurrency token for metadata and ciphertext.
+    pub revision: u64,
 }
