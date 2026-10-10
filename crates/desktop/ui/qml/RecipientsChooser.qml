@@ -346,6 +346,14 @@ ColumnLayout {
                     wrapMode: Text.WrapAnywhere
                     color: Kirigami.Theme.disabledTextColor
                 }
+                Controls.Button {
+                    Layout.leftMargin: keyCheck.implicitWidth + 8
+                    visible: keyDetails.checked
+                    enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
+                    text: qsTr("Copiar clave pública")
+                    icon.name: "edit-copy"
+                    onClicked: recoveryDialog.openFor("copyPublic", keyRow.modelData.id)
+                }
                 ColumnLayout {
                     id: contactLinkArea
                     Layout.fillWidth: true

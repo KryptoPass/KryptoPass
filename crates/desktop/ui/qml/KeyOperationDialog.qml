@@ -8,6 +8,8 @@ import org.kde.kirigami as Kirigami
 Controls.Dialog {
     id: dialog
 
+    signal notificationRequested(string message)
+
     required property KeyStore keyStore
     property string action: ""
     property string fingerprint: ""
@@ -264,6 +266,19 @@ Controls.Dialog {
             publicKeyClipboardSource.copy();
             publicKeyClipboardSource.deselect();
             publicKeyClipboardSource.text = "";
+            dialog.notificationRequested(qsTr("Copiado al portapapeles"));
+        }
+    }
+
+    ToastHost {
+        id: operationToast
+        overlayItem: dialog.parent
+    }
+
+    Connections {
+        target: dialog
+        function onNotificationRequested(message) {
+            operationToast.show(message, "success");
         }
     }
 

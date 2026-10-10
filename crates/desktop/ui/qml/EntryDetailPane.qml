@@ -31,6 +31,7 @@ Controls.Pane {
     signal copyUsernameRequested()
     signal copyPasswordRequested()
     signal retryDetailRequested()
+    signal notificationRequested(string message)
 
     function copySelectedFingerprint() {
         keyDetail.copyFingerprint();
@@ -124,6 +125,7 @@ Controls.Pane {
             selectedKey: root.keyStore.selected
             keyStore: root.keyStore
             operationDialog: root.keyOperationDialog
+            onNotificationRequested: function(message) { root.notificationRequested(message); }
         }
 
         KeyContactsOverview {

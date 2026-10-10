@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/KeyStore.qml")
         .qml_file("ui/qml/KeyDetail.qml")
         .qml_file("ui/qml/KeyOperationDialog.qml")
+        .qml_file("ui/qml/ToastHost.qml")
         .qml_file("ui/qml/KeyContactPanel.qml")
         .qml_file("ui/qml/KeyContactsOverview.qml")
         .qml_file("ui/qml/KeyListDelegate.qml")

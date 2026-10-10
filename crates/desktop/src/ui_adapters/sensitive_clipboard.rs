@@ -31,7 +31,7 @@ pub mod qobject {
 
         #[qinvokable]
         #[cxx_name = "copySensitive"]
-        fn copy_sensitive(self: Pin<&mut Self>, text: &QString);
+        fn copy_sensitive(self: Pin<&mut Self>, text: &QString) -> bool;
         #[qinvokable]
         #[cxx_name = "clearOwned"]
         fn clear_owned(self: Pin<&mut Self>);
@@ -72,7 +72,7 @@ impl qobject::SensitiveClipboard {
         self.as_mut().auto_clear_seconds_changed();
     }
 
-    pub fn copy_sensitive(self: Pin<&mut Self>, text: &QString) {
+    pub fn copy_sensitive(self: Pin<&mut Self>, text: &QString) -> bool {
         let copied =
             unsafe { native_ffi::copy_sensitive(text, self.as_ref().read_auto_clear_seconds()) };
         let error = if copied {
@@ -81,6 +81,7 @@ impl qobject::SensitiveClipboard {
             QString::from("No se pudo copiar el contenido sensible al portapapeles.")
         };
         self.set_error_message(error);
+        copied
     }
 
     pub fn clear_owned(self: Pin<&mut Self>) {

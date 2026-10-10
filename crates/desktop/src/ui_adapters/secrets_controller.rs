@@ -385,6 +385,7 @@ impl qobject::SecretsController {
             state.selection_operation
         };
         self.as_mut().clear_detail();
+        self.as_mut().clear_detail_error();
 
         if *self.locked() {
             self.as_mut().rust_mut().pending_selection = None;
@@ -458,6 +459,7 @@ impl qobject::SecretsController {
                         let detail = content_projection(secret_id, &content, false);
                         match detail {
                             Ok(detail) => {
+                                controller.as_mut().clear_detail_error();
                                 controller.as_mut().rust_mut().detail_content = Some(content);
                                 controller
                                     .as_mut()
@@ -1129,6 +1131,12 @@ impl qobject::SecretsController {
         }
         self.as_mut().set_status(QString::from(message));
         self.operation_failed();
+    }
+
+    fn clear_detail_error(mut self: Pin<&mut Self>) {
+        if !self.as_ref().rust().operation_error_active {
+            self.as_mut().set_error_message(QString::default());
+        }
     }
 
     fn set_operation_error(mut self: Pin<&mut Self>, value: QString) {

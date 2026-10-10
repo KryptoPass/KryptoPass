@@ -183,6 +183,9 @@ Controls.ApplicationWindow {
             closeMessageTimer.restart();
         }
     }
+    function notify(message, severity, timeoutMs) {
+        toastHost.show(message, severity, timeoutMs);
+    }
     function approveWindowClose() {
         if (sensitiveTransitionBlocked) {
             showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
@@ -270,7 +273,10 @@ Controls.ApplicationWindow {
     }
     Connections {
         target: store.controller
-        function onClipboardRequested(value) { secureClipboard.copySensitive(value); }
+        function onClipboardRequested(value) {
+            if (secureClipboard.copySensitive(value))
+                root.notify(qsTr("Copiado al portapapeles"), "success");
+        }
         function onPasswordGenerated(value) {
             if (root.pendingOperation !== "generate")
                 return;
@@ -320,6 +326,11 @@ Controls.ApplicationWindow {
     Backend.SensitiveClipboard {
         id: secureClipboard
         objectName: "sensitiveClipboard"
+    }
+
+    ToastHost {
+        id: toastHost
+        overlayItem: Controls.Overlay.overlay
     }
 
     Controls.Action {
@@ -749,6 +760,7 @@ Controls.ApplicationWindow {
                         editAction: editEntry
                         trashAction: trashEntry
                         copyFingerprintAction: copyFingerprint
+                        onNotificationRequested: function(message) { root.notify(message, "success"); }
                         onFavoriteToggleRequested: {
                             if (root.mutationsBlocked || store.controller.locked)
                                 return;

@@ -15,6 +15,7 @@ ColumnLayout {
     readonly property var signatures: (selectedKey?.signatures || []).slice().sort((a, b) => a.signer.localeCompare(b.signer) || a.keyId.localeCompare(b.keyId) || a.identity.localeCompare(b.identity))
     readonly property bool hasCertifier: keyStore.entries.some(key => key.hasSecret && key.canCertify && key.id.toUpperCase() !== (selectedKey?.id || "").toUpperCase())
     readonly property bool operationAvailable: !keyStore.controller.busy && !keyStore.controller.operationBusy
+    signal notificationRequested(string message)
     spacing: 0
     onSelectedKeyChanged: {
         const id = selectedKey?.id || "";
@@ -25,9 +26,12 @@ ColumnLayout {
         }
     }
     function copyFingerprint() {
+        if (!selectedKey?.id)
+            return;
         clipboardSource.selectAll();
         clipboardSource.copy();
         clipboardSource.deselect();
+        notificationRequested(qsTr("Copiado al portapapeles"));
     }
     function groupedFingerprint(value) {
         return (value || "").replace(/(.{4})(?=.)/g, "$1 ");
