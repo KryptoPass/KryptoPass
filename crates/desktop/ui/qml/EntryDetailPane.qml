@@ -160,7 +160,7 @@ Controls.Pane {
             clip: true
 
             ColumnLayout {
-                width: detailScroll.availableWidth
+                width: Math.min(detailScroll.availableWidth, Kirigami.Units.gridUnit * 42)
                 spacing: Kirigami.Units.largeSpacing
 
                 Kirigami.Separator {
@@ -219,6 +219,11 @@ Controls.Pane {
                     visible: !!root.selectedDetail
                     detail: root.selectedDetail
                     revealed: root.revealed
+                    versionDetail: root.storeAdapter.historyVersion
+                    onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
+                    onVersionCloseRequested: root.storeAdapter.controller.closeHistoryVersion()
+                    onVersionCopyRequested: function(field) { root.storeAdapter.controller.copyHistoryValue(field); }
+                    onActivityExportRequested: root.storeAdapter.controller.exportActivity()
                     onRevealToggled: root.revealToggleRequested()
                     onCopyUsernameRequested: root.copyUsernameRequested()
                     onCopyPasswordRequested: root.copyPasswordRequested()
@@ -235,11 +240,14 @@ Controls.Pane {
                     text: qsTr("Información del elemento")
                 }
 
-                Kirigami.FormLayout {
+                ColumnLayout {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     Controls.Label {
-                        Kirigami.FormData.label: qsTr("Destinatarios:")
+                        text: qsTr("Destinatarios")
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+                    Controls.Label {
                         Layout.fillWidth: true
                         text: root.selected ? (root.selected.recipients || []).join(", ") : ""
                         textFormat: Text.PlainText

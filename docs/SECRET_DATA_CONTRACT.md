@@ -48,19 +48,19 @@ transacción añade las columnas de apariencia con `folder` y `transparent` como
 valores por defecto. La versión se vuelve a leer dentro de la transacción
 para coordinar aperturas concurrentes; la migración no modifica ciphertexts
 ni destinatarios. Las bases que ya usan el esquema 2 conservan los colores
-elegidos. La versión del payload cifrado es independiente: las nuevas escrituras usan la versión 2.
+elegidos. La versión del payload cifrado es independiente: las nuevas escrituras usan la versión 3.
 
 Los iconos se resuelven mediante el tema instalado, con respaldo de carpeta.
 Los colores e iconos disponibles en el editor son opciones de presentación;
 el contrato persistente admite otros nombres de icono y colores válidos.
 
-## Payload cifrado, versión 2
+## Payload cifrado, versión 3
 
 Credencial (`login`):
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "kind": "login",
   "fields": {
     "username": "",
@@ -69,7 +69,7 @@ Credencial (`login`):
     "notes": "",
     "urls": [],
     "totp": null,
-    "history": { "events": [], "previousPasswords": [] }
+    "history": { "events": [], "previousPasswords": [], "versions": [] }
   }
 }
 ```
@@ -78,7 +78,7 @@ Nota segura (`note`):
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "kind": "note",
   "fields": {
     "value": "",
@@ -96,7 +96,7 @@ usuario que no sea correo. `totp` es `null` o una configuración con `secret`
 (15 a 120 segundos), `issuer` y `account` (cadenas opcionales).
 
 El decodificador también acepta la versión 1: migra su URL a `urls` y crea
-TOTP vacío e historial vacío en memoria. Solo al guardar se escribe versión 2.
+TOTP vacío e historial vacío en memoria. Solo al guardar se escribe versión 3.
 La versión 1 rechaza los campos nuevos aunque sean `null`; las notas seguras
 rechazan campos exclusivos de credenciales. Campos y versiones desconocidos
 se rechazan para evitar guardar una representación que pierda información.
@@ -150,8 +150,8 @@ contraseña y copias de usuario, contraseña, código actual o próximo. Las cop
 solo se registran después de confirmar el portapapeles nativo; no equivalen a
 una autenticación real en el sitio. Se conservan los 100 eventos más recientes.
 `previousPasswords` guarda `{password, changedAt}` cifrados, con hasta 20
-contraseñas anteriores y 512 KiB en total. Al añadir una rotación se retiran las
-más antiguas hasta cumplir esos límites. Un payload leído que ya excede los
+contraseñas anteriores y 512 KiB en total. Los registros legados se conservan; las nuevas actualizaciones guardan
+snapshots completos en `versions` con el presupuesto compartido descrito abajo. Un payload leído que ya excede los
 límites se rechaza, sin recortarlo silenciosamente. La UI muestra fechas y
 tipos de eventos, sin proyectar las contraseñas antiguas.
 
@@ -228,3 +228,28 @@ al menos una clase habilitada con caracteres disponibles. Incluye al menos
 un carácter de cada clase habilitada y mezcla el resultado. Obtiene aleatoriedad
 del sistema mediante `getrandom` y usa muestreo por rechazo para convertirla en
 índices sin sesgo de módulo. Si la fuente de aleatoriedad falla, devuelve error.
+
+## Actividad y versiones anteriores
+
+La actividad conserva eventos con fecha y hora exactas. La vista muestra cinco,
+permite ampliar hasta veinte y exporta todos los eventos conservados a un `.txt`
+privado (0600), abierto con el editor asociado. El archivo contiene fechas y
+acciones; no incluye nombres, usuarios, contraseñas, URL, notas ni semillas TOTP.
+La retención de actividad sigue siendo de cien eventos por credencial.
+
+Las nuevas actualizaciones conservan snapshots de la credencial anterior:
+título, usuario, contraseña, sitios, notas y configuración TOTP. Se guardan en
+`history.versions`, dentro del mismo payload OpenPGP, sin anidar el historial.
+Se retienen hasta veinte snapshots completos y un presupuesto compartido de
+512 KiB con las contraseñas legadas; se descartan primero las contraseñas legadas
+y luego los snapshots más antiguos cuando se supera el presupuesto.
+Las acciones de copia no generan versiones nuevas.
+
+La lectura sigue admitiendo payloads 1 y 2. Los registros legados
+`previousPasswords` se muestran como contraseñas anteriores; no se inventan los
+campos que nunca se guardaron. Las versiones completas empiezan con las próximas
+actualizaciones. La UI solo recibe metadatos de versiones hasta que se consulta
+una de ellas. La proyección de consulta oculta la contraseña y la semilla TOTP;
+la copia explícita usa el portapapeles sensible existente. Cerrar la consulta,
+cambiar de elemento o bloquear la bóveda borra esa proyección. Consultar y copiar
+no modifica la versión actual. No se ofrece restaurar versiones.

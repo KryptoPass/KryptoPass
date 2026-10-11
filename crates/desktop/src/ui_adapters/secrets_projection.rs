@@ -69,6 +69,15 @@ struct HistoryProjection {
     events: Vec<HistoryEventProjection>,
     #[serde(rename = "passwordRotations")]
     password_rotations: Vec<HistoryAtProjection>,
+    versions: Vec<VersionMetadataProjection>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VersionMetadataProjection {
+    index: usize,
+    at: u64,
+    password_only: bool,
 }
 
 #[derive(serde::Serialize)]
@@ -437,9 +446,20 @@ fn history_projection(history: &LoginHistory) -> HistoryProjection {
         .map(|timestamp| HistoryAtProjection { at: timestamp })
         .collect();
 
+    let versions = history
+        .version_metadata()
+        .into_iter()
+        .enumerate()
+        .map(|(index, (at, password_only))| VersionMetadataProjection {
+            index,
+            at,
+            password_only,
+        })
+        .collect();
     HistoryProjection {
         events,
         password_rotations,
+        versions,
     }
 }
 

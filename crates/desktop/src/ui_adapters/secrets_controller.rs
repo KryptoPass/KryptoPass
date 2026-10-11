@@ -6,7 +6,7 @@ use std::sync::{
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use cxx_qt::{CxxQtType, Threading};
-use cxx_qt_lib::{QString, QStringList, QUrl};
+use cxx_qt_lib::{QDateTime, QString, QStringList, QTimeZone, QUrl};
 use kryptopass_core::{
     FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
     SecretsService, Storage, generate_password as generate_secure_password, generate_totp,
@@ -40,6 +40,7 @@ pub mod qobject {
         #[qproperty(QStringList, entry_records, cxx_name = "entryRecords", READ, NOTIFY)]
         #[qproperty(QStringList, folder_records, cxx_name = "folderRecords", READ, NOTIFY)]
         #[qproperty(QString, detail_json, cxx_name = "detailJson", READ, NOTIFY)]
+        #[qproperty(QString, version_json, cxx_name = "versionJson", READ, NOTIFY)]
         #[qproperty(QString, editor_json, cxx_name = "editorJson", READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
@@ -86,6 +87,18 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "copyPassword"]
         fn copy_password(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "openHistoryVersion"]
+        fn open_history_version(self: Pin<&mut Self>, index: i32);
+        #[qinvokable]
+        #[cxx_name = "closeHistoryVersion"]
+        fn close_history_version(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "copyHistoryValue"]
+        fn copy_history_value(self: Pin<&mut Self>, field: &QString);
+        #[qinvokable]
+        #[cxx_name = "exportActivity"]
+        fn export_activity(self: Pin<&mut Self>);
         #[qinvokable]
         #[cxx_name = "refreshTotp"]
         fn refresh_totp(self: Pin<&mut Self>);
@@ -153,6 +166,9 @@ pub mod qobject {
         #[cxx_name = "clipboardRequested"]
         fn clipboard_requested(self: Pin<&mut Self>, value: &QString);
         #[qsignal]
+        #[cxx_name = "activityExported"]
+        fn activity_exported(self: Pin<&mut Self>, path: &QUrl);
+        #[qsignal]
         #[cxx_name = "historyRecordFailed"]
         fn history_record_failed(self: Pin<&mut Self>);
         #[qsignal]
@@ -181,6 +197,8 @@ pub struct SecretsControllerRust {
     folder_records: QStringList,
     detail_json: QString,
     editor_json: QString,
+    version_json: QString,
+    history_version_index: Option<usize>,
     error_message: QString,
     /// Keep an overlapping detail-read failure from hiding a store-operation error.
     operation_error_active: bool,
@@ -214,6 +232,8 @@ impl Default for SecretsControllerRust {
             folder_records: QStringList::default(),
             detail_json: QString::default(),
             editor_json: QString::default(),
+            version_json: QString::default(),
+            history_version_index: None,
             error_message: QString::default(),
             operation_error_active: false,
             status: QString::from("Bóveda no cargada"),
@@ -755,6 +775,110 @@ impl qobject::SecretsController {
             }
         };
         self.as_mut().request_copy(CopyKind::Password, value);
+    }
+
+    pub fn open_history_version(mut self: Pin<&mut Self>, index: i32) {
+        self.as_mut().close_history_version();
+        if !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let Ok(index) = usize::try_from(index) else {
+            return;
+        };
+        let projection = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
+                return;
+            };
+            let Some(version) = login.history.version_content(index) else {
+                return;
+            };
+            let Some((at, password_only)) = login.history.version_metadata().get(index).copied()
+            else {
+                return;
+            };
+            serde_json::to_string(&serde_json::json!({
+                "at": at, "passwordOnly": password_only, "title": login.history.version_title(index),
+                "username": version.username, "urls": version.urls,
+                "notes": version.notes, "hasPassword": !version.password.is_empty(),
+                "hasTotp": version.totp.is_some()
+            })).map(Zeroizing::new)
+        };
+        if let Ok(projection) = projection {
+            self.as_mut().rust_mut().history_version_index = Some(index);
+            self.set_version_json(QString::from(projection.as_str()));
+        }
+    }
+
+    pub fn close_history_version(mut self: Pin<&mut Self>) {
+        self.as_mut().rust_mut().history_version_index = None;
+        self.set_version_json(QString::default());
+    }
+
+    pub fn copy_history_value(mut self: Pin<&mut Self>, field: &QString) {
+        if !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let value = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let Some(index) = state.history_version_index else {
+                return;
+            };
+            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
+                return;
+            };
+            let Some(version) = login.history.version_content(index) else {
+                return;
+            };
+            match field.to_string().as_str() {
+                "password" => Zeroizing::new(version.password.clone()),
+                "username" => Zeroizing::new(version.username.clone()),
+                "title" => Zeroizing::new(
+                    login
+                        .history
+                        .version_title(index)
+                        .unwrap_or_default()
+                        .to_owned(),
+                ),
+                "urls" => Zeroizing::new(version.urls.join("\n")),
+                "notes" => Zeroizing::new(version.notes.clone()),
+                "totp" => {
+                    let Some(config) = version.totp.as_ref() else {
+                        return;
+                    };
+                    let Ok(value) = kryptopass_core::format_totp_input(config) else {
+                        return;
+                    };
+                    value
+                }
+                _ => return,
+            }
+        };
+        if value.is_empty() {
+            return;
+        }
+        self.as_mut().rust_mut().pending_copy = None;
+        self.clipboard_requested(&QString::from(value.as_str()));
+    }
+
+    pub fn export_activity(self: Pin<&mut Self>) {
+        if !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let report = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
+                return;
+            };
+            activity_report(&login.history)
+        };
+        match report.and_then(|report| write_activity_report(&report)) {
+            Ok(path) => self.activity_exported(&QUrl::from_local_file(&QString::from(path.to_string_lossy().as_ref()))),
+            Err(_) => self.fail("No se pudo generar el archivo de actividad. Comprueba el espacio disponible e inténtalo de nuevo."),
+        }
     }
 
     pub fn refresh_totp(mut self: Pin<&mut Self>) {
@@ -1391,6 +1515,13 @@ impl qobject::SecretsController {
         }
     }
 
+    fn set_version_json(mut self: Pin<&mut Self>, value: QString) {
+        if self.version_json() != &value {
+            self.as_mut().rust_mut().version_json = value;
+            self.version_json_changed();
+        }
+    }
+
     fn set_editor_json(mut self: Pin<&mut Self>, value: QString) {
         if self.editor_json() != &value {
             self.as_mut().rust_mut().editor_json = value;
@@ -1443,6 +1574,7 @@ impl qobject::SecretsController {
     }
 
     fn clear_detail(mut self: Pin<&mut Self>) {
+        self.as_mut().close_history_version();
         let mut state = self.as_mut().rust_mut();
         state.detail_content = None;
         state.selected_entry = None;
@@ -1645,3 +1777,64 @@ fn parse_secret_id(value: &str) -> Option<SecretId> {
 fn parse_folder_id(value: &str) -> Option<FolderId> {
     Uuid::parse_str(value).ok().map(FolderId)
 }
+
+fn write_activity_report(report: &str) -> anyhow::Result<std::path::PathBuf> {
+    use std::io::Write;
+    let path = std::env::temp_dir().join(format!("kryptopass-actividad-{}.txt", Uuid::new_v4()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
+    }
+    let mut file = options.open(&path)?;
+    if let Err(error) = file
+        .write_all(report.as_bytes())
+        .and_then(|()| file.sync_all())
+    {
+        drop(file);
+        let _ = std::fs::remove_file(&path);
+        return Err(error.into());
+    }
+    Ok(path)
+}
+
+fn activity_report(history: &kryptopass_core::LoginHistory) -> anyhow::Result<String> {
+    let zone = QTimeZone::system_time_zone();
+    let zone = zone
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("local time zone unavailable"))?;
+    let mut report = String::from(
+        "Actividad en KryptoPass\nEventos conservados, del más reciente al más antiguo.\nNo incluye contraseñas ni valores de credenciales.\n\n",
+    );
+    for event in history.events() {
+        let label = match event.kind {
+            LoginHistoryEventKind::Create => "Credencial creada",
+            LoginHistoryEventKind::LoginUse => "Credencial utilizada en KryptoPass",
+            LoginHistoryEventKind::PasswordRotated => "Contraseña actualizada",
+            LoginHistoryEventKind::Edited => "Datos editados",
+            LoginHistoryEventKind::CopyUsername => "Usuario copiado",
+            LoginHistoryEventKind::CopyPassword => "Contraseña copiada",
+            LoginHistoryEventKind::CopyTotp => "Código de verificación copiado",
+            LoginHistoryEventKind::CopyNextTotp => "Próximo código de verificación copiado",
+        };
+        let date = i64::try_from(event.timestamp)
+            .ok()
+            .map(|timestamp| QDateTime::from_secs_since_epoch(timestamp, zone))
+            .filter(QDateTime::is_valid)
+            .map(|date| {
+                date.format_enum(cxx_qt_lib::DateFormat::ISODate)
+                    .to_string()
+            })
+            .unwrap_or_else(|| format!("Unix {}", event.timestamp));
+        report.push_str(&format!("{date}  {label}\n"));
+    }
+    Ok(report)
+}
+
+#[cfg(test)]
+#[path = "activity_export_tests.rs"]
+mod activity_export_tests;

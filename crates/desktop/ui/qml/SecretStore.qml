@@ -29,6 +29,7 @@ QtObject {
     readonly property var folders: parseRecords(controller.folderRecords)
     readonly property var selected: visibleEntries.find(entry => entry.id === selectedId) || null
     readonly property var detail: parseRecord(controller.detailJson)
+    readonly property var historyVersion: parseRecord(controller.versionJson)
     readonly property var visibleEntries: {
         const needle = query.trim().toLowerCase();
         const filtered = entries.filter(entry => {
