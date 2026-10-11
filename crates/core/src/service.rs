@@ -235,11 +235,12 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
                                 || login.urls != previous.urls
                                 || login.totp != previous.totp
                                 || login.notes != previous.notes;
-                            login.history = std::mem::take(&mut previous.history);
+                            let mut history = std::mem::take(&mut previous.history);
+                            if content_changed || metadata_changed {
+                                history.record_version(previous, &secret.title, timestamp)?;
+                            }
+                            login.history = history;
                             if password_rotated {
-                                login
-                                    .history
-                                    .record_password(previous.password.clone(), timestamp)?;
                                 login.history.record_event(
                                     LoginHistoryEventKind::PasswordRotated,
                                     timestamp,

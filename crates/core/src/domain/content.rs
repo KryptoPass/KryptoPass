@@ -10,7 +10,7 @@ use crate::otp::validate_totp_config;
 pub use crate::otp::{TotpAlgorithm, TotpConfig};
 
 /// Current encrypted content envelope version.
-pub const CONTENT_SCHEMA_VERSION: u32 = 2;
+pub const CONTENT_SCHEMA_VERSION: u32 = 3;
 /// Maximum serialized or decoded content size in bytes.
 pub const MAX_CONTENT_BYTES: usize = 1024 * 1024;
 /// Maximum retained login-history event count.
@@ -21,6 +21,8 @@ pub const MAX_PREVIOUS_PASSWORDS: usize = 20;
 pub const MAX_HISTORY_PASSWORD_BYTES: usize = 512 * 1024;
 
 const LEGACY_CONTENT_SCHEMA_VERSION: u32 = 1;
+const LOGIN_HISTORY_SCHEMA_VERSION: u32 = 2;
+const MAX_LOGIN_VERSIONS: usize = 20;
 const MAX_USERNAME_BYTES: usize = 16 * 1024;
 const MAX_PASSWORD_BYTES: usize = 64 * 1024;
 const MAX_URL_BYTES: usize = 8 * 1024;
@@ -95,15 +97,149 @@ pub struct HistoricalPassword {
     changed_at: u64,
 }
 
+/// A previous login state; history is excluded to avoid recursive snapshots.
+#[derive(Clone, Zeroize, ZeroizeOnDrop, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LoginVersion {
+    #[zeroize(skip)]
+    changed_at: u64,
+    title: String,
+    username: String,
+    password: String,
+    urls: Vec<String>,
+    notes: String,
+    totp: Option<TotpConfig>,
+}
+
 /// Credential history stored inside the encrypted login payload.
 #[derive(Clone, Default, Zeroize, ZeroizeOnDrop, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LoginHistory {
     events: Vec<LoginHistoryEvent>,
     previous_passwords: Vec<HistoricalPassword>,
+    #[serde(default)]
+    versions: Vec<LoginVersion>,
 }
 
 impl LoginHistory {
+    /// Retains a prior state inside the encrypted payload, without nesting history.
+    pub fn record_version(
+        &mut self,
+        content: &LoginContent,
+        title: &str,
+        changed_at: u64,
+    ) -> Result<()> {
+        validate_login(content)?;
+        ensure!(
+            title.len() <= 512,
+            "historical title exceeds the maximum size"
+        );
+        let version = LoginVersion {
+            changed_at,
+            title: title.to_owned(),
+            username: content.username.clone(),
+            password: content.password.clone(),
+            urls: content.urls.clone(),
+            notes: content.notes.clone(),
+            totp: content.totp.clone(),
+        };
+        let index = self
+            .versions
+            .partition_point(|entry| entry.changed_at >= changed_at);
+        self.versions.insert(index, version);
+        self.versions.truncate(MAX_LOGIN_VERSIONS);
+        while self.retained_version_bytes()? > MAX_HISTORY_PASSWORD_BYTES {
+            if self.previous_passwords.pop().is_none() && self.versions.pop().is_none() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn retained_version_bytes(&self) -> Result<usize> {
+        let versions = Zeroizing::new(serde_json::to_vec(&self.versions)?);
+        let passwords = Zeroizing::new(serde_json::to_vec(&self.previous_passwords)?);
+        Ok(versions.len() + passwords.len())
+    }
+
+    /// Metadata for snapshots and legacy password-only entries, newest first.
+    pub fn version_metadata(&self) -> Vec<(u64, bool)> {
+        let mut entries: Vec<_> = self
+            .versions
+            .iter()
+            .map(|entry| (entry.changed_at, false))
+            .collect();
+        entries.extend(
+            self.previous_passwords
+                .iter()
+                .map(|entry| (entry.changed_at, true)),
+        );
+        entries.sort_by_key(|entry| std::cmp::Reverse(entry.0));
+        entries
+    }
+
+    /// Returns the original title when a complete snapshot is available.
+    pub fn version_title(&self, index: usize) -> Option<&str> {
+        let (at, password_only) = *self.version_metadata().get(index)?;
+        if password_only {
+            return None;
+        }
+        let ordinal = self.version_metadata()[..index]
+            .iter()
+            .filter(|entry| **entry == (at, false))
+            .count();
+        self.versions
+            .iter()
+            .filter(|entry| entry.changed_at == at)
+            .nth(ordinal)
+            .map(|entry| entry.title.as_str())
+    }
+
+    /// Opens one retained state in Rust. Legacy entries contain only a password.
+    pub fn version_content(&self, index: usize) -> Option<LoginContent> {
+        let (at, password_only) = *self.version_metadata().get(index)?;
+        if password_only {
+            let entry = self
+                .previous_passwords
+                .iter()
+                .filter(|entry| entry.changed_at == at)
+                .nth(
+                    self.version_metadata()[..index]
+                        .iter()
+                        .filter(|entry| **entry == (at, true))
+                        .count(),
+                )?;
+            return Some(LoginContent {
+                username: String::new(),
+                password: entry.password.clone(),
+                url: String::new(),
+                urls: vec![],
+                notes: String::new(),
+                totp: None,
+                history: Box::default(),
+            });
+        }
+        let entry = self
+            .versions
+            .iter()
+            .filter(|entry| entry.changed_at == at)
+            .nth(
+                self.version_metadata()[..index]
+                    .iter()
+                    .filter(|entry| **entry == (at, false))
+                    .count(),
+            )?;
+        Some(LoginContent {
+            username: entry.username.clone(),
+            password: entry.password.clone(),
+            url: entry.urls.first().cloned().unwrap_or_default(),
+            urls: entry.urls.clone(),
+            notes: entry.notes.clone(),
+            totp: entry.totp.clone(),
+            history: Box::default(),
+        })
+    }
+
     /// Returns newest-first event metadata. Historical passwords are never exposed.
     pub fn events(&self) -> &[LoginHistoryEvent] {
         &self.events
@@ -222,7 +358,7 @@ pub fn encode_content(content: &SecretContent) -> Result<Zeroizing<Vec<u8>>> {
     Ok(bytes)
 }
 
-/// Decodes schema 1 and 2 envelopes without accepting lossy fields.
+/// Decodes supported envelopes, preserving legacy events and prior passwords.
 /// Schema 1 login payloads migrate to a one-entry URL list and empty OTP/history
 /// fields. Schema 1 payloads containing schema 2 login fields are rejected.
 pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
@@ -236,7 +372,7 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
     ensure!(
         matches!(
             envelope.schema_version,
-            LEGACY_CONTENT_SCHEMA_VERSION | CONTENT_SCHEMA_VERSION
+            LEGACY_CONTENT_SCHEMA_VERSION | LOGIN_HISTORY_SCHEMA_VERSION | CONTENT_SCHEMA_VERSION
         ),
         "unsupported secret content schema version"
     );
@@ -254,7 +390,7 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
                     ensure_v2_fields_absent(&envelope.fields)?;
                     (None, None, None)
                 }
-                CONTENT_SCHEMA_VERSION => {
+                LOGIN_HISTORY_SCHEMA_VERSION | CONTENT_SCHEMA_VERSION => {
                     let urls =
                         take_value(&mut envelope.fields.urls, "login content is missing URLs")?;
                     let totp = take_nullable(
@@ -358,6 +494,40 @@ fn validate_login(content: &LoginContent) -> Result<()> {
 }
 
 fn validate_history(history: &LoginHistory) -> Result<()> {
+    ensure!(
+        history.versions.len() <= MAX_LOGIN_VERSIONS,
+        "too many login versions"
+    );
+    ensure!(
+        history
+            .versions
+            .windows(2)
+            .all(|pair| pair[0].changed_at >= pair[1].changed_at),
+        "login versions are not newest-first"
+    );
+    if !history.versions.is_empty() {
+        ensure!(
+            history.retained_version_bytes()? <= MAX_HISTORY_PASSWORD_BYTES,
+            "login versions exceed the history size limit"
+        );
+    }
+    for entry in &history.versions {
+        ensure!(
+            entry.title.len() <= 512,
+            "historical title exceeds the maximum size"
+        );
+        let login = LoginContent {
+            username: entry.username.clone(),
+            password: entry.password.clone(),
+            url: entry.urls.first().cloned().unwrap_or_default(),
+            urls: entry.urls.clone(),
+            notes: entry.notes.clone(),
+            totp: entry.totp.clone(),
+            history: Box::default(),
+        };
+        validate_login(&login)?;
+    }
+
     ensure!(
         history.events.len() <= MAX_LOGIN_HISTORY_EVENTS,
         "login history contains too many events"
