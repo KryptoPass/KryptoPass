@@ -8,6 +8,7 @@ pub(crate) mod ffi {
         include!("cxx-qt-lib/core/qobjectmutptr.h");
         include!("native/sensitive_clipboard.h");
         include!("native/kde_contacts.h");
+        include!("native/online_services.h");
 
         type QString = cxx_qt_lib::QString;
         type QStringList = cxx_qt_lib::QStringList;
@@ -28,6 +29,12 @@ pub(crate) mod ffi {
         unsafe fn open_contact_editor(receiver: QObjectMutPtr, uid: &QString);
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn choose_contact_for_key(receiver: QObjectMutPtr, fingerprint: &QString);
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn online_settings() -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn save_online_settings(json: &QString) -> bool;
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn open_online_url(url: &QString) -> bool;
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn open_contacts() -> bool;
     }

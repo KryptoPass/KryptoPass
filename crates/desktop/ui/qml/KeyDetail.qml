@@ -46,6 +46,34 @@ ColumnLayout {
         textFormat: TextEdit.PlainText
         text: root.selectedKey?.id || ""
     }
+    OnlineServicesDialog {
+        id: onlineDialog
+        keyStore: root.keyStore
+    }
+    Controls.Menu {
+        id: onlineMenu
+        Instantiator {
+            model: root.keyStore.onlineSettings.services
+            delegate: Controls.MenuItem {
+                required property string modelData
+                required property int index
+                text: index === 0 ? qsTr("%1 (predeterminado)").arg(modelData.split("/")[2] || modelData)
+                    : modelData.split("/")[2] || modelData
+                Controls.ToolTip.visible: hovered || visualFocus
+                Controls.ToolTip.text: modelData
+                enabled: root.keyStore.onlineSettings.enabled
+                onTriggered: root.keyStore.controller.openOnlineService(index, root.selectedKey.id)
+            }
+            onObjectAdded: (index, object) => onlineMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => onlineMenu.removeItem(object)
+        }
+        Controls.MenuSeparator {}
+        Controls.MenuItem {
+            text: qsTr("Configurar servicios online…")
+            icon.name: "configure"
+            onTriggered: onlineDialog.edit()
+        }
+    }
     Flow {
         Layout.fillWidth: true
         Layout.margins: Kirigami.Units.largeSpacing
@@ -63,10 +91,16 @@ ColumnLayout {
             onClicked: root.operationDialog.openFor("copyPublic", root.selectedKey.id)
         }
         Controls.Button {
-            text: qsTr("Actualizar desde fuente externa…")
+            text: qsTr("Actualizar desde servidor…")
             icon.name: "view-refresh"
             enabled: root.operationAvailable
             onClicked: root.operationDialog.openFor("refreshExternal", root.selectedKey.id)
+        }
+        Controls.ToolButton {
+            id: onlineButton
+            text: qsTr("Servicios online")
+            icon.name: "internet-services"
+            onClicked: onlineMenu.popup(onlineButton, 0, onlineButton.height)
         }
         Controls.ToolButton {
             id: administrationButton
@@ -78,6 +112,14 @@ ColumnLayout {
             Controls.ToolTip.text: text
             Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
         }
+    }
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.largeSpacing
+        Layout.rightMargin: Kirigami.Units.largeSpacing
+        visible: !!root.keyStore.controller.operationError && !root.operationDialog.opened && !onlineDialog.opened
+        type: Kirigami.MessageType.Error
+        text: root.keyStore.controller.operationError
     }
     Controls.Menu {
         id: administrationMenu
@@ -277,6 +319,11 @@ ColumnLayout {
                     font: Kirigami.Theme.fixedWidthFont
                     text: root.groupedFingerprint(root.selectedKey?.id)
                     Accessible.name: qsTr("Huella completa de la clave")
+                }
+                Controls.Button {
+                    text: qsTr("Copiar huella completa")
+                    icon.name: "edit-copy"
+                    onClicked: root.copyFingerprint()
                 }
                 Kirigami.Separator {
                     Layout.fillWidth: true

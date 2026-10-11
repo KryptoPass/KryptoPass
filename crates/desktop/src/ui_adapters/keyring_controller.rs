@@ -3,6 +3,9 @@ use cxx_qt_lib::{QString, QStringList, QUrl};
 use serde_json::Value;
 use std::pin::Pin;
 
+use super::native_ffi::ffi as native_ffi;
+use crate::keyring::online::{OnlineSettings, service_url};
+
 use super::keyring_projection::{key_records, key_summaries};
 
 #[cxx_qt::bridge]
@@ -30,7 +33,16 @@ pub mod qobject {
         #[qproperty(QStringList, key_records, cxx_name = "keyRecords", READ, NOTIFY)]
         #[qproperty(QString, load_error, cxx_name = "loadError", READ, NOTIFY)]
         #[qproperty(QString, operation_error, cxx_name = "operationError", READ, NOTIFY)]
+        #[qproperty(QString, online_settings, cxx_name = "onlineSettings", READ, NOTIFY)]
         type KeyringController = super::KeyringControllerRust;
+
+        #[qinvokable]
+        #[cxx_name = "saveOnlineSettings"]
+        fn save_online_settings(self: Pin<&mut Self>, json: &QString) -> bool;
+
+        #[qinvokable]
+        #[cxx_name = "openOnlineService"]
+        fn open_online_service(self: Pin<&mut Self>, index: i32, fingerprint: &QString);
 
         /// Reloads public OpenPGP identity metadata without blocking Qt.
         #[qinvokable]
@@ -67,6 +79,7 @@ pub mod qobject {
 }
 
 pub struct KeyringControllerRust {
+    online_settings: QString,
     status: QString,
     busy: bool,
     operation_busy: bool,
@@ -79,7 +92,13 @@ pub struct KeyringControllerRust {
 
 impl Default for KeyringControllerRust {
     fn default() -> Self {
+        let stored = unsafe { native_ffi::online_settings() };
+        let settings = serde_json::from_str::<OnlineSettings>(&String::from(&stored))
+            .ok()
+            .filter(|settings| settings.validate().is_ok())
+            .unwrap_or_default();
         Self {
+            online_settings: QString::from(serde_json::to_string(&settings).unwrap_or_default()),
             status: QString::from("Identidades GPG no cargadas"),
             busy: false,
             operation_busy: false,
@@ -93,6 +112,47 @@ impl Default for KeyringControllerRust {
 }
 
 impl qobject::KeyringController {
+    pub fn save_online_settings(mut self: Pin<&mut Self>, json: &QString) -> bool {
+        let result = serde_json::from_str::<OnlineSettings>(&String::from(json))
+            .map_err(|_| "No se pudo leer la configuración de servicios online.".to_owned())
+            .and_then(|settings| settings.validate());
+        if let Err(error) = result {
+            self.as_mut().set_operation_error(QString::from(error));
+            return false;
+        }
+        if !unsafe { native_ffi::save_online_settings(json) } {
+            self.as_mut()
+                .set_operation_error(QString::from("No se pudo guardar la configuración."));
+            return false;
+        }
+        self.as_mut().rust_mut().online_settings = json.clone();
+        self.as_mut().online_settings_changed();
+        self.as_mut().set_operation_error(QString::default());
+        true
+    }
+
+    pub fn open_online_service(mut self: Pin<&mut Self>, index: i32, fingerprint: &QString) {
+        let result = (|| {
+            let settings: OnlineSettings =
+                serde_json::from_str(&String::from(self.online_settings()))
+                    .map_err(|_| "No se pudo leer la configuración.".to_owned())?;
+            if !settings.enabled {
+                return Err("Los servicios online están desactivados.".to_owned());
+            }
+            let template = usize::try_from(index)
+                .ok()
+                .and_then(|index| settings.services.get(index))
+                .ok_or_else(|| "Selecciona un servicio online.".to_owned())?;
+            let url = service_url(template, &String::from(fingerprint))?;
+            if !unsafe { native_ffi::open_online_url(&QString::from(url)) } {
+                return Err("No se pudo abrir el navegador predeterminado de KDE.".to_owned());
+            }
+            Ok(())
+        })();
+        self.as_mut()
+            .set_operation_error(QString::from(result.err().unwrap_or_default()));
+    }
+
     pub fn refresh_keys(mut self: Pin<&mut Self>) {
         if *self.busy() {
             return;
@@ -187,6 +247,17 @@ impl qobject::KeyringController {
                 return;
             }
         };
+
+        if action == "refreshExternal" {
+            let enabled =
+                serde_json::from_str::<OnlineSettings>(&String::from(self.online_settings()))
+                    .is_ok_and(|settings| settings.enabled);
+            if !enabled {
+                self.as_mut()
+                    .fail_operation("Las consultas online están desactivadas.".into());
+                return;
+            }
+        }
 
         self.as_mut().set_operation_busy(true);
         self.as_mut().set_busy(true);

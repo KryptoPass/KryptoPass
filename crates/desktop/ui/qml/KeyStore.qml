@@ -5,6 +5,7 @@ QtObject {
     id: store
     readonly property Backend.KeyringController controller: Backend.KeyringController {}
     readonly property Backend.ContactsController contactsController: Backend.ContactsController {}
+    readonly property var onlineSettings: JSON.parse(controller.onlineSettings)
     property string scope: "all"
     property string query: ""
     property string selectedId: ""

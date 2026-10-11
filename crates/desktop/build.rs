@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/KeyStore.qml")
         .qml_file("ui/qml/KeyDetail.qml")
         .qml_file("ui/qml/KeyOperationDialog.qml")
+        .qml_file("ui/qml/OnlineServicesDialog.qml")
         .qml_file("ui/qml/ToastHost.qml")
         .qml_file("ui/qml/KeyContactPanel.qml")
         .qml_file("ui/qml/KeyContactsOverview.qml")
@@ -67,7 +68,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .cpp_file("src/native/application.cpp")
         .cpp_file("src/native/sensitive_clipboard.cpp")
-        .cpp_file("src/native/kde_contacts.cpp");
+        .cpp_file("src/native/kde_contacts.cpp")
+        .cpp_file("src/native/online_services.cpp");
     // Only adds include paths; generated CXX-Qt settings remain intact.
     unsafe {
         builder.cc_builder(|cc| {

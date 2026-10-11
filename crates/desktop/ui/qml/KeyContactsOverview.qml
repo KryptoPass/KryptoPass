@@ -15,7 +15,6 @@ ColumnLayout {
         for (const contact of keyStore.contactRows) {
             const fingerprints = keyStore.contactFingerprints(contact);
             if (!fingerprints.length) {
-                rows.push({ contact: contact, fingerprint: "", key: null });
                 continue;
             }
             for (const fingerprint of fingerprints) {
@@ -28,14 +27,19 @@ ColumnLayout {
 
     spacing: Kirigami.Units.largeSpacing
 
+    OnlineServicesDialog {
+        id: onlineDialog
+        keyStore: root.keyStore
+    }
+
     Kirigami.Heading {
         Layout.fillWidth: true
         level: 2
-        text: qsTr("Contactos de KDE Contacts")
+        text: qsTr("Contactos con huella OpenPGP")
     }
     Controls.Label {
         Layout.fillWidth: true
-        text: qsTr("Los contactos siguen disponibles aunque no tengan una clave local. Importa un archivo o recupera una clave por su huella completa; después puedes añadir el vínculo desde los detalles de la clave. El correo nunca se usa como huella ni para confiar automáticamente.")
+        text: qsTr("Vincula una clave a un contacto desde sus detalles. Puedes elegir cualquier persona de tu agenda KDE.")
         wrapMode: Text.Wrap
     }
     Flow {
@@ -48,10 +52,21 @@ ColumnLayout {
             onClicked: root.contactsController.refreshContacts()
         }
         Controls.Button {
-            text: qsTr("Nuevo contacto")
-            icon.name: "contact-new"
-            enabled: !root.contactsController.busy
-            onClicked: root.contactsController.newContact()
+            text: qsTr("Importar clave…")
+            icon.name: "document-import"
+            enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
+            onClicked: root.operationDialog.openFor("import")
+        }
+        Controls.Button {
+            text: qsTr("Obtener del servidor…")
+            icon.name: "download"
+            enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
+            onClicked: root.operationDialog.openFor("refreshExternal")
+        }
+        Controls.Button {
+            text: qsTr("Configurar servicios online…")
+            icon.name: "configure"
+            onClicked: onlineDialog.edit()
         }
         Controls.Button {
             text: qsTr("Abrir KDE Contacts")
@@ -87,7 +102,7 @@ ColumnLayout {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: root.contactEntries.length === 0 && !root.contactsController.busy
-                text: qsTr("No hay contactos en la agenda. Puedes añadir uno o abrir KDE Contacts.")
+                text: qsTr("No hay contactos con una huella OpenPGP vinculada. Añade la huella en la agenda KDE o vincula una clave desde sus detalles.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
@@ -128,20 +143,10 @@ ColumnLayout {
                         }
                         Controls.Label {
                             Layout.fillWidth: true
-                            visible: !!contactEntry.modelData.key
                             text: contactEntry.modelData.key
                                 ? qsTr("Clave disponible en el llavero local: %1").arg(contactEntry.modelData.key.title || contactEntry.modelData.key.id)
-                                : ""
+                                : qsTr("Clave pendiente de importar")
                             textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: !contactEntry.modelData.key
-                            text: contactEntry.modelData.fingerprint
-                                ? qsTr("La huella está vinculada al contacto, pero la clave no está en el llavero local.")
-                                : qsTr("Este contacto no tiene una clave OpenPGP vinculada.")
-                            color: Kirigami.Theme.disabledTextColor
                             wrapMode: Text.Wrap
                         }
                         Flow {
@@ -159,24 +164,10 @@ ColumnLayout {
                             }
                             Controls.Button {
                                 visible: !contactEntry.modelData.key
-                                enabled: !root.contactsController.busy
-                                    && !root.keyStore.controller.busy
-                                    && !root.keyStore.controller.operationBusy
-                                text: qsTr("Recuperar por huella completa…")
-                                icon.name: "view-refresh"
-                                onClicked: {
-                                    const fingerprint = contactEntry.modelData.fingerprint;
-                                    root.operationDialog.openFor("refreshExternal", fingerprint);
-                                }
-                            }
-                            Controls.Button {
-                                visible: !contactEntry.modelData.key
-                                enabled: !root.contactsController.busy
-                                    && !root.keyStore.controller.busy
-                                    && !root.keyStore.controller.operationBusy
-                                text: qsTr("Importar desde archivo…")
-                                icon.name: "document-open"
-                                onClicked: root.operationDialog.openFor("import")
+                                enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
+                                text: qsTr("Obtener clave por huella…")
+                                icon.name: "download"
+                                onClicked: root.operationDialog.openFor("refreshExternal", contactEntry.modelData.fingerprint)
                             }
                             Controls.Button {
                                 enabled: !root.contactsController.busy

@@ -58,6 +58,7 @@ Controls.Dialog {
     readonly property bool canSubmit: !controllerBusy && !submitted && !completionMessage
         && fingerprintReady() && privateBackupReady && consequenceReady && operationInputsReady()
     property string completionMessage: ""
+    property string completedFingerprint: ""
 
     parent: dialogParent
     anchors.centerIn: parent
@@ -104,6 +105,8 @@ Controls.Dialog {
             return usageCombo.currentIndex >= 0;
         if (action === "certify")
             return userIds.length > 0 && certifierCombo.currentIndex >= 0 && certifierOptions.length > 0;
+        if (action === "refreshExternal")
+            return keyStore.onlineSettings.enabled;
         return true;
     }
 
@@ -124,7 +127,7 @@ Controls.Dialog {
             prepareRevocation: qsTr("Crear certificado de revocación"),
             revokeKey: qsTr("Revocar clave"),
             certify: qsTr("Certificar identidad"),
-            refreshExternal: qsTr("Actualizar desde fuente externa"),
+            refreshExternal: qsTr("Obtener o actualizar clave"),
             delete: qsTr("Eliminar clave del llavero")
         };
         return titles[action] || qsTr("Operación OpenPGP");
@@ -147,7 +150,7 @@ Controls.Dialog {
             prepareRevocation: qsTr("Guardar certificado"),
             revokeKey: qsTr("Revocar clave"),
             certify: qsTr("Certificar identidad"),
-            refreshExternal: qsTr("Actualizar desde fuente"),
+            refreshExternal: qsTr("Obtener clave"),
             delete: qsTr("Eliminar del llavero")
         };
         return labels[action] || qsTr("Continuar");
@@ -178,6 +181,8 @@ Controls.Dialog {
             request.signerFingerprint = certifierOptions[certifierCombo.currentIndex].fingerprint;
             request.userids = userIds.slice();
             request.local = localCertificationCheck.checked;
+        } else if (action === "refreshExternal") {
+            request.keyserver = keyStore.onlineSettings.keyservers[serverCombo.currentIndex] || "";
         } else if (action === "delete") {
             request.material = materialOptions[materialCombo.currentIndex].value;
         }
@@ -198,12 +203,14 @@ Controls.Dialog {
         privateBackupConfirmed = false;
         consequenceConfirmed = false;
         completionMessage = "";
+        completedFingerprint = "";
         operationError = "";
         operationWarning = "";
         userIdField.text = "";
         fingerprintField.text = "";
         keyStore.controller.clearOperationError();
         Qt.callLater(function() {
+            serverCombo.currentIndex = 0;
             expiryCombo.currentIndex = 3;
             usageCombo.currentIndex = 0;
             certifierCombo.currentIndex = certifierOptions.length ? 0 : -1;
@@ -246,6 +253,7 @@ Controls.Dialog {
             if (!dialog.submitted)
                 return;
             dialog.submitted = false;
+            dialog.completedFingerprint = finishedFingerprint || "";
             if (finishedFingerprint)
                 dialog.keyStore.selectAfterRefresh(finishedFingerprint);
             dialog.operationWarning = String(dialog.keyStore.controller.operationError || "");
@@ -320,6 +328,20 @@ Controls.Dialog {
                 text: dialog.completionMessage
             }
 
+            Controls.Button {
+                visible: !!dialog.completionMessage && !!dialog.completedFingerprint
+                    && (dialog.action === "import" || dialog.action === "refreshExternal")
+                enabled: !dialog.keyStore.contactsController.busy
+                text: qsTr("Vincular a contacto de KDE…")
+                icon.name: "link"
+                onClicked: dialog.keyStore.contactsController.chooseContactForKey(dialog.completedFingerprint)
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: !!dialog.completedFingerprint && !!dialog.keyStore.contactsController.errorMessage
+                type: Kirigami.MessageType.Error
+                text: dialog.keyStore.contactsController.errorMessage
+            }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !!(dialog.fingerprint || fingerprintField.text) && dialog.action !== "create" && dialog.action !== "import"
@@ -500,8 +522,39 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal"
-                text: qsTr("Consulta la fuente externa configurada usando una huella OpenPGP completa. No se busca ni se confía por nombre o correo.")
+                text: qsTr("Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de autorizarla como destinatario.")
                 wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                visible: dialog.action === "refreshExternal"
+                text: qsTr("Servidor de claves")
+            }
+            Controls.ComboBox {
+                id: serverCombo
+                Layout.fillWidth: true
+                visible: dialog.action === "refreshExternal"
+                enabled: !dialog.controllerBusy && dialog.keyStore.onlineSettings.enabled
+                model: dialog.keyStore.onlineSettings.keyservers.length
+                    ? dialog.keyStore.onlineSettings.keyservers : [qsTr("Configuración de GnuPG")]
+                Accessible.name: qsTr("Servidor de claves")
+                onModelChanged: currentIndex = 0
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: dialog.action === "refreshExternal" && !dialog.keyStore.onlineSettings.enabled
+                text: qsTr("Las consultas online están desactivadas. Actívalas en la configuración para obtener claves.")
+                wrapMode: Text.Wrap
+            }
+            Controls.Button {
+                visible: dialog.action === "refreshExternal"
+                enabled: !dialog.controllerBusy
+                text: qsTr("Configurar servicios online…")
+                icon.name: "configure"
+                onClicked: onlineDialog.edit()
+            }
+            Controls.Label {
+                visible: dialog.action === "refreshExternal" && !dialog.fingerprint
+                text: qsTr("Huella OpenPGP completa")
             }
             Controls.TextField {
                 id: fingerprintField
@@ -593,6 +646,11 @@ Controls.Dialog {
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
             onClicked: dialog.submit()
         }
+    }
+
+    OnlineServicesDialog {
+        id: onlineDialog
+        keyStore: dialog.keyStore
     }
 
     Dialogs.FileDialog {

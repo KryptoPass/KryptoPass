@@ -74,7 +74,10 @@ pub fn execute_operation(request_json: &str) -> Result<OperationOutcome, String>
             userids,
             local,
         } => certify_key(&fingerprint, &signer_fingerprint, &userids, local),
-        OperationRequest::RefreshExternal { fingerprint } => refresh_external(&fingerprint),
+        OperationRequest::RefreshExternal {
+            fingerprint,
+            keyserver,
+        } => refresh_external(&fingerprint, &keyserver),
         OperationRequest::Delete {
             fingerprint,
             material,
@@ -748,11 +751,11 @@ fn certify_key(
     ))
 }
 
-fn refresh_external(fingerprint: &str) -> Result<OperationOutcome, String> {
+fn refresh_external(fingerprint: &str, keyserver: &str) -> Result<OperationOutcome, String> {
     let fingerprint = request::normalize_fingerprint(fingerprint)?;
     let mut context = new_context()?;
     let already_present = key_by_fingerprint(&mut context, &fingerprint)?.is_some();
-    let arguments = if already_present {
+    let mut arguments = if already_present {
         vec![
             "--no-tty",
             "--batch",
@@ -762,6 +765,10 @@ fn refresh_external(fingerprint: &str) -> Result<OperationOutcome, String> {
     } else {
         vec!["--no-tty", "--batch", "--recv-keys", fingerprint.as_str()]
     };
+    if !keyserver.is_empty() {
+        crate::keyring::online::validate_keyserver(keyserver)?;
+        arguments.splice(0..0, ["--keyserver", keyserver]);
+    }
     edit::run_gpg_quiet(&arguments).map_err(|error| {
         format!("No se pudo actualizar la clave desde la fuente configurada: {error}")
     })?;

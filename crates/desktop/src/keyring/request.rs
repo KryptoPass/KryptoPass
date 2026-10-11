@@ -71,7 +71,11 @@ pub(super) enum OperationRequest {
         local: bool,
     },
     #[serde(rename = "refreshExternal")]
-    RefreshExternal { fingerprint: String },
+    RefreshExternal {
+        fingerprint: String,
+        #[serde(default)]
+        keyserver: String,
+    },
     #[serde(rename = "delete")]
     Delete {
         fingerprint: String,
