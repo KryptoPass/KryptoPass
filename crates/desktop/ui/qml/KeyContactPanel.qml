@@ -18,7 +18,7 @@ ColumnLayout {
 
     Controls.Label {
         Layout.fillWidth: true
-        text: qsTr("Los contactos se vinculan solo cuando la huella OpenPGP completa coincide. El nombre y el correo nunca se usan para confiar en una clave.")
+        text: qsTr("Elige un contacto de tu agenda KDE para asociarlo a esta clave. Comprueba la huella con su propietario antes de usarla.")
         wrapMode: Text.Wrap
     }
 
@@ -80,7 +80,7 @@ ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Controls.Button {
                     enabled: !root.contactsController.busy
-                    text: qsTr("Añadir vínculo…")
+                    text: qsTr("Vincular a contacto de KDE…")
                     icon.name: "link"
                     onClicked: root.contactsController.chooseContactForKey(root.selectedKey.id)
                 }
