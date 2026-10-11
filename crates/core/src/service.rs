@@ -1,8 +1,10 @@
 //! Application facade for folder and secret use cases.
 
 use anyhow::{Context, Result, ensure};
-use zeroize::Zeroizing;
+use std::time::{SystemTime, UNIX_EPOCH};
+use zeroize::{Zeroize, Zeroizing};
 
+use crate::domain::content::LoginHistoryEventKind;
 use crate::domain::{
     Folder, FolderAppearance, FolderId, RecipientSet, Secret, SecretId, SecretKind, SecretMetadata,
     content::{MAX_CONTENT_BYTES, SecretContent, decode_content, encode_content},
@@ -163,7 +165,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         folder_id: Option<FolderId>,
         title: String,
         recipients: RecipientSelection,
-        content: SecretContent,
+        mut content: SecretContent,
         expected_revision: Option<u64>,
     ) -> Result<SecretId> {
         let title = title.trim();
@@ -205,6 +207,61 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         };
         self.crypto.validate_recipients(&recipients)?;
 
+        if let SecretContent::Login(login) = &mut content {
+            let timestamp = unix_seconds();
+            match existing.as_ref() {
+                None => {
+                    *login.history = Default::default();
+                    login
+                        .history
+                        .record_event(LoginHistoryEventKind::Create, timestamp);
+                }
+                Some(secret) => {
+                    let metadata_changed = secret.title != title
+                        || secret.folder_id != folder_id
+                        || secret.recipients != recipients;
+                    let old_plaintext = self.crypto.decrypt(&secret.ciphertext)?;
+                    let mut old_content = decode_content(old_plaintext.as_slice())?;
+                    ensure!(
+                        old_content.kind() == secret.kind,
+                        "secret metadata and content kinds do not match"
+                    );
+                    match &mut old_content {
+                        SecretContent::Login(previous) => {
+                            let password_rotated = login.password != previous.password;
+                            let content_changed = login.username != previous.username
+                                || password_rotated
+                                || login.url != previous.url
+                                || login.urls != previous.urls
+                                || login.totp != previous.totp
+                                || login.notes != previous.notes;
+                            login.history = std::mem::take(&mut previous.history);
+                            if password_rotated {
+                                login
+                                    .history
+                                    .record_password(previous.password.clone(), timestamp)?;
+                                login.history.record_event(
+                                    LoginHistoryEventKind::PasswordRotated,
+                                    timestamp,
+                                );
+                            }
+                            if content_changed || metadata_changed {
+                                login
+                                    .history
+                                    .record_event(LoginHistoryEventKind::Edited, timestamp);
+                            }
+                        }
+                        SecretContent::Note(_) => {
+                            *login.history = Default::default();
+                            login
+                                .history
+                                .record_event(LoginHistoryEventKind::Create, timestamp);
+                        }
+                    }
+                }
+            }
+        }
+
         let plaintext = encode_content(&content)?;
         let ciphertext = self.crypto.encrypt(plaintext.as_slice(), &recipients)?;
         let secret_id = id.unwrap_or_default();
@@ -242,6 +299,57 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             content.kind() == secret.kind,
             "secret metadata and content kinds do not match"
         );
+        Ok(content)
+    }
+
+    /// Persists a verified cached login payload with one copy event.
+    ///
+    /// The caller supplies the decrypted content snapshot and the revision it
+    /// was read from, so recording a copy does not decrypt the old ciphertext
+    /// or prompt for a private key after the clipboard operation.
+    pub fn record_login_event(
+        &mut self,
+        id: SecretId,
+        expected_revision: u64,
+        mut content: SecretContent,
+        kind: LoginHistoryEventKind,
+        timestamp: u64,
+    ) -> Result<SecretContent> {
+        ensure!(
+            matches!(
+                kind,
+                LoginHistoryEventKind::CopyUsername
+                    | LoginHistoryEventKind::CopyPassword
+                    | LoginHistoryEventKind::CopyTotp
+                    | LoginHistoryEventKind::CopyNextTotp
+            ),
+            "only successful copy events can be recorded through this operation"
+        );
+
+        let mut secret = self
+            .storage
+            .find_secret(id)?
+            .context("secret does not exist")?;
+        ensure!(
+            secret.revision == expected_revision,
+            "secret changed after its cached content was opened"
+        );
+        ensure!(
+            secret.kind == SecretKind::Login,
+            "copy history can only be recorded for login entries"
+        );
+        let SecretContent::Login(login) = &mut content else {
+            anyhow::bail!("copy history requires cached login content");
+        };
+
+        login.history.record_event(kind, timestamp);
+        let plaintext = encode_content(&content)?;
+        let ciphertext = self
+            .crypto
+            .encrypt(plaintext.as_slice(), &secret.recipients)?;
+        secret.ciphertext.zeroize();
+        secret.ciphertext = ciphertext;
+        self.storage.replace_secret(secret, expected_revision)?;
         Ok(content)
     }
 
@@ -365,4 +473,11 @@ fn validate_folder_name(name: &str) -> Result<String> {
         "folder name exceeds the maximum size"
     );
     Ok(name.to_owned())
+}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
