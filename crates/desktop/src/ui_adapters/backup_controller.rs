@@ -5,7 +5,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 
 use crate::infrastructure::backup::{
-    BackupPublishOutcome, export_backup, parse_selected_recipients, restore_backup,
+    BackupPublishOutcome, RestoreFailure, export_backup, parse_selected_recipients, restore_backup,
 };
 use crate::infrastructure::{GnuPgOpenPgp, app_paths};
 
@@ -26,13 +26,6 @@ pub mod qobject {
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
-        #[qproperty(
-            QUrl,
-            vault_directory_url,
-            cxx_name = "vaultDirectoryUrl",
-            READ,
-            CONSTANT
-        )]
         type BackupController = super::BackupControllerRust;
 
         #[qinvokable]
@@ -46,6 +39,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "restoreBackup"]
         fn restore_backup(self: Pin<&mut Self>, input: &QUrl, output: &QUrl);
+
+        #[qinvokable]
+        #[cxx_name = "restoreManagedBackup"]
+        fn restore_managed_backup(self: Pin<&mut Self>, input: &QUrl);
 
         #[qsignal]
         #[cxx_name = "backupExported"]
@@ -63,30 +60,18 @@ pub mod qobject {
     impl cxx_qt::Threading for BackupController {}
 }
 
+#[derive(Default)]
 pub struct BackupControllerRust {
     busy: bool,
     error_message: QString,
     status: QString,
-    vault_directory_url: QUrl,
-}
-
-impl Default for BackupControllerRust {
-    fn default() -> Self {
-        Self {
-            busy: false,
-            error_message: QString::default(),
-            status: QString::from("Copias de seguridad listas"),
-            vault_directory_url: default_vault_directory_url(),
-        }
-    }
 }
 
 impl qobject::BackupController {
     pub fn clear_error(mut self: Pin<&mut Self>) {
         self.as_mut().set_error_message(QString::default());
         if !*self.busy() {
-            self.as_mut()
-                .set_status(QString::from("Copias de seguridad listas"));
+            self.as_mut().set_status(QString::default());
         }
     }
 
@@ -103,7 +88,7 @@ impl qobject::BackupController {
             Ok(recipients) => recipients,
             Err(_) => {
                 self.as_mut()
-                    .fail("Selecciona destinatarios válidos para cifrar el backup.");
+                    .fail("Selecciona al menos una clave válida para proteger la copia.");
                 return;
             }
         };
@@ -111,7 +96,7 @@ impl qobject::BackupController {
         self.as_mut().clear_error();
         self.as_mut().set_busy(true);
         self.as_mut()
-            .set_status(QString::from("Cifrando y guardando backup…"));
+            .set_status(QString::from("Cifrando y guardando la copia…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || export_backup(&path, recipients, &GnuPgOpenPgp).map(|outcome| (outcome, path)),
@@ -125,10 +110,22 @@ impl qobject::BackupController {
                     }
                     Err(_) => controller
                         .as_mut()
-                        .fail("No se pudo guardar el backup cifrado."),
+                        .fail("No se pudo guardar la copia. Comprueba que puedes escribir en la carpeta elegida y que las claves seleccionadas siguen disponibles."),
                 }
             },
         );
+    }
+
+    pub fn restore_managed_backup(mut self: Pin<&mut Self>, input: &QUrl) {
+        if *self.busy() {
+            return;
+        }
+        match app_paths::restored_vault_path(crate::app_info::APP.desktop_file_id) {
+            Ok(path) => self.restore_backup(input, &path_to_url(&path)),
+            Err(_) => self.as_mut().fail(
+                "No se pudo preparar la carpeta privada para restaurar. Comprueba los permisos y el espacio disponible en la carpeta de datos de KryptoPass.",
+            ),
+        }
     }
 
     pub fn restore_backup(mut self: Pin<&mut Self>, input: &QUrl, output: &QUrl) {
@@ -144,7 +141,7 @@ impl qobject::BackupController {
         self.as_mut().clear_error();
         self.as_mut().set_busy(true);
         self.as_mut()
-            .set_status(QString::from("Descifrando y validando backup…"));
+            .set_status(QString::from("Descifrando y comprobando la copia…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || restore_backup(&input, &output, &GnuPgOpenPgp).map(|outcome| (outcome, output)),
@@ -156,9 +153,7 @@ impl qobject::BackupController {
                         let url = path_to_url(&path);
                         controller.as_mut().backup_restored(&url);
                     }
-                    Err(_) => controller
-                        .as_mut()
-                        .fail("No se pudo restaurar el backup; la bóveda actual no cambió."),
+                    Err(error) => controller.as_mut().fail(restore_error_message(&error)),
                 }
             },
         );
@@ -200,22 +195,35 @@ fn local_path(url: &QUrl) -> Option<PathBuf> {
     (!path.is_empty()).then(|| PathBuf::from(path))
 }
 
-fn default_vault_directory_url() -> QUrl {
-    let Ok(database) = app_paths::database_path(crate::app_info::APP.desktop_file_id) else {
-        return QUrl::default();
-    };
-    database.parent().map(path_to_url).unwrap_or_default()
-}
-
 fn path_to_url(path: &Path) -> QUrl {
     QUrl::from_local_file(&QString::from(path.to_string_lossy().as_ref()))
 }
 
 fn publish_status(outcome: BackupPublishOutcome) -> QString {
     match outcome {
-        BackupPublishOutcome::Durable => QString::from("Backup guardado correctamente."),
+        BackupPublishOutcome::Durable => QString::from("Archivo guardado correctamente."),
         BackupPublishOutcome::PublishedButDurabilityUnconfirmed => QString::from(
-            "El archivo se publicó, pero no se pudo confirmar su durabilidad en disco.",
+            "El archivo se guardó, pero no se pudo confirmar que todos los cambios llegaron al disco. Conserva la copia original.",
         ),
+    }
+}
+
+fn restore_error_message(error: &anyhow::Error) -> &'static str {
+    match error.downcast_ref::<RestoreFailure>() {
+        Some(RestoreFailure::Input) => {
+            "No se pudo leer la copia. Selecciona un archivo de copia accesible; el archivo puede haberse movido o superar el tamaño permitido."
+        }
+        Some(RestoreFailure::Destination) => {
+            "No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración."
+        }
+        Some(RestoreFailure::Decryption) => {
+            "No se pudo descifrar la copia. Necesitas la clave privada de uno de sus destinatarios. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado."
+        }
+        Some(RestoreFailure::InvalidBackup) => {
+            "El archivo descifrado no es una copia compatible de KryptoPass o está dañado. Selecciona otra copia o prueba con una versión más reciente de KryptoPass."
+        }
+        None => {
+            "No se pudo completar la restauración. Comprueba el espacio disponible y los permisos de la carpeta de datos de KryptoPass."
+        }
     }
 }

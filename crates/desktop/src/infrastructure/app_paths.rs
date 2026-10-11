@@ -35,6 +35,15 @@ pub fn database_path(app_id: &str) -> Result<PathBuf> {
     default_database_path(app_id)
 }
 
+/// Allocates a new vault name in the application's private data directory.
+pub fn restored_vault_path(app_id: &str) -> Result<PathBuf> {
+    let database = default_database_path(app_id)?;
+    let directory = database
+        .parent()
+        .context("vault directory is unavailable")?;
+    Ok(directory.join(format!("restored-{}.sqlite3", uuid::Uuid::new_v4())))
+}
+
 /// Returns the explicitly selected database file, if the user has selected one.
 pub fn active_vault_path(app_id: &str) -> Result<Option<PathBuf>> {
     validate_app_id(app_id)?;

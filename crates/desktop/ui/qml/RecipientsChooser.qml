@@ -12,6 +12,7 @@ ColumnLayout {
     readonly property Backend.ContactsController contactsController: keyStore.contactsController
     property var selectedFingerprints: []
     readonly property var encryptableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
+    readonly property var matchingKeys: chooser.encryptableKeys.filter(key => (key.title + " " + key.email + " " + key.contactName + " " + key.id).toLowerCase().includes(recipientSearch.text.trim().toLowerCase()) || key.id.toLowerCase().includes(recipientSearch.text.replace(/\s/g, "").toLowerCase()))
     readonly property var unavailableFingerprints: selectedFingerprints.filter(fingerprint => !encryptableKeys.some(key => key.id.toUpperCase() === fingerprint.toUpperCase()))
     readonly property bool eligibleSelection: selectedFingerprints.length > 0 && unavailableFingerprints.length === 0
     readonly property var contactRows: {
@@ -29,23 +30,8 @@ ColumnLayout {
         const rows = [];
         for (const contact of contactRows) {
             for (const fingerprint of keyStore.contactFingerprints(contact)) {
-                if (contactsController.recipientCandidates.includes(fingerprint)
+                if (Array.from(contactsController.recipientCandidates).includes(fingerprint)
                         && encryptableKeys.some(key => key.id.toUpperCase() === fingerprint))
-                    rows.push(Object.assign({}, contact, { openPgpFingerprint: fingerprint }));
-            }
-        }
-        return rows;
-    }
-    readonly property var contactsNeedingKey: {
-        const rows = [];
-        for (const contact of contactRows) {
-            const fingerprints = keyStore.contactFingerprints(contact);
-            if (!fingerprints.length) {
-                rows.push(Object.assign({}, contact, { openPgpFingerprint: "" }));
-                continue;
-            }
-            for (const fingerprint of fingerprints) {
-                if (!encryptableKeys.some(key => key.id.toUpperCase() === fingerprint))
                     rows.push(Object.assign({}, contact, { openPgpFingerprint: fingerprint }));
             }
         }
@@ -159,82 +145,11 @@ ColumnLayout {
             wrapMode: Text.Wrap
         }
 
-        Kirigami.Heading {
-            level: 3
-            text: qsTr("Contactos sin clave cifrable")
-        }
-        Controls.Label {
+        Kirigami.SearchField {
+            id: recipientSearch
             Layout.fillWidth: true
-            text: qsTr("Los contactos de la agenda se conservan aunque falte una clave local. Recupera la clave por su huella completa o importa un archivo; no se usa el correo para buscarla.")
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.Wrap
-        }
-        Controls.Label {
-            Layout.fillWidth: true
-            visible: chooser.contactsNeedingKey.length === 0
-            text: qsTr("No hay contactos que necesiten una clave OpenPGP.")
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.Wrap
-        }
-        Repeater {
-            model: chooser.contactsNeedingKey
-            delegate: Controls.Frame {
-                id: contactKeyRow
-                required property var modelData
-                Layout.fillWidth: true
-                contentItem: ColumnLayout {
-                    spacing: Kirigami.Units.smallSpacing
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: contactKeyRow.modelData.name || contactKeyRow.modelData.email || contactKeyRow.modelData.uid || qsTr("Contacto sin nombre")
-                        textFormat: Text.PlainText
-                        font.weight: Font.DemiBold
-                        wrapMode: Text.Wrap
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        visible: !!contactKeyRow.modelData.email
-                        text: contactKeyRow.modelData.email || ""
-                        textFormat: Text.PlainText
-                        color: Kirigami.Theme.disabledTextColor
-                        wrapMode: Text.WrapAnywhere
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: contactKeyRow.modelData.openPgpFingerprint || qsTr("Este contacto aún no tiene una huella OpenPGP vinculada.")
-                        textFormat: Text.PlainText
-                        font: Kirigami.Theme.fixedWidthFont
-                        color: Kirigami.Theme.disabledTextColor
-                        wrapMode: Text.WrapAnywhere
-                    }
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: Kirigami.Units.smallSpacing
-                        Controls.Button {
-                            enabled: !chooser.contactsController.busy && !chooser.keyStore.controller.busy
-                            text: qsTr("Recuperar por huella completa…")
-                            icon.name: "view-refresh"
-                            onClicked: {
-                                const fingerprint = contactKeyRow.modelData.openPgpFingerprint || "";
-                                const full = /^(?:[A-Fa-f0-9]{40}|[A-Fa-f0-9]{64})$/.test(fingerprint);
-                                recoveryDialog.openFor("refreshExternal", full ? fingerprint : "");
-                            }
-                        }
-                        Controls.Button {
-                            enabled: !chooser.contactsController.busy && !chooser.keyStore.controller.busy
-                            text: qsTr("Importar desde archivo…")
-                            icon.name: "document-open"
-                            onClicked: recoveryDialog.openFor("import")
-                        }
-                        Controls.Button {
-                            enabled: !chooser.contactsController.busy
-                            text: qsTr("Editar contacto")
-                            icon.name: "document-edit"
-                            onClicked: chooser.contactsController.editContact(contactKeyRow.modelData.uid)
-                        }
-                    }
-                }
-            }
+            placeholderText: qsTr("Buscar destinatario, correo o huella…")
+            Accessible.name: qsTr("Buscar destinatarios con clave")
         }
 
         Flow {
@@ -248,16 +163,16 @@ ColumnLayout {
                 onClicked: chooser.contactsController.refreshContacts()
             }
             Controls.Button {
-                text: qsTr("Nuevo contacto")
-                icon.name: "contact-new"
-                enabled: !chooser.contactsController.busy
-                onClicked: chooser.contactsController.newContact()
+                text: qsTr("Importar clave…")
+                icon.name: "document-import"
+                enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
+                onClicked: recoveryDialog.openFor("import")
             }
             Controls.Button {
-                text: qsTr("Abrir agenda KDE")
-                icon.name: "view-pim-contacts"
-                enabled: !chooser.contactsController.busy
-                onClicked: chooser.contactsController.openContacts()
+                text: qsTr("Obtener del servidor…")
+                icon.name: "download"
+                enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
+                onClicked: recoveryDialog.openFor("refreshExternal")
             }
             Controls.Button {
                 text: qsTr("Elegir desde contactos")
@@ -289,8 +204,14 @@ ColumnLayout {
             wrapMode: Text.Wrap
         }
 
+        Controls.Label {
+            Layout.fillWidth: true
+            visible: !!recipientSearch.text && chooser.matchingKeys.length === 0 && chooser.encryptableKeys.length > 0
+            text: qsTr("No hay destinatarios que coincidan con la búsqueda.")
+            wrapMode: Text.Wrap
+        }
         Repeater {
-            model: chooser.encryptableKeys
+            model: chooser.matchingKeys
 
             delegate: ColumnLayout {
                 id: keyRow
@@ -313,7 +234,7 @@ ColumnLayout {
                         spacing: 2
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: keyRow.modelData.title
+                            text: keyRow.modelData.contactName || keyRow.modelData.title
                             textFormat: Text.PlainText
                             wrapMode: Text.Wrap
                         }
@@ -356,6 +277,7 @@ ColumnLayout {
                 }
                 ColumnLayout {
                     id: contactLinkArea
+                    visible: keyDetails.checked
                     Layout.fillWidth: true
                     Layout.leftMargin: keyCheck.implicitWidth + 8
                     spacing: Kirigami.Units.smallSpacing
@@ -384,7 +306,7 @@ ColumnLayout {
                         }
                     }
                     Controls.Button {
-                        text: qsTr("Añadir vínculo…")
+                        text: qsTr("Vincular a contacto de KDE…")
                         icon.name: "link"
                         enabled: !chooser.contactsController.busy
                         Accessible.name: qsTr("Añadir vínculo de contacto para la clave %1").arg(keyRow.modelData.title)

@@ -37,6 +37,23 @@ pub enum BackupPublishOutcome {
     PublishedButDurabilityUnconfirmed,
 }
 
+/// Recovery categories exposed to the UI without decrypted data or GnuPG output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RestoreFailure {
+    Input,
+    Destination,
+    Decryption,
+    InvalidBackup,
+}
+
+impl fmt::Display for RestoreFailure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "restore failed: {self:?}")
+    }
+}
+
+impl std::error::Error for RestoreFailure {}
+
 /// Writes a full store snapshot as one encrypted OpenPGP file.
 pub fn export_backup(
     path: &Path,
@@ -76,9 +93,9 @@ pub fn restore_backup(
     crypto: &GnuPgOpenPgp,
 ) -> Result<BackupPublishOutcome> {
     let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
-    let input = prepare_existing_file(input)?;
-    let destination = prepare_destination(output, false)?;
-    protect_store_target(&database_path, &destination)?;
+    let input = prepare_existing_file(input).context(RestoreFailure::Input)?;
+    let destination = prepare_destination(output, false).context(RestoreFailure::Destination)?;
+    protect_store_target(&database_path, &destination).context(RestoreFailure::Destination)?;
     ensure!(
         !destination.exists(),
         "restore output already exists; choose a new vault file"
@@ -86,15 +103,19 @@ pub fn restore_backup(
     let parent = destination
         .parent()
         .context("restore destination has no parent")?;
-    ensure_private_directory(parent)?;
+    ensure_private_directory(parent).context(RestoreFailure::Destination)?;
 
-    let ciphertext = read_bounded_file(&input, MAX_BACKUP_CIPHERTEXT_BYTES)?;
-    let plaintext = crypto.decrypt_bounded(
-        &ciphertext,
-        MAX_BACKUP_CIPHERTEXT_BYTES,
-        MAX_BACKUP_PLAINTEXT_BYTES,
-    )?;
-    let (folders, secrets) = deserialize_backup(plaintext.as_slice())?;
+    let ciphertext =
+        read_bounded_file(&input, MAX_BACKUP_CIPHERTEXT_BYTES).context(RestoreFailure::Input)?;
+    let plaintext = crypto
+        .decrypt_bounded(
+            &ciphertext,
+            MAX_BACKUP_CIPHERTEXT_BYTES,
+            MAX_BACKUP_PLAINTEXT_BYTES,
+        )
+        .context(RestoreFailure::Decryption)?;
+    let (folders, secrets) =
+        deserialize_backup(plaintext.as_slice()).context(RestoreFailure::InvalidBackup)?;
 
     let stage = create_private_staging_directory(parent)?;
     let mut stage_guard = StagingDirectory(stage.clone());

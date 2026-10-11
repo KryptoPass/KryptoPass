@@ -437,12 +437,12 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
-                text: qsTr("Crear backup cifrado…")
+                text: qsTr("Crear copia de seguridad…")
                 enabled: !root.mutationsBlocked
                 onTriggered: backupDialog.openForExport()
             }
             Controls.MenuItem {
-                text: qsTr("Restaurar backup…")
+                text: qsTr("Restaurar copia de seguridad…")
                 enabled: !root.mutationsBlocked
                 onTriggered: backupDialog.openForRestore()
             }
