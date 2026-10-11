@@ -3,12 +3,13 @@ use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList, QUrl};
 use kryptopass_core::{
-    FolderAppearance, FolderId, PasswordOptions, SecretContent, SecretId, SecretsService, Storage,
-    generate_password as generate_secure_password,
+    FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
+    SecretsService, Storage, generate_password as generate_secure_password, generate_totp,
 };
 use uuid::Uuid;
 use zeroize::{Zeroize, Zeroizing};
@@ -17,7 +18,7 @@ use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage, app_paths};
 
 use super::secrets_projection::{
     EntryDraft, OpenedEntry, StoreSnapshot, content_projection, draft_matches_session,
-    editor_projection, new_editor_projection, prepare_save, store_snapshot,
+    editor_projection, new_editor_projection, prepare_save, snapshot_revision, store_snapshot,
 };
 
 #[cxx_qt::bridge]
@@ -86,6 +87,15 @@ pub mod qobject {
         #[cxx_name = "copyPassword"]
         fn copy_password(self: Pin<&mut Self>);
         #[qinvokable]
+        #[cxx_name = "refreshTotp"]
+        fn refresh_totp(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "copyTotp"]
+        fn copy_totp(self: Pin<&mut Self>, next: bool);
+        #[qinvokable]
+        #[cxx_name = "confirmCopy"]
+        fn confirm_copy(self: Pin<&mut Self>, copied: bool);
+        #[qinvokable]
         #[cxx_name = "saveFolder"]
         fn save_folder(
             self: Pin<&mut Self>,
@@ -143,6 +153,9 @@ pub mod qobject {
         #[cxx_name = "clipboardRequested"]
         fn clipboard_requested(self: Pin<&mut Self>, value: &QString);
         #[qsignal]
+        #[cxx_name = "historyRecordFailed"]
+        fn history_record_failed(self: Pin<&mut Self>);
+        #[qsignal]
         #[cxx_name = "passwordGenerated"]
         fn password_generated(self: Pin<&mut Self>, value: &QString);
         #[qsignal]
@@ -178,8 +191,10 @@ pub struct SecretsControllerRust {
     saving: bool,
     locked: bool,
     selected_entry: Option<SecretId>,
+    selected_revision: Option<u64>,
     detail_content: Option<SecretContent>,
     password_revealed: bool,
+    pending_copy: Option<PendingCopy>,
     editor_session: Option<EditorSession>,
     load_operation: u64,
     active_vault_operation: u64,
@@ -208,8 +223,10 @@ impl Default for SecretsControllerRust {
             saving: false,
             locked: true,
             selected_entry: None,
+            selected_revision: None,
             detail_content: None,
             password_revealed: false,
+            pending_copy: None,
             editor_session: None,
             load_operation: 0,
             active_vault_operation: 0,
@@ -229,10 +246,32 @@ struct EditorSession {
     revision: Option<u64>,
 }
 
+#[derive(Clone, Copy)]
+struct PendingCopy {
+    id: SecretId,
+    selection_operation: u64,
+    kind: CopyKind,
+}
+
+#[derive(Clone, Copy)]
+enum CopyKind {
+    Username,
+    Password,
+    Totp,
+    NextTotp,
+}
+
 struct MutationResult {
     snapshot: Result<StoreSnapshot, ()>,
     signal: MutationSignal,
     editor_operation: Option<u64>,
+}
+
+struct CopyHistoryResult {
+    content: SecretContent,
+    write_revision: u64,
+    observed_revision: Option<u64>,
+    snapshot: Result<StoreSnapshot, ()>,
 }
 
 enum MutationSignal {
@@ -240,6 +279,7 @@ enum MutationSignal {
     EntrySaved(String),
     FolderSaved(String),
     EntryRemoved(SecretId),
+    MetadataChanged(SecretId, u64),
 }
 
 impl qobject::SecretsController {
@@ -422,11 +462,10 @@ impl qobject::SecretsController {
         let cancel_epoch = self.as_ref().rust().selection_cancel_epoch.clone();
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || -> anyhow::Result<Option<SecretContent>> {
-                let service = open_service()?;
-                let content = service.read_content(secret_id)?;
+            move || -> anyhow::Result<Option<(SecretContent, u64)>> {
+                let (content, revision) = load_detail_content(secret_id)?;
                 if cancel_epoch.load(Ordering::Acquire) == operation {
-                    Ok(Some(content))
+                    Ok(Some((content, revision)))
                 } else {
                     drop(content);
                     Ok(None)
@@ -455,12 +494,16 @@ impl qobject::SecretsController {
 
                 controller.as_mut().set_detail_busy(false);
                 match result {
-                    Ok(Some(content)) => {
-                        let detail = content_projection(secret_id, &content, false);
+                    Ok(Some((content, revision))) => {
+                        let detail = content_projection(secret_id, &content, false, unix_seconds());
                         match detail {
                             Ok(detail) => {
                                 controller.as_mut().clear_detail_error();
-                                controller.as_mut().rust_mut().detail_content = Some(content);
+                                {
+                                    let mut state = controller.as_mut().rust_mut();
+                                    state.detail_content = Some(content);
+                                    state.selected_revision = Some(revision);
+                                }
                                 controller
                                     .as_mut()
                                     .set_detail_json(QString::from(detail.as_str()));
@@ -483,7 +526,7 @@ impl qobject::SecretsController {
     }
 
     pub fn open_entry(mut self: Pin<&mut Self>, id: &QString) {
-        if *self.saving() || *self.locked() {
+        if *self.busy() || *self.saving() || *self.locked() {
             return;
         }
         let id = id.to_string();
@@ -666,7 +709,7 @@ impl qobject::SecretsController {
             state
                 .detail_content
                 .as_ref()
-                .map(|content| content_projection(id, content, revealed))
+                .map(|content| content_projection(id, content, revealed, unix_seconds()))
         };
         if let Some(Ok(detail)) = projection {
             self.as_mut()
@@ -674,8 +717,8 @@ impl qobject::SecretsController {
         }
     }
 
-    pub fn copy_username(self: Pin<&mut Self>) {
-        if *self.locked() || *self.busy() {
+    pub fn copy_username(mut self: Pin<&mut Self>) {
+        if !self.as_ref().can_copy_login_value() {
             return;
         }
         let value = {
@@ -691,12 +734,11 @@ impl qobject::SecretsController {
                 _ => return,
             }
         };
-        let value = QString::from(value.as_str());
-        self.clipboard_requested(&value);
+        self.as_mut().request_copy(CopyKind::Username, value);
     }
 
-    pub fn copy_password(self: Pin<&mut Self>) {
-        if *self.locked() || *self.busy() {
+    pub fn copy_password(mut self: Pin<&mut Self>) {
+        if !self.as_ref().can_copy_login_value() {
             return;
         }
         let value = {
@@ -712,8 +754,236 @@ impl qobject::SecretsController {
                 _ => return,
             }
         };
+        self.as_mut().request_copy(CopyKind::Password, value);
+    }
+
+    pub fn refresh_totp(mut self: Pin<&mut Self>) {
+        if *self.locked() || *self.busy() {
+            return;
+        }
+        let (id, projection) = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let Some(id) = state.selected_entry else {
+                return;
+            };
+            let Some(content) = state.detail_content.as_ref() else {
+                return;
+            };
+            if !matches!(content, SecretContent::Login(_)) {
+                return;
+            }
+            (
+                id,
+                content_projection(id, content, state.password_revealed, unix_seconds()),
+            )
+        };
+        if let Ok(projection) = projection {
+            if self.as_ref().rust().selected_entry == Some(id) {
+                self.as_mut()
+                    .set_detail_json(QString::from(projection.as_str()));
+            }
+        }
+    }
+
+    pub fn copy_totp(mut self: Pin<&mut Self>, next: bool) {
+        if !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let value = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
+                return;
+            };
+            let Some(config) = login.totp.as_ref() else {
+                return;
+            };
+            let Ok(mut snapshot) = generate_totp(config, unix_seconds()) else {
+                return;
+            };
+            let code = if next {
+                std::mem::take(&mut snapshot.next)
+            } else {
+                std::mem::take(&mut snapshot.current)
+            };
+            Zeroizing::new(code)
+        };
+        self.as_mut().request_copy(
+            if next {
+                CopyKind::NextTotp
+            } else {
+                CopyKind::Totp
+            },
+            value,
+        );
+    }
+
+    pub fn confirm_copy(mut self: Pin<&mut Self>, copied: bool) {
+        let pending = self.as_mut().rust_mut().pending_copy.take();
+        if !copied {
+            return;
+        }
+        let Some(pending) = pending else {
+            return;
+        };
+        let valid = {
+            let object = self.as_ref();
+            let state = object.rust();
+            !*self.locked()
+                && state.selection_operation == pending.selection_operation
+                && state.selected_entry == Some(pending.id)
+                && state.editor_session.is_none()
+                && state.selected_revision.is_some()
+                && state.detail_content.is_some()
+        };
+        if !valid || *self.busy() {
+            return;
+        }
+        self.as_mut().start_copy_history_record(pending);
+    }
+
+    fn can_copy_login_value(self: Pin<&Self>) -> bool {
+        let state = self.rust();
+        !*self.locked()
+            && !*self.busy()
+            && !*self.saving()
+            && state.editor_session.is_none()
+            && state.selected_revision.is_some()
+            && matches!(state.detail_content.as_ref(), Some(SecretContent::Login(_)))
+    }
+
+    fn request_copy(mut self: Pin<&mut Self>, kind: CopyKind, value: Zeroizing<String>) {
+        {
+            let mut state = self.as_mut().rust_mut();
+            let Some(id) = state.selected_entry else {
+                return;
+            };
+            if state.selected_revision.is_none() || state.editor_session.is_some() {
+                return;
+            }
+            let pending = PendingCopy {
+                id,
+                selection_operation: state.selection_operation,
+                kind,
+            };
+            state.pending_copy = Some(pending);
+        }
         let value = QString::from(value.as_str());
-        self.clipboard_requested(&value);
+        self.as_mut().clipboard_requested(&value);
+    }
+
+    fn start_copy_history_record(mut self: Pin<&mut Self>, pending: PendingCopy) {
+        let copy_snapshot = {
+            let object = self.as_ref();
+            let state = object.rust();
+            state
+                .selected_revision
+                .zip(state.detail_content.as_ref().cloned())
+        };
+        let Some((revision, content_snapshot)) = copy_snapshot else {
+            self.as_mut().history_record_failed();
+            return;
+        };
+        let kind = match pending.kind {
+            CopyKind::Username => LoginHistoryEventKind::CopyUsername,
+            CopyKind::Password => LoginHistoryEventKind::CopyPassword,
+            CopyKind::Totp => LoginHistoryEventKind::CopyTotp,
+            CopyKind::NextTotp => LoginHistoryEventKind::CopyNextTotp,
+        };
+        let timestamp = unix_seconds();
+        self.as_mut().set_busy(true);
+
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || -> anyhow::Result<CopyHistoryResult> {
+                let mut service = open_service()?;
+                let content = service.record_login_event(
+                    pending.id,
+                    revision,
+                    content_snapshot,
+                    kind,
+                    timestamp,
+                )?;
+                let write_revision = revision
+                    .checked_add(1)
+                    .ok_or_else(|| anyhow::anyhow!("secret revision is exhausted"))?;
+                let observed_revision = find_entry_metadata(pending.id)
+                    .ok()
+                    .map(|metadata| metadata.revision);
+                let snapshot = snapshot_after_mutation();
+                Ok(CopyHistoryResult {
+                    content,
+                    write_revision,
+                    observed_revision,
+                    snapshot,
+                })
+            },
+            move |mut controller, result| {
+                controller.as_mut().set_busy(false);
+                match result {
+                    Ok(saved) => {
+                        let (has_snapshot, snapshot_revision) = match saved.snapshot {
+                            Ok(snapshot) => {
+                                let revision = snapshot_revision(&snapshot, pending.id);
+                                controller.as_mut().publish_snapshot(snapshot);
+                                (true, revision)
+                            }
+                            Err(()) => (false, None),
+                        };
+
+                        let still_selected = {
+                            let object = controller.as_ref();
+                            let state = object.rust();
+                            state.selected_entry == Some(pending.id)
+                                && state.selection_operation == pending.selection_operation
+                                && !*controller.as_ref().locked()
+                        };
+                        if !still_selected {
+                            return;
+                        }
+
+                        let revision_matches_snapshot = match snapshot_revision {
+                            Some(snapshot_revision) => {
+                                snapshot_revision == saved.write_revision
+                                    && saved.observed_revision == Some(saved.write_revision)
+                            }
+                            None => {
+                                !has_snapshot
+                                    && saved.observed_revision == Some(saved.write_revision)
+                            }
+                        };
+                        if !revision_matches_snapshot {
+                            controller.as_mut().history_record_failed();
+                            return;
+                        }
+
+                        let revision = snapshot_revision.unwrap_or(saved.write_revision);
+                        let detail = content_projection(
+                            pending.id,
+                            &saved.content,
+                            controller.as_ref().rust().password_revealed,
+                            unix_seconds(),
+                        );
+                        if let Ok(detail) = detail {
+                            {
+                                let mut state = controller.as_mut().rust_mut();
+                                state.selected_revision = Some(revision);
+                                state.detail_content = Some(saved.content);
+                            }
+                            controller
+                                .as_mut()
+                                .set_detail_json(QString::from(detail.as_str()));
+                        } else {
+                            controller.as_mut().history_record_failed();
+                        }
+                    }
+                    Err(_) => {
+                        controller.as_mut().history_record_failed();
+                    }
+                }
+            },
+        );
     }
 
     pub fn save_folder(
@@ -856,10 +1126,11 @@ impl qobject::SecretsController {
             "No se pudo mover el elemento.",
             move || {
                 let mut service = open_service()?;
+                let before_revision = find_entry_metadata(id)?.revision;
                 service.move_secret(id, folder_id)?;
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
-                    signal: MutationSignal::None,
+                    signal: MutationSignal::MetadataChanged(id, before_revision),
                     editor_operation: None,
                 })
             },
@@ -911,16 +1182,26 @@ impl qobject::SecretsController {
             return;
         };
 
+        let selected_id = self.as_ref().rust().selected_entry;
         self.as_mut().start_mutation(
             "Eliminando carpeta…",
             false,
             "No se pudo eliminar la carpeta.",
             move || {
                 let mut service = open_service()?;
+                let affected_selection = selected_id.and_then(|selected| {
+                    find_entry_metadata(selected)
+                        .ok()
+                        .filter(|entry| entry.folder == Some(id))
+                        .map(|entry| (selected, entry.revision))
+                });
                 service.remove_folder(id)?;
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
-                    signal: MutationSignal::None,
+                    signal: affected_selection
+                        .map_or(MutationSignal::None, |(selected, revision)| {
+                            MutationSignal::MetadataChanged(selected, revision)
+                        }),
                     editor_operation: None,
                 })
             },
@@ -982,10 +1263,11 @@ impl qobject::SecretsController {
             "No se pudo actualizar el elemento.",
             move || {
                 let mut service = open_service()?;
+                let before_revision = find_entry_metadata(id)?.revision;
                 service.update_flags(id, favorite, trashed)?;
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
-                    signal: MutationSignal::None,
+                    signal: MutationSignal::MetadataChanged(id, before_revision),
                     editor_operation: None,
                 })
             },
@@ -1019,6 +1301,22 @@ impl qobject::SecretsController {
             controller.as_mut().set_saving(false);
             match result {
                 Ok(result) => {
+                    if let MutationSignal::MetadataChanged(id, before_revision) = &result.signal {
+                        let next_revision = before_revision.checked_add(1);
+                        let stored_revision = result
+                            .snapshot
+                            .as_ref()
+                            .ok()
+                            .and_then(|snapshot| snapshot_revision(snapshot, *id));
+                        let mut state = controller.as_mut().rust_mut();
+                        if state.selected_entry == Some(*id)
+                            && state.selected_revision == Some(*before_revision)
+                            && next_revision.is_some()
+                            && stored_revision == next_revision
+                        {
+                            state.selected_revision = next_revision;
+                        }
+                    }
                     match result.snapshot {
                         Ok(snapshot) => {
                             controller.as_mut().publish_snapshot(snapshot);
@@ -1036,7 +1334,7 @@ impl qobject::SecretsController {
                         }
                     }
                     match result.signal {
-                        MutationSignal::None => {}
+                        MutationSignal::None | MutationSignal::MetadataChanged(_, _) => {}
                         MutationSignal::EntrySaved(id) => {
                             if result.editor_operation
                                 == Some(controller.as_ref().rust().editor_operation)
@@ -1148,7 +1446,9 @@ impl qobject::SecretsController {
         let mut state = self.as_mut().rust_mut();
         state.detail_content = None;
         state.selected_entry = None;
+        state.selected_revision = None;
         state.password_revealed = false;
+        state.pending_copy = None;
         self.as_mut().set_detail_json(QString::default());
     }
 
@@ -1257,6 +1557,18 @@ fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
     })
 }
 
+fn load_detail_content(id: SecretId) -> anyhow::Result<(SecretContent, u64)> {
+    let service = open_service()?;
+    let before = find_entry_metadata(id)?;
+    let content = service.read_content(id)?;
+    let after = find_entry_metadata(id)?;
+    anyhow::ensure!(
+        before.revision == after.revision,
+        "secret changed while opening"
+    );
+    Ok((content, after.revision))
+}
+
 struct EntryMetadata {
     folder: Option<FolderId>,
     title: String,
@@ -1317,6 +1629,13 @@ fn open_storage() -> anyhow::Result<SqliteStorage> {
 
 fn snapshot_after_mutation() -> Result<StoreSnapshot, ()> {
     read_store_snapshot().map_err(|_| ())
+}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 fn parse_secret_id(value: &str) -> Option<SecretId> {

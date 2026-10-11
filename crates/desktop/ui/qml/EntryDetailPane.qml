@@ -30,6 +30,7 @@ Controls.Pane {
     signal revealToggleRequested()
     signal copyUsernameRequested()
     signal copyPasswordRequested()
+    signal copyTotpRequested(bool next)
     signal retryDetailRequested()
     signal notificationRequested(string message)
 
@@ -40,6 +41,18 @@ Controls.Pane {
     Controls.SplitView.fillWidth: true
     Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 21
     padding: 0
+
+    Timer {
+        interval: 1000
+        repeat: true
+        triggeredOnStart: true
+        running: root.visible && !root.editing && !root.keysMode
+            && !root.storeAdapter.controller.locked
+            && !!root.selectedDetail && root.selectedDetail.kind === "login"
+            && !!root.selectedDetail.totp
+            && Application.state === Qt.ApplicationActive
+        onTriggered: root.storeAdapter.controller.refreshTotp()
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -209,6 +222,7 @@ Controls.Pane {
                     onRevealToggled: root.revealToggleRequested()
                     onCopyUsernameRequested: root.copyUsernameRequested()
                     onCopyPasswordRequested: root.copyPasswordRequested()
+                    onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
                 }
 
                 Kirigami.Separator {

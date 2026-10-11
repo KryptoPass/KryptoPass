@@ -66,7 +66,9 @@ Controls.Pane {
             kind: kindField.currentValue || "login",
             username: isNote ? "" : loginFields.username,
             password: isNote ? "" : loginFields.password,
-            url: isNote ? "" : loginFields.url,
+            url: isNote ? "" : (loginFields.normalizedUrls.length ? loginFields.normalizedUrls[0] : loginFields.url),
+            urls: isNote ? [] : loginFields.normalizedUrls,
+            totpInput: isNote ? "" : loginFields.totpInput,
             notes: isNote ? noteFields.notes : loginFields.notes,
             value: isNote ? noteFields.value : "",
             recipients: recipientChooser.selectedFingerprints.slice(),
@@ -128,7 +130,9 @@ Controls.Pane {
         kindField.currentIndex = Math.max(0, kindField.model.findIndex(option => option.id === (draft.kind === "note" ? "note" : "login")));
         loginFields.username = draft.username || "";
         loginFields.password = draft.password || "";
-        loginFields.url = draft.url || "";
+        loginFields.setUrls(Array.isArray(draft.urls) ? draft.urls : [], draft.url || "");
+        loginFields.totpInput = draft.totpInput || "";
+        loginFields.totpVisible = false;
         loginFields.notes = draft.kind === "note" ? "" : draft.notes || "";
         loginFields.passwordVisible = false;
         noteFields.value = draft.kind === "note" ? draft.value || "" : "";
@@ -229,7 +233,9 @@ Controls.Pane {
         titleField.text = "";
         loginFields.username = "";
         loginFields.password = "";
-        loginFields.url = "";
+        loginFields.setUrls([], "");
+        loginFields.totpInput = "";
+        loginFields.totpVisible = false;
         loginFields.notes = "";
         loginFields.passwordVisible = false;
         noteFields.value = "";
@@ -425,6 +431,9 @@ Controls.Pane {
                             onUsernameChanged: editor.updateDirty()
                             onPasswordChanged: editor.updateDirty()
                             onUrlChanged: editor.updateDirty()
+                            onUrlsChanged: editor.updateDirty()
+                            onUrlsTextChanged: editor.updateDirty()
+                            onTotpInputChanged: editor.updateDirty()
                             onNotesChanged: editor.updateDirty()
                             onGeneratePasswordRequested: editor.generatePasswordRequested()
                         }

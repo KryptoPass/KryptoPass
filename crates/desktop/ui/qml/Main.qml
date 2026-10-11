@@ -274,8 +274,13 @@ Controls.ApplicationWindow {
     Connections {
         target: store.controller
         function onClipboardRequested(value) {
-            if (secureClipboard.copySensitive(value))
+            const copied = secureClipboard.copySensitive(value);
+            store.controller.confirmCopy(copied);
+            if (copied)
                 root.notify(qsTr("Copiado al portapapeles"), "success");
+        }
+        function onHistoryRecordFailed() {
+            root.notify(qsTr("La copia se realizó, pero no se pudo actualizar el historial. Vuelve a abrir el elemento para actualizarlo."), "warning");
         }
         function onPasswordGenerated(value) {
             if (root.pendingOperation !== "generate")
@@ -782,6 +787,7 @@ Controls.ApplicationWindow {
                         }
                         onCopyUsernameRequested: store.controller.copyUsername()
                         onCopyPasswordRequested: store.controller.copyPassword()
+                        onCopyTotpRequested: function(next) { store.controller.copyTotp(next); }
                         onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
                     }
                 }

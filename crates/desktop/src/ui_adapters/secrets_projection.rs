@@ -1,8 +1,9 @@
 //! Converts secret-store records into the JSON contracts consumed by QML.
 
 use kryptopass_core::{
-    Folder, FolderId, KeyFingerprint, LoginContent, NoteContent, RecipientSelection, RecipientSet,
-    SecretContent, SecretId, SecretMetadata,
+    Folder, FolderId, KeyFingerprint, LoginContent, LoginHistory, LoginHistoryEventKind,
+    NoteContent, RecipientSelection, RecipientSet, SecretContent, SecretId, SecretMetadata,
+    TotpConfig, format_totp_input, generate_totp, parse_totp_input,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -13,6 +14,21 @@ use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 pub(super) struct StoreSnapshot {
     pub(super) entries: Vec<String>,
     pub(super) folders: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct EntryRevisionRecord {
+    id: String,
+    revision: u64,
+}
+
+pub(super) fn snapshot_revision(snapshot: &StoreSnapshot, id: SecretId) -> Option<u64> {
+    let id = id.0.to_string();
+    snapshot
+        .entries
+        .iter()
+        .filter_map(|record| serde_json::from_str::<EntryRevisionRecord>(record).ok())
+        .find_map(|record| (record.id == id).then_some(record.revision))
 }
 
 pub(super) struct OpenedEntry {
@@ -31,6 +47,39 @@ pub(super) struct PreparedSave {
     pub(super) recipients: RecipientSelection,
     pub(super) content: SecretContent,
     pub(super) expected_revision: Option<u64>,
+}
+
+#[derive(serde::Serialize, Zeroize, ZeroizeOnDrop)]
+struct TotpProjection {
+    #[serde(rename = "currentCode")]
+    current_code: String,
+    #[serde(rename = "nextCode")]
+    next_code: String,
+    period: u64,
+    #[serde(rename = "remainingSeconds")]
+    remaining_seconds: u64,
+    #[serde(rename = "validUntil")]
+    valid_until: u64,
+    #[serde(rename = "nextValidFrom")]
+    next_valid_from: u64,
+}
+
+#[derive(serde::Serialize)]
+struct HistoryProjection {
+    events: Vec<HistoryEventProjection>,
+    #[serde(rename = "passwordRotations")]
+    password_rotations: Vec<HistoryAtProjection>,
+}
+
+#[derive(serde::Serialize)]
+struct HistoryEventProjection {
+    kind: &'static str,
+    at: u64,
+}
+
+#[derive(serde::Serialize)]
+struct HistoryAtProjection {
+    at: u64,
 }
 
 /// Projects list data without copying encrypted payload bytes into QML.
@@ -85,12 +134,16 @@ pub(super) struct EntryDraft {
     username: SensitiveText,
     password: SensitiveText,
     url: SensitiveText,
+    #[serde(default)]
+    urls: Option<Vec<SensitiveText>>,
+    #[serde(rename = "totpInput", default)]
+    totp_input: SensitiveText,
     notes: SensitiveText,
     value: SensitiveText,
     recipients: Vec<String>,
 }
 
-#[derive(Zeroize, ZeroizeOnDrop)]
+#[derive(Default, Zeroize, ZeroizeOnDrop)]
 struct SensitiveText(String);
 
 impl<'de> Deserialize<'de> for SensitiveText {
@@ -140,16 +193,36 @@ pub(super) fn prepare_save(
     let recipients = RecipientSelection::Explicit(RecipientSet::new(recipients)?);
 
     let content = match draft.kind.as_str() {
-        "login" if draft.value.0.is_empty() => SecretContent::Login(LoginContent {
-            username: draft.username.take(),
-            password: draft.password.take(),
-            url: draft.url.take(),
-            notes: draft.notes.take(),
-        }),
+        "login" if draft.value.0.is_empty() => {
+            let urls = match draft.urls.take() {
+                Some(urls) => urls.into_iter().map(|mut value| value.take()).collect(),
+                None => {
+                    let legacy_url = draft.url.take();
+                    if legacy_url.is_empty() {
+                        Vec::new()
+                    } else {
+                        vec![legacy_url]
+                    }
+                }
+            };
+            let url = urls.first().cloned().unwrap_or_default();
+            let totp = parse_totp_input(&draft.totp_input.0)?;
+            SecretContent::Login(LoginContent {
+                username: draft.username.take(),
+                password: draft.password.take(),
+                url,
+                notes: draft.notes.take(),
+                urls,
+                totp,
+                history: Box::default(),
+            })
+        }
         "note"
             if draft.username.0.is_empty()
                 && draft.password.0.is_empty()
-                && draft.url.0.is_empty() =>
+                && draft.url.0.is_empty()
+                && draft.urls.as_ref().is_none_or(Vec::is_empty)
+                && draft.totp_input.0.is_empty() =>
         {
             SecretContent::Note(NoteContent {
                 value: draft.value.take(),
@@ -173,55 +246,94 @@ pub(super) fn content_projection(
     id: SecretId,
     content: &SecretContent,
     reveal_password: bool,
-) -> serde_json::Result<Zeroizing<String>> {
-    let (kind, username, url, notes, value, password, password_revealed) = match content {
-        SecretContent::Login(login) => (
-            "login",
-            login.username.as_str(),
-            login.url.as_str(),
-            login.notes.as_str(),
-            "",
-            if reveal_password {
-                login.password.as_str()
-            } else {
-                ""
-            },
-            reveal_password,
-        ),
-        SecretContent::Note(note) => (
-            "note",
-            "",
-            "",
-            note.notes.as_str(),
-            note.value.as_str(),
-            "",
-            false,
-        ),
-    };
+    unix_seconds: u64,
+) -> anyhow::Result<Zeroizing<String>> {
+    let (kind, username, url, urls, notes, value, password, password_revealed, totp, history) =
+        match content {
+            SecretContent::Login(login) => {
+                let totp = login
+                    .totp
+                    .as_ref()
+                    .map(|config| totp_projection(config, unix_seconds))
+                    .transpose()?;
+                let history = Some(history_projection(&login.history));
+                (
+                    "login",
+                    login.username.as_str(),
+                    login.url.as_str(),
+                    login.urls.as_slice(),
+                    login.notes.as_str(),
+                    "",
+                    if reveal_password {
+                        login.password.as_str()
+                    } else {
+                        ""
+                    },
+                    reveal_password,
+                    totp,
+                    history,
+                )
+            }
+            SecretContent::Note(note) => (
+                "note",
+                "",
+                "",
+                &[] as &[String],
+                note.notes.as_str(),
+                note.value.as_str(),
+                "",
+                false,
+                None,
+                None,
+            ),
+        };
     serde_json::to_string(&ContentProjection {
         id: id.0.to_string(),
         kind,
         password_revealed,
         username,
         url,
+        urls,
         notes,
         value,
         password,
+        totp,
+        history,
     })
     .map(Zeroizing::new)
+    .map_err(Into::into)
 }
 
-pub(super) fn editor_projection(entry: &OpenedEntry) -> serde_json::Result<Zeroizing<String>> {
-    let (kind, username, password, url, notes, value) = match &entry.content {
-        SecretContent::Login(login) => (
-            "login",
-            login.username.as_str(),
-            login.password.as_str(),
-            login.url.as_str(),
-            login.notes.as_str(),
+pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing<String>> {
+    let (kind, username, password, url, urls, totp_input, notes, value) = match &entry.content {
+        SecretContent::Login(login) => {
+            let totp_input = login
+                .totp
+                .as_ref()
+                .map(format_totp_input)
+                .transpose()?
+                .unwrap_or_else(Zeroizing::default);
+            (
+                "login",
+                login.username.as_str(),
+                login.password.as_str(),
+                login.url.as_str(),
+                login.urls.as_slice(),
+                totp_input,
+                login.notes.as_str(),
+                "",
+            )
+        }
+        SecretContent::Note(note) => (
+            "note",
             "",
+            "",
+            "",
+            &[] as &[String],
+            Zeroizing::default(),
+            note.notes.as_str(),
+            note.value.as_str(),
         ),
-        SecretContent::Note(note) => ("note", "", "", "", note.notes.as_str(), note.value.as_str()),
     };
     serde_json::to_string(&EditorProjection {
         id: entry.id.0.to_string(),
@@ -232,16 +344,19 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> serde_json::Result<Zeroi
         username,
         password,
         url,
+        urls,
+        totp_input: totp_input.as_str(),
         notes,
         value,
         recipients: &entry.recipients,
     })
     .map(Zeroizing::new)
+    .map_err(Into::into)
 }
 
 pub(super) fn new_editor_projection() -> Zeroizing<String> {
     Zeroizing::new(
-        r#"{"id":"","revision":null,"folder":"","title":"","kind":"login","username":"","password":"","url":"","notes":"","value":"","recipients":[]}"#.to_owned(),
+        r#"{"id":"","revision":null,"folder":"","title":"","kind":"login","username":"","password":"","url":"","urls":[],"totpInput":"","notes":"","value":"","recipients":[]}"#.to_owned(),
     )
 }
 
@@ -253,9 +368,12 @@ struct ContentProjection<'a> {
     password_revealed: bool,
     username: &'a str,
     url: &'a str,
+    urls: &'a [String],
     notes: &'a str,
     value: &'a str,
     password: &'a str,
+    totp: Option<TotpProjection>,
+    history: Option<HistoryProjection>,
 }
 
 #[derive(serde::Serialize)]
@@ -268,6 +386,9 @@ struct EditorProjection<'a> {
     username: &'a str,
     password: &'a str,
     url: &'a str,
+    urls: &'a [String],
+    #[serde(rename = "totpInput")]
+    totp_input: &'a str,
     notes: &'a str,
     value: &'a str,
     recipients: &'a [String],
@@ -282,5 +403,55 @@ fn parse_optional_folder_id(value: &str) -> anyhow::Result<Option<FolderId>> {
             .map(FolderId)
             .map(Some)
             .ok_or_else(|| anyhow::anyhow!("folder identifier is invalid"))
+    }
+}
+
+fn totp_projection(config: &TotpConfig, unix_seconds: u64) -> anyhow::Result<TotpProjection> {
+    let snapshot = generate_totp(config, unix_seconds)?;
+    let period = snapshot.period.max(1);
+    let valid_until = unix_seconds
+        .saturating_sub(unix_seconds % period)
+        .saturating_add(period);
+
+    Ok(TotpProjection {
+        current_code: snapshot.current.clone(),
+        next_code: snapshot.next.clone(),
+        period: snapshot.period,
+        remaining_seconds: snapshot.remaining,
+        valid_until,
+        next_valid_from: valid_until,
+    })
+}
+
+fn history_projection(history: &LoginHistory) -> HistoryProjection {
+    let events = history
+        .events()
+        .iter()
+        .map(|event| HistoryEventProjection {
+            kind: history_event_kind_name(&event.kind),
+            at: event.timestamp,
+        })
+        .collect();
+    let password_rotations = history
+        .password_change_timestamps()
+        .map(|timestamp| HistoryAtProjection { at: timestamp })
+        .collect();
+
+    HistoryProjection {
+        events,
+        password_rotations,
+    }
+}
+
+fn history_event_kind_name(kind: &LoginHistoryEventKind) -> &'static str {
+    match kind {
+        LoginHistoryEventKind::Create => "create",
+        LoginHistoryEventKind::LoginUse => "loginUse",
+        LoginHistoryEventKind::PasswordRotated => "passwordRotated",
+        LoginHistoryEventKind::Edited => "edited",
+        LoginHistoryEventKind::CopyUsername => "copyUsername",
+        LoginHistoryEventKind::CopyPassword => "copyPassword",
+        LoginHistoryEventKind::CopyTotp => "copyTotp",
+        LoginHistoryEventKind::CopyNextTotp => "copyNextTotp",
     }
 }
