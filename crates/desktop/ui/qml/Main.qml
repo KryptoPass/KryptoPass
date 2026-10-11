@@ -31,8 +31,8 @@ Controls.ApplicationWindow {
     property url pendingVaultPath: ""
     property string closeMessage: ""
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
-    readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || editor.savePending || folderEditor.pending
-    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
+    readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || importDialog.busy || editor.savePending || folderEditor.pending
+    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || importDialog.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
     readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError)
         || (folderEditor.opened && !!folderEditor.saveError)
         || (moveDialog.opened && !!moveDialog.operationError)
@@ -125,6 +125,8 @@ Controls.ApplicationWindow {
             markdownDemo.close();
         if (keyErrorDialog.opened)
             keyErrorDialog.close();
+        if (importDialog.opened)
+            importDialog.close();
         if (backupDialog.opened)
             backupDialog.close();
         if (mainKeyOperationDialog.opened)
@@ -440,6 +442,11 @@ Controls.ApplicationWindow {
                 visible: root.keysMode
             }
             Controls.MenuSeparator {}
+            Controls.MenuItem {
+                text: qsTr("Importar desde Proton Pass…")
+                enabled: !root.mutationsBlocked
+                onTriggered: importDialog.prepare()
+            }
             Controls.MenuItem {
                 text: qsTr("Crear copia de seguridad…")
                 enabled: !root.mutationsBlocked
@@ -819,7 +826,7 @@ Controls.ApplicationWindow {
                             color: Kirigami.Theme.disabledTextColor
                         }
                         Controls.BusyIndicator {
-                            visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy)
+                            visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy || importDialog.busy)
                             running: visible
                             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                             Layout.preferredHeight: width
@@ -844,7 +851,7 @@ Controls.ApplicationWindow {
         focusedItem: root.activeFocusItem
         externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened
                            || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
-                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened
+                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened || importDialog.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }
@@ -896,6 +903,11 @@ Controls.ApplicationWindow {
             root.beginOperation("generate", "");
             store.controller.generatePassword(length, lowercase, uppercase, digits, symbols, excluded);
         }
+    }
+    ImportDialog {
+        id: importDialog
+        keyStore: keys
+        onImported: store.controller.loadStore()
     }
     BackupDialog {
         id: backupDialog

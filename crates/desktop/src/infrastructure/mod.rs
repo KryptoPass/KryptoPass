@@ -2,6 +2,7 @@
 
 pub mod app_paths;
 pub mod backup;
+pub mod import;
 pub mod openpgp;
 pub mod sqlite_storage;
 

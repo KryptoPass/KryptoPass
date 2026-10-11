@@ -4,6 +4,7 @@ pub mod app_shell;
 pub mod application;
 pub mod backup_controller;
 pub mod contacts_controller;
+pub mod import_controller;
 pub mod keyring_controller;
 mod keyring_projection;
 pub mod markdown_document;

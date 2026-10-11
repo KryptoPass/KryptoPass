@@ -117,11 +117,28 @@ pub fn restore_backup(
     let (folders, secrets) =
         deserialize_backup(plaintext.as_slice()).context(RestoreFailure::InvalidBackup)?;
 
+    publish_restore_snapshot(&destination, &folders, &secrets)
+}
+
+/// Publishes a restored snapshot into an isolated, new private store.
+fn publish_restore_snapshot(
+    output: &Path,
+    folders: &[Folder],
+    secrets: &[Secret],
+) -> Result<BackupPublishOutcome> {
+    let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
+    let destination = prepare_destination(output, false)?;
+    protect_store_target(&database_path, &destination)?;
+    ensure!(!destination.exists(), "import destination already exists");
+    let parent = destination
+        .parent()
+        .context("import destination has no parent")?;
+    ensure_private_directory(parent)?;
     let stage = create_private_staging_directory(parent)?;
     let mut stage_guard = StagingDirectory(stage.clone());
     let staged_database = stage.join(RESTORE_DATABASE_NAME);
     let mut storage = SqliteStorage::open(&staged_database)?;
-    storage.import_backup_snapshot(&folders, &secrets)?;
+    storage.import_backup_snapshot(folders, secrets)?;
     storage.finish_for_backup_publish()?;
     File::open(&staged_database)
         .and_then(|file| file.sync_all())

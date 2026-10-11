@@ -18,6 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/NoteFields.qml")
         .qml_file("ui/qml/RecipientsChooser.qml")
         .qml_file("ui/qml/BackupDialog.qml")
+        .qml_file("ui/qml/ImportDialog.qml")
         .qml_file("ui/qml/PasswordGenerator.qml")
         .qml_file("ui/qml/FolderEditor.qml")
         .qml_file("ui/qml/FolderAppearancePicker.qml")
@@ -62,6 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "src/ui_adapters/markdown_document.rs",
             "src/ui_adapters/secrets_controller.rs",
             "src/ui_adapters/backup_controller.rs",
+            "src/ui_adapters/import_controller.rs",
             "src/ui_adapters/sensitive_clipboard.rs",
             "src/ui_adapters/contacts_controller.rs",
             "src/ui_adapters/native_ffi.rs",

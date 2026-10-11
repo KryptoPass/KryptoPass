@@ -1,6 +1,6 @@
 //! SQLite storage for encrypted secret payloads and public organizing metadata.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::Path;
@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{
-    DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,
-    SecretId, SecretKind, SecretMetadata, Storage,
+    DomainError, Folder, FolderAppearance, FolderId, ImportStorage, KeyFingerprint, RecipientSet,
+    Secret, SecretId, SecretKind, SecretMetadata, Storage,
 };
 use rusqlite::types::{Type, ValueRef};
 use rusqlite::{
@@ -135,61 +135,7 @@ impl SqliteStorage {
             .context("could not inspect the restore destination")?;
         ensure!(!nonempty, "backup restore destination is not empty");
 
-        // Insert folders as roots first so input ordering does not matter.
-        for folder in folders {
-            transaction
-                .execute(
-                    "INSERT INTO folders(id, parent_id, name, icon, color, sort_position) \
-                     VALUES (?1, NULL, ?2, ?3, ?4, ?5)",
-                    params![
-                        folder.id.0.to_string(),
-                        &folder.name,
-                        folder.appearance.icon(),
-                        folder.appearance.color(),
-                        folder.sort_position,
-                    ],
-                )
-                .map_err(|_| anyhow::anyhow!("could not restore folder metadata"))?;
-            replace_folder_recipients(&transaction, folder.id, folder.default_recipients.as_ref())?;
-        }
-
-        // Reuse the storage hierarchy check; every link update is rolled back
-        // if a missing parent or cycle is encountered.
-        for folder in folders {
-            if let Some(parent_id) = folder.parent_id {
-                validate_parent(&transaction, folder.id, Some(parent_id))?;
-                transaction
-                    .execute(
-                        "UPDATE folders SET parent_id = ?1 WHERE id = ?2",
-                        params![parent_id.0.to_string(), folder.id.0.to_string()],
-                    )
-                    .map_err(|_| anyhow::anyhow!("could not restore folder hierarchy"))?;
-            }
-        }
-
-        for secret in secrets {
-            if let Some(folder_id) = secret.folder_id {
-                ensure_folder_exists(&transaction, folder_id)?;
-            }
-            transaction
-                .execute(
-                    "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-                    params![
-                        secret.id.0.to_string(),
-                        secret.folder_id.map(|id| id.0.to_string()),
-                        &secret.title,
-                        secret.kind.as_str(),
-                        secret.favorite,
-                        secret.trashed,
-                        &secret.ciphertext,
-                        i64::try_from(secret.revision)
-                            .context("backup secret revision is invalid")?,
-                    ],
-                )
-                .map_err(|_| anyhow::anyhow!("could not restore encrypted secret"))?;
-            replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
-        }
+        insert_encrypted_batch(&transaction, folders, secrets)?;
 
         transaction
             .commit()
@@ -1292,6 +1238,14 @@ fn validate_backup_read_budget(connection: &Connection) -> Result<()> {
 }
 
 fn validate_backup_snapshot(folders: &[Folder], secrets: &[Secret]) -> Result<()> {
+    validate_encrypted_batch(folders, secrets, false)
+}
+
+fn validate_encrypted_batch(
+    folders: &[Folder],
+    secrets: &[Secret],
+    allow_existing_folders: bool,
+) -> Result<()> {
     ensure!(
         folders.len().saturating_add(secrets.len()) <= MAX_BACKUP_ROWS,
         "backup contains too many records"
@@ -1324,7 +1278,7 @@ fn validate_backup_snapshot(folders: &[Folder], secrets: &[Secret]) -> Result<()
         );
         if let Some(parent_id) = folder.parent_id {
             ensure!(
-                folder_ids.contains(&parent_id),
+                allow_existing_folders || folder_ids.contains(&parent_id),
                 "backup folder parent is missing"
             );
         }
@@ -1360,7 +1314,7 @@ fn validate_backup_snapshot(folders: &[Folder], secrets: &[Secret]) -> Result<()
         );
         if let Some(folder_id) = secret.folder_id {
             ensure!(
-                folder_ids.contains(&folder_id),
+                allow_existing_folders || folder_ids.contains(&folder_id),
                 "backup secret folder is missing"
             );
         }
@@ -1657,3 +1611,97 @@ struct RawSecretMetadata {
 #[cfg(test)]
 #[path = "folder_move_tests.rs"]
 mod folder_move_tests;
+
+fn insert_encrypted_batch(
+    transaction: &Transaction<'_>,
+    folders: &[Folder],
+    secrets: &[Secret],
+) -> Result<()> {
+    // Insert folders as roots first so input ordering does not matter.
+    for folder in folders {
+        transaction
+            .execute(
+                "INSERT INTO folders(id, parent_id, name, icon, color, sort_position) \
+                     VALUES (?1, NULL, ?2, ?3, ?4, ?5)",
+                params![
+                    folder.id.0.to_string(),
+                    &folder.name,
+                    folder.appearance.icon(),
+                    folder.appearance.color(),
+                    folder.sort_position,
+                ],
+            )
+            .map_err(|_| anyhow::anyhow!("could not restore folder metadata"))?;
+        replace_folder_recipients(transaction, folder.id, folder.default_recipients.as_ref())?;
+    }
+
+    // Reuse the storage hierarchy check; every link update is rolled back
+    // if a missing parent or cycle is encountered.
+    for folder in folders {
+        if let Some(parent_id) = folder.parent_id {
+            validate_parent(transaction, folder.id, Some(parent_id))?;
+            transaction
+                .execute(
+                    "UPDATE folders SET parent_id = ?1 WHERE id = ?2",
+                    params![parent_id.0.to_string(), folder.id.0.to_string()],
+                )
+                .map_err(|_| anyhow::anyhow!("could not restore folder hierarchy"))?;
+        }
+    }
+
+    for secret in secrets {
+        if let Some(folder_id) = secret.folder_id {
+            ensure_folder_exists(transaction, folder_id)?;
+        }
+        transaction
+                .execute(
+                    "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        secret.id.0.to_string(),
+                        secret.folder_id.map(|id| id.0.to_string()),
+                        &secret.title,
+                        secret.kind.as_str(),
+                        secret.favorite,
+                        secret.trashed,
+                        &secret.ciphertext,
+                        i64::try_from(secret.revision)
+                            .context("backup secret revision is invalid")?,
+                    ],
+                )
+                .map_err(|_| anyhow::anyhow!("could not restore encrypted secret"))?;
+        replace_secret_recipients(transaction, secret.id, &secret.recipients)?;
+    }
+
+    Ok(())
+}
+
+impl ImportStorage for SqliteStorage {
+    fn append_import(&mut self, folders: &[Folder], secrets: &[Secret]) -> Result<()> {
+        validate_encrypted_batch(folders, secrets, true)?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .context("could not begin additive import")?;
+        let mut next_positions = HashMap::new();
+        let mut ordered = folders.to_vec();
+        for folder in &mut ordered {
+            let next = match next_positions.entry(folder.parent_id) {
+                std::collections::hash_map::Entry::Occupied(entry) => entry.into_mut(),
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    let maximum: i64 = transaction.query_row(
+                        "SELECT COALESCE(MAX(sort_position), -1) FROM folders WHERE parent_id IS ?1",
+                        [folder.parent_id.map(|id| id.0.to_string())], |row| row.get(0),
+                    )?;
+                    entry.insert(maximum.checked_add(1).context("folder order overflow")?)
+                }
+            };
+            folder.sort_position = *next;
+            *next = next.checked_add(1).context("folder order overflow")?;
+        }
+        insert_encrypted_batch(&transaction, &ordered, secrets)?;
+        transaction
+            .commit()
+            .context("could not commit additive import")
+    }
+}
