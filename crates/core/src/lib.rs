@@ -1,6 +1,7 @@
 //! Shared domain logic for KryptoPass: folders, secrets and crypto contracts.
 
 pub mod domain;
+pub mod import;
 pub mod keyring;
 pub mod navigation;
 pub mod otp;
@@ -18,6 +19,10 @@ pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,
     SecretId, SecretKind, SecretMetadata,
 };
+pub use import::{
+    ImportBatch, ImportFolder, ImportFolderPolicy, ImportItem, ImportOptions, ImportReceipt,
+    ImportReceiver, ImportValidationError, MAX_IMPORT_RECORDS,
+};
 pub use keyring::{KeyInfo, KeyValidity, Keyring, KeyringError, UserIdInfo};
 pub use navigation::NavigationNode;
 pub use otp::{
@@ -25,5 +30,5 @@ pub use otp::{
     parse_totp_input,
 };
 pub use password::{PasswordOptions, generate_password};
-pub use ports::{OpenPgp, Storage};
+pub use ports::{ImportStorage, OpenPgp, Storage};
 pub use service::{CreateSecret, RecipientSelection, SecretsService};

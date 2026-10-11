@@ -28,11 +28,11 @@ dev:
 
 # Formato Rust: debe pasar sin diff.
 fmt:
-    cargo fmt --check
+    cargo fmt --all --check
 
 # Compila + regenera .qmltypes (base de lint y smoke).
 check:
-    cargo check
+    cargo check --workspace
 
 # Compila (reenvía flags a cargo: `just build --release`).
 build *args: check
@@ -40,7 +40,7 @@ build *args: check
 
 # Lints Rust como errores.
 clippy:
-    cargo clippy --all-targets -- -D warnings
+    cargo clippy --workspace --all-targets -- -D warnings
 
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
 lint: check
@@ -48,7 +48,7 @@ lint: check
 
 # Tests Rust (el agente de tests usa los suyos; esto es lo general).
 test:
-    cargo test
+    cargo test --workspace
 
 # Smoke offscreen: arranca y falla si el log trae errores QML.
 smoke: build

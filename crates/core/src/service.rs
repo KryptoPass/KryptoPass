@@ -482,3 +482,76 @@ fn unix_seconds() -> u64 {
         .unwrap_or_default()
         .as_secs()
 }
+
+impl<S: crate::ports::ImportStorage, G: OpenPgp> crate::import::ImportReceiver
+    for SecretsService<S, G>
+{
+    fn receive_import(
+        &mut self,
+        batch: crate::import::ImportBatch,
+        options: crate::import::ImportOptions,
+    ) -> Result<crate::import::ImportReceipt> {
+        use crate::import::{ImportFolderPolicy, ImportReceipt};
+        batch.validate()?;
+        ensure!(
+            options.recipients.as_slice().len() <= 64,
+            "too many import recipients"
+        );
+        let destination = match options.folders {
+            ImportFolderPolicy::PreserveHierarchy { parent } => parent,
+            ImportFolderPolicy::PlaceAll { folder } => folder,
+        };
+        if let Some(id) = destination {
+            self.storage
+                .find_folder(id)?
+                .context("import destination folder does not exist")?;
+        }
+        self.crypto.validate_recipients(&options.recipients)?;
+        let ids: Vec<_> = batch.folders.iter().map(|_| FolderId::new()).collect();
+        let folders = match options.folders {
+            ImportFolderPolicy::PreserveHierarchy { parent } => batch
+                .folders
+                .iter()
+                .enumerate()
+                .map(|(index, folder)| Folder {
+                    id: ids[index],
+                    parent_id: folder.parent.map(|index| ids[index]).or(parent),
+                    sort_position: index as i64,
+                    name: folder.name.trim().to_owned(),
+                    appearance: FolderAppearance::default(),
+                    default_recipients: Some(options.recipients.clone()),
+                })
+                .collect(),
+            ImportFolderPolicy::PlaceAll { .. } => Vec::new(),
+        };
+        let mut secrets = Vec::with_capacity(batch.items.len());
+        for item in &batch.items {
+            let plaintext = encode_content(&item.content)?;
+            let ciphertext = self.crypto.encrypt(&plaintext, &options.recipients)?;
+            ensure!(
+                !ciphertext.is_empty(),
+                "import encryption produced no ciphertext"
+            );
+            let folder_id = match options.folders {
+                ImportFolderPolicy::PreserveHierarchy { .. } => Some(ids[item.folder]),
+                ImportFolderPolicy::PlaceAll { folder } => folder,
+            };
+            secrets.push(Secret {
+                id: SecretId::new(),
+                folder_id,
+                title: item.title.trim().to_owned(),
+                kind: item.content.kind(),
+                recipients: options.recipients.clone(),
+                ciphertext,
+                favorite: item.favorite,
+                trashed: item.trashed,
+                revision: 0,
+            });
+        }
+        self.storage.append_import(&folders, &secrets)?;
+        Ok(ImportReceipt {
+            folders_added: folders.len(),
+            items_added: secrets.len(),
+        })
+    }
+}
