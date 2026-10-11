@@ -4,10 +4,11 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-ColumnLayout {
+GridLayout {
     id: root
 
     property var detail: null
+    property var recipients: []
     property bool revealed: false
     property bool historyOpen: false
     property bool historyExpanded: false
@@ -103,342 +104,432 @@ ColumnLayout {
     }
 
     Layout.fillWidth: true
-    spacing: Kirigami.Units.largeSpacing
+    readonly property bool wideLayout: detail?.kind === "login" && width >= Kirigami.Units.gridUnit * 56
+    columns: wideLayout ? 2 : 1
+    columnSpacing: Kirigami.Units.largeSpacing * 2
+    rowSpacing: Kirigami.Units.largeSpacing
 
     ColumnLayout {
         Layout.fillWidth: true
-        visible: root.detail && root.detail.kind === "login"
-        spacing: Kirigami.Units.smallSpacing
+        Layout.minimumWidth: 0
+        Layout.preferredWidth: root.wideLayout ? root.width * 0.65 : root.width
+        Layout.alignment: Qt.AlignTop
+        spacing: Kirigami.Units.largeSpacing
 
-        DetailField {
-            label: qsTr("Correo o usuario")
-            value: root.detail?.username || qsTr("Sin usuario")
-            copyLabel: qsTr("Copiar usuario")
-            copyEnabled: !!root.detail?.username
-            onCopyRequested: root.copyUsernameRequested()
-        }
-        DetailField {
-            label: qsTr("Contraseña")
-            value: root.revealed ? root.detail?.password || qsTr("Sin contraseña") : "••••••••••••"
-            copyLabel: qsTr("Copiar contraseña")
-            copyEnabled: !!root.detail
-            revealable: true
-            revealed: root.revealed
-            onRevealRequested: root.revealToggled()
-            onCopyRequested: root.copyPasswordRequested()
-        }
-        DetailField {
-            visible: !!root.totp
-            label: qsTr("Código de verificación")
-            value: root.totp?.currentCode || ""
-            copyLabel: qsTr("Copiar código de verificación")
-            prominent: true
-            hint: qsTr("Se renueva en %1 s").arg(root.totpRemaining)
-            progress: root.totpProgress
-            onCopyRequested: root.copyTotpRequested(false)
-
-            Controls.ToolButton {
-                id: totpOptions
-                text: qsTr("Opciones del código de verificación")
-                icon.name: "view-more-symbolic"
-                display: Controls.AbstractButton.IconOnly
-                onClicked: totpMenu.popup()
-                Controls.ToolTip.visible: hovered || visualFocus
-                Controls.ToolTip.text: text
-
-                Controls.Menu {
-                    id: totpMenu
-                    Controls.MenuItem {
-                        text: qsTr("Copiar próximo código")
-                        icon.name: "edit-copy"
-                        enabled: !!root.totp?.nextCode
-                        onTriggered: root.copyTotpRequested(true)
-                    }
-                }
-            }
-        }
-    }
-
-    ColumnLayout {
-        Layout.fillWidth: true
-        visible: root.detail && root.detail.kind === "login"
-        spacing: Kirigami.Units.smallSpacing
-
-        Kirigami.Heading {
-            level: 3
-            text: qsTr("Sitios web")
-        }
-        Repeater {
-            model: root.websiteUrls
-            delegate: Controls.Frame {
-                id: websiteDelegate
-                required property string modelData
-                readonly property string webUrl: root.safeWebUrl(modelData)
-                readonly property string domain: webUrl ? webUrl.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] : qsTr("Enlace no válido")
-                Layout.fillWidth: true
-                padding: Kirigami.Units.largeSpacing
-
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
-                    Kirigami.Icon {
-                        source: "internet-web-browser"
-                        Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                        Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        spacing: Kirigami.Units.smallSpacing
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: websiteDelegate.domain
-                            textFormat: Text.PlainText
-                            font.weight: Font.Medium
-                            elide: Text.ElideMiddle
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            text: websiteDelegate.modelData
-                            textFormat: Text.PlainText
-                            color: Kirigami.Theme.disabledTextColor
-                            elide: Text.ElideMiddle
-                            Accessible.name: websiteDelegate.modelData
-                        }
-                    }
-                    Controls.ToolButton {
-                        text: qsTr("Abrir sitio web")
-                        icon.name: "window-new"
-                        display: Controls.AbstractButton.IconOnly
-                        enabled: !!websiteDelegate.webUrl
-                        Accessible.name: qsTr("Abrir %1 en el navegador").arg(websiteDelegate.domain)
-                        Accessible.description: websiteDelegate.modelData
-                        onClicked: Qt.openUrlExternally(websiteDelegate.webUrl)
-                        Controls.ToolTip.visible: hovered || visualFocus
-                        Controls.ToolTip.text: websiteDelegate.modelData
-                    }
-                }
-            }
-        }
-        Controls.Label {
+        ColumnLayout {
             Layout.fillWidth: true
-            visible: root.websiteUrls.length === 0
-            text: qsTr("No hay sitios web guardados.")
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.Wrap
-        }
-    }
-
-    Controls.Frame {
-        Layout.fillWidth: true
-        visible: root.detail && root.detail.kind === "note"
-        padding: Kirigami.Units.largeSpacing
-
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-
-            Controls.Label {
-                text: qsTr("Contenido")
-                color: Kirigami.Theme.disabledTextColor
-            }
-            Controls.TextArea {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 6)
-                readOnly: true
-                selectByMouse: true
-                wrapMode: TextEdit.Wrap
-                textFormat: TextEdit.PlainText
-                text: root.detail ? root.detail.value || qsTr("Sin contenido") : ""
-                Accessible.name: qsTr("Contenido de la nota segura")
-            }
-        }
-    }
-
-    Controls.Frame {
-        Layout.fillWidth: true
-        visible: !!root.detail && !!root.detail.notes
-        padding: Kirigami.Units.largeSpacing
-        contentItem: ColumnLayout {
-            Controls.Label {
-                text: qsTr("Notas")
-                color: Kirigami.Theme.disabledTextColor
-            }
-            Controls.TextArea {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 3)
-                readOnly: true
-                selectByMouse: true
-                wrapMode: TextEdit.Wrap
-                textFormat: TextEdit.PlainText
-                text: root.detail ? root.detail.notes || "" : ""
-                Accessible.name: qsTr("Notas del elemento")
-            }
-        }
-    }
-
-    Controls.Frame {
-        Layout.fillWidth: true
-        visible: root.historyItems.length > 0
-        padding: Kirigami.Units.largeSpacing
-        contentItem: ColumnLayout {
+            visible: root.detail && root.detail.kind === "login"
             spacing: Kirigami.Units.smallSpacing
 
-            RowLayout {
+            GridLayout {
+                id: identityFields
                 Layout.fillWidth: true
-                Controls.ToolButton {
-                    id: activityToggle
-                    text: qsTr("Actividad en KryptoPass")
-                    icon.name: root.historyOpen ? "arrow-down" : "arrow-right"
-                    display: Controls.AbstractButton.IconOnly
-                    checkable: true
-                    checked: root.historyOpen
-                    Accessible.name: root.historyOpen ? qsTr("Contraer actividad") : qsTr("Expandir actividad")
-                    onToggled: root.historyOpen = checked
+                columns: width >= Kirigami.Units.gridUnit * 36 ? 2 : 1
+                columnSpacing: Kirigami.Units.smallSpacing
+                rowSpacing: Kirigami.Units.smallSpacing
+
+                DetailField {
+                    label: qsTr("Correo o usuario")
+                    value: root.detail?.username || qsTr("Sin usuario")
+                    copyLabel: qsTr("Copiar usuario")
+                    copyEnabled: !!root.detail?.username
+                    onCopyRequested: root.copyUsernameRequested()
                 }
+                DetailField {
+                    label: qsTr("Contraseña")
+                    value: root.revealed ? root.detail?.password || qsTr("Sin contraseña") : "••••••••••••"
+                    copyLabel: qsTr("Copiar contraseña")
+                    copyEnabled: !!root.detail
+                    revealable: true
+                    revealed: root.revealed
+                    onRevealRequested: root.revealToggled()
+                    onCopyRequested: root.copyPasswordRequested()
+                }
+            }
+            DetailField {
+                visible: !!root.totp
+                label: qsTr("Código de verificación")
+                value: root.totp?.currentCode || ""
+                copyLabel: qsTr("Copiar código de verificación")
+                prominent: true
+                hint: qsTr("Se renueva en %1 s").arg(root.totpRemaining)
+                progress: root.totpProgress
+                onCopyRequested: root.copyTotpRequested(false)
+
+                Controls.ToolButton {
+                    id: totpOptions
+                    text: qsTr("Opciones del código de verificación")
+                    icon.name: "view-more-symbolic"
+                    display: Controls.AbstractButton.IconOnly
+                    onClicked: totpMenu.popup()
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: text
+
+                    Controls.Menu {
+                        id: totpMenu
+                        Controls.MenuItem {
+                            text: qsTr("Copiar próximo código")
+                            icon.name: "edit-copy"
+                            enabled: !!root.totp?.nextCode
+                            onTriggered: root.copyTotpRequested(true)
+                        }
+                    }
+                }
+            }
+        }
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: root.detail && root.detail.kind === "login"
+            padding: Kirigami.Units.largeSpacing
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
                 Controls.Label {
                     Layout.fillWidth: true
-                    Layout.minimumWidth: 0
-                    text: qsTr("Actividad en KryptoPass")
-                    font.weight: Font.Medium
+                    text: qsTr("Sitios web")
+                    color: Kirigami.Theme.disabledTextColor
                     wrapMode: Text.Wrap
                 }
-                Controls.Label {
-                    text: root.historyItems.length === 1 ? qsTr("1 evento") : qsTr("%1 eventos").arg(root.historyItems.length)
-                    color: Kirigami.Theme.disabledTextColor
-                }
-            }
-
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: !root.historyOpen
-                text: root.historyItems.length
-                      ? qsTr("%1 · %2").arg(root.eventText(root.historyItems[0].kind)).arg(root.formatEventTime(root.historyItems[0].at))
-                      : ""
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-                color: Kirigami.Theme.disabledTextColor
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                visible: root.historyOpen
-                spacing: Kirigami.Units.smallSpacing
-
                 Repeater {
-                    model: root.historyOpen ? root.visibleHistoryItems : []
+                    model: root.websiteUrls
                     delegate: ColumnLayout {
-                        id: historyItemRow
-                        required property var modelData
+                        id: websiteDelegate
+                        required property string modelData
                         required property int index
+                        readonly property string webUrl: root.safeWebUrl(modelData)
+                        readonly property string domain: webUrl ? webUrl.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] : qsTr("Enlace no válido")
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
-                        readonly property bool startsDay: index === 0
-                            || root.eventDate(modelData.at) !== root.eventDate(root.visibleHistoryItems[index - 1].at)
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            Layout.topMargin: historyItemRow.index > 0 ? Kirigami.Units.largeSpacing : Kirigami.Units.smallSpacing
-                            visible: historyItemRow.startsDay
-                            text: root.eventDate(historyItemRow.modelData.at)
-                            wrapMode: Text.Wrap
-                            textFormat: Text.PlainText
-                            font.weight: Font.Medium
-                        }
 
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: Kirigami.Units.smallSpacing
-                            Kirigami.Icon {
-                                source: root.eventIcon(historyItemRow.modelData.kind)
-                                Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                                Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                            Controls.Label {
+                            ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.minimumWidth: 0
-                                text: root.eventText(historyItemRow.modelData.kind)
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
+                                spacing: Kirigami.Units.smallSpacing
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    text: websiteDelegate.domain
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideMiddle
+                                }
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
+                                    text: websiteDelegate.modelData
+                                    textFormat: Text.PlainText
+                                    color: Kirigami.Theme.disabledTextColor
+                                    elide: Text.ElideMiddle
+                                    Accessible.name: websiteDelegate.modelData
+                                }
                             }
-                            Controls.Label {
-                                text: root.eventTime(historyItemRow.modelData.at)
-                                textFormat: Text.PlainText
-                                color: Kirigami.Theme.disabledTextColor
-                                Accessible.name: root.formatEventTime(historyItemRow.modelData.at)
+                            Controls.ToolButton {
+                                text: qsTr("Abrir sitio web")
+                                icon.name: "window-new"
+                                display: Controls.AbstractButton.IconOnly
+                                enabled: !!websiteDelegate.webUrl
+                                Accessible.name: qsTr("Abrir %1 en el navegador").arg(websiteDelegate.domain)
+                                Accessible.description: websiteDelegate.modelData
+                                onClicked: Qt.openUrlExternally(websiteDelegate.webUrl)
+                                Controls.ToolTip.visible: hovered || visualFocus
+                                Controls.ToolTip.text: websiteDelegate.modelData
                             }
                         }
                         Kirigami.Separator {
                             Layout.fillWidth: true
-                            visible: historyItemRow.index < root.visibleHistoryItems.length - 1
+                            visible: websiteDelegate.index < root.websiteUrls.length - 1
                         }
                     }
                 }
-                Controls.Button {
-                    visible: root.historyItems.length > 5
-                    text: root.historyExpanded ? qsTr("Ver solo los últimos 5") : qsTr("Ver los últimos %1").arg(Math.min(20, root.historyItems.length))
-                    flat: true
-                    onClicked: root.historyExpanded = !root.historyExpanded
-                }
-                Controls.Button {
-                    text: qsTr("Mostrar todos los eventos…")
-                    icon.name: "document-open"
-                    flat: true
-                    Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: qsTr("Generar y abrir un archivo de texto con los eventos conservados")
-                    onClicked: root.activityExportRequested()
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: root.websiteUrls.length === 0
+                    text: qsTr("No hay sitios web guardados.")
+                    wrapMode: Text.Wrap
                 }
             }
         }
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: root.detail && root.detail.kind === "note"
+            padding: Kirigami.Units.largeSpacing
+
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: qsTr("Contenido")
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Controls.TextArea {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 6)
+                    leftPadding: 0
+                    rightPadding: 0
+                    background: Rectangle {
+                        color: "transparent"
+                        radius: Kirigami.Units.smallSpacing
+                        border.width: parent.activeFocus ? 1 : 0
+                        border.color: Kirigami.Theme.highlightColor
+                    }
+                    readOnly: true
+                    selectByMouse: true
+                    wrapMode: TextEdit.Wrap
+                    textFormat: TextEdit.PlainText
+                    text: root.detail ? root.detail.value || qsTr("Sin contenido") : ""
+                    Accessible.name: qsTr("Contenido de la nota segura")
+                }
+            }
+        }
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: !!root.detail && !!root.detail.notes
+            padding: Kirigami.Units.largeSpacing
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+                Controls.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: qsTr("Notas")
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Controls.TextArea {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 3)
+                    leftPadding: 0
+                    rightPadding: 0
+                    background: Rectangle {
+                        color: "transparent"
+                        radius: Kirigami.Units.smallSpacing
+                        border.width: parent.activeFocus ? 1 : 0
+                        border.color: Kirigami.Theme.highlightColor
+                    }
+                    readOnly: true
+                    selectByMouse: true
+                    wrapMode: TextEdit.Wrap
+                    textFormat: TextEdit.PlainText
+                    text: root.detail ? root.detail.notes || "" : ""
+                    Accessible.name: qsTr("Notas del elemento")
+                }
+            }
+        }
+
     }
 
-    Controls.Frame {
+    ColumnLayout {
         Layout.fillWidth: true
-        visible: !!root.detail?.history
-        padding: Kirigami.Units.largeSpacing
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.smallSpacing
-            Kirigami.Heading {
-                level: 3
-                text: qsTr("Historial de versiones")
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: root.versions.length === 0
-                text: qsTr("Aún no hay versiones anteriores. Se guardan cuando actualizas los datos de esta credencial.")
-                color: Kirigami.Theme.disabledTextColor
-                wrapMode: Text.Wrap
-            }
-            Repeater {
-                model: root.versions
-                delegate: RowLayout {
-                    id: versionRow
-                    required property var modelData
+        Layout.minimumWidth: 0
+        Layout.preferredWidth: root.wideLayout ? root.width * 0.35 : root.width
+        Layout.alignment: Qt.AlignTop
+        visible: root.historyItems.length > 0 || !!root.detail?.history || root.recipients.length > 0
+        spacing: Kirigami.Units.largeSpacing
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: root.historyItems.length > 0
+            padding: Kirigami.Units.largeSpacing
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.ToolButton {
+                    id: activityToggle
                     Layout.fillWidth: true
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        spacing: 0
+                    leftPadding: 0
+                    rightPadding: 0
+                    readonly property string sectionTitle: qsTr("Actividad")
+                    text: ""
+                    display: Controls.AbstractButton.IconOnly
+                    focusPolicy: Qt.StrongFocus
+                    checkable: true
+                    checked: root.historyOpen
+                    Accessible.name: qsTr("Actividad")
+                    Accessible.description: root.historyOpen ? qsTr("Ocultar los %1 eventos").arg(root.historyItems.length) : qsTr("Mostrar los %1 eventos").arg(root.historyItems.length)
+                    onToggled: root.historyOpen = checked
+                    contentItem: RowLayout {
+                        spacing: Kirigami.Units.largeSpacing
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: versionRow.modelData.passwordOnly ? qsTr("Contraseña anterior") : qsTr("Versión anterior")
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: root.formatEventTime(versionRow.modelData.at)
+                            text: activityToggle.sectionTitle
                             color: Kirigami.Theme.disabledTextColor
                             wrapMode: Text.Wrap
                         }
+                        Controls.Label {
+                            text: root.historyItems.length === 1 ? qsTr("1 evento") : qsTr("%1 eventos").arg(root.historyItems.length)
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        Kirigami.Icon {
+                            source: root.historyOpen ? "arrow-up" : "arrow-down"
+                            Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                            Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                        }
+                    }
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: !root.historyOpen
+                    text: root.historyItems.length
+                          ? qsTr("%1 · %2").arg(root.eventText(root.historyItems[0].kind)).arg(root.formatEventTime(root.historyItems[0].at))
+                          : ""
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: root.historyOpen
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Repeater {
+                        model: root.historyOpen ? root.visibleHistoryItems : []
+                        delegate: ColumnLayout {
+                            id: historyItemRow
+                            required property var modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            readonly property bool startsDay: index === 0
+                                || root.eventDate(modelData.at) !== root.eventDate(root.visibleHistoryItems[index - 1].at)
+
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                Layout.topMargin: historyItemRow.index > 0 ? Kirigami.Units.largeSpacing : Kirigami.Units.smallSpacing
+                                visible: historyItemRow.startsDay
+                                text: root.eventDate(historyItemRow.modelData.at)
+                                wrapMode: Text.Wrap
+                                textFormat: Text.PlainText
+                                font.weight: Font.Medium
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+                                Kirigami.Icon {
+                                    source: root.eventIcon(historyItemRow.modelData.kind)
+                                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
+                                    text: root.eventText(historyItemRow.modelData.kind)
+                                    textFormat: Text.PlainText
+                                    wrapMode: Text.Wrap
+                                }
+                                Controls.Label {
+                                    text: root.eventTime(historyItemRow.modelData.at)
+                                    textFormat: Text.PlainText
+                                    color: Kirigami.Theme.disabledTextColor
+                                    Accessible.name: root.formatEventTime(historyItemRow.modelData.at)
+                                }
+                            }
+                            Kirigami.Separator {
+                                Layout.fillWidth: true
+                                visible: historyItemRow.index < root.visibleHistoryItems.length - 1
+                            }
+                        }
                     }
                     Controls.Button {
-                        text: qsTr("Consultar")
-                        Accessible.name: qsTr("Consultar versión anterior del %1").arg(root.formatEventTime(versionRow.modelData.at))
-                        onClicked: root.versionOpenRequested(versionRow.modelData.index)
+                        visible: root.historyItems.length > 5
+                        text: root.historyExpanded ? qsTr("Ver solo los últimos 5") : qsTr("Ver los últimos %1").arg(Math.min(20, root.historyItems.length))
+                        flat: true
+                        onClicked: root.historyExpanded = !root.historyExpanded
+                    }
+                    Controls.Button {
+                        text: qsTr("Mostrar todos los eventos…")
+                        icon.name: "document-open"
+                        flat: true
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: qsTr("Generar y abrir un archivo de texto con los eventos conservados")
+                        onClicked: root.activityExportRequested()
                     }
                 }
             }
         }
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: !!root.detail?.history
+            padding: Kirigami.Units.largeSpacing
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+                Controls.Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Versiones anteriores")
+                    color: Kirigami.Theme.disabledTextColor
+                    wrapMode: Text.Wrap
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: root.versions.length === 0
+                    text: qsTr("Aún no hay versiones anteriores. Se guardan cuando actualizas los datos de esta credencial.")
+                    color: Kirigami.Theme.disabledTextColor
+                    wrapMode: Text.Wrap
+                }
+                Repeater {
+                    model: root.versions
+                    delegate: RowLayout {
+                        id: versionRow
+                        required property var modelData
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            spacing: 0
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: versionRow.modelData.passwordOnly ? qsTr("Contraseña anterior") : qsTr("Versión anterior")
+                                wrapMode: Text.Wrap
+                            }
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: root.formatEventTime(versionRow.modelData.at)
+                                color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Controls.Button {
+                            text: qsTr("Consultar")
+                            Accessible.name: qsTr("Consultar versión anterior del %1").arg(root.formatEventTime(versionRow.modelData.at))
+                            onClicked: root.versionOpenRequested(versionRow.modelData.index)
+                        }
+                    }
+                }
+            }
+        }
+
+        Controls.Frame {
+            Layout.fillWidth: true
+            visible: root.recipients.length > 0
+            padding: Kirigami.Units.largeSpacing
+            contentItem: ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+                Controls.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: qsTr("Destinatarios")
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Repeater {
+                    model: root.recipients
+                    delegate: Controls.Label {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: modelData
+                        textFormat: Text.PlainText
+                        font.family: Kirigami.Theme.fixedWidthFont.family
+                        wrapMode: Text.WrapAnywhere
+                    }
+                }
+            }
+        }
+
     }
 
     QtObject {

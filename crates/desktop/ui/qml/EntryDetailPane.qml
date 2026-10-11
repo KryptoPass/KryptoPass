@@ -160,7 +160,7 @@ Controls.Pane {
             clip: true
 
             ColumnLayout {
-                width: Math.min(detailScroll.availableWidth, Kirigami.Units.gridUnit * 42)
+                width: detailScroll.availableWidth
                 spacing: Kirigami.Units.largeSpacing
 
                 Kirigami.Separator {
@@ -218,6 +218,7 @@ Controls.Pane {
                     Layout.margins: Kirigami.Units.largeSpacing
                     visible: !!root.selectedDetail
                     detail: root.selectedDetail
+                    recipients: root.selected?.recipients || []
                     revealed: root.revealed
                     versionDetail: root.storeAdapter.historyVersion
                     onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
@@ -228,31 +229,6 @@ Controls.Pane {
                     onCopyUsernameRequested: root.copyUsernameRequested()
                     onCopyPasswordRequested: root.copyPasswordRequested()
                     onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
-                }
-
-                Kirigami.Separator {
-                    Layout.fillWidth: true
-                }
-
-                Kirigami.Heading {
-                    Layout.leftMargin: Kirigami.Units.largeSpacing
-                    level: 3
-                    text: qsTr("Información del elemento")
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    Controls.Label {
-                        text: qsTr("Destinatarios")
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: root.selected ? (root.selected.recipients || []).join(", ") : ""
-                        textFormat: Text.PlainText
-                        wrapMode: Text.WrapAnywhere
-                    }
                 }
 
                 ColumnLayout {
