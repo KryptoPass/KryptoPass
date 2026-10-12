@@ -250,6 +250,7 @@ impl qobject::ContactsController {
     }
 
     fn set_error_message(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.error_message() != &value {
             self.as_mut().rust_mut().error_message = value;
             self.error_message_changed();

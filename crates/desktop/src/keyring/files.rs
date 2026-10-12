@@ -74,8 +74,9 @@ pub(super) fn create_secure_temp_directory(
             Ok(()) => return Ok(SecureTempDirectory(path)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(error) => {
-                return Err(format!(
-                    "No se pudo crear una carpeta temporal privada: {error}"
+                return Err(crate::i18n::format(
+                    "No se pudo crear una carpeta temporal privada: %1",
+                    &[error.to_string()],
                 ));
             }
         }
@@ -104,7 +105,12 @@ pub(super) fn create_secure_temp_file(
                 });
             }
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(format!("No se pudo crear un temporal seguro: {error}")),
+            Err(error) => {
+                return Err(crate::i18n::format(
+                    "No se pudo crear un temporal seguro: %1",
+                    &[error.to_string()],
+                ));
+            }
         }
     }
     Err("No se pudo reservar un nombre temporal único.".into())
@@ -122,29 +128,46 @@ pub(super) fn read_bounded_file(
         use std::os::unix::fs::OpenOptionsExt;
         options.custom_flags(libc::O_NOFOLLOW);
     }
-    let mut file = options
-        .open(path)
-        .map_err(|error| format!("No se pudo abrir {}: {error}", path.display()))?;
-    let metadata = file
-        .metadata()
-        .map_err(|error| format!("No se pudo consultar {}: {error}", path.display()))?;
+    let mut file = options.open(path).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo abrir %1: %2",
+            &[format!("{}", path.display()), error.to_string()],
+        )
+    })?;
+    let metadata = file.metadata().map_err(|error| {
+        crate::i18n::format(
+            "No se pudo consultar %1: %2",
+            &[format!("{}", path.display()), error.to_string()],
+        )
+    })?;
     if !metadata.is_file() {
-        return Err(format!(
-            "{} debe ser un archivo local regular.",
-            description
+        return Err(crate::i18n::format(
+            "%1 debe ser un archivo local regular.",
+            &[description.to_string()],
         ));
     }
     if metadata.len() > limit {
-        return Err(format!("{} supera el tamaño permitido.", description));
+        return Err(crate::i18n::format(
+            "%1 supera el tamaño permitido.",
+            &[description.to_string()],
+        ));
     }
     let capacity = usize::try_from(metadata.len()).unwrap_or(0);
     let mut bytes = Zeroizing::new(Vec::with_capacity(capacity));
     Read::by_ref(&mut file)
         .take(limit.saturating_add(1))
         .read_to_end(&mut bytes)
-        .map_err(|error| format!("No se pudo leer {}: {error}", path.display()))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo leer %1: %2",
+                &[format!("{}", path.display()), error.to_string()],
+            )
+        })?;
     if bytes.len() as u64 > limit {
-        return Err(format!("{} supera el tamaño permitido.", description));
+        return Err(crate::i18n::format(
+            "%1 supera el tamaño permitido.",
+            &[description.to_string()],
+        ));
     }
     Ok(bytes)
 }
@@ -166,9 +189,9 @@ pub(super) fn write_atomic_new(
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
     let parent = fs::canonicalize(requested_parent).map_err(|error| {
-        format!(
-            "No se pudo abrir la carpeta de destino {}: {error}",
-            requested_parent.display()
+        crate::i18n::format(
+            "No se pudo abrir la carpeta de destino %1: %2",
+            &[format!("{}", requested_parent.display()), error.to_string()],
         )
     })?;
     if !parent.is_dir() {
@@ -177,29 +200,36 @@ pub(super) fn write_atomic_new(
     reject_protected_destination(&parent, file_name, context)?;
     let destination = parent.join(file_name);
     if destination.exists() {
-        return Err(format!(
-            "El archivo {} ya existe; la exportación no lo sobrescribirá.",
-            destination.display()
+        return Err(crate::i18n::format(
+            "El archivo %1 ya existe; la exportación no lo sobrescribirá.",
+            &[format!("{}", destination.display())],
         ));
     }
 
     let mut temporary = create_secure_temp_file(parent.clone(), "kryptopass-export")?;
-    temporary
-        .file_mut()?
-        .write_all(bytes)
-        .map_err(|error| format!("No se pudo escribir la exportación: {error}"))?;
-    temporary
-        .file_mut()?
-        .sync_all()
-        .map_err(|error| format!("No se pudo sincronizar la exportación: {error}"))?;
+    temporary.file_mut()?.write_all(bytes).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo escribir la exportación: %1",
+            &[error.to_string()],
+        )
+    })?;
+    temporary.file_mut()?.sync_all().map_err(|error| {
+        crate::i18n::format(
+            "No se pudo sincronizar la exportación: %1",
+            &[error.to_string()],
+        )
+    })?;
     fs::hard_link(temporary.path(), &destination).map_err(|error| {
         if error.kind() == io::ErrorKind::AlreadyExists {
-            format!(
-                "El archivo {} ya existe; no se sobrescribió.",
-                destination.display()
+            crate::i18n::format(
+                "El archivo %1 ya existe; no se sobrescribió.",
+                &[format!("{}", destination.display())],
             )
         } else {
-            format!("No se pudo publicar la exportación de forma atómica: {error}")
+            crate::i18n::format(
+                "No se pudo publicar la exportación de forma atómica: %1",
+                &[error.to_string()],
+            )
         }
     })?;
 

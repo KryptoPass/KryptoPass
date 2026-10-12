@@ -20,16 +20,15 @@ pub mod qobject {
         type QUrl = cxx_qt_lib::QUrl;
     }
 
-    #[auto_cxx_name]
     extern "RustQt" {
         /// GPG identity feature controller. It exposes only view-safe metadata.
         #[qobject]
         #[qml_element]
-        #[qproperty(QString, status)]
+        #[qproperty(QString, status, READ, NOTIFY)]
         #[qproperty(bool, busy)]
         #[qproperty(bool, operation_busy, cxx_name = "operationBusy", READ, NOTIFY)]
-        #[qproperty(QStringList, key_summaries)]
-        #[qproperty(i32, key_count)]
+        #[qproperty(QStringList, key_summaries, cxx_name = "keySummaries")]
+        #[qproperty(i32, key_count, cxx_name = "keyCount")]
         #[qproperty(QStringList, key_records, cxx_name = "keyRecords", READ, NOTIFY)]
         #[qproperty(QString, load_error, cxx_name = "loadError", READ, NOTIFY)]
         #[qproperty(QString, operation_error, cxx_name = "operationError", READ, NOTIFY)]
@@ -46,10 +45,12 @@ pub mod qobject {
 
         /// Reloads public OpenPGP identity metadata without blocking Qt.
         #[qinvokable]
+        #[cxx_name = "refreshKeys"]
         fn refresh_keys(self: Pin<&mut Self>);
 
         /// Runs the system-agent signing probe without blocking Qt.
         #[qinvokable]
+        #[cxx_name = "testAgentPrompt"]
         fn test_agent_prompt(self: Pin<&mut Self>);
 
         /// Executes a typed keyring operation without blocking Qt.
@@ -99,7 +100,7 @@ impl Default for KeyringControllerRust {
             .unwrap_or_default();
         Self {
             online_settings: QString::from(serde_json::to_string(&settings).unwrap_or_default()),
-            status: QString::from("Identidades GPG no cargadas"),
+            status: QString::from(crate::i18n::text("Identidades GPG no cargadas")),
             busy: false,
             operation_busy: false,
             key_summaries: QStringList::default(),
@@ -177,9 +178,10 @@ impl qobject::KeyringController {
                         let (summaries, count) = key_summaries(keys);
                         controller.as_mut().set_key_summaries(summaries);
                         controller.as_mut().set_key_count(count);
-                        controller
-                            .as_mut()
-                            .set_status(QString::from(format!("Claves GPG cargadas: {count}")));
+                        controller.as_mut().set_status(crate::i18n::plural(
+                            "%n clave GPG cargada",
+                            count as usize,
+                        ));
                     }
                     Err(error) => {
                         controller.as_mut().rust_mut().load_error =
@@ -294,9 +296,7 @@ impl qobject::KeyringController {
                         let fingerprint =
                             QString::from(outcome.selected_fingerprint.unwrap_or_default());
                         if let Some(error) = reload_error {
-                            controller.as_mut().set_operation_error(QString::from(format!(
-                                "La operación se completó, pero no se pudo actualizar la lista de claves: {error}"
-                            )));
+                            controller.as_mut().set_operation_error(QString::from(crate::i18n::format("La operación se completó, pero no se pudo actualizar la lista de claves: %1", &[error.to_string()])));
                         }
                         if action == "copyPublic"
                             && let Some(armored) = outcome.public_key
@@ -312,8 +312,9 @@ impl qobject::KeyringController {
                     }
                     Err(message) => {
                         let message = match reload_error {
-                            Some(error) => format!(
-                                "{message} Además, no se pudo actualizar la lista de claves: {error}"
+                            Some(error) => crate::i18n::format(
+                                "%1 Además, no se pudo actualizar la lista de claves: %2",
+                                &[message.to_string(), error.to_string()],
                             ),
                             None => message,
                         };
@@ -328,6 +329,14 @@ impl qobject::KeyringController {
         self.as_mut().set_operation_error(QString::default());
     }
 
+    fn set_status(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
+        if self.status() != &value {
+            self.as_mut().rust_mut().status = value;
+            self.status_changed();
+        }
+    }
+
     fn set_operation_busy(mut self: Pin<&mut Self>, value: bool) {
         if *self.operation_busy() != value {
             self.as_mut().rust_mut().operation_busy = value;
@@ -336,6 +345,7 @@ impl qobject::KeyringController {
     }
 
     fn set_operation_error(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.operation_error() != &value {
             self.as_mut().rust_mut().operation_error = value;
             self.operation_error_changed();
@@ -343,7 +353,7 @@ impl qobject::KeyringController {
     }
 
     fn fail_operation(mut self: Pin<&mut Self>, message: String) {
-        let message = QString::from(message);
+        let message = crate::i18n::translate(&QString::from(message));
         self.as_mut().set_operation_error(message.clone());
         self.as_mut().set_status(message.clone());
         self.as_mut().operation_failed(&message);

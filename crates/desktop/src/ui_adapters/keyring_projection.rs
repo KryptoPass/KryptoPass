@@ -40,15 +40,15 @@ fn key_record(key: &KeyInfo) -> Value {
 
     json!({
         "id": key.fingerprint,
-        "title": identity_title(identity),
+        "title": identity.and_then(|uid| uid.name.as_deref()).filter(|name| !name.is_empty()).map(str::to_owned).unwrap_or_else(|| crate::i18n::text(identity_title(identity))),
         "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
         "hasSecret": key.has_secret,
         "canEncrypt": can_encrypt,
         "canCertify": can_certify,
         "capabilities": capabilities(can_encrypt, can_sign, can_certify, can_authenticate),
-        "validity": validity_label,
+        "validity": crate::i18n::text(validity_label),
         "validityCode": validity_code,
-        "status": status.label,
+        "status": crate::i18n::text(status.label),
         "statusCode": status.code,
         "identities": identity_records(key),
         "subkeys": subkey_records(key),
@@ -137,12 +137,12 @@ fn subkey_record(subkey: &SubkeyInfo, is_primary: bool) -> Value {
             subkey.can_certify,
             subkey.can_authenticate,
         ),
-        "status": status.label,
+        "status": crate::i18n::text(status.label),
         "statusCode": status.code,
     })
 }
 
-fn capabilities(encrypt: bool, sign: bool, certify: bool, authenticate: bool) -> Vec<&'static str> {
+fn capabilities(encrypt: bool, sign: bool, certify: bool, authenticate: bool) -> Vec<String> {
     [
         (encrypt, "Cifrar"),
         (sign, "Firmar"),
@@ -150,7 +150,8 @@ fn capabilities(encrypt: bool, sign: bool, certify: bool, authenticate: bool) ->
         (authenticate, "Autenticar"),
     ]
     .into_iter()
-    .filter_map(|(enabled, name)| enabled.then_some(name))
+    .filter(|(enabled, _)| *enabled)
+    .map(|(_, name)| crate::i18n::text(name))
     .collect()
 }
 
@@ -214,7 +215,7 @@ fn identity_record(identity: &UserIdInfo, primary: bool) -> Value {
         "primary": primary,
         "revoked": identity.revoked,
         "invalid": identity.invalid,
-        "validity": label,
+        "validity": crate::i18n::text(label),
         "validityCode": code,
     })
 }
@@ -245,7 +246,7 @@ fn signature_record(
         "identity": identity.id,
         "signer": signature.signer,
         "keyId": signature.signer_key_id,
-        "status": signature_status_label(signature),
+        "status": crate::i18n::text(signature_status_label(signature)),
     }))
 }
 

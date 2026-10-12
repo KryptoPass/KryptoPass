@@ -245,7 +245,7 @@ impl Default for SecretsControllerRust {
             history_version_index: None,
             error_message: QString::default(),
             operation_error_active: false,
-            status: QString::from("Bóveda no cargada"),
+            status: QString::from(crate::i18n::text("Bóveda no cargada")),
             busy: false,
             detail_busy: false,
             editor_busy: false,
@@ -1605,6 +1605,7 @@ impl qobject::SecretsController {
     }
 
     fn set_error_message(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.error_message() != &value {
             self.as_mut().rust_mut().error_message = value;
             self.error_message_changed();
@@ -1612,6 +1613,7 @@ impl qobject::SecretsController {
     }
 
     fn set_status(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.status() != &value {
             self.as_mut().rust_mut().status = value;
             self.status_changed();

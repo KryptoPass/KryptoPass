@@ -103,8 +103,12 @@ pub(super) fn parse_request(request_json: &str) -> Result<OperationRequest, Stri
     if request_json.len() > MAX_REQUEST_BYTES {
         return Err("La solicitud OpenPGP supera el tamaño permitido.".into());
     }
-    serde_json::from_str::<OperationRequest>(request_json)
-        .map_err(|error| format!("La solicitud OpenPGP no es válida: {error}"))
+    serde_json::from_str::<OperationRequest>(request_json).map_err(|error| {
+        crate::i18n::format(
+            "La solicitud OpenPGP no es válida: %1",
+            &[error.to_string()],
+        )
+    })
 }
 
 pub(super) fn normalize_fingerprint(input: &str) -> Result<String, String> {

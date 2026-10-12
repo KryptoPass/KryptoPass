@@ -811,7 +811,7 @@ Controls.ApplicationWindow {
                             Layout.maximumWidth: parent.width * 0.6
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
-                            text: root.keysMode ? qsTr("%1 claves · %2").arg(keys.visibleEntries.length).arg(root.scopeTitle) : qsTr("%1 elementos · %2").arg(store.visibleEntries.length).arg(root.scopeTitle)
+                            text: root.keysMode ? qsTr("%n clave", "", keys.visibleEntries.length) + " · " + root.scopeTitle : qsTr("%n elemento", "", store.visibleEntries.length) + " · " + root.scopeTitle
                         }
                         Item {
                             Layout.fillWidth: true

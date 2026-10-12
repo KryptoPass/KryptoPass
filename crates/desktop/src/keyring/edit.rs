@@ -26,7 +26,9 @@ pub(super) fn run_gpg_quiet(arguments: &[&str]) -> Result<(), String> {
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|error| format!("No se pudo iniciar GnuPG: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format("No se pudo iniciar GnuPG: %1", &[error.to_string()])
+        })?;
     let stderr = child
         .stderr
         .take()
@@ -42,7 +44,12 @@ pub(super) fn run_gpg_quiet(arguments: &[&str]) -> Result<(), String> {
     drain
         .join()
         .map_err(|_| "No se pudo cerrar la salida acotada de GnuPG.".to_owned())?
-        .map_err(|error| format!("No se pudo leer la salida de GnuPG: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo leer la salida de GnuPG: %1",
+                &[error.to_string()],
+            )
+        })?;
     if status.success() {
         Ok(())
     } else {
@@ -75,7 +82,10 @@ fn wait_with_timeout(child: &mut Child, timeout: Duration) -> Result<ExitStatus,
             Err(error) => {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err(format!("No se pudo esperar a GnuPG: {error}"));
+                return Err(crate::i18n::format(
+                    "No se pudo esperar a GnuPG: %1",
+                    &[error.to_string()],
+                ));
             }
         }
     }
@@ -106,7 +116,10 @@ pub(super) fn generate_revocation_certificate(
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| {
-            format!("No se pudo iniciar GnuPG para preparar la revocación: {error}")
+            crate::i18n::format(
+                "No se pudo iniciar GnuPG para preparar la revocación: %1",
+                &[error.to_string()],
+            )
         })?;
     let stdin = child
         .stdin
@@ -168,7 +181,9 @@ fn drive_revocation_protocol(stderr: impl Read, mut command: impl Write) -> Resu
             .write_all(answer.as_bytes())
             .and_then(|()| command.write_all(b"\n"))
             .and_then(|()| command.flush())
-            .map_err(|error| format!("No se pudo responder a GnuPG: {error}"))?;
+            .map_err(|error| {
+                crate::i18n::format("No se pudo responder a GnuPG: %1", &[error.to_string()])
+            })?;
         state += 1;
         responses += 1;
     }
@@ -182,9 +197,12 @@ fn read_status_line(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, String
     let mut line = Vec::new();
     let mut oversized = false;
     loop {
-        let available = reader
-            .fill_buf()
-            .map_err(|error| format!("No se pudo leer el estado de GnuPG: {error}"))?;
+        let available = reader.fill_buf().map_err(|error| {
+            crate::i18n::format(
+                "No se pudo leer el estado de GnuPG: %1",
+                &[error.to_string()],
+            )
+        })?;
         if available.is_empty() {
             if line.is_empty() {
                 return Ok(None);
@@ -240,9 +258,12 @@ pub(super) fn interact_revoking_subkey(
     let interactor = SubkeyRevocationInteractor {
         state: Arc::clone(&state),
     };
-    context
-        .interact(key, interactor, "")
-        .map_err(|error| format!("No se pudo completar la revocación de la subclave: {error}"))?;
+    context.interact(key, interactor, "").map_err(|error| {
+        crate::i18n::format(
+            "No se pudo completar la revocación de la subclave: %1",
+            &[error.to_string()],
+        )
+    })?;
     let state = state
         .lock()
         .map_err(|_| "Se bloqueó la interacción de revocación de la subclave.".to_owned())?;

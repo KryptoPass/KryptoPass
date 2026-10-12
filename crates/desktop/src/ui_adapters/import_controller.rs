@@ -162,9 +162,7 @@ impl qobject::ImportController {
                 controller.as_mut().set_busy(false);
                 match result {
                     Ok(receipt) => {
-                        controller.as_mut().set_status(QString::from(format!(
-                            "Importación completada: {} elementos añadidos a la bóveda actual.", receipt.items_added
-                        )));
+                        controller.as_mut().set_status(crate::i18n::plural("Importación completada: %n elemento añadido a la bóveda actual.", receipt.items_added));
                         controller.import_completed();
                     }
                     Err(_) => controller.fail("No se pudo añadir el lote. Los datos anteriores se conservaron. Comprueba las claves, los permisos y el espacio disponible; vuelve a revisar el archivo para reintentar."),
@@ -202,6 +200,7 @@ impl qobject::ImportController {
     }
 
     fn set_status(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.status() != &value {
             self.as_mut().rust_mut().status = value;
             self.status_changed();
@@ -209,6 +208,7 @@ impl qobject::ImportController {
     }
 
     fn set_error_message(mut self: Pin<&mut Self>, value: QString) {
+        let value = crate::i18n::translate(&value);
         if self.error_message() != &value {
             self.as_mut().rust_mut().error_message = value;
             self.error_message_changed();

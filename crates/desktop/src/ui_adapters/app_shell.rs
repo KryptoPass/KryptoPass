@@ -52,6 +52,7 @@ impl Default for ShellControllerRust {
             health_checks: 0,
             bridge_ready: true,
             app_version: QString::from(crate::app_info::APP.version),
+            app_description: QString::from(crate::i18n::text(crate::app_info::APP.description)),
         }
     }
 }
@@ -62,15 +63,13 @@ impl qobject::ShellController {
 
         self.as_mut().set_health_checks(next_check);
         self.as_mut().set_bridge_ready(true);
-        self.set_bridge_status(QString::from(format!(
-            "Puente Rust/QML verificado · prueba #{next_check}"
+        self.set_bridge_status(QString::from(crate::i18n::format(
         )));
     }
 
     pub fn select_section(mut self: Pin<&mut Self>, section: &QString) {
         self.as_mut().set_active_section(section.clone());
-        self.set_bridge_status(QString::from(format!(
-            "Navegación gestionada por Rust · {section}"
+        self.set_bridge_status(QString::from(crate::i18n::format(
         )));
     }
 

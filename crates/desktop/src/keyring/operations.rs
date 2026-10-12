@@ -87,23 +87,38 @@ pub fn execute_operation(request_json: &str) -> Result<OperationOutcome, String>
 
 fn new_context() -> Result<Context, String> {
     let mut context = Context::from_protocol(Protocol::OpenPgp)
-        .map_err(|error| format!("No se pudo abrir GnuPG: {error}"))?;
+        .map_err(|error| crate::i18n::format("No se pudo abrir GnuPG: %1", &[error.to_string()]))?;
     context
         .set_pinentry_mode(PinentryMode::Ask)
-        .map_err(|error| format!("No se pudo activar pinentry: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format("No se pudo activar pinentry: %1", &[error.to_string()])
+        })?;
     context
         .add_key_list_mode(KeyListMode::WITH_SECRET | KeyListMode::SIGS)
-        .map_err(|error| format!("No se pudo preparar la consulta de claves: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo preparar la consulta de claves: %1",
+                &[error.to_string()],
+            )
+        })?;
     Ok(context)
 }
 
 fn key_by_fingerprint(context: &mut Context, fingerprint: &str) -> Result<Option<Key>, String> {
-    let mut keys = context
-        .keys()
-        .map_err(|error| format!("No se pudo consultar el llavero OpenPGP: {error}"))?;
+    let mut keys = context.keys().map_err(|error| {
+        crate::i18n::format(
+            "No se pudo consultar el llavero OpenPGP: %1",
+            &[error.to_string()],
+        )
+    })?;
     let mut found = None;
     for entry in keys.by_ref() {
-        let key = entry.map_err(|error| format!("No se pudo leer una clave OpenPGP: {error}"))?;
+        let key = entry.map_err(|error| {
+            crate::i18n::format(
+                "No se pudo leer una clave OpenPGP: %1",
+                &[error.to_string()],
+            )
+        })?;
         let candidate = key
             .fingerprint_raw()
             .map(|value| value.to_string_lossy().to_ascii_uppercase());
@@ -112,15 +127,23 @@ fn key_by_fingerprint(context: &mut Context, fingerprint: &str) -> Result<Option
             break;
         }
     }
-    keys.finish()
-        .map_err(|error| format!("No se pudo cerrar la consulta de claves: {error}"))?;
+    keys.finish().map_err(|error| {
+        crate::i18n::format(
+            "No se pudo cerrar la consulta de claves: %1",
+            &[error.to_string()],
+        )
+    })?;
     Ok(found)
 }
 
 fn required_key(context: &mut Context, fingerprint: &str) -> Result<Key, String> {
     let fingerprint = request::normalize_fingerprint(fingerprint)?;
-    key_by_fingerprint(context, &fingerprint)?
-        .ok_or_else(|| format!("No existe una clave local con la huella primaria {fingerprint}."))
+    key_by_fingerprint(context, &fingerprint)?.ok_or_else(|| {
+        crate::i18n::format(
+            "No existe una clave local con la huella primaria %1.",
+            &[fingerprint.to_string()],
+        )
+    })
 }
 
 fn primary_fingerprint(key: &Key) -> Result<String, String> {
@@ -175,7 +198,12 @@ fn create_key(userid: &str, expires_days: u32) -> Result<OperationOutcome, Strin
 
     let generated = context
         .create_key_with_flags(userid, "default", expires, primary_flags)
-        .map_err(|error| format!("No se pudo crear la clave primaria: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo crear la clave primaria: %1",
+                &[error.to_string()],
+            )
+        })?;
     let fingerprint = generated
         .fingerprint()
         .map_err(|_| "GnuPG creó la clave pero no devolvió su huella.".to_owned())?
@@ -183,11 +211,15 @@ fn create_key(userid: &str, expires_days: u32) -> Result<OperationOutcome, Strin
     drop(generated);
 
     let key = key_by_fingerprint(&mut context, &fingerprint)?.ok_or_else(|| {
-        format!("La clave primaria {fingerprint} se creó, pero no aparece en el llavero.")
+        crate::i18n::format(
+            "La clave primaria %1 se creó, pero no aparece en el llavero.",
+            &[fingerprint.to_string()],
+        )
     })?;
     if let Err(error) = require_own_primary_key(&key) {
-        return Err(format!(
-            "La clave primaria {fingerprint} se creó, pero no se pudo validar: {error}"
+        return Err(crate::i18n::format(
+            "La clave primaria %1 se creó, pero no se pudo validar: %2",
+            &[fingerprint.to_string(), error.to_string()],
         ));
     }
     let has_encryption_subkey = key
@@ -202,14 +234,18 @@ fn create_key(userid: &str, expires_days: u32) -> Result<OperationOutcome, Strin
         context
             .create_subkey_with_flags(&key, "default", expires, subkey_flags)
             .map_err(|error| {
-                format!(
-                    "La clave primaria {fingerprint} ya se creó, pero falló la subclave de cifrado: {error}"
+                crate::i18n::format(
+                    "La clave primaria %1 ya se creó, pero falló la subclave de cifrado: %2",
+                    &[fingerprint.to_string(), error.to_string()],
                 )
             })?;
     }
 
     Ok(operation_outcome(
-        format!("Clave OpenPGP creada con subclave de cifrado: {fingerprint}."),
+        crate::i18n::format(
+            "Clave OpenPGP creada con subclave de cifrado: %1.",
+            &[fingerprint.to_string()],
+        ),
         Some(fingerprint),
         None,
     ))
@@ -225,14 +261,17 @@ fn import_file(path: &str) -> Result<OperationOutcome, String> {
     let mut context = new_context()?;
     let source = Cursor::new(bytes.as_slice());
     let data = Data::from_reader(source).map_err(|error| {
-        format!(
-            "No se pudo leer el archivo de importación: {}",
-            error.error()
+        crate::i18n::format(
+            "No se pudo leer el archivo de importación: %1",
+            &[format!("{}", error.error())],
         )
     })?;
-    let result = context
-        .import(data)
-        .map_err(|error| format!("No se pudo importar el material OpenPGP: {error}"))?;
+    let result = context.import(data).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo importar el material OpenPGP: %1",
+            &[error.to_string()],
+        )
+    })?;
     let considered = result.considered();
     let imported = result.imported() + result.secret_imported();
     let unchanged = result.unchanged() + result.secret_unchanged();
@@ -282,18 +321,23 @@ fn import_file(path: &str) -> Result<OperationOutcome, String> {
         || new_revocations > 0
         || selected_fingerprint.is_some();
     if !successful_work {
-        return Err(format!(
-            "La importación no aplicó ningún cambio: {not_imported} elemento(s) no importado(s) y {item_errors} registro(s) con error."
+        return Err(crate::i18n::format(
+            "La importación no aplicó ningún cambio: %1 elemento(s) no importado(s) y %2 registro(s) con error.",
+            &[not_imported.to_string(), item_errors.to_string()],
         ));
     }
 
     let partial = not_imported > 0 || item_errors > 0 || without_user_id > 0 || skipped_v3 > 0;
     let mut message = if partial {
-        format!(
-            "Importación OpenPGP parcial: GnuPG incorporó {imported} elemento(s) y dejó {not_imported} sin importar."
+        crate::i18n::format(
+            "Importación OpenPGP parcial: GnuPG incorporó %1 elemento(s) y dejó %2 sin importar.",
+            &[imported.to_string(), not_imported.to_string()],
         )
     } else {
-        format!("Importación OpenPGP completada; GnuPG incorporó {imported} elemento(s).")
+        crate::i18n::format(
+            "Importación OpenPGP completada; GnuPG incorporó %1 elemento(s).",
+            &[imported.to_string()],
+        )
     };
     if unchanged > 0 {
         message.push_str(&format!(
@@ -306,13 +350,15 @@ fn import_file(path: &str) -> Result<OperationOutcome, String> {
         ));
     }
     if without_user_id > 0 {
-        message.push_str(&format!(
-            " {without_user_id} clave(s) no tenían identidad de usuario."
+        message.push_str(&crate::i18n::format(
+            " %1 clave(s) no tenían identidad de usuario.",
+            &[without_user_id.to_string()],
         ));
     }
     if skipped_v3 > 0 {
-        message.push_str(&format!(
-            " Se omitieron {skipped_v3} clave(s) de formato v3."
+        message.push_str(&crate::i18n::format(
+            " Se omitieron %1 clave(s) de formato v3.",
+            &[skipped_v3.to_string()],
         ));
     }
     if new_user_ids > 0 {
@@ -337,11 +383,17 @@ fn export_bytes(
 ) -> Result<Zeroizing<Vec<u8>>, String> {
     let storage = Arc::new(Mutex::new(Zeroizing::new(Vec::new())));
     let writer = BoundedBufferWriter::new(Arc::clone(&storage), MAX_KEY_BLOB_BYTES);
-    let mut destination = Data::from_writer(writer)
-        .map_err(|error| format!("No se pudo preparar la exportación: {}", error.error()))?;
+    let mut destination = Data::from_writer(writer).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo preparar la exportación: %1",
+            &[format!("{}", error.error())],
+        )
+    })?;
     context
         .export([fingerprint], mode, &mut destination)
-        .map_err(|error| format!("GnuPG no pudo exportar la clave: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format("GnuPG no pudo exportar la clave: %1", &[error.to_string()])
+        })?;
     drop(destination);
 
     let mutex = Arc::try_unwrap(storage)
@@ -359,17 +411,23 @@ fn export_public(fingerprint: &str, path: &str) -> Result<OperationOutcome, Stri
     let fingerprint = request::normalize_fingerprint(fingerprint)?;
     let path = request::local_path(path)?;
     let mut context = new_context()?;
-    let key = key_by_fingerprint(&mut context, &fingerprint)?
-        .ok_or_else(|| format!("No existe la clave {fingerprint} en el llavero local."))?;
+    let key = key_by_fingerprint(&mut context, &fingerprint)?.ok_or_else(|| {
+        crate::i18n::format(
+            "No existe la clave %1 en el llavero local.",
+            &[fingerprint.to_string()],
+        )
+    })?;
     let actual_fingerprint = primary_fingerprint(&key)?;
     context.set_armor(true);
     let bytes = export_bytes(&mut context, &actual_fingerprint, ExportMode::empty())?;
     let publication = files::write_atomic_new(&path, &bytes, &context)?;
     Ok(operation_outcome(
-        format!(
-            "Clave pública exportada a {}.{}",
-            path.display(),
-            publication_warning(&publication)
+        crate::i18n::format(
+            "Clave pública exportada a %1.%2",
+            &[
+                format!("{}", path.display()),
+                publication_warning(&publication).to_string(),
+            ],
         ),
         Some(actual_fingerprint),
         None,
@@ -379,15 +437,22 @@ fn export_public(fingerprint: &str, path: &str) -> Result<OperationOutcome, Stri
 fn copy_public(fingerprint: &str) -> Result<OperationOutcome, String> {
     let fingerprint = request::normalize_fingerprint(fingerprint)?;
     let mut context = new_context()?;
-    let key = key_by_fingerprint(&mut context, &fingerprint)?
-        .ok_or_else(|| format!("No existe la clave {fingerprint} en el llavero local."))?;
+    let key = key_by_fingerprint(&mut context, &fingerprint)?.ok_or_else(|| {
+        crate::i18n::format(
+            "No existe la clave %1 en el llavero local.",
+            &[fingerprint.to_string()],
+        )
+    })?;
     let actual_fingerprint = primary_fingerprint(&key)?;
     context.set_armor(true);
     let bytes = export_bytes(&mut context, &actual_fingerprint, ExportMode::empty())?;
     let public_key = String::from_utf8(bytes.to_vec())
         .map_err(|_| "GnuPG devolvió una clave pública que no es ASCII/UTF-8.".to_owned())?;
     Ok(operation_outcome(
-        format!("Clave pública lista para copiar: {actual_fingerprint}."),
+        crate::i18n::format(
+            "Clave pública lista para copiar: %1.",
+            &[actual_fingerprint.to_string()],
+        ),
         Some(actual_fingerprint),
         Some(public_key),
     ))
@@ -397,8 +462,12 @@ fn backup_private(fingerprint: &str, path: &str) -> Result<OperationOutcome, Str
     let fingerprint = request::normalize_fingerprint(fingerprint)?;
     let path = request::local_path(path)?;
     let mut context = new_context()?;
-    let key = key_by_fingerprint(&mut context, &fingerprint)?
-        .ok_or_else(|| format!("No existe la clave {fingerprint} en el llavero local."))?;
+    let key = key_by_fingerprint(&mut context, &fingerprint)?.ok_or_else(|| {
+        crate::i18n::format(
+            "No existe la clave %1 en el llavero local.",
+            &[fingerprint.to_string()],
+        )
+    })?;
     require_secret_material(&key)?;
     let actual_fingerprint = primary_fingerprint(&key)?;
     context.set_armor(true);
@@ -420,9 +489,12 @@ fn change_passphrase(fingerprint: &str) -> Result<OperationOutcome, String> {
     let mut context = new_context()?;
     let key = required_key(&mut context, &fingerprint)?;
     require_secret_material(&key)?;
-    context
-        .change_key_passphrase(&key)
-        .map_err(|error| format!("No se pudo cambiar la frase de paso: {error}"))?;
+    context.change_key_passphrase(&key).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo cambiar la frase de paso: %1",
+            &[error.to_string()],
+        )
+    })?;
     Ok(operation_outcome(
         format!("Frase de paso actualizada para {fingerprint}."),
         Some(fingerprint),
@@ -456,14 +528,20 @@ fn change_expiry(
     let available = subkey_fingerprints(&key);
     for subkey in &normalized_subkeys {
         if !available.contains(subkey) {
-            return Err(format!(
-                "La subclave {subkey} no pertenece a la clave primaria {fingerprint}."
+            return Err(crate::i18n::format(
+                "La subclave %1 no pertenece a la clave primaria %2.",
+                &[subkey.to_string(), fingerprint.to_string()],
             ));
         }
     }
     context
         .set_expire(&key, expires, normalized_subkeys.iter().map(String::as_str))
-        .map_err(|error| format!("No se pudo actualizar la caducidad: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo actualizar la caducidad: %1",
+                &[error.to_string()],
+            )
+        })?;
     let scope = if normalized_subkeys.is_empty() {
         "la clave primaria"
     } else {
@@ -485,11 +563,11 @@ fn add_identity(fingerprint: &str, userid: &str) -> Result<OperationOutcome, Str
     if find_user_id(&key, userid).is_some() {
         return Err("La identidad ya está presente en esta clave.".into());
     }
-    context
-        .add_uid(&key, userid)
-        .map_err(|error| format!("No se pudo añadir la identidad: {error}"))?;
+    context.add_uid(&key, userid).map_err(|error| {
+        crate::i18n::format("No se pudo añadir la identidad: %1", &[error.to_string()])
+    })?;
     Ok(operation_outcome(
-        format!("Identidad añadida a {fingerprint}."),
+        crate::i18n::format("Identidad añadida a %1.", &[fingerprint.to_string()]),
         Some(fingerprint),
         None,
     ))
@@ -506,11 +584,17 @@ fn set_primary_identity(fingerprint: &str, userid: &str) -> Result<OperationOutc
         Some(_) => return Err("No se puede elegir como principal una identidad revocada.".into()),
         None => return Err("La identidad indicada no pertenece a esta clave.".into()),
     }
-    context
-        .set_primary_uid(&key, userid)
-        .map_err(|error| format!("No se pudo cambiar la identidad principal: {error}"))?;
+    context.set_primary_uid(&key, userid).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo cambiar la identidad principal: %1",
+            &[error.to_string()],
+        )
+    })?;
     Ok(operation_outcome(
-        format!("Identidad principal actualizada para {fingerprint}."),
+        crate::i18n::format(
+            "Identidad principal actualizada para %1.",
+            &[fingerprint.to_string()],
+        ),
         Some(fingerprint),
         None,
     ))
@@ -527,11 +611,11 @@ fn revoke_identity(fingerprint: &str, userid: &str) -> Result<OperationOutcome, 
         Some(_) => return Err("La identidad ya está revocada.".into()),
         None => return Err("La identidad indicada no pertenece a esta clave.".into()),
     }
-    context
-        .revoke_uid(&key, userid)
-        .map_err(|error| format!("No se pudo revocar la identidad: {error}"))?;
+    context.revoke_uid(&key, userid).map_err(|error| {
+        crate::i18n::format("No se pudo revocar la identidad: %1", &[error.to_string()])
+    })?;
     Ok(operation_outcome(
-        format!("Identidad revocada en {fingerprint}."),
+        crate::i18n::format("Identidad revocada en %1.", &[fingerprint.to_string()]),
         Some(fingerprint),
         None,
     ))
@@ -562,9 +646,17 @@ fn add_subkey(
     require_own_primary_key(&key)?;
     context
         .create_subkey_with_flags(&key, "default", expires, flags)
-        .map_err(|error| format!("No se pudo crear la subclave de {usage_name}: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo crear la subclave de %1: %2",
+                &[usage_name.to_string(), error.to_string()],
+            )
+        })?;
     Ok(operation_outcome(
-        format!("Subclave de {usage_name} creada para {fingerprint}."),
+        crate::i18n::format(
+            "Subclave de %1 creada para %2.",
+            &[usage_name.to_string(), fingerprint.to_string()],
+        ),
         Some(fingerprint),
         None,
     ))
@@ -594,7 +686,13 @@ fn revoke_subkey(fingerprint: &str, subkey_fingerprint: &str) -> Result<Operatio
         }
     }
     let selected_index = selected_index.ok_or_else(|| {
-        format!("La subclave {subkey_fingerprint} no pertenece a {primary_fingerprint}.")
+        crate::i18n::format(
+            "La subclave %1 no pertenece a %2.",
+            &[
+                subkey_fingerprint.to_string(),
+                primary_fingerprint.to_string(),
+            ],
+        )
     })?;
 
     edit::interact_revoking_subkey(&mut context, &key, selected_index)?;
@@ -613,12 +711,13 @@ fn revoke_subkey(fingerprint: &str, subkey_fingerprint: &str) -> Result<Operatio
             && subkey.is_revoked()
     });
     if !revoked {
-        return Err(format!(
-            "GnuPG no confirmó la revocación de la subclave {subkey_fingerprint}."
+        return Err(crate::i18n::format(
+            "GnuPG no confirmó la revocación de la subclave %1.",
+            &[subkey_fingerprint.to_string()],
         ));
     }
     Ok(operation_outcome(
-        format!("Subclave {subkey_fingerprint} revocada."),
+        crate::i18n::format("Subclave %1 revocada.", &[subkey_fingerprint.to_string()]),
         Some(primary_fingerprint),
         None,
     ))
@@ -653,24 +752,28 @@ fn revoke_key(fingerprint: &str) -> Result<OperationOutcome, String> {
     }
     let certificate = revocation_certificate(&context, &fingerprint)?;
     let data = Data::from_reader(Cursor::new(certificate.as_slice())).map_err(|error| {
-        format!(
-            "No se pudo preparar el certificado de revocación: {}",
-            error.error()
+        crate::i18n::format(
+            "No se pudo preparar el certificado de revocación: %1",
+            &[format!("{}", error.error())],
         )
     })?;
-    context
-        .import(data)
-        .map_err(|error| format!("No se pudo aplicar el certificado de revocación: {error}"))?;
+    context.import(data).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo aplicar el certificado de revocación: %1",
+            &[error.to_string()],
+        )
+    })?;
 
     let mut verification_context = new_context()?;
     let updated = required_key(&mut verification_context, &fingerprint)?;
     if !updated.is_revoked() {
-        return Err(format!(
-            "GnuPG importó el certificado, pero no confirmó la revocación de {fingerprint}."
+        return Err(crate::i18n::format(
+            "GnuPG importó el certificado, pero no confirmó la revocación de %1.",
+            &[fingerprint.to_string()],
         ));
     }
     Ok(operation_outcome(
-        format!("Clave {fingerprint} revocada localmente."),
+        crate::i18n::format("Clave %1 revocada localmente.", &[fingerprint.to_string()]),
         Some(fingerprint),
         None,
     ))
@@ -720,15 +823,19 @@ fn certify_key(
             }
             Some(_) => {}
             None => {
-                return Err(format!(
-                    "La identidad `{userid}` no pertenece a la clave {fingerprint}."
+                return Err(crate::i18n::format(
+                    "La identidad `%1` no pertenece a la clave %2.",
+                    &[userid.to_string(), fingerprint.to_string()],
                 ));
             }
         }
     }
-    context
-        .add_signer(&signer)
-        .map_err(|error| format!("No se pudo seleccionar la clave firmante: {error}"))?;
+    context.add_signer(&signer).map_err(|error| {
+        crate::i18n::format(
+            "No se pudo seleccionar la clave firmante: %1",
+            &[error.to_string()],
+        )
+    })?;
     let mut flags = KeySigningFlags::empty();
     if local {
         flags |= KeySigningFlags::LOCAL;
@@ -740,7 +847,12 @@ fn certify_key(
             Duration::ZERO,
             flags,
         )
-        .map_err(|error| format!("No se pudo certificar las identidades: {error}"))?;
+        .map_err(|error| {
+            crate::i18n::format(
+                "No se pudo certificar las identidades: %1",
+                &[error.to_string()],
+            )
+        })?;
     Ok(operation_outcome(
         format!(
             "{}identidad(es) certificada(s) en {fingerprint}.",
@@ -770,13 +882,19 @@ fn refresh_external(fingerprint: &str, keyserver: &str) -> Result<OperationOutco
         arguments.splice(0..0, ["--keyserver", keyserver]);
     }
     edit::run_gpg_quiet(&arguments).map_err(|error| {
-        format!("No se pudo actualizar la clave desde la fuente configurada: {error}")
+        crate::i18n::format(
+            "No se pudo actualizar la clave desde la fuente configurada: %1",
+            &[error.to_string()],
+        )
     })?;
 
     let mut verification_context = new_context()?;
     let updated =
         key_by_fingerprint(&mut verification_context, &fingerprint)?.ok_or_else(|| {
-            format!("La fuente externa no devolvió la clave {fingerprint} solicitada.")
+            crate::i18n::format(
+                "La fuente externa no devolvió la clave %1 solicitada.",
+                &[fingerprint.to_string()],
+            )
         })?;
     let actual = primary_fingerprint(&updated)?;
     if actual != fingerprint {
@@ -790,7 +908,10 @@ fn refresh_external(fingerprint: &str, keyserver: &str) -> Result<OperationOutco
         "importada"
     };
     Ok(operation_outcome(
-        format!("Clave {fingerprint} {verb} desde la fuente externa configurada."),
+        crate::i18n::format(
+            "Clave %1 %2 desde la fuente externa configurada.",
+            &[fingerprint.to_string(), verb.to_string()],
+        ),
         Some(fingerprint),
         None,
     ))
@@ -811,7 +932,12 @@ fn delete_key(fingerprint: &str, material: DeleteMaterial) -> Result<OperationOu
             }
             context
                 .delete_key_with_flags(&key, DeleteKeyFlags::FORCE)
-                .map_err(|error| format!("No se pudo eliminar la clave pública: {error}"))?;
+                .map_err(|error| {
+                    crate::i18n::format(
+                        "No se pudo eliminar la clave pública: %1",
+                        &[error.to_string()],
+                    )
+                })?;
             verify_key_absent(&fingerprint)?;
             Ok(operation_outcome(
                 format!("Parte pública eliminada para {fingerprint}."),
@@ -830,7 +956,12 @@ fn delete_key(fingerprint: &str, material: DeleteMaterial) -> Result<OperationOu
                 "--delete-secret-keys",
                 fingerprint.as_str(),
             ])
-            .map_err(|error| format!("No se pudo eliminar solo el material privado: {error}"))?;
+            .map_err(|error| {
+                crate::i18n::format(
+                    "No se pudo eliminar solo el material privado: %1",
+                    &[error.to_string()],
+                )
+            })?;
             let mut verification_context = new_context()?;
             match key_by_fingerprint(&mut verification_context, &fingerprint)? {
                 Some(remaining) if !remaining.has_secret() => {}
@@ -861,10 +992,18 @@ fn delete_key(fingerprint: &str, material: DeleteMaterial) -> Result<OperationOu
             };
             context
                 .delete_key_with_flags(&key, flags)
-                .map_err(|error| format!("No se pudo eliminar la clave completa: {error}"))?;
+                .map_err(|error| {
+                    crate::i18n::format(
+                        "No se pudo eliminar la clave completa: %1",
+                        &[error.to_string()],
+                    )
+                })?;
             verify_key_absent(&fingerprint)?;
             Ok(operation_outcome(
-                format!("Clave pública y material privado eliminados para {fingerprint}."),
+                crate::i18n::format(
+                    "Clave pública y material privado eliminados para %1.",
+                    &[fingerprint.to_string()],
+                ),
                 Some(fingerprint),
                 None,
             ))
@@ -884,8 +1023,9 @@ fn find_user_id<'key>(key: &'key Key, needle: &str) -> Option<gpgme::UserId<'key
 fn verify_key_absent(fingerprint: &str) -> Result<(), String> {
     let mut context = new_context()?;
     if key_by_fingerprint(&mut context, fingerprint)?.is_some() {
-        return Err(format!(
-            "GnuPG terminó, pero la clave {fingerprint} aún aparece en el llavero."
+        return Err(crate::i18n::format(
+            "GnuPG terminó, pero la clave %1 aún aparece en el llavero.",
+            &[fingerprint.to_string()],
         ));
     }
     Ok(())
@@ -920,8 +1060,9 @@ fn revocation_certificate(
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => {
-                return Err(format!(
-                    "No se pudo consultar la carpeta de revocaciones: {error}"
+                return Err(crate::i18n::format(
+                    "No se pudo consultar la carpeta de revocaciones: %1",
+                    &[error.to_string()],
                 ));
             }
         }
@@ -941,8 +1082,9 @@ fn revocation_certificate(
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => {
-                return Err(format!(
-                    "No se pudo consultar el certificado de revocación: {error}"
+                return Err(crate::i18n::format(
+                    "No se pudo consultar el certificado de revocación: %1",
+                    &[error.to_string()],
                 ));
             }
         }
