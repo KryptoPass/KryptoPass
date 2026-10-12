@@ -227,7 +227,7 @@ ColumnLayout {
                     Controls.Label {
                         Kirigami.FormData.label: qsTr("Tipo:")
                         Layout.fillWidth: true
-                        text: root.selectedKey?.hasSecret ? qsTr("Clave propia (parte privada disponible)") : qsTr("Destinatario (solo clave pública)")
+                        text: root.selectedKey?.hasSecret ? qsTr("Clave propia (parte privada disponible)") : qsTr("Clave de contacto (solo parte pública)")
                         wrapMode: Text.Wrap
                     }
                     KeyStatus {

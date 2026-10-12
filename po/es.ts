@@ -11,8 +11,8 @@
       <translation>Versión %1</translation>
     </message>
     <message>
-      <source>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de destinatarios se guardan sin cifrar.</source>
-      <translation>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de destinatarios se guardan sin cifrar.</translation>
+      <source>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de las claves de acceso se guardan sin cifrar.</source>
+      <translation>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de las claves de acceso se guardan sin cifrar.</translation>
     </message>
     <message>
       <source>Licencia: %1
@@ -781,10 +781,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración.</translation>
     </message>
     <message>
-      <source>No se pudo descifrar la copia. Necesitas la clave privada de uno de sus destinatarios. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</source>
-      <translation>No se pudo descifrar la copia. Necesitas la clave privada de uno de sus destinatarios. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</translation>
-    </message>
-    <message>
       <source>No se pudo descifrar la exportación. Revisa la contraseña en GnuPG y vuelve a intentarlo.</source>
       <translation>No se pudo descifrar la exportación. Revisa la contraseña en GnuPG y vuelve a intentarlo.</translation>
     </message>
@@ -977,10 +973,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Revisa el resultado y elige las claves para los elementos que se añadirán.</translation>
     </message>
     <message>
-      <source>Revisa los datos del elemento y sus destinatarios.</source>
-      <translation>Revisa los datos del elemento y sus destinatarios.</translation>
-    </message>
-    <message>
       <source>Revocación registrada</source>
       <translation>Revocación registrada</translation>
     </message>
@@ -1138,6 +1130,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Correo</source>
       <translation>Correo</translation>
+    </message>
+    <message>
+      <source>Could not start browser integration</source>
+      <translation>Could not start browser integration</translation>
     </message>
     <message>
       <source>Código de seguridad</source>
@@ -1376,6 +1372,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo crear una carpeta temporal privada: %1</translation>
     </message>
     <message>
+      <source>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</source>
+      <translation>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</translation>
+    </message>
+    <message>
       <source>No se pudo eliminar la clave completa: %1</source>
       <translation>No se pudo eliminar la clave completa: %1</translation>
     </message>
@@ -1530,6 +1530,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Red oculta</source>
       <translation>Red oculta</translation>
+    </message>
+    <message>
+      <source>Revisa los datos del elemento y quién tiene acceso.</source>
+      <translation>Revisa los datos del elemento y quién tiene acceso.</translation>
     </message>
     <message>
       <source>Revocada</source>
@@ -1698,6 +1702,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>application data directory is not owned by the current user</source>
       <translation>application data directory is not owned by the current user</translation>
+    </message>
+    <message>
+      <source>application data directory missing</source>
+      <translation>application data directory missing</translation>
     </message>
     <message>
       <source>application data path is not a real directory</source>
@@ -1950,6 +1958,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>backup size overflow</source>
       <translation>backup size overflow</translation>
+    </message>
+    <message>
+      <source>browser entry changed</source>
+      <translation>browser entry changed</translation>
+    </message>
+    <message>
+      <source>browser request cancelled</source>
+      <translation>browser request cancelled</translation>
     </message>
     <message>
       <source>buffer de exportación bloqueado</source>
@@ -2296,6 +2312,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no icon store</translation>
     </message>
     <message>
+      <source>not a login</source>
+      <translation>not a login</translation>
+    </message>
+    <message>
       <source>output size overflow</source>
       <translation>output size overflow</translation>
     </message>
@@ -2582,6 +2602,76 @@ No incluye contraseñas ni valores de credenciales.
     </message>
   </context>
   <context>
+    <name>BrowserAccessDialog</name>
+    <message>
+      <source>Rellenar en el navegador</source>
+      <translation>Rellenar en el navegador</translation>
+    </message>
+    <message>
+      <source>Credenciales disponibles</source>
+      <translation>Credenciales disponibles</translation>
+    </message>
+    <message>
+      <source>No hay credenciales disponibles.</source>
+      <translation>No hay credenciales disponibles.</translation>
+    </message>
+    <message>
+      <source>No hay coincidencias. Prueba con otro nombre o carpeta.</source>
+      <translation>No hay coincidencias. Prueba con otro nombre o carpeta.</translation>
+    </message>
+    <message>
+      <source>Credencial · %1</source>
+      <translation>Credencial · %1</translation>
+    </message>
+    <message>
+      <source>Sin carpeta</source>
+      <translation>Sin carpeta</translation>
+    </message>
+    <message>
+      <source>El navegador solicita usuario y contraseña para:</source>
+      <translation>El navegador solicita usuario y contraseña para:</translation>
+    </message>
+    <message>
+      <source>Sitio solicitado: %1</source>
+      <translation>Sitio solicitado: %1</translation>
+    </message>
+    <message>
+      <source>Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.</source>
+      <translation>Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.</translation>
+    </message>
+    <message>
+      <source>Rechazar</source>
+      <translation>Rechazar</translation>
+    </message>
+    <message>
+      <source>Permitir relleno</source>
+      <translation>Permitir relleno</translation>
+    </message>
+  </context>
+  <context>
+    <name>BrowserPairingDialog</name>
+    <message>
+      <source>Conectar el navegador</source>
+      <translation>Conectar el navegador</translation>
+    </message>
+    <message>
+      <source>La extensión solicita vincularse con esta bóveda. Acepta solo si acabas de iniciar la conexión desde tu navegador.
+
+La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de relleno requerirá tu autorización.</source>
+      <translation>La extensión solicita vincularse con esta bóveda. Acepta solo si acabas de iniciar la conexión desde tu navegador.
+
+La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de relleno requerirá tu autorización.</translation>
+    </message>
+    <message>
+      <source>Rechazar conexión</source>
+      <translation>Rechazar conexión</translation>
+    </message>
+    <message>
+      <source>Vincular navegador</source>
+      <translation>Vincular navegador</translation>
+    </message>
+  </context>
+  <context>
     <name>CardFields</name>
     <message>
       <source>Titular</source>
@@ -2854,12 +2944,12 @@ Huella(s) detectadas:
       <translation>Propiedades de la clave</translation>
     </message>
     <message>
-      <source>Agenda de destinatarios</source>
-      <translation>Agenda de destinatarios</translation>
-    </message>
-    <message>
       <source>Contactos de KDE Contacts</source>
       <translation>Contactos de KDE Contacts</translation>
+    </message>
+    <message>
+      <source>Agenda de contactos</source>
+      <translation>Agenda de contactos</translation>
     </message>
     <message>
       <source>Detalle</source>
@@ -2876,10 +2966,6 @@ Huella(s) detectadas:
     <message>
       <source>Volver a los detalles de la clave</source>
       <translation>Volver a los detalles de la clave</translation>
-    </message>
-    <message>
-      <source>Ver la agenda de destinatarios</source>
-      <translation>Ver la agenda de destinatarios</translation>
     </message>
     <message>
       <source>Favorito</source>
@@ -2938,6 +3024,10 @@ Huella(s) detectadas:
       <translation>La bóveda está bloqueada. Desbloquéala para abrir este elemento.</translation>
     </message>
     <message>
+      <source>Ver la agenda de contactos</source>
+      <translation>Ver la agenda de contactos</translation>
+    </message>
+    <message>
       <source>Descifrando el contenido del elemento…</source>
       <translation>Descifrando el contenido del elemento…</translation>
     </message>
@@ -2983,6 +3073,57 @@ Huella(s) detectadas:
     <message>
       <source>Reintentar</source>
       <translation>Reintentar</translation>
+    </message>
+  </context>
+  <context>
+    <name>EntryPickerDialog</name>
+    <message>
+      <source>Elementos disponibles para vincular</source>
+      <translation>Elementos disponibles para vincular</translation>
+    </message>
+    <message>
+      <source>No hay elementos disponibles. Los que ya tienen un vínculo no aparecen aquí.</source>
+      <translation>No hay elementos disponibles. Los que ya tienen un vínculo no aparecen aquí.</translation>
+    </message>
+    <message>
+      <source>No hay coincidencias. Prueba con otro nombre, tipo o carpeta.</source>
+      <translation>No hay coincidencias. Prueba con otro nombre, tipo o carpeta.</translation>
+    </message>
+    <message>
+      <source>Vincular</source>
+      <translation>Vincular</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Vincular elemento</source>
+      <translation>Vincular elemento</translation>
+    </message>
+    <message>
+      <source>Buscar elemento</source>
+      <translation>Buscar elemento</translation>
+    </message>
+    <message>
+      <source>Buscar por nombre, tipo o carpeta</source>
+      <translation>Buscar por nombre, tipo o carpeta</translation>
+    </message>
+    <message>
+      <source>Carpeta</source>
+      <translation>Carpeta</translation>
+    </message>
+    <message>
+      <source>Sin carpeta</source>
+      <translation>Sin carpeta</translation>
+    </message>
+    <message>
+      <source>Todas las carpetas</source>
+      <translation>Todas las carpetas</translation>
+    </message>
+    <message>
+      <source>Filtrar por carpeta</source>
+      <translation>Filtrar por carpeta</translation>
     </message>
   </context>
   <context>
@@ -3422,8 +3563,8 @@ Huella(s) detectadas:
       <translation>No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.</translation>
     </message>
     <message>
-      <source>Para leer los datos necesitarás la clave privada de alguno de los destinatarios elegidos.</source>
-      <translation>Para leer los datos necesitarás la clave privada de alguno de los destinatarios elegidos.</translation>
+      <source>Para leer los datos necesitarás la clave privada de alguien con acceso.</source>
+      <translation>Para leer los datos necesitarás la clave privada de alguien con acceso.</translation>
     </message>
     <message>
       <source>Cerrar</source>
@@ -3647,8 +3788,8 @@ Huella(s) detectadas:
       <translation>Clave propia (parte privada disponible)</translation>
     </message>
     <message>
-      <source>Destinatario (solo clave pública)</source>
-      <translation>Destinatario (solo clave pública)</translation>
+      <source>Clave de contacto (solo parte pública)</source>
+      <translation>Clave de contacto (solo parte pública)</translation>
     </message>
     <message>
       <source>Estado:</source>
@@ -4089,8 +4230,8 @@ Huella(s) detectadas:
       <translation>Mantener la certificación local, sin exportarla</translation>
     </message>
     <message>
-      <source>Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de autorizarla como destinatario.</source>
-      <translation>Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de autorizarla como destinatario.</translation>
+      <source>Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de darle acceso a un elemento.</source>
+      <translation>Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de darle acceso a un elemento.</translation>
     </message>
     <message>
       <source>Servidor de claves</source>
@@ -4404,10 +4545,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Claves propias</translation>
     </message>
     <message>
-      <source>Destinatarios</source>
-      <translation>Destinatarios</translation>
-    </message>
-    <message>
       <source>Todas las claves</source>
       <translation>Todas las claves</translation>
     </message>
@@ -4422,6 +4559,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Papelera</source>
       <translation>Papelera</translation>
+    </message>
+    <message>
+      <source>Contactos</source>
+      <translation>Contactos</translation>
     </message>
     <message>
       <source>Guarda o descarta los cambios de carpeta antes de salir.</source>
@@ -4741,8 +4882,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>No se pudo mover el elemento.</translation>
     </message>
     <message>
-      <source>Mover solo cambia la carpeta. Los destinatarios se conservan.</source>
-      <translation>Mover solo cambia la carpeta. Los destinatarios se conservan.</translation>
+      <source>Mover solo cambia la carpeta. Se conserva quién tiene acceso.</source>
+      <translation>Mover solo cambia la carpeta. Se conserva quién tiene acceso.</translation>
     </message>
     <message>
       <source>Carpeta de destino</source>
@@ -4967,22 +5108,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Elegir contacto %1, huella %2</translation>
     </message>
     <message>
-      <source>Claves autorizadas</source>
-      <translation>Claves autorizadas</translation>
-    </message>
-    <message>
-      <source>Elige las claves OpenPGP que podrán descifrar este elemento.</source>
-      <translation>Elige las claves OpenPGP que podrán descifrar este elemento.</translation>
-    </message>
-    <message>
-      <source>Buscar destinatario, correo o huella…</source>
-      <translation>Buscar destinatario, correo o huella…</translation>
-    </message>
-    <message>
-      <source>Buscar destinatarios con clave</source>
-      <translation>Buscar destinatarios con clave</translation>
-    </message>
-    <message>
       <source>Actualizar contactos</source>
       <translation>Actualizar contactos</translation>
     </message>
@@ -5003,12 +5128,28 @@ https://cuenta.ejemplo.test</translation>
       <translation>Consultando o actualizando KDE Contacts…</translation>
     </message>
     <message>
-      <source>No hay destinatarios que coincidan con la búsqueda.</source>
-      <translation>No hay destinatarios que coincidan con la búsqueda.</translation>
+      <source>Quién tiene acceso</source>
+      <translation>Quién tiene acceso</translation>
     </message>
     <message>
-      <source>Autorizar %1, %2, huella %3</source>
-      <translation>Autorizar %1, %2, huella %3</translation>
+      <source>Elige quién puede abrir este elemento con su clave privada OpenPGP.</source>
+      <translation>Elige quién puede abrir este elemento con su clave privada OpenPGP.</translation>
+    </message>
+    <message>
+      <source>Buscar nombre, correo o huella…</source>
+      <translation>Buscar nombre, correo o huella…</translation>
+    </message>
+    <message>
+      <source>Buscar personas con clave OpenPGP</source>
+      <translation>Buscar personas con clave OpenPGP</translation>
+    </message>
+    <message>
+      <source>No hay claves que coincidan con la búsqueda.</source>
+      <translation>No hay claves que coincidan con la búsqueda.</translation>
+    </message>
+    <message>
+      <source>Dar acceso a %1, %2, huella %3</source>
+      <translation>Dar acceso a %1, %2, huella %3</translation>
     </message>
     <message>
       <source>Ocultar detalles de la clave</source>
@@ -5051,8 +5192,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>Añadir vínculo de contacto para la clave %1</translation>
     </message>
     <message>
-      <source>Destinatario original no disponible, huella %1</source>
-      <translation>Destinatario original no disponible, huella %1</translation>
+      <source>Clave de acceso original no disponible, huella %1</source>
+      <translation>Clave de acceso original no disponible, huella %1</translation>
     </message>
     <message>
       <source>%1 · sin clave válida para cifrar</source>
@@ -5098,12 +5239,40 @@ https://cuenta.ejemplo.test</translation>
       <translation>Tipo desconocido</translation>
     </message>
     <message>
+      <source>Sin carpeta</source>
+      <translation>Sin carpeta</translation>
+    </message>
+    <message>
       <source>Elemento vinculado</source>
       <translation>Elemento vinculado</translation>
     </message>
     <message>
+      <source>Cambiar vínculo…</source>
+      <translation>Cambiar vínculo…</translation>
+    </message>
+    <message>
+      <source>Vincular elemento…</source>
+      <translation>Vincular elemento…</translation>
+    </message>
+    <message>
+      <source>Desvincular</source>
+      <translation>Desvincular</translation>
+    </message>
+    <message>
       <source>Vincula un elemento complementario. Ambos elementos mostrarán esta relación.</source>
       <translation>Vincula un elemento complementario. Ambos elementos mostrarán esta relación.</translation>
+    </message>
+    <message>
+      <source>Vincular elemento</source>
+      <translation>Vincular elemento</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Vincular</source>
+      <translation>Vincular</translation>
     </message>
   </context>
   <context>
@@ -5369,8 +5538,28 @@ https://cuenta.ejemplo.test</translation>
       <translation>No se puede mostrar este tipo de elemento.</translation>
     </message>
     <message>
-      <source>Destinatarios</source>
-      <translation>Destinatarios</translation>
+      <source>Quién tiene acceso</source>
+      <translation>Quién tiene acceso</translation>
+    </message>
+    <message>
+      <source>Clave no disponible</source>
+      <translation>Clave no disponible</translation>
+    </message>
+    <message>
+      <source>Ocultar detalles de la clave</source>
+      <translation>Ocultar detalles de la clave</translation>
+    </message>
+    <message>
+      <source>Ver detalles de la clave</source>
+      <translation>Ver detalles de la clave</translation>
+    </message>
+    <message>
+      <source>%1: %2</source>
+      <translation>%1: %2</translation>
+    </message>
+    <message>
+      <source>Huella OpenPGP: %1</source>
+      <translation>Huella OpenPGP: %1</translation>
     </message>
   </context>
   <context>

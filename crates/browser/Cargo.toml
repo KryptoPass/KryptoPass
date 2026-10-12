@@ -1,0 +1,23 @@
+[package]
+name = "kryptopass-browser"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+crypto_box = { version = "0.9.1", features = ["std"] }
+libc = "0.2"
+curve25519-dalek = "4"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+zeroize = "1"
+
+[lints]
+workspace = true

@@ -131,7 +131,7 @@ Controls.Dialog {
                 visible: backend.reviewed && dialog.eligibleSelection
                     && !dialog.availableKeys.some(key => key.hasSecret && dialog.selectedFingerprints.includes(key.id))
                 type: Kirigami.MessageType.Warning
-                text: qsTr("Para leer los datos necesitarás la clave privada de alguno de los destinatarios elegidos.")
+                text: qsTr("Para leer los datos necesitarás la clave privada de alguien con acceso.")
             }
             Controls.BusyIndicator {
                 Layout.alignment: Qt.AlignHCenter

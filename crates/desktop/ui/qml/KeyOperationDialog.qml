@@ -522,7 +522,7 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal"
-                text: qsTr("Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de autorizarla como destinatario.")
+                text: qsTr("Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de darle acceso a un elemento.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {

@@ -34,40 +34,13 @@ QtObject {
             const searchText = [entry.title, folderName(entry.folder), kindName(entry.kind)].join(" ").toLowerCase();
             return searchText.includes(needle);
         });
-        const sorted = filtered.sort((left, right) => {
+        return filtered.sort((left, right) => {
             const result = left.title.localeCompare(right.title, undefined, {
                 sensitivity: "base",
                 numeric: true
             }) || left.id.localeCompare(right.id);
             return sortDescending ? -result : result;
         });
-        const byId = Object.create(null);
-        const companionById = Object.create(null);
-        for (const entry of sorted)
-            byId[entry.id] = entry;
-        for (const entry of sorted) {
-            const companion = entry.relatedEntryId ? byId[entry.relatedEntryId] : null;
-            if (companion && companion.id !== entry.id) {
-                companionById[entry.id] = companion;
-                if (!companionById[companion.id])
-                    companionById[companion.id] = entry;
-            }
-        }
-        const ordered = [];
-        const emitted = new Set();
-        for (const entry of sorted) {
-            if (emitted.has(entry.id))
-                continue;
-            ordered.push(entry);
-            emitted.add(entry.id);
-
-            const companion = companionById[entry.id];
-            if (companion && !emitted.has(companion.id)) {
-                ordered.push(companion);
-                emitted.add(companion.id);
-            }
-        }
-        return ordered;
     }
     readonly property var folderRows: {
         const rows = [];

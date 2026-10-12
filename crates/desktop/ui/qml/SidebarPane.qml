@@ -102,7 +102,7 @@ Controls.Pane {
                 },
                 {
                     id: "contacts",
-                    name: qsTranslate("Main", "Destinatarios"),
+                    name: qsTranslate("Main", "Contactos"),
                     icon: "view-pim-contacts"
                 }
             ] : [

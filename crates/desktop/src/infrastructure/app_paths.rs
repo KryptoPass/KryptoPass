@@ -113,6 +113,15 @@ pub fn set_active_vault_path(app_id: &str, path: &Path) -> Result<bool> {
     write_config_atomically(&config_path, directory, &contents)
 }
 
+/// Private application directory for browser pairing metadata, separate from vault content.
+pub fn browser_state_directory(app_id: &str) -> Result<PathBuf> {
+    let path = default_database_path(app_id)?;
+    Ok(path
+        .parent()
+        .context("application data directory missing")?
+        .to_path_buf())
+}
+
 fn default_database_path(app_id: &str) -> Result<PathBuf> {
     validate_app_id(app_id)?;
 

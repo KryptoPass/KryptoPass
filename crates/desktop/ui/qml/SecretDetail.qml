@@ -10,6 +10,7 @@ ColumnLayout {
 
     property var detail: null
     property var recipients: []
+    property var recipientKeys: []
     property bool revealed: false
     property var versionDetail: null
     readonly property SecretContentView contentView: contentLoader.item as SecretContentView
@@ -112,19 +113,62 @@ ColumnLayout {
             Controls.Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: qsTr("Destinatarios")
+                text: qsTr("Quién tiene acceso")
                 color: Kirigami.Theme.disabledTextColor
             }
             Repeater {
                 model: root.recipients
-                delegate: Controls.Label {
+                delegate: ColumnLayout {
+                    id: recipientRow
                     required property string modelData
+                    readonly property var recipientKey: root.recipientKeys.find(key => key.id.toUpperCase() === recipientRow.modelData.toUpperCase()) || null
+                    readonly property string recipientName: recipientKey?.contactName || recipientKey?.title || recipientKey?.email || qsTr("Clave no disponible")
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    text: modelData
-                    textFormat: Text.PlainText
-                    font.family: Kirigami.Theme.fixedWidthFont.family
-                    wrapMode: Text.WrapAnywhere
+                    spacing: Kirigami.Units.smallSpacing
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            spacing: 2
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: recipientRow.recipientName
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                            }
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                visible: !!recipientRow.recipientKey?.email
+                                text: recipientRow.recipientKey?.email || ""
+                                textFormat: Text.PlainText
+                                color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.WrapAnywhere
+                            }
+                        }
+                        Controls.ToolButton {
+                            id: recipientDetails
+                            text: checked ? qsTr("Ocultar detalles de la clave") : qsTr("Ver detalles de la clave")
+                            icon.name: checked ? "arrow-up" : "arrow-down"
+                            display: Controls.AbstractButton.IconOnly
+                            checkable: true
+                            Accessible.name: qsTr("%1: %2").arg(text).arg(recipientRow.recipientName)
+                            Controls.ToolTip.visible: hovered || visualFocus
+                            Controls.ToolTip.text: text
+                        }
+                    }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        visible: recipientDetails.checked
+                        text: qsTr("Huella OpenPGP: %1").arg(recipientRow.modelData)
+                        textFormat: Text.PlainText
+                        font.family: Kirigami.Theme.fixedWidthFont.family
+                        wrapMode: Text.WrapAnywhere
+                        color: Kirigami.Theme.disabledTextColor
+                    }
                 }
             }
         }

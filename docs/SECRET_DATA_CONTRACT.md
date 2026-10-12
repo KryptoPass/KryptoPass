@@ -171,9 +171,9 @@ elimina ninguno de los dos elementos.
 
 El detalle usa únicamente metadatos para presentar la tarjeta del compañero.
 Abrirla pasa por la selección y autorización habituales; no descifra el otro
-contenido en segundo plano. Los filtros siguen aplicándose a cada elemento y
-las parejas visibles se muestran juntas, ordenadas por el primer título de
-cada pareja. «Crear seguridad» prepara un secreto personalizado con título
+contenido en segundo plano. Los filtros y el orden por título elegido siguen
+aplicándose a cada elemento; los vínculos no desplazan ni agrupan filas.
+«Crear seguridad» prepara un secreto personalizado con título
 «Seguridad de …», la misma carpeta y destinatarios, y el vínculo al elemento
 actual. La creación se hace efectiva al guardar ese borrador.
 
@@ -399,3 +399,35 @@ una de ellas. La proyección de consulta oculta la contraseña y la semilla TOTP
 la copia explícita usa el portapapeles sensible existente. Cerrar la consulta,
 cambiar de elemento o bloquear la bóveda borra esa proyección. Consultar y copiar
 no modifica la versión actual. No se ofrece restaurar versiones.
+
+
+## Lectura autorizada desde navegador
+
+`kryptopass-browser` implementa el transporte cifrado y la autorización; el
+adaptador Desktop abre la bóveda y usa `SecretsService`. La vinculación
+persistente identifica el navegador y la bóveda, pero cada `get-logins`
+requiere una aprobación nueva y caduca en 60 segundos.
+
+QML recibe el origen HTTP(S) normalizado en ASCII, un token temporal y los
+UUID, nombres y revisiones de credenciales activas. Buscar en el diálogo usa
+nombres, tipo y carpeta, mediante el mismo selector que los elementos vinculados. Elegir una entrada autoriza descifrar esa revisión, sin consultar
+contenido privado de las demás. El adaptador comprueba tipo, papelera,
+revisión y vigencia de la solicitud antes y después de la lectura.
+
+Rust compara las URLs de la entrada aprobada con el esquema, host y puerto
+efectivo del origen solicitado. No admite credenciales embebidas en URLs ni
+envíos de formulario a otro origen. Solo una coincidencia permite enviar
+usuario y contraseña de esa entrada; no envía notas, historial ni semillas
+TOTP. Los valores permanecen en buffers Rust con limpieza al liberarse y no
+pasan por propiedades de Qt.
+
+Bloquear o cambiar de bóveda invalida solicitudes y resultados pendientes.
+La autorización se vuelve a comprobar al escribir la respuesta cifrada al
+socket. La extensión recibe avisos de bloqueo para invalidar su caché. Esto
+no borra los valores que el navegador ya haya rellenado o entregado a una
+página.
+
+Las asociaciones se guardan en un archivo privado por ruta canónica de
+bóveda: identidad aleatoria y claves públicas del navegador, sin contenido
+privado de entradas. Reiniciar conserva la vinculación; mover la base a otra
+ruta requiere volver a vincularla. Véase [BROWSER_INTEGRATION.md](BROWSER_INTEGRATION.md).

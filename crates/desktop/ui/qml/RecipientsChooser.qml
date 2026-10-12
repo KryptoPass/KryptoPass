@@ -130,7 +130,7 @@ ColumnLayout {
     }
 
     Controls.Label {
-        text: qsTr("Claves autorizadas")
+        text: qsTr("Quién tiene acceso")
         font.weight: Font.DemiBold
     }
 
@@ -140,7 +140,7 @@ ColumnLayout {
 
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Elige las claves OpenPGP que podrán descifrar este elemento.")
+            text: qsTr("Elige quién puede abrir este elemento con su clave privada OpenPGP.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -148,8 +148,8 @@ ColumnLayout {
         Kirigami.SearchField {
             id: recipientSearch
             Layout.fillWidth: true
-            placeholderText: qsTr("Buscar destinatario, correo o huella…")
-            Accessible.name: qsTr("Buscar destinatarios con clave")
+            placeholderText: qsTr("Buscar nombre, correo o huella…")
+            Accessible.name: qsTr("Buscar personas con clave OpenPGP")
         }
 
         Flow {
@@ -207,7 +207,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: !!recipientSearch.text && chooser.matchingKeys.length === 0 && chooser.encryptableKeys.length > 0
-            text: qsTr("No hay destinatarios que coincidan con la búsqueda.")
+            text: qsTr("No hay claves que coincidan con la búsqueda.")
             wrapMode: Text.Wrap
         }
         Repeater {
@@ -225,7 +225,7 @@ ColumnLayout {
                     Controls.CheckBox {
                         id: keyCheck
                         checked: chooser.selectedFingerprints.includes(keyRow.modelData.id)
-                        Accessible.name: qsTr("Autorizar %1, %2, huella %3").arg(keyRow.modelData.title).arg(keyRow.modelData.email || "").arg(keyRow.modelData.id)
+                        Accessible.name: qsTr("Dar acceso a %1, %2, huella %3").arg(keyRow.modelData.title).arg(keyRow.modelData.email || "").arg(keyRow.modelData.id)
                         onToggled: chooser.setChecked(keyRow.modelData.id, checked)
                     }
                     ColumnLayout {
@@ -326,7 +326,7 @@ ColumnLayout {
                 spacing: 8
                 Controls.CheckBox {
                     checked: chooser.selectedFingerprints.includes(unavailableRow.modelData)
-                    Accessible.name: qsTr("Destinatario original no disponible, huella %1").arg(unavailableRow.modelData)
+                    Accessible.name: qsTr("Clave de acceso original no disponible, huella %1").arg(unavailableRow.modelData)
                     onToggled: chooser.setChecked(unavailableRow.modelData, checked)
                 }
                 Controls.Label {

@@ -22,6 +22,32 @@ Controls.ApplicationWindow {
         id: store
         objectName: "secretStore"
     }
+    Timer {
+        interval: 250
+        repeat: true
+        running: true
+        onTriggered: store.controller.refreshBrowserPairing()
+    }
+    BrowserAccessWindow {
+        id: browserAccessWindow
+        requestJson: store.controller.browserAccess
+        entryMetadata: store.entries
+        kindOptions: store.kindOptions
+        folders: store.folders
+        folderRows: store.folderRows
+        vaultLocked: store.controller.locked
+        onDecisionRequested: function(token, entryId, approve) {
+            store.controller.decideBrowserAccess(token, entryId, approve);
+        }
+    }
+    BrowserPairingDialog {
+        id: browserPairingDialog
+        requestToken: store.controller.browserPairing
+        vaultLocked: store.controller.locked
+        onDecisionRequested: function(token, approve) {
+            store.controller.decideBrowserPairing(token, approve);
+        }
+    }
     KeyStore {
         id: keys
         objectName: "keyStore"
@@ -218,7 +244,7 @@ Controls.ApplicationWindow {
         close();
     }
     readonly property bool revealed: !!store.detail?.content?.fields?.passwordRevealed
-    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Destinatarios") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
+    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Contactos") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
     Component.onCompleted: {
         store.controller.loadStore();
         keys.controller.refreshKeys();
@@ -968,7 +994,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened
+        externalModalOpen: browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened
                            || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
                            || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened || importDialog.opened
         onSaveRequested: function (draftJson) {

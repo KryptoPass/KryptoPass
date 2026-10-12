@@ -80,7 +80,7 @@ Controls.Pane {
                     text: root.keysMode
                         ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
                            ? qsTr("Propiedades de la clave")
-                           : root.keyStore.scope === "contacts" ? qsTr("Agenda de destinatarios") : qsTr("Contactos de KDE Contacts"))
+                           : root.keyStore.scope === "contacts" ? qsTr("Agenda de contactos") : qsTr("Contactos de KDE Contacts"))
                         : qsTr("Detalle")
                 }
                 Controls.ToolButton {
@@ -90,7 +90,7 @@ Controls.Pane {
                     icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
                         ? "view-certificate" : "view-pim-contacts"
                     Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
-                        ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de destinatarios")
+                        ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de contactos")
                     onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected
                         ? !root.keyStore.contactsOverviewVisible : true
                     Controls.ToolTip.visible: hovered || visualFocus
@@ -180,10 +180,12 @@ Controls.Pane {
 
         Controls.ScrollView {
             id: detailScroll
+            objectName: "entryDetailScroll"
             visible: !root.editing && !root.keysMode && !!root.selected
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
+            contentHeight: detailSurface.height
             clip: true
 
             Item {
@@ -239,98 +241,6 @@ Controls.Pane {
                         }
                     }
 
-                    Controls.Button {
-                        objectName: "relatedEntryCard"
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.largeSpacing
-                        visible: !!root.relatedEntry
-                        enabled: !root.relatedEntry?.trashed && !root.storeAdapter.controller.busy
-                        text: root.relatedEntry?.title || ""
-                        Accessible.name: root.relatedEntry?.trashed
-                            ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title)
-                            : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
-                        Accessible.description: root.relatedEntry
-                            ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
-                            : ""
-                        contentItem: RowLayout {
-                            spacing: Kirigami.Units.largeSpacing
-                            EntryIcon {
-                                entryIcon: root.relatedEntry?.icon || null
-                                imageSource: root.relatedEntry?.iconSource || ""
-                                fallbackIcon: root.storeAdapter.kindIcon(root.relatedEntry?.kind || "custom")
-                                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                                Layout.preferredHeight: width
-                            }
-                            Kirigami.TitleSubtitle {
-                                Layout.fillWidth: true
-                                Layout.minimumWidth: 0
-                                textFormat: Text.PlainText
-                                title: root.relatedEntry?.title || ""
-                                subtitle: root.relatedEntry?.trashed
-                                    ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
-                                    : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
-                            }
-                            Kirigami.Icon {
-                                visible: !root.relatedEntry?.trashed
-                                source: "go-next"
-                                Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                                Layout.preferredHeight: width
-                            }
-                        }
-                        onClicked: {
-                            if (root.relatedEntry && !root.relatedEntry.trashed)
-                                root.relatedEntryOpenRequested(root.relatedEntry);
-                        }
-                    }
-
-                    Controls.Button {
-                        Layout.alignment: Qt.AlignRight
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.largeSpacing
-                        visible: !!root.relatedEntry?.trashed
-                        text: qsTr("Ver en la papelera")
-                        icon.name: "user-trash"
-                        onClicked: root.relatedEntryTrashRequested(root.relatedEntry)
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.largeSpacing
-                        visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
-                        spacing: Kirigami.Units.largeSpacing
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            Controls.Label {
-                                Layout.fillWidth: true
-                                text: root.storeAdapter.controller.locked
-                                    ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.")
-                                    : qsTr("Crea un secreto personalizado para acompañar este elemento.")
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                        }
-                        Controls.Button {
-                            objectName: "createSecurityButton"
-                            text: qsTr("Crear seguridad")
-                            icon.name: "list-add"
-                            enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy
-                                && !root.storeAdapter.controller.editorBusy
-                            onClicked: root.createSecurityRequested(root.selected)
-                        }
-                    }
-
-                    Kirigami.InlineMessage {
-                        Layout.fillWidth: true
-                        Layout.margins: Kirigami.Units.largeSpacing
-                        visible: root.hasRelatedEntryReference && !root.relatedEntry
-                        type: Kirigami.MessageType.Warning
-                        text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
-                    }
-
                     Kirigami.InlineMessage {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
@@ -353,6 +263,7 @@ Controls.Pane {
                         visible: !!root.selectedDetail
                         detail: root.selectedDetail
                         recipients: root.selected?.recipients || []
+                        recipientKeys: root.keyStore.entries
                         revealed: root.revealed
                         versionDetail: root.storeAdapter.historyVersion
                         onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
@@ -366,6 +277,105 @@ Controls.Pane {
                         onCopyUsernameRequested: root.copyUsernameRequested()
                         onCopyPasswordRequested: root.copyPasswordRequested()
                         onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
+                    }
+
+                    Controls.Frame {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: root.hasRelatedEntryReference || (!!root.selected && !root.selected.trashed)
+                        padding: Kirigami.Units.largeSpacing
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.ItemDelegate {
+                                id: relatedEntryCard
+                                objectName: "relatedEntryCard"
+                                Layout.fillWidth: true
+                                visible: !!root.relatedEntry
+                                enabled: !root.relatedEntry?.trashed && !root.storeAdapter.controller.busy
+                                text: ""
+                                Accessible.name: root.relatedEntry?.trashed
+                                    ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title)
+                                    : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
+                                Accessible.description: root.relatedEntry
+                                    ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
+                                    : ""
+                                contentItem: RowLayout {
+                                    spacing: Kirigami.Units.largeSpacing
+                                    EntryIcon {
+                                        entryIcon: root.relatedEntry?.icon || null
+                                        imageSource: root.relatedEntry?.iconSource || ""
+                                        fallbackIcon: root.storeAdapter.kindIcon(root.relatedEntry?.kind || "custom")
+                                        selected: relatedEntryCard.highlighted || relatedEntryCard.down
+                                        Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+                                        Layout.preferredHeight: width
+                                    }
+                                    Kirigami.TitleSubtitle {
+                                        Layout.fillWidth: true
+                                        Layout.minimumWidth: 0
+                                        textFormat: Text.PlainText
+                                        title: root.relatedEntry?.title || ""
+                                        selected: relatedEntryCard.highlighted || relatedEntryCard.down
+                                        font: relatedEntryCard.font
+                                        subtitleFont: relatedEntryCard.font
+                                        subtitle: root.relatedEntry?.trashed
+                                            ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
+                                            : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
+                                    }
+                                    Kirigami.Icon {
+                                        visible: !root.relatedEntry?.trashed
+                                        source: "go-next"
+                                        Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                                        Layout.preferredHeight: width
+                                    }
+                                }
+                                onClicked: {
+                                    if (root.relatedEntry && !root.relatedEntry.trashed)
+                                        root.relatedEntryOpenRequested(root.relatedEntry);
+                                }
+                            }
+
+                            Controls.Button {
+                                Layout.alignment: Qt.AlignRight
+                                visible: !!root.relatedEntry?.trashed
+                                text: qsTr("Ver en la papelera")
+                                icon.name: "user-trash"
+                                onClicked: root.relatedEntryTrashRequested(root.relatedEntry)
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
+                                spacing: Kirigami.Units.largeSpacing
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
+                                    Controls.Label {
+                                        Layout.fillWidth: true
+                                        text: root.storeAdapter.controller.locked
+                                            ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.")
+                                            : qsTr("Crea un secreto personalizado para acompañar este elemento.")
+                                        textFormat: Text.PlainText
+                                        wrapMode: Text.Wrap
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+                                }
+                                Controls.Button {
+                                    objectName: "createSecurityButton"
+                                    text: qsTr("Crear seguridad")
+                                    icon.name: "list-add"
+                                    enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy
+                                        && !root.storeAdapter.controller.editorBusy
+                                    onClicked: root.createSecurityRequested(root.selected)
+                                }
+                            }
+
+                            Kirigami.InlineMessage {
+                                Layout.fillWidth: true
+                                visible: root.hasRelatedEntryReference && !root.relatedEntry
+                                type: Kirigami.MessageType.Warning
+                                text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
+                            }
+                        }
                     }
                 }
             }

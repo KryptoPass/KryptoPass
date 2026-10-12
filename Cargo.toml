@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/desktop", "crates/core", "crates/import"]
+members = ["crates/desktop", "crates/core", "crates/import", "crates/browser"]
 # Por defecto solo la app; el resto con --workspace / -p.
 default-members = ["crates/desktop"]
 
@@ -16,6 +16,8 @@ authors = ["KryptoPass contributors"]
 
 [workspace.metadata.kryptopass]
 app-id = "org.kryptopass.desktop"
+browser-host-id = "org.kryptopass.browser"
+browser-extension-id = "org.kryptopass.browser@kryptopass.org"
 display-name = "KryptoPass"
 organization = "KryptoPass"
 organization-domain = "kryptopass.org"

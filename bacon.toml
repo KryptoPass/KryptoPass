@@ -86,3 +86,9 @@ command = ["just", "screenshot"]
 need_stdout = true
 default_watch = false
 watch = ["crates/desktop", "packaging/capture_screenshot.py"]
+
+[jobs.browser]
+command = ["just", "browser-build"]
+need_stdout = true
+default_watch = false
+watch = ["crates/browser", "Cargo.toml"]

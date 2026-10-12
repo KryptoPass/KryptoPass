@@ -28,7 +28,9 @@ def app_metadata():
         cwd=ROOT, check=True, capture_output=True, text=True,
     )
     metadata = json.loads(result.stdout)
-    binaries = [(p, t) for p in metadata["packages"] for t in p["targets"] if "bin" in t["kind"]]
+    desktop_name = load_metadata()["binary"]
+    binaries = [(p, t) for p in metadata["packages"] if p["name"] == desktop_name
+                for t in p["targets"] if "bin" in t["kind"] and t["name"] == desktop_name]
     if len(binaries) != 1:
         raise RuntimeError("expected one desktop binary in Cargo metadata")
     package, target = binaries[0]

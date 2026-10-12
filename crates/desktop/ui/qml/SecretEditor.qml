@@ -260,6 +260,7 @@ Controls.Pane {
     }
 
     function closeAndClear() {
+        relatedEntryPicker.closePicker();
         savePending = false;
         preparingSecretMaterial = false;
         waitingForEditor = false;
@@ -618,20 +619,6 @@ Controls.Pane {
                         }
                     }
 
-                    RelatedEntryPicker {
-                        id: relatedEntryPicker
-                        Layout.fillWidth: true
-                        enabled: !editor.saving && !editor.savePending
-                        entries: editor.storeAdapter.entries
-                        kindOptions: editor.storeAdapter.kindOptions
-                        entryId: editor.entryId
-                        relatedEntryId: editor.relatedEntryId
-                        onSelectionChanged: function(relatedId) {
-                            editor.relatedEntryId = relatedId;
-                            editor.updateDirty();
-                        }
-                    }
-
                     SecretFieldsHost {
                         id: fieldsHost
                         Layout.fillWidth: true
@@ -655,6 +642,23 @@ Controls.Pane {
                         enabled: !editor.saving && !editor.savePending
                         keyStore: editor.keyStore
                         onSelectionChanged: function(fingerprints) {
+                            editor.updateDirty();
+                        }
+                    }
+
+                    RelatedEntryPicker {
+                        id: relatedEntryPicker
+                        Layout.fillWidth: true
+                        enabled: !editor.saving && !editor.savePending
+                        entries: editor.storeAdapter.entries
+                        kindOptions: editor.storeAdapter.kindOptions
+                        folders: editor.storeAdapter.folders
+                        folderRows: editor.storeAdapter.folderRows
+                        entryId: editor.entryId
+                        relatedEntryId: editor.relatedEntryId
+                        onExternalModalRequested: function(opened) { editor.externalModalOpen = opened; }
+                        onSelectionChanged: function(relatedId) {
+                            editor.relatedEntryId = relatedId;
                             editor.updateDirty();
                         }
                     }

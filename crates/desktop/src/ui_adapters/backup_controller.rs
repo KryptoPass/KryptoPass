@@ -219,7 +219,7 @@ fn restore_error_message(error: &anyhow::Error) -> &'static str {
             "No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración."
         }
         Some(RestoreFailure::Decryption) => {
-            "No se pudo descifrar la copia. Necesitas la clave privada de uno de sus destinatarios. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado."
+            "No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado."
         }
         Some(RestoreFailure::InvalidBackup) => {
             "El archivo descifrado no es una copia compatible de KryptoPass o está dañado. Selecciona otra copia o prueba con una versión más reciente de KryptoPass."

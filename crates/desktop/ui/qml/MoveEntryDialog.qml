@@ -69,7 +69,7 @@ Controls.Dialog {
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Mover solo cambia la carpeta. Los destinatarios se conservan.")
+            text: qsTr("Mover solo cambia la carpeta. Se conserva quién tiene acceso.")
             wrapMode: Text.Wrap
         }
         FolderPicker {

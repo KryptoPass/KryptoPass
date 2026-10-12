@@ -135,3 +135,15 @@ install prefix:
 # Captura con bóveda y configuración temporales, sin datos del usuario.
 screenshot: build
     python3 packaging/capture_screenshot.py
+
+# Construye el proxy de navegador sin enlazar Qt.
+browser-build:
+    cargo build -p kryptopass-browser --bin kryptopass-browser-proxy
+
+# Adapta el checkout local de KeePassXC-Browser a la identidad de Cargo.toml.
+browser-fork extension_dir:
+    python3 packaging/browser_integration.py prepare {{ quote(extension_dir) }}
+
+# Registro de usuario: --browser firefox, chromium, brave o brave-origin.
+browser-install-dev *args: browser-build
+    python3 packaging/browser_integration.py install --proxy target/debug/kryptopass-browser-proxy {{ args }}

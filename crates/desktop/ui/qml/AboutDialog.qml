@@ -38,7 +38,7 @@ Controls.Dialog {
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de destinatarios se guardan sin cifrar.")
+                text: qsTr("El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de las claves de acceso se guardan sin cifrar.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {

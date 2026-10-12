@@ -17,6 +17,18 @@ const DEFAULT_STYLE: &str = "org.kde.desktop";
 fn main() {
     init_tracing();
 
+    let _browser_server = if std::env::args().any(|arg| arg == "--browser-integration") {
+        match kryptopass_browser::start(APP.desktop_file_id, APP.version) {
+            Ok(server) => Some(server),
+            Err(error) => {
+                tracing::error!(%error, "Could not start browser integration");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
     let mut application = ui_adapters::application::new();
     let Some(mut app) = application.as_mut() else {
         tracing::error!("Failed to initialize QApplication");

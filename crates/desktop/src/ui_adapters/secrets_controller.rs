@@ -44,6 +44,8 @@ pub mod qobject {
         #[qproperty(QString, version_json, cxx_name = "versionJson", READ, NOTIFY)]
         #[qproperty(QString, editor_json, cxx_name = "editorJson", READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
+        #[qproperty(QString, browser_access, cxx_name = "browserAccess", READ, NOTIFY)]
+        #[qproperty(QString, browser_pairing, cxx_name = "browserPairing", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, detail_busy, cxx_name = "detailBusy", READ, NOTIFY)]
@@ -52,6 +54,21 @@ pub mod qobject {
         #[qproperty(bool, saving, READ, NOTIFY)]
         #[qproperty(bool, locked, READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
+
+        #[qinvokable]
+        #[cxx_name = "refreshBrowserPairing"]
+        fn refresh_browser_pairing(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "decideBrowserAccess"]
+        fn decide_browser_access(
+            self: Pin<&mut Self>,
+            token: &QString,
+            entry_id: &QString,
+            approve: bool,
+        );
+        #[qinvokable]
+        #[cxx_name = "decideBrowserPairing"]
+        fn decide_browser_pairing(self: Pin<&mut Self>, token: &QString, approve: bool);
 
         #[qinvokable]
         #[cxx_name = "loadStore"]
@@ -226,6 +243,8 @@ pub mod qobject {
 
 /// State owned by the QObject; decrypted values have zeroizing domain types.
 pub struct SecretsControllerRust {
+    browser_pairing: QString,
+    browser_access: QString,
     entry_records: QStringList,
     folder_records: QStringList,
     detail_json: QString,
@@ -268,6 +287,8 @@ pub struct SecretsControllerRust {
 impl Default for SecretsControllerRust {
     fn default() -> Self {
         Self {
+            browser_pairing: QString::default(),
+            browser_access: QString::default(),
             entry_records: QStringList::default(),
             folder_records: QStringList::default(),
             detail_json: QString::default(),
@@ -350,6 +371,35 @@ enum MutationSignal {
 }
 
 impl qobject::SecretsController {
+    pub fn decide_browser_access(
+        mut self: Pin<&mut Self>,
+        token: &QString,
+        entry_id: &QString,
+        approve: bool,
+    ) {
+        kryptopass_browser::decide_access(
+            &token.to_string(),
+            &entry_id.to_string(),
+            approve && !*self.locked(),
+        );
+        self.as_mut().refresh_browser_pairing();
+    }
+
+    pub fn refresh_browser_pairing(mut self: Pin<&mut Self>) {
+        let value = QString::from(kryptopass_browser::pending_access());
+        if self.browser_access() != &value {
+            self.as_mut().rust_mut().browser_access = value;
+            self.as_mut().browser_access_changed();
+        }
+        self.as_mut()
+            .set_browser_pairing(QString::from(kryptopass_browser::pending_pairing()));
+    }
+
+    pub fn decide_browser_pairing(mut self: Pin<&mut Self>, token: &QString, approve: bool) {
+        kryptopass_browser::decide_pairing(&token.to_string(), approve && !*self.locked());
+        self.as_mut().refresh_browser_pairing();
+    }
+
     pub fn load_store(mut self: Pin<&mut Self>) {
         if *self.busy() {
             return;
@@ -746,7 +796,7 @@ impl qobject::SecretsController {
             Ok(prepared) => prepared,
             Err(_) => {
                 self.as_mut()
-                    .fail("Revisa los datos del elemento y sus destinatarios.");
+                    .fail("Revisa los datos del elemento y quién tiene acceso.");
                 return;
             }
         };
@@ -2098,8 +2148,16 @@ impl qobject::SecretsController {
         }
     }
 
+    fn set_browser_pairing(mut self: Pin<&mut Self>, value: QString) {
+        if self.browser_pairing() != &value {
+            self.as_mut().rust_mut().browser_pairing = value;
+            self.browser_pairing_changed();
+        }
+    }
+
     fn set_locked(mut self: Pin<&mut Self>, value: bool) {
         if *self.locked() != value {
+            kryptopass_browser::set_locked(value, false);
             self.as_mut().rust_mut().locked = value;
             self.locked_changed();
         }
@@ -2222,7 +2280,10 @@ fn open_service() -> anyhow::Result<SecretsService<SqliteStorage, GnuPgOpenPgp>>
 }
 
 fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
-    read_store_snapshot()
+    let snapshot = read_store_snapshot()?;
+    let path = app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
+    crate::infrastructure::browser::configure(&path)?;
+    Ok(snapshot)
 }
 
 fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
@@ -2235,6 +2296,7 @@ fn activate_store_snapshot(path: std::path::PathBuf) -> anyhow::Result<(StoreSna
     let storage = SqliteStorage::open_existing(&path)?;
     let (folders, secrets, links) = storage.read_snapshot_with_links()?;
     let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
+    crate::infrastructure::browser::configure(&path)?;
     crate::infrastructure::entry_icons::bind_store(&path);
     let snapshot = store_snapshot_with_links(folders, secrets, links);
     Ok((snapshot, durable))
