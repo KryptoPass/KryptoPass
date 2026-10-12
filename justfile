@@ -64,7 +64,11 @@ test-icons:
 smoke: build
     #!/usr/bin/env bash
     set -uo pipefail
-    out=$(timeout 10 bash -c 'QT_QPA_PLATFORM=offscreen QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 exec target/debug/kryptopass-desktop' 2>&1)
+    profile=$(mktemp -d)
+    trap 'rm -rf "$profile"' EXIT
+    mkdir -m 700 "$profile/data" "$profile/config" "$profile/cache" "$profile/gnupg"
+    export XDG_DATA_HOME="$profile/data" XDG_CONFIG_HOME="$profile/config" XDG_CACHE_HOME="$profile/cache" GNUPGHOME="$profile/gnupg"
+    out=$(timeout 10 bash -c 'QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 exec target/debug/kryptopass-desktop' 2>&1)
     status=$?
     echo "$out" | tail -n 8
     if echo "$out" | grep -Ei "not installed|Unable to assign|failed to load|Unknown style|QQmlApplicationEngine failed|Invalid property assignment|Cannot assign|ReferenceError|TypeError|Binding loop|Detected anchors on an item that is managed by a layout|undefined behavior" >/dev/null; then
@@ -89,12 +93,10 @@ uninstall-dev-desktop:
     python3 packaging/dev_desktop.py uninstall
 
 # Puerta completa rápida (sin lanzar la app).
-verify: fmt check clippy lint test
+verify: fmt check clippy lint test-icons test-items test test-packaging metadata translations-check licenses
 
 # Gate pre-push: todo verde y árbol limpio.
-ready: verify
-    git diff --exit-code
-    git diff --cached --exit-code
+ready: verify clean
     @echo "ready: verde y limpio"
 
 # Bacon en fondo con el job por defecto (check).
@@ -104,3 +106,32 @@ watch:
 # Atajo a jobs bacon concretos: `just bacon-job qmllint`.
 bacon-job job:
     bacon {{ job }}
+
+# Incluye archivos nuevos que todavía no están en el índice.
+clean:
+    python3 packaging/check_clean.py
+
+translations:
+    python3 packaging/translations.py update
+
+translations-check:
+    python3 packaging/translations.py check
+
+metadata:
+    python3 packaging/gen_install.py --check
+    desktop-file-validate packaging/gen/*.desktop
+    appstreamcli validate --no-net --pedantic packaging/gen/*.metainfo.xml
+
+test-packaging:
+    python3 -m unittest discover -s tests -v
+
+licenses:
+    reuse lint
+
+# Instala los recursos de distribución en un prefijo local o de staging.
+install prefix:
+    python3 packaging/install.py --prefix {{ quote(prefix) }}
+
+# Captura con bóveda y configuración temporales, sin datos del usuario.
+screenshot: build
+    python3 packaging/capture_screenshot.py

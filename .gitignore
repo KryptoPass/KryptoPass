@@ -6,3 +6,6 @@
 *.user
 *.autosave
 
+
+__pycache__/
+*.pyc

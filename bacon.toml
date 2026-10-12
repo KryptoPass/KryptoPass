@@ -50,3 +50,39 @@ watch = ["crates"]
 
 [keybindings]
 q = "job:qmllint"
+
+[jobs.metadata]
+command = ["just", "metadata"]
+need_stdout = true
+default_watch = false
+watch = ["Cargo.toml", "packaging"]
+
+[jobs.translations]
+command = ["just", "translations-check"]
+need_stdout = true
+default_watch = false
+watch = ["crates/desktop", "po", "packaging/translations.py"]
+
+[jobs.licenses]
+command = ["just", "licenses"]
+need_stdout = true
+default_watch = false
+watch = ["REUSE.toml", "LICENSES", "crates", "docs", "packaging"]
+
+[jobs.test-packaging]
+command = ["just", "test-packaging"]
+need_stdout = true
+default_watch = false
+watch = ["tests", "packaging", "Cargo.toml"]
+
+[jobs.clean]
+command = ["just", "clean"]
+need_stdout = true
+default_watch = false
+watch = ["crates", "docs", "packaging", "tests"]
+
+[jobs.screenshot]
+command = ["just", "screenshot"]
+need_stdout = true
+default_watch = false
+watch = ["crates/desktop", "packaging/capture_screenshot.py"]

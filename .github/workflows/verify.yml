@@ -1,0 +1,38 @@
+name: Verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install build and desktop dependencies
+        run: >-
+          pacman -Syu --noconfirm --needed
+          git rustup just cmake pkgconf clang lld python reuse
+          qt6-base qt6-declarative qt6-tools qt6-svg kirigami qqc2-desktop-style
+          kcontacts akonadi-contacts kxmlgui kconfig gpgme sqlite
+          appstream desktop-file-utils
+      - uses: actions/checkout@v4
+      - name: Trust checkout ownership inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install the pinned Rust toolchain
+        run: rustup show
+      - name: Verify
+        run: just verify
+      - name: Smoke test with isolated user data
+        env:
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          export XDG_DATA_HOME="$RUNNER_TEMP/data"
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/config"
+          export XDG_CACHE_HOME="$RUNNER_TEMP/cache"
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
+          just smoke

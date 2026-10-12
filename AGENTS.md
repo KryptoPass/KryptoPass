@@ -1,7 +1,12 @@
 # KryptoPass Desktop — guía de trabajo
 
 App de escritorio en Rust + CXX-Qt + QML (Kirigami). QML presenta,
-Rust decide y ejecuta. Nada de secretos en QML: solo estado observable.
+Rust decide y ejecuta. QML recibe metadatos observables y proyecciones
+temporales del contenido necesario para el detalle o editor abierto; no
+recibe claves privadas ni conserva secretos en modelos globales. Rust controla
+el cifrado, la persistencia, la autorización de lectura y la invalidación.
+Vaciar propiedades QML no garantiza borrar todas las copias de memoria Qt/JS.
+El contrato completo vive en `docs/SECRET_DATA_CONTRACT.md`.
 
 ## Puertas: just manda, bacon vigila
 
