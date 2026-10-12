@@ -15,6 +15,10 @@ pub use domain::content::{
     MAX_PREVIOUS_PASSWORDS, NoteContent, SecretContent, TotpAlgorithm, TotpConfig, decode_content,
     encode_content,
 };
+pub use domain::entry_icon::{
+    EntryAppearanceUpdate, EntryIcon, EntryIconAsset, MAX_ENTRY_ICON_BYTES,
+    MAX_ENTRY_ICON_DIMENSION, automatic_entry_icon, favicon_for_url, valid_favicon_host,
+};
 pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,
     SecretId, SecretKind, SecretMetadata,
@@ -31,4 +35,4 @@ pub use otp::{
 };
 pub use password::{PasswordOptions, generate_password};
 pub use ports::{ImportStorage, OpenPgp, Storage};
-pub use service::{CreateSecret, RecipientSelection, SecretsService};
+pub use service::{CreateSecret, RecipientSelection, SaveContentRequest, SecretsService};

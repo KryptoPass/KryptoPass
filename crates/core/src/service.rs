@@ -29,7 +29,15 @@ pub struct CreateSecret {
     pub plaintext: Zeroizing<Vec<u8>>,
 }
 
-/// Coordinates domain rules, persistence, and OpenPGP without knowing either adapter.
+pub struct SaveContentRequest {
+    pub id: Option<SecretId>,
+    pub folder_id: Option<FolderId>,
+    pub title: String,
+    pub recipients: RecipientSelection,
+    pub content: SecretContent,
+    pub expected_revision: Option<u64>,
+}
+
 pub struct SecretsService<S, G> {
     storage: S,
     crypto: G,
@@ -122,6 +130,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         let id = SecretId::new();
 
         self.storage.insert_secret(Secret {
+            icon: None,
             id,
             folder_id: request.folder_id,
             title: title.to_owned(),
@@ -165,9 +174,44 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         folder_id: Option<FolderId>,
         title: String,
         recipients: RecipientSelection,
-        mut content: SecretContent,
+        content: SecretContent,
         expected_revision: Option<u64>,
     ) -> Result<SecretId> {
+        self.save_content_impl(
+            SaveContentRequest {
+                id,
+                folder_id,
+                title,
+                recipients,
+                content,
+                expected_revision,
+            },
+            None,
+        )
+    }
+
+    pub fn save_content_with_appearance(
+        &mut self,
+        request: SaveContentRequest,
+        appearance: crate::EntryAppearanceUpdate,
+    ) -> Result<SecretId> {
+        appearance.validate()?;
+        self.save_content_impl(request, Some(appearance))
+    }
+
+    fn save_content_impl(
+        &mut self,
+        request: SaveContentRequest,
+        appearance: Option<crate::EntryAppearanceUpdate>,
+    ) -> Result<SecretId> {
+        let SaveContentRequest {
+            id,
+            folder_id,
+            title,
+            recipients,
+            mut content,
+            expected_revision,
+        } = request;
         let title = title.trim();
         ensure!(!title.is_empty(), "secret title cannot be empty");
         ensure!(
@@ -267,6 +311,21 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         let ciphertext = self.crypto.encrypt(plaintext.as_slice(), &recipients)?;
         let secret_id = id.unwrap_or_default();
         let secret = Secret {
+            icon: match appearance.as_ref().map(|update| update.icon.as_ref()) {
+                Some(Some(
+                    icon @ crate::EntryIcon::Theme { .. } | icon @ crate::EntryIcon::Image { .. },
+                )) => Some(icon.clone()),
+                Some(None | Some(crate::EntryIcon::Favicon { .. })) => {
+                    crate::automatic_entry_icon(&content)
+                }
+                None => match existing.as_ref().and_then(|secret| secret.icon.as_ref()) {
+                    Some(
+                        icon @ crate::EntryIcon::Theme { .. }
+                        | icon @ crate::EntryIcon::Image { .. },
+                    ) => Some(icon.clone()),
+                    _ => crate::automatic_entry_icon(&content),
+                },
+            },
             id: secret_id,
             folder_id,
             title: title.to_owned(),
@@ -278,12 +337,14 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             revision: existing.as_ref().map_or(0, |secret| secret.revision),
         };
 
+        let asset = appearance.and_then(|update| update.asset);
         if existing.is_some() {
             let expected_revision =
                 expected_revision.context("an edit requires its expected revision")?;
-            self.storage.replace_secret(secret, expected_revision)?;
+            self.storage
+                .replace_secret_with_icon(secret, expected_revision, asset)?;
         } else {
-            self.storage.insert_secret(secret)?;
+            self.storage.insert_secret_with_icon(secret, asset)?;
         }
 
         Ok(secret_id)
@@ -537,6 +598,7 @@ impl<S: crate::ports::ImportStorage, G: OpenPgp> crate::import::ImportReceiver
                 ImportFolderPolicy::PlaceAll { folder } => folder,
             };
             secrets.push(Secret {
+                icon: crate::automatic_entry_icon(&item.content),
                 id: SecretId::new(),
                 folder_id,
                 title: item.title.trim().to_owned(),

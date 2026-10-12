@@ -1,6 +1,7 @@
 //! Core entities and value objects for the local secret store.
 
 pub mod content;
+pub mod entry_icon;
 
 use thiserror::Error;
 use uuid::Uuid;
@@ -216,6 +217,7 @@ impl SecretKind {
 /// or replace a secret must use [`Secret`] instead.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SecretMetadata {
+    pub icon: Option<entry_icon::EntryIcon>,
     pub id: SecretId,
     pub folder_id: Option<FolderId>,
     pub title: String,
@@ -230,6 +232,7 @@ pub struct SecretMetadata {
 /// An encrypted secret. Plaintext must not be stored in this entity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Secret {
+    pub icon: Option<entry_icon::EntryIcon>,
     pub id: SecretId,
     pub folder_id: Option<FolderId>,
     pub title: String,

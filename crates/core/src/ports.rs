@@ -7,6 +7,25 @@ use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId, SecretMeta
 
 /// Persistence boundary for the local secret store.
 pub trait Storage {
+    fn insert_secret_with_icon(
+        &mut self,
+        secret: Secret,
+        asset: Option<crate::EntryIconAsset>,
+    ) -> Result<()> {
+        anyhow::ensure!(asset.is_none(), "storage does not support image resources");
+        self.insert_secret(secret)
+    }
+
+    fn replace_secret_with_icon(
+        &mut self,
+        secret: Secret,
+        expected_revision: u64,
+        asset: Option<crate::EntryIconAsset>,
+    ) -> Result<()> {
+        anyhow::ensure!(asset.is_none(), "storage does not support image resources");
+        self.replace_secret(secret, expected_revision)
+    }
+
     fn list_folders(&self) -> Result<Vec<Folder>>;
 
     fn list_secrets(&self) -> Result<Vec<Secret>>;
