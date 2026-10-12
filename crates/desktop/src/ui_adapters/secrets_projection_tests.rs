@@ -24,6 +24,8 @@ fn login() -> LoginContent {
             period: 60,
             issuer: Some("Example".to_owned()),
             account: Some("alice@example.invalid".to_owned()),
+            original_label: None,
+            extensions: vec![],
         }),
         history: Box::default(),
     }

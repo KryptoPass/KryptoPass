@@ -34,6 +34,8 @@ fn activity_export_preserves_all_events_and_exact_times_without_credentials() {
             period: 30,
             issuer: Some("fake-history-issuer".to_owned()),
             account: Some("fake-history-account".to_owned()),
+            original_label: None,
+            extensions: vec![],
         }),
         history: Box::default(),
     };

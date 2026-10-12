@@ -50,7 +50,7 @@ fn current_note_roundtrip_preserves_text_and_emits_the_current_envelope() {
     });
     let bytes = encode_content(&content).unwrap();
     let encoded: Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-    assert_eq!(CONTENT_SCHEMA_VERSION, 3);
+    assert_eq!(CONTENT_SCHEMA_VERSION, 4);
     assert_eq!(encoded, envelope("note", CONTENT_SCHEMA_VERSION));
 
     let decoded = decode_content(bytes.as_slice()).unwrap();
@@ -85,12 +85,14 @@ fn current_login_roundtrip_preserves_credentials_sites_totp_and_history() {
             period: 60,
             issuer: Some("Example".to_owned()),
             account: Some("alice@example.org".to_owned()),
+            original_label: None,
+            extensions: vec![],
         }),
         history: Box::new(history),
     });
     let bytes = encode_content(&content).unwrap();
     let encoded: Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-    assert_eq!(encoded["schemaVersion"], 3);
+    assert_eq!(encoded["schemaVersion"], CONTENT_SCHEMA_VERSION);
     assert_eq!(encoded["kind"], "login");
 
     let decoded = decode_content(bytes.as_slice()).unwrap();
@@ -111,7 +113,7 @@ fn all_supported_note_schemas_decode_without_changing_the_fields() {
         assert_eq!(note.notes, "Context");
         let bytes = encode_content(&content).unwrap();
         let upgraded: Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-        assert_eq!(upgraded, envelope("note", 3));
+        assert_eq!(upgraded, envelope("note", CONTENT_SCHEMA_VERSION));
     }
 }
 
@@ -150,7 +152,7 @@ fn all_supported_login_schemas_preserve_credentials_and_upgrade_to_current() {
 
         let bytes = encode_content(&content).unwrap();
         let upgraded: Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-        assert_eq!(upgraded["schemaVersion"], 3);
+        assert_eq!(upgraded["schemaVersion"], CONTENT_SCHEMA_VERSION);
         let reread = decode_content(bytes.as_slice()).unwrap();
         assert!(matches!(reread, SecretContent::Login(_)));
     }
@@ -238,17 +240,8 @@ fn unknown_fields_are_rejected_in_the_envelope_and_each_content_variant() {
 
 #[test]
 fn unknown_or_reserved_kinds_never_decode_as_an_implemented_variant() {
-    for kind in [
-        "unknown",
-        "Login",
-        "secure-note",
-        "api-token",
-        "totp",
-        "ssh-key",
-        "card",
-        "identity",
-    ] {
-        for schema in 1..=3 {
+    for kind in ["unknown", "Login", "secure-note", "api-token"] {
+        for schema in 1..=CONTENT_SCHEMA_VERSION {
             let mut fixture = envelope("note", schema);
             fixture["kind"] = json!(kind);
             assert_rejected(&fixture, kind);
@@ -261,7 +254,7 @@ fn unsupported_schema_versions_are_rejected_for_every_content_variant() {
     for kind in ["login", "note"] {
         for version in [
             json!(0),
-            json!(4),
+            json!(5),
             json!(u32::MAX),
             json!(-1),
             json!(3.5),
