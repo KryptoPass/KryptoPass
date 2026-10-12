@@ -16,6 +16,7 @@ pub(crate) mod ffi {
         include!("native/kde_contacts.h");
         include!("native/online_services.h");
         include!("native/entry_icons.h");
+        include!("native/desktop_integration.h");
         include!("cxx-qt-lib/qqmlengine.h");
         type QQmlEngine = cxx_qt_lib::QQmlEngine;
 
@@ -29,6 +30,18 @@ pub(crate) mod ffi {
         fn prefetch_favicons(hosts: &QStringList);
 
         type QString = cxx_qt_lib::QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn initialize_desktop();
+        #[namespace = "kryptopass::desktop::native"]
+        fn capture_screenshot(path: &QString);
+        #[namespace = "kryptopass::desktop::native"]
+        fn translate_ui(source: &QString) -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn translate_plural(source: &QString, count: i32) -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn configured_shortcuts() -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn configure_shortcuts() -> QString;
         type QStringList = cxx_qt_lib::QStringList;
         type QObjectMutPtr = cxx_qt_lib::QObjectMutPtr;
 

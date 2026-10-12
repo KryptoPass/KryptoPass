@@ -12,7 +12,6 @@ use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQmlEngine, QQuickStyle
 use std::pin::Pin;
 use tracing_subscriber::EnvFilter;
 
-const MAIN_QML: &str = "qrc:/qt/qml/org/kryptopass/desktop/ui/qml/Main.qml";
 const DEFAULT_STYLE: &str = "org.kde.desktop";
 
 fn main() {
@@ -36,6 +35,7 @@ fn main() {
     // Match the installed desktop entry for proper Wayland integration.
     QGuiApplication::set_desktop_file_name(&QString::from(APP.desktop_file_id));
 
+    ui_adapters::native_ffi::ffi::initialize_desktop();
     configure_quick_style();
 
     let mut qml_engine = QQmlApplicationEngine::new();
@@ -54,8 +54,21 @@ fn main() {
         .on_quit(|_| tracing::info!("QML requested application shutdown"))
         .release();
 
-    engine.load(&QUrl::from(MAIN_QML));
-    app.exec();
+    let main_qml = format!(
+        "qrc:/qt/qml/{}/ui/qml/Main.qml",
+        APP.desktop_file_id.replace('.', "/")
+    );
+    engine.load(&QUrl::from(main_qml.as_str()));
+    if let Some(path) = std::env::args()
+        .skip_while(|arg| arg != "--screenshot")
+        .nth(1)
+    {
+        ui_adapters::native_ffi::ffi::capture_screenshot(&QString::from(path));
+    }
+    let exit_code = app.exec();
+    if exit_code != 0 {
+        std::process::exit(exit_code);
+    }
 }
 
 fn init_tracing() {

@@ -15,6 +15,9 @@ Controls.ApplicationWindow {
     title: Qt.application.name
     LayoutMirroring.enabled: Qt.locale().textDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
+    Backend.ShellController { id: shell }
+    readonly property var shortcuts: JSON.parse(shell.shortcutsJson)
+    function configureShortcuts() { shell.configureShortcuts(); }
     SecretStore {
         id: store
         objectName: "secretStore"
@@ -36,6 +39,7 @@ Controls.ApplicationWindow {
     readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError)
         || (folderEditor.opened && !!folderEditor.saveError)
         || (moveDialog.opened && !!moveDialog.operationError)
+        || (folderMoveDialog.opened && !!folderMoveDialog.operationError)
         || (deleteEntryDialog.opened && !!deleteEntryDialog.operationError)
         || (deleteFolderDialog.opened && !!deleteFolderDialog.operationError)
         || (passwordGenerator.opened && !!passwordGenerator.operationError)
@@ -115,6 +119,8 @@ Controls.ApplicationWindow {
             passwordGenerator.clearSensitiveState();
         if (moveDialog.opened)
             moveDialog.close();
+        if (folderMoveDialog.opened)
+            folderMoveDialog.close();
         if (deleteEntryDialog.opened)
             deleteEntryDialog.close();
         if (deleteFolderDialog.opened)
@@ -349,7 +355,7 @@ Controls.ApplicationWindow {
         text: qsTr("Nuevo elemento…")
         icon.name: "document-new"
         enabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked
-        shortcut: StandardKey.New
+        shortcut: root.shortcuts.newEntry[0] || ""
         onTriggered: editor.openEntry(null)
     }
     Controls.Action {
@@ -357,7 +363,7 @@ Controls.ApplicationWindow {
         text: qsTr("Editar…")
         icon.name: "document-edit"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
-        shortcut: "F2"
+        shortcut: root.shortcuts.editEntry[0] || ""
         onTriggered: editor.openEntry(store.selected)
     }
     Controls.Action {
@@ -365,7 +371,7 @@ Controls.ApplicationWindow {
         text: qsTr("Mover a la papelera")
         icon.name: "user-trash"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
-        shortcut: StandardKey.Delete
+        shortcut: root.shortcuts.trashEntry[0] || ""
         onTriggered: {
             root.beginOperation("trash", store.selectedId);
             store.updateEntry(store.selectedId, { trashed: true });
@@ -376,7 +382,7 @@ Controls.ApplicationWindow {
         text: qsTr("Nueva carpeta…")
         icon.name: "folder-new"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked
-        shortcut: "Ctrl+Shift+N"
+        shortcut: root.shortcuts.newFolder[0] || ""
         onTriggered: folderEditor.openFolder(false)
     }
     Controls.Action {
@@ -384,7 +390,7 @@ Controls.ApplicationWindow {
         text: qsTr("Recargar llavero")
         icon.name: "view-refresh"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: "F5"
+        shortcut: root.shortcuts.refreshKeys[0] || ""
         onTriggered: keys.controller.refreshKeys()
     }
     Controls.Action {
@@ -392,7 +398,7 @@ Controls.ApplicationWindow {
         text: qsTr("Crear clave OpenPGP…")
         icon.name: "document-new"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: "Ctrl+Shift+K"
+        shortcut: root.shortcuts.createKey[0] || ""
         onTriggered: mainKeyOperationDialog.openFor("create")
     }
     Controls.Action {
@@ -400,11 +406,12 @@ Controls.ApplicationWindow {
         text: qsTr("Importar clave OpenPGP…")
         icon.name: "document-import"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: "Ctrl+Shift+I"
+        shortcut: root.shortcuts.importKey[0] || ""
         onTriggered: mainKeyOperationDialog.openFor("import")
     }
     Controls.Action {
         id: copyFingerprint
+        shortcut: root.shortcuts.copyFingerprint[0] || ""
         text: qsTr("Copiar huella")
         icon.name: "edit-copy"
         enabled: root.keysMode && !!keys.selected
@@ -412,10 +419,36 @@ Controls.ApplicationWindow {
     }
     Controls.Action {
         id: lockVaultAction
+        shortcut: root.shortcuts.lockVault[0] || ""
         text: store.controller.locked ? qsTr("Desbloquear bóveda") : qsTr("Bloquear bóveda")
         icon.name: store.controller.locked ? "object-unlocked" : "object-locked"
         enabled: !root.sensitiveTransitionBlocked && !passwordGenerator.generating
         onTriggered: root.requestLock()
+    }
+    readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
+    Controls.Action {
+        id: folderUp
+        text: qsTr("Subir carpeta")
+        icon.name: "go-up"
+        shortcut: root.shortcuts.folderUp[0] || ""
+        enabled: root.folderActionsEnabled
+        onTriggered: store.controller.stepFolder(store.scope, -1)
+    }
+    Controls.Action {
+        id: folderDown
+        text: qsTr("Bajar carpeta")
+        icon.name: "go-down"
+        shortcut: root.shortcuts.folderDown[0] || ""
+        enabled: root.folderActionsEnabled
+        onTriggered: store.controller.stepFolder(store.scope, 1)
+    }
+    Controls.Action {
+        id: moveFolderAction
+        text: qsTr("Mover carpeta…")
+        icon.name: "folder-move"
+        shortcut: root.shortcuts.moveFolder[0] || ""
+        enabled: root.folderActionsEnabled
+        onTriggered: folderMoveDialog.prepare(store.scope)
     }
     menuBar: Controls.MenuBar {
         Controls.Menu {
@@ -480,6 +513,10 @@ Controls.ApplicationWindow {
                 action: copyFingerprint
                 visible: root.keysMode
             }
+            Controls.MenuSeparator {}
+            Controls.MenuItem { action: folderUp }
+            Controls.MenuItem { action: folderDown }
+            Controls.MenuItem { action: moveFolderAction }
             Controls.MenuSeparator {}
             Controls.Menu {
                 title: qsTr("Autolimpieza del portapapeles")
@@ -553,9 +590,17 @@ Controls.ApplicationWindow {
             }
         }
         Controls.Menu {
+            title: qsTr("&Preferencias")
+            Controls.MenuItem {
+                text: qsTr("Configurar atajos de teclado…")
+                icon.name: "configure-shortcuts"
+                onTriggered: root.configureShortcuts()
+            }
+        }
+        Controls.Menu {
             title: qsTr("A&yuda")
             Controls.MenuItem {
-                text: qsTr("Acerca de KryptoPass")
+                text: qsTr("Acerca de %1").arg(Qt.application.name)
                 onTriggered: aboutDialog.open()
             }
         }
@@ -569,12 +614,66 @@ Controls.ApplicationWindow {
     }
 
     Shortcut {
-        sequences: [StandardKey.Find]
+        sequences: root.shortcuts.find
         onActivated: search.forceActiveFocus()
     }
     Shortcut {
-        sequences: [StandardKey.Quit]
+        sequences: root.shortcuts.quit
         onActivated: root.close()
+    }
+
+    Shortcut {
+        sequences: root.shortcuts.newEntry.slice(1)
+        enabled: newEntry.enabled
+        onActivated: newEntry.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.editEntry.slice(1)
+        enabled: editEntry.enabled
+        onActivated: editEntry.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.trashEntry.slice(1)
+        enabled: trashEntry.enabled
+        onActivated: trashEntry.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.newFolder.slice(1)
+        enabled: newFolder.enabled
+        onActivated: newFolder.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.refreshKeys.slice(1)
+        enabled: refreshKeys.enabled
+        onActivated: refreshKeys.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.createKey.slice(1)
+        enabled: createKey.enabled
+        onActivated: createKey.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.importKey.slice(1)
+        enabled: importKey.enabled
+        onActivated: importKey.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.copyFingerprint.slice(1)
+        enabled: copyFingerprint.enabled
+        onActivated: copyFingerprint.trigger()
+    }
+    Shortcut {
+        sequences: root.shortcuts.lockVault.slice(1)
+        enabled: lockVaultAction.enabled
+        onActivated: lockVaultAction.trigger()
+    }
+
+    Shortcut { sequences: root.shortcuts.folderUp.slice(1); enabled: folderUp.enabled; onActivated: folderUp.trigger() }
+    Shortcut { sequences: root.shortcuts.folderDown.slice(1); enabled: folderDown.enabled; onActivated: folderDown.trigger() }
+    Shortcut { sequences: root.shortcuts.moveFolder.slice(1); enabled: moveFolderAction.enabled; onActivated: moveFolderAction.trigger() }
+    MoveFolderDialog {
+        id: folderMoveDialog
+        storeAdapter: store
     }
 
     Controls.SplitView {
@@ -849,7 +948,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened
+        externalModalOpen: passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened
                            || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
                            || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened || importDialog.opened
         onSaveRequested: function (draftJson) {

@@ -123,6 +123,10 @@ pub mod qobject {
             color: &QString,
         );
         #[qinvokable]
+        #[cxx_name = "stepFolder"]
+        fn step_folder(self: Pin<&mut Self>, id: &QString, direction: i32);
+
+        #[qinvokable]
         #[cxx_name = "moveFolder"]
         fn move_folder(
             self: Pin<&mut Self>,
@@ -1256,6 +1260,30 @@ impl qobject::SecretsController {
         );
     }
 
+    pub fn step_folder(mut self: Pin<&mut Self>, id: &QString, direction: i32) {
+        if *self.busy() || *self.locked() || ![-1, 1].contains(&direction) {
+            return;
+        }
+        let Some(id) = parse_folder_id(&id.to_string()) else {
+            self.as_mut().fail("La carpeta seleccionada no es válida.");
+            return;
+        };
+        self.as_mut().start_mutation(
+            "Ordenando carpeta…",
+            false,
+            "No se pudo cambiar el orden de la carpeta.",
+            move || {
+                let mut service = open_service()?;
+                step_folder_in_service(&mut service, id, direction)?;
+                Ok(MutationResult {
+                    snapshot: snapshot_after_mutation(),
+                    signal: MutationSignal::None,
+                    editor_operation: None,
+                })
+            },
+        );
+    }
+
     pub fn move_folder(
         mut self: Pin<&mut Self>,
         id: &QString,
@@ -1561,6 +1589,11 @@ impl qobject::SecretsController {
     }
 
     fn publish_snapshot(mut self: Pin<&mut Self>, snapshot: StoreSnapshot) {
+        let hosts = snapshot
+            .favicon_hosts
+            .into_iter()
+            .map(QString::from)
+            .collect();
         crate::ui_adapters::native_ffi::ffi::prefetch_favicons(&hosts);
         let entries = snapshot
             .entries
@@ -1818,6 +1851,43 @@ fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
     Ok(metadata)
 }
 
+fn step_folder_in_service(
+    service: &mut SecretsService<SqliteStorage, GnuPgOpenPgp>,
+    id: FolderId,
+    direction: i32,
+) -> anyhow::Result<()> {
+    anyhow::ensure!([-1, 1].contains(&direction), "invalid folder direction");
+    let folders = service.list_folders()?;
+    let folder = folders
+        .iter()
+        .find(|folder| folder.id == id)
+        .ok_or_else(|| anyhow::anyhow!("folder not found"))?;
+    let mut siblings: Vec<_> = folders
+        .iter()
+        .filter(|candidate| candidate.parent_id == folder.parent_id)
+        .collect();
+    siblings.sort_by_key(|candidate| {
+        (
+            candidate.sort_position,
+            candidate.name.as_str(),
+            candidate.id.0,
+        )
+    });
+    let index = siblings
+        .iter()
+        .position(|candidate| candidate.id == id)
+        .ok_or_else(|| anyhow::anyhow!("folder not found"))?;
+    let before = if direction < 0 {
+        index.checked_sub(1).map(|previous| siblings[previous].id)
+    } else {
+        siblings.get(index + 2).map(|next| next.id)
+    };
+    if (direction < 0 && index > 0) || (direction > 0 && index + 1 < siblings.len()) {
+        service.move_folder(id, folder.parent_id, before)?;
+    }
+    Ok(())
+}
+
 fn open_service() -> anyhow::Result<SecretsService<SqliteStorage, GnuPgOpenPgp>> {
     Ok(SecretsService::new(open_storage()?, GnuPgOpenPgp))
 }
@@ -1934,3 +2004,7 @@ fn activity_report(history: &kryptopass_core::LoginHistory) -> anyhow::Result<St
 #[cfg(test)]
 #[path = "activity_export_tests.rs"]
 mod activity_export_tests;
+
+#[cfg(test)]
+#[path = "folder_step_tests.rs"]
+mod folder_step_tests;

@@ -5,6 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
 publish = false
 
 [dependencies]
@@ -24,6 +27,10 @@ kryptopass-core = { path = "../core" }
 kryptopass-import = { path = "../import" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+base64 = "0.22"
+rqrr = "0.10"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [build-dependencies]
 cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
