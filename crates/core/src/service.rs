@@ -235,6 +235,12 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             (None, Some(_)) => anyhow::bail!("a new secret cannot have an expected revision"),
             (None, None) => {}
         }
+        if let Some(secret) = &existing {
+            ensure!(
+                secret.kind == content.kind(),
+                "an existing secret cannot change its content kind"
+            );
+        }
         let folder = folder_id
             .map(|folder_id| {
                 self.storage
@@ -251,61 +257,26 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         };
         self.crypto.validate_recipients(&recipients)?;
 
-        if let SecretContent::Login(login) = &mut content {
-            let timestamp = unix_seconds();
-            match existing.as_ref() {
-                None => {
-                    *login.history = Default::default();
-                    login
-                        .history
-                        .record_event(LoginHistoryEventKind::Create, timestamp);
-                }
-                Some(secret) => {
-                    let metadata_changed = secret.title != title
-                        || secret.folder_id != folder_id
-                        || secret.recipients != recipients;
-                    let old_plaintext = self.crypto.decrypt(&secret.ciphertext)?;
-                    let mut old_content = decode_content(old_plaintext.as_slice())?;
-                    ensure!(
-                        old_content.kind() == secret.kind,
-                        "secret metadata and content kinds do not match"
-                    );
-                    match &mut old_content {
-                        SecretContent::Login(previous) => {
-                            let password_rotated = login.password != previous.password;
-                            let content_changed = login.username != previous.username
-                                || password_rotated
-                                || login.url != previous.url
-                                || login.urls != previous.urls
-                                || login.totp != previous.totp
-                                || login.notes != previous.notes;
-                            let mut history = std::mem::take(&mut previous.history);
-                            if content_changed || metadata_changed {
-                                history.record_version(previous, &secret.title, timestamp)?;
-                            }
-                            login.history = history;
-                            if password_rotated {
-                                login.history.record_event(
-                                    LoginHistoryEventKind::PasswordRotated,
-                                    timestamp,
-                                );
-                            }
-                            if content_changed || metadata_changed {
-                                login
-                                    .history
-                                    .record_event(LoginHistoryEventKind::Edited, timestamp);
-                            }
-                        }
-                        SecretContent::Note(_) => {
-                            *login.history = Default::default();
-                            login
-                                .history
-                                .record_event(LoginHistoryEventKind::Create, timestamp);
-                        }
-                    }
-                }
-            }
-        }
+        content.validate()?;
+        let mut previous_content = if content.needs_previous_content() {
+            existing
+                .as_ref()
+                .map(|secret| self.decrypt_content(secret))
+                .transpose()?
+        } else {
+            None
+        };
+        let metadata_changed = existing.as_ref().is_some_and(|secret| {
+            secret.title != title
+                || secret.folder_id != folder_id
+                || secret.recipients != recipients
+        });
+        content.record_save(
+            previous_content.as_mut(),
+            existing.as_ref().map_or("", |secret| secret.title.as_str()),
+            metadata_changed,
+            unix_seconds(),
+        )?;
 
         let plaintext = encode_content(&content)?;
         let ciphertext = self.crypto.encrypt(plaintext.as_slice(), &recipients)?;
@@ -355,6 +326,10 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             .storage
             .find_secret(id)?
             .context("secret does not exist")?;
+        self.decrypt_content(&secret)
+    }
+
+    fn decrypt_content(&self, secret: &Secret) -> Result<SecretContent> {
         let plaintext = self.crypto.decrypt(&secret.ciphertext)?;
         let content = decode_content(plaintext.as_slice())?;
         ensure!(
