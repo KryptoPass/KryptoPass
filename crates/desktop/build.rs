@@ -80,6 +80,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .cpp_file("src/native/application.cpp")
         .cpp_file("src/native/entry_icons.cpp")
+        .cpp_file("src/native/entry_icon_image.cpp")
+        .cpp_file("src/native/favicon_service.cpp")
         .cpp_file("src/native/sensitive_clipboard.cpp")
         .cpp_file("src/native/kde_contacts.cpp")
         .cpp_file("src/native/online_services.cpp");

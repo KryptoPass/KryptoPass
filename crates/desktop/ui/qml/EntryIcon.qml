@@ -17,11 +17,11 @@ Item {
     Image {
         id: image
         anchors.centerIn: parent
-        width: Math.min(root.width, implicitWidth)
-        height: Math.min(root.height, implicitHeight)
+        width: Math.min(root.width, root.iconSize)
+        height: Math.min(root.height, root.iconSize)
         source: root.entryIcon?.kind === "theme" ? "" : root.imageSource
-        sourceSize.width: 256
-        sourceSize.height: 256
+        sourceSize: Qt.size(Math.ceil(root.iconSize * Screen.devicePixelRatio),
+                            Math.ceil(root.iconSize * Screen.devicePixelRatio))
         asynchronous: true
         fillMode: Image.PreserveAspectFit
         visible: status === Image.Ready

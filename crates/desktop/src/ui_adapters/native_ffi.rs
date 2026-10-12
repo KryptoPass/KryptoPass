@@ -26,9 +26,7 @@ pub(crate) mod ffi {
         #[namespace = "kryptopass::desktop::native"]
         fn install_entry_icon_provider(engine: Pin<&mut QQmlEngine>, app_id: &QString);
         #[namespace = "kryptopass::desktop::native"]
-        fn fetch_favicon(host: &QString) -> Vec<u8>;
-        #[namespace = "kryptopass::desktop::native"]
-        fn prefetch_favicons(hosts: &QString);
+        fn prefetch_favicons(hosts: &QStringList);
 
         type QString = cxx_qt_lib::QString;
         type QStringList = cxx_qt_lib::QStringList;

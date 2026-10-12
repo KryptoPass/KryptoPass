@@ -17,6 +17,18 @@ need_stdout = false
 command = ["cargo", "test", "--workspace"]
 need_stdout = true
 
+[jobs.test-items]
+command = ["just", "test-items"]
+need_stdout = true
+default_watch = false
+watch = ["crates/desktop/ui/qml", "crates/desktop/ui/tests", "crates/desktop/build.rs"]
+
+[jobs.test-icons]
+command = ["just", "test-icons"]
+need_stdout = true
+default_watch = false
+watch = ["crates/desktop/src/native", "crates/desktop/native-tests"]
+
 [jobs.run]
 command = ["just", "run"]
 need_stdout = true

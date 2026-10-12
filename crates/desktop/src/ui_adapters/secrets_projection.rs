@@ -18,6 +18,7 @@ use content::{DetailContent, DraftContent, EditorContent};
 pub(super) struct StoreSnapshot {
     pub(super) entries: Vec<String>,
     pub(super) folders: Vec<String>,
+    pub(super) favicon_hosts: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -99,6 +100,15 @@ struct HistoryAtProjection {
 
 /// Projects list data without copying encrypted payload bytes into QML.
 pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>) -> StoreSnapshot {
+    let favicon_hosts = secrets
+        .iter()
+        .filter_map(|secret| match secret.icon.as_ref() {
+            Some(EntryIcon::Favicon { host }) => Some(host.clone()),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
     let folders = folders
         .into_iter()
         .map(|folder| {
@@ -138,7 +148,11 @@ pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>)
         })
         .collect();
 
-    StoreSnapshot { entries, folders }
+    StoreSnapshot {
+        entries,
+        folders,
+        favicon_hosts,
+    }
 }
 
 #[derive(Deserialize, Zeroize, ZeroizeOnDrop)]

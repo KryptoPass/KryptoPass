@@ -1561,6 +1561,7 @@ impl qobject::SecretsController {
     }
 
     fn publish_snapshot(mut self: Pin<&mut Self>, snapshot: StoreSnapshot) {
+        crate::ui_adapters::native_ffi::ffi::prefetch_favicons(&hosts);
         let entries = snapshot
             .entries
             .into_iter()
@@ -1572,7 +1573,6 @@ impl qobject::SecretsController {
             .map(|record| QString::from(record.as_str()))
             .collect();
 
-        prefetch_entry_favicons();
         if self.entry_records() != &entries {
             self.as_mut().rust_mut().entry_records = entries;
             self.as_mut().entry_records_changed();
@@ -1855,29 +1855,6 @@ fn open_storage() -> anyhow::Result<SqliteStorage> {
 
 fn snapshot_after_mutation() -> Result<StoreSnapshot, ()> {
     read_store_snapshot().map_err(|_| ())
-}
-
-// Proactive favicon warm-up off the UI thread; the C++ side dedupes against
-// in-flight, recently failed, and already cached hosts.
-fn prefetch_entry_favicons() {
-    let hosts = open_storage()
-        .and_then(|storage| storage.read_snapshot().map(|(_, secrets)| secrets))
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|secret| match secret.icon.as_ref() {
-            Some(kryptopass_core::EntryIcon::Favicon { host }) => Some(host.clone()),
-            _ => None,
-        })
-        .collect::<std::collections::BTreeSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>()
-        .join(",");
-    if hosts.is_empty() {
-        return;
-    }
-    std::thread::spawn(move || {
-        crate::ui_adapters::native_ffi::ffi::prefetch_favicons(&QString::from(hosts))
-    });
 }
 
 fn unix_seconds() -> u64 {

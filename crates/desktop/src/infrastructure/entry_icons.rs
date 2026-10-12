@@ -89,15 +89,6 @@ pub(crate) fn entry_icon_bytes(source: &str) -> Vec<u8> {
 }
 
 fn read_resource(source: &str) -> Result<Vec<u8>> {
-    if let Some(host) = source.strip_prefix("favicon/") {
-        ensure!(
-            kryptopass_core::valid_favicon_host(host),
-            "invalid favicon host"
-        );
-        return Ok(crate::ui_adapters::native_ffi::ffi::fetch_favicon(
-            &cxx_qt_lib::QString::from(host),
-        ));
-    }
     let (scope, asset) = source
         .split_once('/')
         .ok_or_else(|| anyhow::anyhow!("invalid icon source"))?;
@@ -141,10 +132,7 @@ fn read_resource(source: &str) -> Result<Vec<u8>> {
         [id.to_string()],
         |row| row.get(0),
     )?;
-    EntryIconAsset {
-        id,
-        png: png.clone(),
-    }
-    .validate()?;
-    Ok(png)
+    let asset = EntryIconAsset { id, png };
+    asset.validate()?;
+    Ok(asset.png)
 }

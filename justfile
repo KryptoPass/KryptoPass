@@ -50,6 +50,16 @@ lint: check
 test:
     cargo test --workspace
 
+# Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
+test-items: check
+    python3 crates/desktop/ui/tests/run_item_types.py
+
+# Ciclo de favicons con transporte simulado, sin acceso a internet.
+test-icons:
+    cmake -S crates/desktop/native-tests -B target/native-tests
+    cmake --build target/native-tests --parallel 2
+    ctest --test-dir target/native-tests --output-on-failure
+
 # Smoke offscreen: arranca y falla si el log trae errores QML.
 smoke: build
     #!/usr/bin/env bash
