@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-ColumnLayout {
+SecretFields {
     id: root
 
     property string username: ""
@@ -19,7 +19,35 @@ ColumnLayout {
     readonly property var normalizedUrls: String(urlsText || "")
         .split(/\r?\n/).map(value => value.trim()).filter(value => !!value)
 
-    signal generatePasswordRequested()
+    onUsernameChanged: edited()
+    onPasswordChanged: edited()
+    onUrlsTextChanged: edited()
+    onTotpInputChanged: edited()
+    onNotesChanged: edited()
+
+    function loadFields(fields) {
+        username = fields.username || "";
+        password = fields.password || "";
+        setUrls(Array.isArray(fields.urls) ? fields.urls : [], fields.url || "");
+        totpInput = fields.totpInput || "";
+        notes = fields.notes || "";
+        passwordVisible = false;
+        totpVisible = false;
+    }
+
+    function currentFields() {
+        return {
+            username: username,
+            password: password,
+            url: normalizedUrls.length ? normalizedUrls[0] : "",
+            urls: normalizedUrls,
+            totpInput: totpInput,
+            notes: notes
+        };
+    }
+
+    function clearFields() { loadFields({}); }
+    function applyGeneratedPassword(value) { password = value; }
 
     spacing: 24
 

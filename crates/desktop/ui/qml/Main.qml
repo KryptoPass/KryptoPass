@@ -203,7 +203,7 @@ Controls.ApplicationWindow {
         allowClose = true;
         close();
     }
-    readonly property bool revealed: store.detail ? store.detail.passwordRevealed : false
+    readonly property bool revealed: !!store.detail?.content?.fields?.passwordRevealed
     readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Destinatarios") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
     Component.onCompleted: {
         store.controller.loadStore();

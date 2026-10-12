@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import org.kryptopass.desktop
 import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
@@ -34,7 +35,7 @@ Controls.Pane {
     readonly property string title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
 
     readonly property bool saving: storeAdapter.controller.saving
-    readonly property bool canSave: loaded && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
+    readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
 
     signal saveRequested(string draftJson)
     signal generatePasswordRequested()
@@ -61,20 +62,12 @@ Controls.Pane {
     }
 
     function currentDraft() {
-        const isNote = kindField.currentValue === "note";
         return {
             id: entryId,
             folder: draftFolderId,
             title: titleField.text,
-            kind: kindField.currentValue || "login",
+            content: { kind: fieldsHost.kind, fields: fieldsHost.currentFields() },
             icon: draftIcon,
-            username: isNote ? "" : loginFields.username,
-            password: isNote ? "" : loginFields.password,
-            url: isNote ? "" : (loginFields.normalizedUrls.length ? loginFields.normalizedUrls[0] : loginFields.url),
-            urls: isNote ? [] : loginFields.normalizedUrls,
-            totpInput: isNote ? "" : loginFields.totpInput,
-            notes: isNote ? noteFields.notes : loginFields.notes,
-            value: isNote ? noteFields.value : "",
             recipients: recipientChooser.selectedFingerprints.slice(),
             revision: entryId ? revision : null
         };
@@ -127,22 +120,21 @@ Controls.Pane {
         if (resultId !== requestedId)
             return;
 
+        const kindIndex = kindField.model.findIndex(option => option.id === draft.content?.kind);
+        if (kindIndex < 0) {
+            waitingForEditor = false;
+            saveError = qsTr("No se puede editar este tipo de elemento.");
+            return;
+        }
+        loaded = false;
         entryId = resultId;
         draftFolderId = draft.folder || "";
         revision = draft.revision === undefined ? null : draft.revision;
         titleField.text = draft.title || "";
         draftIcon = draft.icon?.kind === "favicon" ? null : draft.icon || null;
         draftIconSource = draft.iconSource || "";
-        kindField.currentIndex = Math.max(0, kindField.model.findIndex(option => option.id === (draft.kind === "note" ? "note" : "login")));
-        loginFields.username = draft.username || "";
-        loginFields.password = draft.password || "";
-        loginFields.setUrls(Array.isArray(draft.urls) ? draft.urls : [], draft.url || "");
-        loginFields.totpInput = draft.totpInput || "";
-        loginFields.totpVisible = false;
-        loginFields.notes = draft.kind === "note" ? "" : draft.notes || "";
-        loginFields.passwordVisible = false;
-        noteFields.value = draft.kind === "note" ? draft.value || "" : "";
-        noteFields.notes = draft.kind === "note" ? draft.notes || "" : "";
+        kindField.currentIndex = kindIndex;
+        fieldsHost.loadContent(draft.content);
         recipientChooser.selectedFingerprints = Array.isArray(draft.recipients) ? draft.recipients.slice() : [];
 
         waitingForEditor = false;
@@ -166,10 +158,8 @@ Controls.Pane {
     }
 
     function applyGeneratedPassword(value) {
-        if (!opened || !loaded || kindField.currentValue !== "login")
-            return;
-        loginFields.password = value;
-        updateDirty();
+        if (opened && loaded)
+            fieldsHost.applyGeneratedPassword(value);
     }
 
     function requestClose() {
@@ -239,15 +229,7 @@ Controls.Pane {
         titleField.text = "";
         draftIcon = null;
         draftIconSource = "";
-        loginFields.username = "";
-        loginFields.password = "";
-        loginFields.setUrls([], "");
-        loginFields.totpInput = "";
-        loginFields.totpVisible = false;
-        loginFields.notes = "";
-        loginFields.passwordVisible = false;
-        noteFields.value = "";
-        noteFields.notes = "";
+        fieldsHost.clearFields();
         recipientChooser.selectedFingerprints = [];
         opened = false;
         pendingNavigation = null;
@@ -544,7 +526,8 @@ Controls.Pane {
                                     textRole: "name"
                                     valueRole: "id"
                                     Accessible.name: qsTr("Tipo de elemento")
-                                    onActivated: editor.updateDirty()
+                                    enabled: !editor.entryId
+                                    onActivated: { if (!editor.entryId) fieldsHost.selectType(currentValue); }
                                 }
                             }
                             ColumnLayout {
@@ -568,30 +551,12 @@ Controls.Pane {
                         }
                     }
 
-                    ColumnLayout {
+                    SecretFieldsHost {
+                        id: fieldsHost
                         Layout.fillWidth: true
                         enabled: !editor.saving && !editor.savePending
-                        spacing: 0
-                        LoginFields {
-                            id: loginFields
-                            Layout.fillWidth: true
-                            visible: kindField.currentValue !== "note"
-                            onUsernameChanged: editor.updateDirty()
-                            onPasswordChanged: editor.updateDirty()
-                            onUrlChanged: editor.updateDirty()
-                            onUrlsChanged: editor.updateDirty()
-                            onUrlsTextChanged: editor.updateDirty()
-                            onTotpInputChanged: editor.updateDirty()
-                            onNotesChanged: editor.updateDirty()
-                            onGeneratePasswordRequested: editor.generatePasswordRequested()
-                        }
-                        NoteFields {
-                            id: noteFields
-                            Layout.fillWidth: true
-                            visible: kindField.currentValue === "note"
-                            onValueChanged: editor.updateDirty()
-                            onNotesChanged: editor.updateDirty()
-                        }
+                        onEdited: editor.updateDirty()
+                        onGeneratePasswordRequested: editor.generatePasswordRequested()
                     }
 
                     RecipientsChooser {

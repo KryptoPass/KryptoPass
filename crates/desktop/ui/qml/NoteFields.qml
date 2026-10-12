@@ -4,11 +4,22 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-ColumnLayout {
+SecretFields {
     id: root
 
     property string value: ""
     property string notes: ""
+
+    onValueChanged: edited()
+    onNotesChanged: edited()
+
+    function loadFields(fields) {
+        value = fields.value || "";
+        notes = fields.notes || "";
+    }
+
+    function currentFields() { return { value: value, notes: notes }; }
+    function clearFields() { loadFields({}); }
 
     spacing: 8
 

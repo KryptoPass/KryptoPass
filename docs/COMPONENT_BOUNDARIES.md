@@ -32,6 +32,13 @@ componentes que ya existían conservan sus contextos anteriores.
 ## Formularios y diálogos
 
 `SecretEditor` y `FolderEditor` mantienen el borrador y el foco de sus campos.
+`EntryTypes` reúne etiquetas, iconos y componentes por tipo. `SecretFields`
+define el contrato de carga, borrador y limpieza de cada formulario;
+`SecretFieldsHost` conserva los borradores por tipo durante la creación y
+limpia tanto el formulario activo como los borradores al cerrar.
+`SecretContentView` define los datos y señales de cada detalle. `SecretEditor`
+y `SecretDetail` cargan esos componentes sin conocer sus campos específicos.
+`SecretTextSection` comparte la presentación del texto de notas.
 El editor del elemento solicita una proyección temporal al controlador y
 conserva el borrador hasta la confirmación del guardado. Cerrar con cambios
 pendientes requiere confirmar su descarte. `PasswordGenerator` recoge las

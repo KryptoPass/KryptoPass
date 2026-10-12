@@ -212,6 +212,13 @@ que lo presentan. Añadir campos persistentes o modificar su interpretación
 requiere una decisión explícita sobre versión y migración. Las variantes
 reservadas de `SecretKind` no implican que exista ya un editor para ellas.
 
+El contrato temporal Rust/QML agrupa los campos específicos en
+`content: { kind, fields }`, tanto en borradores como en proyecciones. Cada
+variante acepta únicamente sus campos. El tipo de un elemento existente es
+inmutable en el guardado habitual; las conversiones necesitan una operación
+explícita. El catálogo de presentación y la receta para añadir tipos están en
+[`ADDING_ITEM_TYPES.md`](ADDING_ITEM_TYPES.md).
+
 ## TOTP e historial cifrado
 
 El editor acepta una semilla Base32 o una URI `otpauth://totp/...`. Se rechazan

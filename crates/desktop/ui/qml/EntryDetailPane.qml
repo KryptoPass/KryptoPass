@@ -48,8 +48,8 @@ Controls.Pane {
         triggeredOnStart: true
         running: root.visible && !root.editing && !root.keysMode
             && !root.storeAdapter.controller.locked
-            && !!root.selectedDetail && root.selectedDetail.kind === "login"
-            && !!root.selectedDetail.totp
+            && !!root.selectedDetail
+            && !!root.selectedDetail.content?.fields?.totp
             && Application.state === Qt.ApplicationActive
         onTriggered: root.storeAdapter.controller.refreshTotp()
     }

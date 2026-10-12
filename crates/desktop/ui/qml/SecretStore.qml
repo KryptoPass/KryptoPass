@@ -13,18 +13,7 @@ QtObject {
     readonly property string status: controller.status
     readonly property string errorMessage: controller.errorMessage
     readonly property bool busy: controller.busy || controller.detailBusy || controller.editorBusy || controller.saving
-    readonly property var kindOptions: [
-        {
-            id: "login",
-            name: qsTr("Inicio de sesión"),
-            icon: "user-identity"
-        },
-        {
-            id: "note",
-            name: qsTr("Nota"),
-            icon: "document-edit"
-        }
-    ]
+    readonly property var kindOptions: EntryTypes.options
     readonly property var entries: parseRecords(controller.entryRecords)
     readonly property var folders: parseRecords(controller.folderRecords)
     readonly property var selected: visibleEntries.find(entry => entry.id === selectedId) || null

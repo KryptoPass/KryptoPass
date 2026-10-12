@@ -567,11 +567,18 @@ impl qobject::SecretsController {
         self.as_mut().clear_error();
 
         if id.is_empty() {
+            let draft = match new_editor_projection() {
+                Ok(draft) => draft,
+                Err(_) => {
+                    self.as_mut()
+                        .fail_detail("No se pudo preparar el elemento para editarlo.");
+                    return;
+                }
+            };
             self.as_mut().rust_mut().editor_session = Some(EditorSession {
                 id: None,
                 revision: None,
             });
-            let draft = new_editor_projection();
             self.as_mut().set_editor_json(QString::from(draft.as_str()));
             self.as_mut().set_editor_busy(false);
             self.as_mut().editor_ready();
