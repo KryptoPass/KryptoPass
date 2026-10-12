@@ -8,7 +8,7 @@ pub mod import_controller;
 pub mod keyring_controller;
 mod keyring_projection;
 pub mod markdown_document;
-mod native_ffi;
+pub(crate) mod native_ffi;
 pub mod secrets_controller;
 mod secrets_projection;
 pub mod sensitive_clipboard;

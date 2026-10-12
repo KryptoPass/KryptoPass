@@ -47,6 +47,7 @@ pub mod qobject {
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, detail_busy, cxx_name = "detailBusy", READ, NOTIFY)]
         #[qproperty(bool, editor_busy, cxx_name = "editorBusy", READ, NOTIFY)]
+        #[qproperty(bool, icon_busy, cxx_name = "iconBusy", READ, NOTIFY)]
         #[qproperty(bool, saving, READ, NOTIFY)]
         #[qproperty(bool, locked, READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
@@ -75,6 +76,9 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "saveEntry"]
         fn save_entry(self: Pin<&mut Self>, draft_json: &QString);
+        #[qinvokable]
+        #[cxx_name = "prepareEntryIcon"]
+        fn prepare_entry_icon(self: Pin<&mut Self>, path: &QUrl);
         #[qinvokable]
         #[cxx_name = "clearEditor"]
         fn clear_editor(self: Pin<&mut Self>);
@@ -154,6 +158,9 @@ pub mod qobject {
         );
 
         #[qsignal]
+        #[cxx_name = "iconPrepared"]
+        fn icon_prepared(self: Pin<&mut Self>, json: &QString);
+        #[qsignal]
         #[cxx_name = "editorReady"]
         fn editor_ready(self: Pin<&mut Self>);
         #[qsignal]
@@ -206,6 +213,8 @@ pub struct SecretsControllerRust {
     busy: bool,
     detail_busy: bool,
     editor_busy: bool,
+    icon_busy: bool,
+    staged_icon: Option<kryptopass_core::EntryIconAsset>,
     saving: bool,
     locked: bool,
     selected_entry: Option<SecretId>,
@@ -240,6 +249,8 @@ impl Default for SecretsControllerRust {
             busy: false,
             detail_busy: false,
             editor_busy: false,
+            icon_busy: false,
+            staged_icon: None,
             saving: false,
             locked: true,
             selected_entry: None,
@@ -641,7 +652,7 @@ impl qobject::SecretsController {
                 .fail("No hay un borrador abierto para guardar.");
             return;
         };
-        if *self.editor_busy() {
+        if *self.editor_busy() || *self.icon_busy() {
             return;
         }
 
@@ -674,20 +685,39 @@ impl qobject::SecretsController {
             }
         };
         let operation = self.as_ref().rust().editor_operation;
+        let staged_icon = self.as_ref().rust().staged_icon.clone();
         self.as_mut().start_mutation(
             "Guardando elemento…",
             true,
             "No se pudo guardar el elemento.",
             move || {
                 let mut service = open_service()?;
-                let id = service.save_content(
-                    prepared.id,
-                    prepared.folder,
-                    prepared.title,
-                    prepared.recipients,
-                    prepared.content,
-                    prepared.expected_revision,
-                )?;
+                let request = kryptopass_core::SaveContentRequest {
+                    id: prepared.id,
+                    folder_id: prepared.folder,
+                    title: prepared.title,
+                    recipients: prepared.recipients,
+                    content: prepared.content,
+                    expected_revision: prepared.expected_revision,
+                };
+                let id = if let Some(icon) = prepared.icon_update {
+                    let asset = staged_icon.filter(|asset| {
+                        icon == Some(kryptopass_core::EntryIcon::Image { asset_id: asset.id })
+                    });
+                    service.save_content_with_appearance(
+                        request,
+                        kryptopass_core::EntryAppearanceUpdate { icon, asset },
+                    )?
+                } else {
+                    service.save_content(
+                        request.id,
+                        request.folder_id,
+                        request.title,
+                        request.recipients,
+                        request.content,
+                        request.expected_revision,
+                    )?
+                };
                 let snapshot = snapshot_after_mutation();
                 Ok(MutationResult {
                     snapshot,
@@ -696,6 +726,43 @@ impl qobject::SecretsController {
                 })
             },
         );
+    }
+
+    pub fn prepare_entry_icon(mut self: Pin<&mut Self>, path: &QUrl) {
+        if *self.locked()
+            || *self.busy()
+            || *self.editor_busy()
+            || *self.icon_busy()
+            || self.as_ref().rust().editor_session.is_none()
+        {
+            return;
+        }
+        let Some(path) = path.to_local_file() else {
+            self.as_mut().fail("Elige una imagen local.");
+            return;
+        };
+        let operation = self.as_ref().rust().editor_operation;
+        self.as_mut().set_icon_busy(true);
+        let qt_thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = crate::infrastructure::entry_icons::prepare_image(std::path::Path::new(
+                &path.to_string(),
+            ));
+            let _ = qt_thread.queue(move |mut controller| {
+                if controller.as_ref().rust().editor_operation != operation { return; }
+                controller.as_mut().set_icon_busy(false);
+                match result {
+                    Ok(asset) => {
+                        crate::infrastructure::entry_icons::stage(&asset);
+                        let icon = kryptopass_core::EntryIcon::Image { asset_id: asset.id };
+                        let json = serde_json::json!({ "icon": icon, "iconSource": crate::infrastructure::entry_icons::source_for(Some(&icon)) }).to_string();
+                        controller.as_mut().rust_mut().staged_icon = Some(asset);
+                        controller.as_mut().icon_prepared(&QString::from(json));
+                    }
+                    Err(_) => controller.as_mut().fail("No se pudo usar esa imagen. Elige un PNG, JPEG o WebP estático de hasta 4 MB, con lados de hasta 4096 píxeles y un máximo de 4 millones de píxeles."),
+                }
+            });
+        });
     }
 
     pub fn clear_editor(mut self: Pin<&mut Self>) {
@@ -1498,6 +1565,7 @@ impl qobject::SecretsController {
             .map(|record| QString::from(record.as_str()))
             .collect();
 
+        prefetch_entry_favicons();
         if self.entry_records() != &entries {
             self.as_mut().rust_mut().entry_records = entries;
             self.as_mut().entry_records_changed();
@@ -1619,6 +1687,9 @@ impl qobject::SecretsController {
 
     fn clear_editor_projection(mut self: Pin<&mut Self>) {
         self.as_mut().rust_mut().editor_session = None;
+        self.as_mut().rust_mut().staged_icon = None;
+        crate::infrastructure::entry_icons::clear_stage();
+        self.as_mut().set_icon_busy(false);
         self.set_editor_json(QString::default());
     }
 
@@ -1654,6 +1725,13 @@ impl qobject::SecretsController {
         }
     }
 
+    fn set_icon_busy(mut self: Pin<&mut Self>, value: bool) {
+        if *self.icon_busy() != value {
+            self.as_mut().rust_mut().icon_busy = value;
+            self.icon_busy_changed();
+        }
+    }
+
     fn set_saving(mut self: Pin<&mut Self>, value: bool) {
         if *self.saving() != value {
             self.as_mut().rust_mut().saving = value;
@@ -1685,6 +1763,7 @@ fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
         title: after.title,
         revision: after.revision,
         recipients: after.recipients,
+        icon: after.icon,
         content,
     })
 }
@@ -1702,6 +1781,7 @@ fn load_detail_content(id: SecretId) -> anyhow::Result<(SecretContent, u64)> {
 }
 
 struct EntryMetadata {
+    icon: Option<kryptopass_core::EntryIcon>,
     folder: Option<FolderId>,
     title: String,
     revision: u64,
@@ -1714,6 +1794,7 @@ fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
         .find_secret(id)?
         .ok_or_else(|| anyhow::anyhow!("secret does not exist"))?;
     let metadata = EntryMetadata {
+        icon: secret.icon.take(),
         folder: secret.folder_id,
         title: std::mem::take(&mut secret.title),
         revision: secret.revision,
@@ -1745,22 +1826,51 @@ fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
 fn activate_store_snapshot(path: std::path::PathBuf) -> anyhow::Result<(StoreSnapshot, bool)> {
     let storage = SqliteStorage::open_existing(&path)?;
     let (folders, secrets) = storage.read_snapshot()?;
-    let snapshot = store_snapshot(folders, secrets);
     let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
+    crate::infrastructure::entry_icons::bind_store(&path);
+    let snapshot = store_snapshot(folders, secrets);
     Ok((snapshot, durable))
 }
 
 fn open_storage() -> anyhow::Result<SqliteStorage> {
     let app_id = crate::app_info::APP.desktop_file_id;
     if let Some(path) = app_paths::active_vault_path(app_id)? {
-        SqliteStorage::open_existing(path)
+        let storage = SqliteStorage::open_existing(&path)?;
+        crate::infrastructure::entry_icons::bind_store(&path);
+        Ok(storage)
     } else {
-        SqliteStorage::open(app_paths::database_path(app_id)?)
+        let path = app_paths::database_path(app_id)?;
+        let storage = SqliteStorage::open(&path)?;
+        crate::infrastructure::entry_icons::bind_store(&path);
+        Ok(storage)
     }
 }
 
 fn snapshot_after_mutation() -> Result<StoreSnapshot, ()> {
     read_store_snapshot().map_err(|_| ())
+}
+
+// Proactive favicon warm-up off the UI thread; the C++ side dedupes against
+// in-flight, recently failed, and already cached hosts.
+fn prefetch_entry_favicons() {
+    let hosts = open_storage()
+        .and_then(|storage| storage.read_snapshot().map(|(_, secrets)| secrets))
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|secret| match secret.icon.as_ref() {
+            Some(kryptopass_core::EntryIcon::Favicon { host }) => Some(host.clone()),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+        .join(",");
+    if hosts.is_empty() {
+        return;
+    }
+    std::thread::spawn(move || {
+        crate::ui_adapters::native_ffi::ffi::prefetch_favicons(&QString::from(hosts))
+    });
 }
 
 fn unix_seconds() -> u64 {

@@ -43,6 +43,11 @@ fn main() {
         return;
     };
 
+    ui_adapters::native_ffi::ffi::install_entry_icon_provider(
+        engine.as_mut().upcast_pin(),
+        &QString::from(APP.desktop_file_id),
+    );
+
     let base_engine: Pin<&mut QQmlEngine> = engine.as_mut().upcast_pin();
     base_engine
         .on_quit(|_| tracing::info!("QML requested application shutdown"))

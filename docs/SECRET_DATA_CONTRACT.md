@@ -43,7 +43,8 @@ La proyección pública de carpeta incluye `id`, `parent`, `name`, `icon` y
 en SQLite. Cambiar título, icono o color conserva el padre, los destinatarios
 por defecto y los elementos contenidos.
 
-SQLite utiliza el esquema 2. Al abrir un archivo propio del esquema 1, una
+SQLite utiliza el esquema 4. El esquema 2 incorporó apariencia de carpetas;
+el 3 agregó orden entre hermanos y el 4 agrega iconos de elementos. Al abrir un archivo propio del esquema 1, una
 transacción añade las columnas de apariencia con `folder` y `transparent` como
 valores por defecto. La versión se vuelve a leer dentro de la transacción
 para coordinar aperturas concurrentes; la migración no modifica ciphertexts
@@ -53,6 +54,96 @@ elegidos. La versión del payload cifrado es independiente: las nuevas escritura
 Los iconos se resuelven mediante el tema instalado, con respaldo de carpeta.
 Los colores e iconos disponibles en el editor son opciones de presentación;
 el contrato persistente admite otros nombres de icono y colores válidos.
+
+## Iconos opcionales de elementos
+
+Cada credencial y nota segura admite un `icon` opcional, independiente del tipo
+y de la carpeta:
+
+```json
+{ "icon": null }
+{ "icon": { "kind": "theme", "name": "internet-web-browser" } }
+{ "icon": { "kind": "image", "assetId": "e8bf948e-c7ba-42f9-99d9-cf563ec12a31" } }
+```
+
+`null` usa el icono del tipo. `theme.name` admite entre 1 y 128 caracteres ASCII
+alfanuméricos o guiones, sin rutas ni URL. `image.assetId` es un UUID no nulo
+que referencia un recurso local inmutable. Se rechazan variantes y campos
+desconocidos.
+
+`Secret` y `SecretMetadata` incluyen esta referencia. Tanto la referencia como
+la imagen son metadatos públicos de SQLite, igual que el título: un logo puede
+identificar el servicio con la bóveda bloqueada. No se incluyen en el payload
+cifrado ni en las versiones anteriores de la credencial. Guardar desde el
+editor utiliza la operación habitual de contenido; cambiar únicamente el icono
+no crea una versión ni un evento de edición de la credencial.
+
+### Ingreso y persistencia
+
+El adaptador admite imágenes locales PNG, WebP y JPEG estáticos. Valida su
+formato real, tamaño y dimensiones antes de decodificar; rechaza animaciones,
+SVG y formatos desconocidos. Aplica orientación y convierte a PNG RGBA de 8 bits
+sin metadatos del archivo. Reduce conservando proporciones, sin ampliar ni
+recortar, y mantiene el canal alfa. Un fondo opaco original se conserva; no se
+convierte blanco en transparencia.
+
+| Límite | Valor |
+| --- | --- |
+| Archivo de origen | 4 MiB |
+| Ancho o alto de origen | 4096 píxeles |
+| Píxeles de origen | 4 194 304 |
+| Dimensiones del recurso normalizado | Hasta 256 × 256 píxeles |
+| PNG persistido por recurso | 512 KiB |
+
+`entry_icon_assets` guarda los bytes por UUID, separados de los registros de
+navegación y ciphertexts. No conserva la ruta ni el nombre original. Elegir
+otra imagen genera un UUID nuevo. La vista previa permanece en memoria hasta
+guardar; cancelar no deja recursos persistidos.
+
+Guardar referencia y recurso es una transacción con la revisión esperada del
+elemento. Un conflicto revierte ambos y conserva el borrador. Al sustituir,
+quitar o eliminar definitivamente se eliminan recursos sin referencias; mover,
+marcar favorito y enviar a la papelera mantienen la apariencia. Los clientes
+que omiten `icon` al editar conservan la elección existente; `icon: null` la
+quita explícitamente.
+
+### Presentación y accesibilidad
+
+El snapshot incluye `icon` e `iconSource`, sin BLOBs. La fuente temporal es
+`image://org.kryptopass.entryicons/<vaultScope>/<assetId>`; el ámbito evita mezclar
+recursos al cambiar de bóveda. El proveedor lee los bytes bajo demanda y carga
+asíncronamente con una caché propia de hasta 16 MiB. `iconSource` no se persiste
+ni pertenece al respaldo. No se buscan favicons ni se hacen solicitudes de red.
+
+[`EntryIcon.qml`](../crates/desktop/ui/qml/EntryIcon.qml) se comparte entre lista,
+detalle, editor y arrastre. El contenedor asigna un espacio cuadrado estable;
+la imagen se centra con `PreserveAspectFit`, sin estirar, recortar, añadir un
+fondo ni teñir colores de marca. Imágenes pequeñas no se amplían por encima de
+su tamaño natural. La selección mantiene los colores del tema y los logos sus
+colores originales. Si falta una imagen o un icono del tema, aparece el icono
+del tipo sin modificar la elección guardada.
+
+El logo es decorativo (`Accessible.ignored`) y no añade paradas de Tab. El
+editor muestra el estado elegido en texto, una vista previa y acciones con
+nombres accesibles: «Usar icono del tipo», «Elegir imagen…» y «Elegir icono del
+tema…». El selector del tema ofrece opciones reconocibles y permite introducir
+un nombre válido. Una imagen inválida deja intacto el formulario y la elección
+anterior; el usuario puede corregirla o continuar sin cambiar el icono.
+
+### Migración y respaldos
+
+SQLite usa esquema 4; la migración desde 3 agrega columnas y recursos con valores
+nulos para elementos existentes, sin descifrar ni reescribir credenciales. Las
+migraciones anteriores se aplican en la misma transacción. El payload cifrado
+mantiene `CONTENT_SCHEMA_VERSION = 3`.
+
+El respaldo versión 3 incluye referencias y cada recurso normalizado una sola
+vez. Se mantienen los límites globales de 64 MiB de JSON y 10 000 registros;
+los recursos admiten hasta 10 000 entradas y 32 MiB combinados dentro del mismo
+presupuesto de JSON. Restaurar valida UUID, tamaño, decodificación, unicidad y
+referencias; rechaza recursos ausentes o huérfanos antes de publicar la base.
+Los respaldos 1 y 2 siguen admitidos, con `icon = null` y sin recursos. Las
+versiones desconocidas se rechazan.
 
 ## Payload cifrado, versión 3
 

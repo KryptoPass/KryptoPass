@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{
-    Folder, FolderAppearance, FolderId, KeyFingerprint, OpenPgp, RecipientSet, Secret, SecretId,
-    SecretKind,
+    EntryIcon, EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, OpenPgp,
+    RecipientSet, Secret, SecretId, SecretKind,
 };
 use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -20,7 +20,7 @@ use super::GnuPgOpenPgp;
 use super::sqlite_storage::SqliteStorage;
 
 const BACKUP_FORMAT: &str = "org.kryptopass.backup";
-const BACKUP_VERSION: u32 = 2;
+const BACKUP_VERSION: u32 = 3;
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const MAX_RECIPIENTS_PER_RECORD: usize = 64;
 const MAX_SELECTED_RECIPIENTS: usize = 256;
@@ -71,8 +71,8 @@ pub fn export_backup(
     protect_store_target(&database_path, &destination)?;
 
     let storage = SqliteStorage::open_existing(database_path)?;
-    let (folders, secrets) = storage.backup_snapshot()?;
-    let plaintext = serialize_backup(folders, secrets)?;
+    let (folders, secrets, assets) = storage.backup_snapshot()?;
+    let plaintext = serialize_backup_with_icons(folders, secrets, assets)?;
     let ciphertext = crypto.encrypt_bounded(
         plaintext.as_slice(),
         &recipients,
@@ -114,10 +114,10 @@ pub fn restore_backup(
             MAX_BACKUP_PLAINTEXT_BYTES,
         )
         .context(RestoreFailure::Decryption)?;
-    let (folders, secrets) =
-        deserialize_backup(plaintext.as_slice()).context(RestoreFailure::InvalidBackup)?;
+    let (folders, secrets, assets) = deserialize_backup_with_icons(plaintext.as_slice())
+        .context(RestoreFailure::InvalidBackup)?;
 
-    publish_restore_snapshot(&destination, &folders, &secrets)
+    publish_restore_snapshot(&destination, &folders, &secrets, &assets)
 }
 
 /// Publishes a restored snapshot into an isolated, new private store.
@@ -125,6 +125,7 @@ fn publish_restore_snapshot(
     output: &Path,
     folders: &[Folder],
     secrets: &[Secret],
+    assets: &[EntryIconAsset],
 ) -> Result<BackupPublishOutcome> {
     let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let destination = prepare_destination(output, false)?;
@@ -138,7 +139,7 @@ fn publish_restore_snapshot(
     let mut stage_guard = StagingDirectory(stage.clone());
     let staged_database = stage.join(RESTORE_DATABASE_NAME);
     let mut storage = SqliteStorage::open(&staged_database)?;
-    storage.import_backup_snapshot(folders, secrets)?;
+    storage.import_backup_snapshot(folders, secrets, assets)?;
     storage.finish_for_backup_publish()?;
     File::open(&staged_database)
         .and_then(|file| file.sync_all())
@@ -200,6 +201,15 @@ struct BackupDocument {
     version: u32,
     folders: BoundedVec<BackupFolder, MAX_BACKUP_ROWS>,
     secrets: BoundedVec<BackupSecret, MAX_BACKUP_ROWS>,
+    #[serde(default)]
+    assets: BoundedVec<BackupIconAsset, MAX_BACKUP_ROWS>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BackupIconAsset {
+    id: Uuid,
+    png: IconBytes,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -227,11 +237,19 @@ struct BackupSecret {
     favorite: bool,
     trashed: bool,
     revision: u64,
+    #[serde(default)]
+    icon: Option<EntryIcon>,
 }
 
 #[derive(Serialize)]
 #[serde(transparent)]
 struct BoundedVec<T, const LIMIT: usize>(Vec<T>);
+
+impl<T, const LIMIT: usize> Default for BoundedVec<T, LIMIT> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
 
 impl<'de, T, const LIMIT: usize> Deserialize<'de> for BoundedVec<T, LIMIT>
 where
@@ -319,11 +337,61 @@ impl<'de> Deserialize<'de> for Base64Bytes {
     }
 }
 
+struct IconBytes(Vec<u8>);
+
+impl Serialize for IconBytes {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.serialize_str(&base64_encode(&self.0))
+    }
+}
+
+impl<'de> Deserialize<'de> for IconBytes {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        struct IconVisitor;
+        impl Visitor<'_> for IconVisitor {
+            type Value = IconBytes;
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a bounded base64 icon string")
+            }
+            fn visit_str<E: de::Error>(self, value: &str) -> std::result::Result<IconBytes, E> {
+                if value.len() > kryptopass_core::MAX_ENTRY_ICON_BYTES.div_ceil(3) * 4 {
+                    return Err(E::custom("icon exceeds maximum size"));
+                }
+                let bytes = base64_decode(value).map_err(E::custom)?;
+                if bytes.len() > kryptopass_core::MAX_ENTRY_ICON_BYTES {
+                    return Err(E::custom("icon exceeds maximum size"));
+                }
+                Ok(IconBytes(bytes))
+            }
+        }
+        deserializer.deserialize_str(IconVisitor)
+    }
+}
+
+#[cfg(test)]
 fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<Zeroizing<Vec<u8>>> {
+    serialize_backup_with_icons(folders, secrets, Vec::new())
+}
+
+fn serialize_backup_with_icons(
+    folders: Vec<Folder>,
+    secrets: Vec<Secret>,
+    assets: Vec<EntryIconAsset>,
+) -> Result<Zeroizing<Vec<u8>>> {
+    validate_icon_resources(&secrets, &assets)?;
     validate_domain_records(&folders, &secrets)?;
     let document = BackupDocument {
         format: BACKUP_FORMAT.to_owned(),
         version: BACKUP_VERSION,
+        assets: BoundedVec(
+            assets
+                .into_iter()
+                .map(|asset| BackupIconAsset {
+                    id: asset.id,
+                    png: IconBytes(asset.png),
+                })
+                .collect(),
+        ),
         folders: BoundedVec(
             folders
                 .into_iter()
@@ -366,6 +434,7 @@ fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<Zeroiz
                     favorite: secret.favorite,
                     trashed: secret.trashed,
                     revision: secret.revision,
+                    icon: secret.icon,
                 })
                 .collect(),
         ),
@@ -413,7 +482,15 @@ impl Write for BoundedBackupWriter {
     }
 }
 
+#[cfg(test)]
 fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
+    let (folders, secrets, _) = deserialize_backup_with_icons(bytes)?;
+    Ok((folders, secrets))
+}
+
+fn deserialize_backup_with_icons(
+    bytes: &[u8],
+) -> Result<(Vec<Folder>, Vec<Secret>, Vec<EntryIconAsset>)> {
     ensure!(
         bytes.len() <= MAX_BACKUP_PLAINTEXT_BYTES,
         "backup exceeds the maximum size"
@@ -421,7 +498,7 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
     let document: BackupDocument =
         serde_json::from_slice(bytes).context("backup document is invalid")?;
     ensure!(
-        document.format == BACKUP_FORMAT && matches!(document.version, 1 | BACKUP_VERSION),
+        document.format == BACKUP_FORMAT && matches!(document.version, 1 | 2 | BACKUP_VERSION),
         "backup format or version is unsupported"
     );
     ensure!(
@@ -434,6 +511,25 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
         "backup contains too many records"
     );
 
+    ensure!(
+        document.version >= 3
+            || (document.assets.0.is_empty()
+                && document
+                    .secrets
+                    .0
+                    .iter()
+                    .all(|secret| secret.icon.is_none())),
+        "icons require backup version 3"
+    );
+    let assets: Vec<_> = document
+        .assets
+        .0
+        .into_iter()
+        .map(|asset| EntryIconAsset {
+            id: asset.id,
+            png: asset.png.0,
+        })
+        .collect();
     let mut folders = Vec::with_capacity(document.folders.0.len());
     for folder in document.folders.0 {
         let id = parse_folder_id(&folder.id)?;
@@ -490,11 +586,13 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
             favorite: secret.favorite,
             trashed: secret.trashed,
             revision: secret.revision,
+            icon: secret.icon,
         });
     }
 
     validate_domain_records(&folders, &secrets)?;
-    Ok((folders, secrets))
+    validate_icon_resources(&secrets, &assets)?;
+    Ok((folders, secrets, assets))
 }
 
 fn validate_domain_records(folders: &[Folder], secrets: &[Secret]) -> Result<()> {
@@ -1101,3 +1199,38 @@ impl Drop for TemporaryFile {
 #[cfg(test)]
 #[path = "backup_order_tests.rs"]
 mod backup_order_tests;
+
+fn validate_icon_resources(secrets: &[Secret], assets: &[EntryIconAsset]) -> Result<()> {
+    ensure!(assets.len() <= MAX_BACKUP_ROWS, "too many icon resources");
+    let mut ids = HashSet::new();
+    let mut total = 0usize;
+    for asset in assets {
+        asset.validate()?;
+        ensure!(ids.insert(asset.id), "duplicate icon resource");
+        total = total.saturating_add(asset.png.len());
+        ensure!(
+            total <= MAX_BACKUP_PLAINTEXT_BYTES / 2,
+            "icon resources exceed backup budget"
+        );
+        ensure!(
+            super::entry_icons::valid_normalized_image(&asset.png),
+            "invalid icon image"
+        );
+    }
+    let mut referenced = HashSet::new();
+    for secret in secrets {
+        if let Some(icon) = &secret.icon {
+            icon.validate()?;
+            if let EntryIcon::Image { asset_id } = icon {
+                ensure!(ids.contains(asset_id), "missing icon resource");
+                referenced.insert(*asset_id);
+            }
+        }
+    }
+    ensure!(ids == referenced, "unreferenced icon resource");
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "entry_icon_tests.rs"]
+mod entry_icon_tests;

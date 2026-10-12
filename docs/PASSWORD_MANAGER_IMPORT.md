@@ -84,6 +84,20 @@ adicionales, con las limitaciones de la tabla siguiente.
 | `userId`, `shareId`, `itemId`, `folderId`, `itemUuid` | IDs usados para resolver jerarquía/duplicados cuando corresponde; IDs nuevos en destino, sin persistir procedencia | Procedencia cifrada, deduplicación y reimportación |
 | `contentFormatVersion`, `platformSpecific`, `shareCount`, permisos y campos futuros desconocidos | No se trasladan; sin advertencia individual para campos desconocidos | Contratos explícitos según necesidad; revisar cambios del proveedor |
 
+### Logos e imágenes
+
+La exportación Proton Pass examinada contiene `metadata.name`, `metadata.note`
+y `metadata.itemUuid`, pero no bytes de imágenes ni campos de icono, logo o
+favicon. `files` tampoco contiene adjuntos en esa muestra. Los elementos
+importados usan `icon = null`, el respaldo visual de su tipo; se puede elegir
+una imagen local posteriormente en el editor.
+
+No se deduce un favicon desde la URL ni se consulta el sitio web durante la
+importación. No se promete recuperar imágenes que el archivo no incluye. Los
+adjuntos continúan teniendo su advertencia y no se convierten en logos. Para
+una futura variante que exporte imágenes se necesitará un mapeo documentado del
+proveedor y la misma validación y normalización del contrato de iconos.
+
 El informe de advertencias cuenta incidencias por categoría, no elementos
 únicos: un login puede tener varias. Los conteos de notas incluyen alias
 convertidos, y los conteos de logins/notas incluyen elementos en la papelera.

@@ -1,7 +1,7 @@
 //! Converts secret-store records into the JSON contracts consumed by QML.
 
 use kryptopass_core::{
-    Folder, FolderId, KeyFingerprint, LoginContent, LoginHistory, LoginHistoryEventKind,
+    EntryIcon, Folder, FolderId, KeyFingerprint, LoginContent, LoginHistory, LoginHistoryEventKind,
     NoteContent, RecipientSelection, RecipientSet, SecretContent, SecretId, SecretMetadata,
     TotpConfig, format_totp_input, generate_totp, parse_totp_input,
 };
@@ -37,6 +37,7 @@ pub(super) struct OpenedEntry {
     pub(super) title: String,
     pub(super) revision: u64,
     pub(super) recipients: Vec<String>,
+    pub(super) icon: Option<EntryIcon>,
     pub(super) content: SecretContent,
 }
 
@@ -47,6 +48,7 @@ pub(super) struct PreparedSave {
     pub(super) recipients: RecipientSelection,
     pub(super) content: SecretContent,
     pub(super) expected_revision: Option<u64>,
+    pub(super) icon_update: Option<Option<EntryIcon>>,
 }
 
 #[derive(serde::Serialize, Zeroize, ZeroizeOnDrop)]
@@ -111,12 +113,15 @@ pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>)
     let entries = secrets
         .into_iter()
         .map(|secret| {
+            let display_icon = secret.icon.as_ref();
             json!({
                 "id": secret.id.0.to_string(),
                 "folder": secret.folder_id.map_or_else(String::new, |id| id.0.to_string()),
                 "title": secret.title,
                 "kind": secret.kind.as_str(),
                 "format": "Texto",
+                "iconSource": crate::infrastructure::entry_icons::source_for(display_icon),
+                "icon": secret.icon,
                 "revision": secret.revision,
                 "recipients": secret.recipients.as_slice().iter().map(|key| key.as_str()).collect::<Vec<_>>(),
                 "favorite": secret.favorite,
@@ -136,6 +141,9 @@ pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>)
 #[serde(deny_unknown_fields)]
 pub(super) struct EntryDraft {
     id: String,
+    #[serde(default)]
+    #[zeroize(skip)]
+    icon: DraftIcon,
     revision: Option<u64>,
     folder: String,
     title: SensitiveText,
@@ -150,6 +158,20 @@ pub(super) struct EntryDraft {
     notes: SensitiveText,
     value: SensitiveText,
     recipients: Vec<String>,
+}
+
+#[derive(Default)]
+struct DraftIcon {
+    present: bool,
+    value: Option<EntryIcon>,
+}
+impl<'de> Deserialize<'de> for DraftIcon {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Option::<EntryIcon>::deserialize(deserializer).map(|value| Self {
+            present: true,
+            value,
+        })
+    }
 }
 
 #[derive(Default, Zeroize, ZeroizeOnDrop)]
@@ -190,6 +212,9 @@ pub(super) fn prepare_save(
     session_id: Option<SecretId>,
     session_revision: Option<u64>,
 ) -> anyhow::Result<PreparedSave> {
+    if let Some(icon) = &draft.icon.value {
+        icon.validate()?;
+    }
     let folder = parse_optional_folder_id(&draft.folder)?;
     let mut recipients = Vec::with_capacity(draft.recipients.len());
     for fingerprint in draft.recipients.drain(..) {
@@ -248,6 +273,7 @@ pub(super) fn prepare_save(
         recipients,
         content,
         expected_revision: session_revision,
+        icon_update: draft.icon.present.then(|| draft.icon.value.take()),
     })
 }
 
@@ -349,6 +375,8 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing
         revision: entry.revision,
         folder: entry.folder.map_or_else(String::new, |id| id.0.to_string()),
         title: &entry.title,
+        icon: &entry.icon,
+        icon_source: crate::infrastructure::entry_icons::source_for(entry.icon.as_ref()),
         kind,
         username,
         password,
@@ -365,7 +393,7 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing
 
 pub(super) fn new_editor_projection() -> Zeroizing<String> {
     Zeroizing::new(
-        r#"{"id":"","revision":null,"folder":"","title":"","kind":"login","username":"","password":"","url":"","urls":[],"totpInput":"","notes":"","value":"","recipients":[]}"#.to_owned(),
+        r#"{"id":"","revision":null,"folder":"","title":"","kind":"login","icon":null,"iconSource":"","username":"","password":"","url":"","urls":[],"totpInput":"","notes":"","value":"","recipients":[]}"#.to_owned(),
     )
 }
 
@@ -391,6 +419,9 @@ struct EditorProjection<'a> {
     revision: u64,
     folder: String,
     title: &'a str,
+    icon: &'a Option<EntryIcon>,
+    #[serde(rename = "iconSource")]
+    icon_source: String,
     kind: &'static str,
     username: &'a str,
     password: &'a str,

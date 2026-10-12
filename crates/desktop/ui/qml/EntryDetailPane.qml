@@ -112,6 +112,26 @@ Controls.Pane {
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
+                    visible: !root.keysMode && !!root.selected && root.selected.trashed
+                    text: qsTr("Restaurar")
+                    icon.name: "edit-undo"
+                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
+                    display: Controls.AbstractButton.IconOnly
+                    onClicked: root.restoreRequested()
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: text
+                }
+                Controls.ToolButton {
+                    visible: !root.keysMode && !!root.selected && root.selected.trashed
+                    text: qsTr("Eliminar definitivamente…")
+                    icon.name: "edit-delete"
+                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
+                    display: Controls.AbstractButton.IconOnly
+                    onClicked: root.permanentDeleteRequested()
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: text
+                }
+                Controls.ToolButton {
                     action: root.copyFingerprintAction
                     visible: root.keysMode
                     display: root.width < Kirigami.Units.gridUnit * 26 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
@@ -159,92 +179,91 @@ Controls.Pane {
             contentWidth: availableWidth
             clip: true
 
-            ColumnLayout {
+            Item {
+                id: detailSurface
                 width: detailScroll.availableWidth
-                spacing: Kirigami.Units.largeSpacing
+                height: Math.max(detailScroll.availableHeight, detailContent.implicitHeight)
 
-                Kirigami.Separator {
-                    Layout.fillWidth: true
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    spacing: Kirigami.Units.largeSpacing
-                    Kirigami.Icon {
-                        source: root.storeAdapter.kindIcon(root.selected?.kind || "note")
-                        Layout.preferredWidth: Kirigami.Units.iconSizes.large
-                        Layout.preferredHeight: width
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        spacing: 0
-                        Kirigami.Heading {
-                            Layout.fillWidth: true
-                            level: 2
-                            text: root.selected?.title || ""
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: qsTr("%1 · %2").arg(root.storeAdapter.folderName(root.selected?.folder || "")).arg(root.storeAdapter.kindName(root.selected?.kind || "note"))
-                            textFormat: Text.PlainText
-                            color: Kirigami.Theme.disabledTextColor
-                            elide: Text.ElideRight
-                        }
-                    }
-                }
-
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    visible: !!root.selected && root.storeAdapter.controller.locked
-                    type: Kirigami.MessageType.Information
-                    text: qsTr("La bóveda está bloqueada. Desbloquéala para abrir este elemento.")
-                }
-
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
-                    type: Kirigami.MessageType.Information
-                    text: qsTr("Descifrando el contenido del elemento…")
-                }
-
-                SecretDetail {
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    visible: !!root.selectedDetail
-                    detail: root.selectedDetail
-                    recipients: root.selected?.recipients || []
-                    revealed: root.revealed
-                    versionDetail: root.storeAdapter.historyVersion
-                    onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
-                    onVersionCloseRequested: root.storeAdapter.controller.closeHistoryVersion()
-                    onVersionCopyRequested: function(field) { root.storeAdapter.controller.copyHistoryValue(field); }
-                    onActivityExportRequested: root.storeAdapter.controller.exportActivity()
-                    onRevealToggled: root.revealToggleRequested()
-                    onCopyUsernameRequested: root.copyUsernameRequested()
-                    onCopyPasswordRequested: root.copyPasswordRequested()
-                    onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    Accessible.ignored: true
+                    onClicked: detailSurface.forceActiveFocus(Qt.MouseFocusReason)
                 }
 
                 ColumnLayout {
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    visible: root.selected?.trashed || false
-                    Controls.Button {
-                        text: qsTr("Restaurar")
-                        icon.name: "edit-undo"
-                        enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
-                        onClicked: root.restoreRequested()
+                    id: detailContent
+                    width: detailSurface.width
+                    spacing: Kirigami.Units.largeSpacing
+
+                    Kirigami.Separator {
+                        Layout.fillWidth: true
                     }
-                    Controls.Button {
-                        text: qsTr("Eliminar definitivamente…")
-                        icon.name: "edit-delete"
-                        enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
-                        onClicked: root.permanentDeleteRequested()
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        spacing: Kirigami.Units.largeSpacing
+                        EntryIcon {
+                            entryIcon: root.selected?.icon || null
+                            imageSource: root.selected?.iconSource || ""
+                            fallbackIcon: root.storeAdapter.kindIcon(root.selected?.kind || "note")
+                            Layout.preferredWidth: Kirigami.Units.iconSizes.large
+                            Layout.preferredHeight: width
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            spacing: 0
+                            Kirigami.Heading {
+                                Layout.fillWidth: true
+                                level: 2
+                                text: root.selected?.title || ""
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                            }
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: qsTr("%1 · %2").arg(root.storeAdapter.folderName(root.selected?.folder || "")).arg(root.storeAdapter.kindName(root.selected?.kind || "note"))
+                                textFormat: Text.PlainText
+                                color: Kirigami.Theme.disabledTextColor
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!root.selected && root.storeAdapter.controller.locked
+                        type: Kirigami.MessageType.Information
+                        text: qsTr("La bóveda está bloqueada. Desbloquéala para abrir este elemento.")
+                    }
+
+                    Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
+                        type: Kirigami.MessageType.Information
+                        text: qsTr("Descifrando el contenido del elemento…")
+                    }
+
+                    SecretDetail {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!root.selectedDetail
+                        detail: root.selectedDetail
+                        recipients: root.selected?.recipients || []
+                        revealed: root.revealed
+                        versionDetail: root.storeAdapter.historyVersion
+                        onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
+                        onVersionCloseRequested: root.storeAdapter.controller.closeHistoryVersion()
+                        onVersionCopyRequested: function(field) { root.storeAdapter.controller.copyHistoryValue(field); }
+                        onActivityExportRequested: root.storeAdapter.controller.exportActivity()
+                        onRevealToggled: root.revealToggleRequested()
+                        onCopyUsernameRequested: root.copyUsernameRequested()
+                        onCopyPasswordRequested: root.copyPasswordRequested()
+                        onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
                     }
                 }
             }

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
@@ -15,6 +16,8 @@ Controls.Pane {
 
     property string entryId: ""
     property string draftFolderId: ""
+    property var draftIcon: null
+    property url draftIconSource: ""
     property var revision: null
     property bool loaded: false
     property bool waitingForEditor: false
@@ -31,7 +34,7 @@ Controls.Pane {
     readonly property string title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
 
     readonly property bool saving: storeAdapter.controller.saving
-    readonly property bool canSave: loaded && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
+    readonly property bool canSave: loaded && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
 
     signal saveRequested(string draftJson)
     signal generatePasswordRequested()
@@ -44,7 +47,7 @@ Controls.Pane {
     padding: 0
 
     function guardNavigation(action) {
-        if (saving || savePending || waitingForEditor || externalModalOpen)
+        if (saving || savePending || waitingForEditor || externalModalOpen || storeAdapter.controller.iconBusy)
             return;
         if (opened && dirty) {
             pendingNavigation = action;
@@ -64,6 +67,7 @@ Controls.Pane {
             folder: draftFolderId,
             title: titleField.text,
             kind: kindField.currentValue || "login",
+            icon: draftIcon,
             username: isNote ? "" : loginFields.username,
             password: isNote ? "" : loginFields.password,
             url: isNote ? "" : (loginFields.normalizedUrls.length ? loginFields.normalizedUrls[0] : loginFields.url),
@@ -88,7 +92,7 @@ Controls.Pane {
 
     function openEntry(entry) {
         const nextId = entry ? entry.id : "";
-        if (saving || savePending || externalModalOpen)
+        if (saving || savePending || externalModalOpen || storeAdapter.controller.iconBusy)
             return;
         if (waitingForEditor) {
             requestEntry(nextId);
@@ -127,6 +131,8 @@ Controls.Pane {
         draftFolderId = draft.folder || "";
         revision = draft.revision === undefined ? null : draft.revision;
         titleField.text = draft.title || "";
+        draftIcon = draft.icon?.kind === "favicon" ? null : draft.icon || null;
+        draftIconSource = draft.iconSource || "";
         kindField.currentIndex = Math.max(0, kindField.model.findIndex(option => option.id === (draft.kind === "note" ? "note" : "login")));
         loginFields.username = draft.username || "";
         loginFields.password = draft.password || "";
@@ -231,6 +237,8 @@ Controls.Pane {
         revision = null;
         saveError = "";
         titleField.text = "";
+        draftIcon = null;
+        draftIconSource = "";
         loginFields.username = "";
         loginFields.password = "";
         loginFields.setUrls([], "");
@@ -273,19 +281,111 @@ Controls.Pane {
     Shortcut {
         sequences: [StandardKey.Cancel]
         context: Qt.WindowShortcut
-        enabled: editor.opened && !editor.externalModalOpen && !discardDialog.opened && !folderField.menuOpen
+        enabled: editor.opened && !editor.externalModalOpen && !discardDialog.opened && !themeIconDialog.opened && !iconMenu.opened && !folderField.menuOpen
         onActivated: editor.requestClose()
     }
 
     Shortcut {
         sequences: [StandardKey.Save]
         context: Qt.WindowShortcut
-        enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened
+        enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened && !themeIconDialog.opened && !iconMenu.opened
         onActivated: editor.submit()
+    }
+
+    Dialogs.FileDialog {
+        id: iconFileDialog
+        title: qsTr("Elegir imagen del elemento")
+        nameFilters: [qsTr("Imágenes (*.png *.jpg *.jpeg *.webp)")]
+        onAccepted: {
+            editor.externalModalOpen = false;
+            editor.storeAdapter.controller.prepareEntryIcon(selectedFile);
+        }
+        onRejected: editor.externalModalOpen = false
+    }
+
+    Controls.Dialog {
+        id: themeIconDialog
+        title: qsTr("Icono del tema")
+        modal: true
+        anchors.centerIn: Controls.Overlay.overlay
+        parent: Controls.Overlay.overlay
+        standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
+        onOpened: {
+            themeIconName.text = editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "internet-web-browser";
+            themeIconName.forceActiveFocus();
+        }
+        onAccepted: {
+            if (!themeIconName.acceptableInput) return;
+            editor.draftIcon = { kind: "theme", name: themeIconName.text };
+            editor.draftIconSource = "";
+            editor.updateDirty();
+        }
+        contentItem: ColumnLayout {
+            spacing: Kirigami.Units.largeSpacing
+            EntryIcon {
+                Layout.alignment: Qt.AlignHCenter
+                iconSize: Kirigami.Units.iconSizes.large
+                entryIcon: ({ kind: "theme", name: themeIconName.text })
+                fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
+            }
+            GridLayout {
+                columns: 4
+                Repeater {
+                    model: [
+                        { name: qsTr("Internet"), icon: "internet-web-browser" },
+                        { name: qsTr("Correo"), icon: "mail-message" },
+                        { name: qsTr("Trabajo"), icon: "applications-office" },
+                        { name: qsTr("Personal"), icon: "user-identity" },
+                        { name: qsTr("Servidor"), icon: "network-server" },
+                        { name: qsTr("Billetera"), icon: "wallet-open" },
+                        { name: qsTr("Desarrollo"), icon: "utilities-terminal" },
+                        { name: qsTr("Juegos"), icon: "applications-games" }
+                    ]
+                    delegate: Controls.ToolButton {
+                        required property var modelData
+                        icon.name: modelData.icon
+                        display: Controls.AbstractButton.IconOnly
+                        text: modelData.name
+                        checkable: true
+                        checked: themeIconName.text === modelData.icon
+                        focusPolicy: Qt.StrongFocus
+                        Accessible.name: modelData.name
+                        Accessible.description: checked ? qsTr("Icono seleccionado") : qsTr("Seleccionar icono")
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 3
+                        Layout.preferredHeight: Kirigami.Units.gridUnit * 3
+                        onClicked: themeIconName.text = modelData.icon
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                }
+            }
+            Controls.TextField {
+                id: themeIconName
+                Layout.fillWidth: true
+                maximumLength: 128
+                validator: RegularExpressionValidator { regularExpression: /[a-zA-Z0-9-]{1,128}/ }
+                Accessible.name: qsTr("Nombre del icono del tema")
+                placeholderText: "internet-web-browser"
+            }
+        }
+        Binding {
+            target: themeIconDialog.standardButton(Controls.Dialog.Ok)
+            property: "enabled"
+            value: themeIconName.acceptableInput
+        }
     }
 
     Connections {
         target: editor.storeAdapter.controller
+
+        function onIconPrepared(json) {
+            if (!editor.opened || !editor.loaded) return;
+            const result = JSON.parse(json);
+            editor.draftIcon = result.icon;
+            editor.draftIconSource = result.iconSource;
+            editor.updateDirty();
+            editor.saveError = "";
+        }
 
         function onEditorReady() {
             editor.acceptEditorReady();
@@ -299,6 +399,8 @@ Controls.Pane {
         }
 
         function onOperationFailed() {
+            if (editor.opened && !editor.savePending && !editor.waitingForEditor)
+                editor.saveError = editor.storeAdapter.controller.errorMessage;
             if (editor.savePending && !editor.storeAdapter.controller.saving) {
                 editor.savePending = false;
                 editor.saveError = editor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar el elemento.");
@@ -376,6 +478,52 @@ Controls.Pane {
                                 Accessible.name: qsTr("Nombre del elemento")
                                 placeholderText: qsTr("Ej. Correo personal")
                                 onTextEdited: editor.updateDirty()
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.Label { text: qsTr("Icono") }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                EntryIcon {
+                                    entryIcon: editor.draftIcon
+                                    imageSource: editor.draftIconSource
+                                    fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
+                                    Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+                                    Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+                                }
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    text: editor.storeAdapter.controller.iconBusy ? qsTr("Preparando imagen…") : editor.draftIcon?.kind === "image" ? qsTr("Imagen personalizada") : editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : qsTr("Automático")
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                }
+                                Controls.Button {
+                                    text: qsTr("Cambiar…")
+                                    Accessible.name: qsTr("Cambiar icono del elemento")
+                                    enabled: !editor.storeAdapter.controller.iconBusy
+                                    onClicked: iconMenu.open()
+                                    Controls.Menu {
+                                        id: iconMenu
+                                        Controls.MenuItem {
+                                            text: qsTr("Usar favicon automático")
+                                            onTriggered: {
+                                                editor.draftIcon = null;
+                                                editor.draftIconSource = "";
+                                                editor.updateDirty();
+                                            }
+                                        }
+                                        Controls.MenuItem {
+                                            text: qsTr("Elegir imagen…")
+                                            onTriggered: { editor.externalModalOpen = true; iconFileDialog.open(); }
+                                        }
+                                        Controls.MenuItem {
+                                            text: qsTr("Elegir icono del tema…")
+                                            onTriggered: themeIconDialog.open()
+                                        }
+                                    }
+                                }
                             }
                         }
                         GridLayout {

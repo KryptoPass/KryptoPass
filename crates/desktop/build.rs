@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/FolderEditor.qml")
         .qml_file("ui/qml/FolderAppearancePicker.qml")
         .qml_file("ui/qml/FolderIcon.qml")
+        .qml_file("ui/qml/EntryIcon.qml")
         .qml_file(QmlFile::from("ui/qml/FolderPalette.qml").singleton(true))
         .qml_file("ui/qml/FolderPicker.qml")
         .qml_file("ui/qml/MoveEntryDialog.qml")
@@ -56,6 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let builder = CxxQtBuilder::new_qml_module(qml_module)
         // Qt QML requires Qt Network on some platforms, including macOS.
         .qt_module("Network")
+        .qt_module("Quick")
         .qt_module("Widgets")
         .files([
             "src/ui_adapters/app_shell.rs",
@@ -70,6 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "src/ui_adapters/application.rs",
         ])
         .cpp_file("src/native/application.cpp")
+        .cpp_file("src/native/entry_icons.cpp")
         .cpp_file("src/native/sensitive_clipboard.cpp")
         .cpp_file("src/native/kde_contacts.cpp")
         .cpp_file("src/native/online_services.cpp");

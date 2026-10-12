@@ -34,11 +34,23 @@ fn sample_folders() -> Vec<Folder> {
 }
 
 #[test]
-fn backup_v2_roundtrip_preserves_folder_positions_and_hierarchy() {
+fn backup_v3_roundtrip_preserves_folder_positions_and_hierarchy() {
     let folders = sample_folders();
     let bytes = serialize_backup(folders.clone(), vec![]).unwrap();
     let document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(document["version"], 2);
+    assert_eq!(document["version"], 3);
+    let (restored, secrets) = deserialize_backup(&bytes).unwrap();
+    assert_eq!(restored, folders);
+    assert!(secrets.is_empty());
+}
+
+#[test]
+fn legacy_backup_v2_preserves_folder_positions_and_hierarchy() {
+    let folders = sample_folders();
+    let bytes = serialize_backup(folders.clone(), vec![]).unwrap();
+    let mut document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    document["version"] = serde_json::json!(2);
+    let bytes = serde_json::to_vec(&document).unwrap();
     let (restored, secrets) = deserialize_backup(&bytes).unwrap();
     assert_eq!(restored, folders);
     assert!(secrets.is_empty());

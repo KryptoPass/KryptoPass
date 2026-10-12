@@ -17,7 +17,7 @@ QtObject {
         {
             id: "login",
             name: qsTr("Inicio de sesión"),
-            icon: "network-server"
+            icon: "user-identity"
         },
         {
             id: "note",

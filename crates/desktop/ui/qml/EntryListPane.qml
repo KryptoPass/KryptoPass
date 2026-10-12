@@ -144,8 +144,8 @@ Controls.Pane {
                                 readonly property var storeAdapter: root.storeAdapter
                                 visible: Drag.active
                                 z: 1000
-                                width: dragLabel.implicitWidth + 24
-                                height: dragLabel.implicitHeight + 16
+                                width: dragRow.implicitWidth + 24
+                                height: dragRow.implicitHeight + 16
                                 radius: 6
                                 color: Kirigami.Theme.backgroundColor
                                 border.color: Kirigami.Theme.highlightColor
@@ -153,20 +153,30 @@ Controls.Pane {
                                 Drag.keys: ["org.kryptopass.entry"]
                                 Drag.supportedActions: Qt.MoveAction
                                 Drag.proposedAction: Qt.MoveAction
-                                Controls.Label {
-                                    id: dragLabel
+                                RowLayout {
+                                    id: dragRow
                                     anchors.centerIn: parent
+                                    EntryIcon {
+                                        entryIcon: entryDelegate.modelData.icon || null
+                                        imageSource: entryDelegate.modelData.iconSource || ""
+                                        fallbackIcon: entryDelegate.icon.name
+                                    }
+                                    Controls.Label {
+                                    id: dragLabel
                                     text: entryDelegate.text
                                     textFormat: Text.PlainText
                                     elide: Text.ElideRight
-                                    width: Math.min(implicitWidth, 240)
+                                    Layout.preferredWidth: Math.min(implicitWidth, 240)
+                                    }
                                 }
                             }
                             Keys.onReturnPressed: clicked()
                             Keys.onEnterPressed: clicked()
                             contentItem: RowLayout {
-                                Kirigami.Icon {
-                                    source: entryDelegate.icon.name
+                                EntryIcon {
+                                    entryIcon: root.keysMode ? null : entryDelegate.modelData.icon || null
+                                    imageSource: root.keysMode ? "" : entryDelegate.modelData.iconSource || ""
+                                    fallbackIcon: entryDelegate.icon.name
                                     selected: entryDelegate.highlighted || entryDelegate.down
                                     Layout.preferredWidth: entryDelegate.icon.width
                                     Layout.preferredHeight: entryDelegate.icon.height

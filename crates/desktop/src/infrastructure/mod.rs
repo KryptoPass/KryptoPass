@@ -2,6 +2,7 @@
 
 pub mod app_paths;
 pub mod backup;
+pub(crate) mod entry_icons;
 pub mod import;
 pub mod openpgp;
 pub mod sqlite_storage;

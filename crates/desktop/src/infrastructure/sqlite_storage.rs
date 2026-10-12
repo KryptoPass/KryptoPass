@@ -8,8 +8,9 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{
-    DomainError, Folder, FolderAppearance, FolderId, ImportStorage, KeyFingerprint, RecipientSet,
-    Secret, SecretId, SecretKind, SecretMetadata, Storage,
+    DomainError, EntryIcon, EntryIconAsset, Folder, FolderAppearance, FolderId, ImportStorage,
+    KeyFingerprint, MAX_ENTRY_ICON_BYTES, RecipientSet, Secret, SecretId, SecretKind,
+    SecretMetadata, Storage,
 };
 use rusqlite::types::{Type, ValueRef};
 use rusqlite::{
@@ -20,7 +21,7 @@ use uuid::Uuid;
 use super::MAX_CIPHERTEXT_BYTES;
 use super::backup::{MAX_BACKUP_PLAINTEXT_BYTES, MAX_BACKUP_RECIPIENTS, MAX_BACKUP_ROWS};
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 const APPLICATION_ID: i64 = 0x4b50_5331;
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -99,7 +100,9 @@ impl SqliteStorage {
     }
 
     /// Reads the complete encrypted store under one bounded SQLite snapshot.
-    pub(crate) fn backup_snapshot(&self) -> Result<(Vec<Folder>, Vec<Secret>)> {
+    pub(crate) fn backup_snapshot(
+        &self,
+    ) -> Result<(Vec<Folder>, Vec<Secret>, Vec<EntryIconAsset>)> {
         let transaction = self
             .connection
             .unchecked_transaction()
@@ -107,10 +110,11 @@ impl SqliteStorage {
         validate_backup_read_budget(&transaction)?;
         let folders = read_folders(&transaction)?;
         let secrets = read_secrets(&transaction)?;
+        let assets = read_icon_assets(&transaction)?;
         transaction
             .commit()
             .context("could not finish reading the encrypted backup")?;
-        Ok((folders, secrets))
+        Ok((folders, secrets, assets))
     }
 
     /// Imports a validated backup into a newly created, empty store atomically.
@@ -118,6 +122,7 @@ impl SqliteStorage {
         &mut self,
         folders: &[Folder],
         secrets: &[Secret],
+        assets: &[EntryIconAsset],
     ) -> Result<()> {
         validate_backup_snapshot(folders, secrets)?;
 
@@ -128,13 +133,17 @@ impl SqliteStorage {
         let nonempty: bool = transaction
             .query_row(
                 "SELECT EXISTS(SELECT 1 FROM folders) OR EXISTS(SELECT 1 FROM secrets) \
-                 OR EXISTS(SELECT 1 FROM folder_recipients) OR EXISTS(SELECT 1 FROM secret_recipients)",
+                 OR EXISTS(SELECT 1 FROM folder_recipients) OR EXISTS(SELECT 1 FROM secret_recipients) \
+                 OR EXISTS(SELECT 1 FROM entry_icon_assets)",
                 [],
                 |row| row.get(0),
             )
             .context("could not inspect the restore destination")?;
         ensure!(!nonempty, "backup restore destination is not empty");
 
+        for asset in assets {
+            insert_icon_asset(&transaction, asset)?;
+        }
         insert_encrypted_batch(&transaction, folders, secrets)?;
 
         transaction
@@ -253,6 +262,14 @@ impl Storage for SqliteStorage {
     }
 
     fn insert_secret(&mut self, secret: Secret) -> Result<()> {
+        self.insert_secret_with_icon(secret, None)
+    }
+
+    fn insert_secret_with_icon(
+        &mut self,
+        secret: Secret,
+        asset: Option<EntryIconAsset>,
+    ) -> Result<()> {
         validate_secret(&secret)?;
         ensure!(
             secret.revision == 0,
@@ -263,6 +280,13 @@ impl Storage for SqliteStorage {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not begin secret update")?;
+        if let Some(asset) = &asset {
+            ensure!(
+                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
+                "icon resource does not match secret"
+            );
+            insert_icon_asset(&transaction, asset)?;
+        }
         transaction
             .execute(
                 "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
@@ -279,6 +303,8 @@ impl Storage for SqliteStorage {
             )
             .map_err(|_| anyhow::anyhow!("could not save secret"))?;
         replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
+        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
+        collect_unused_icons(&transaction)?;
         transaction
             .commit()
             .context("could not finish secret update")
@@ -356,6 +382,15 @@ impl Storage for SqliteStorage {
     }
 
     fn replace_secret(&mut self, secret: Secret, expected_revision: u64) -> Result<()> {
+        self.replace_secret_with_icon(secret, expected_revision, None)
+    }
+
+    fn replace_secret_with_icon(
+        &mut self,
+        secret: Secret,
+        expected_revision: u64,
+        asset: Option<EntryIconAsset>,
+    ) -> Result<()> {
         validate_secret(&secret)?;
         ensure!(
             secret.revision == expected_revision,
@@ -374,6 +409,13 @@ impl Storage for SqliteStorage {
             ensure_folder_exists(&transaction, folder_id)?;
         }
 
+        if let Some(asset) = &asset {
+            ensure!(
+                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
+                "icon resource does not match secret"
+            );
+            insert_icon_asset(&transaction, asset)?;
+        }
         let changed = transaction
             .execute(
                 "UPDATE secrets \
@@ -397,6 +439,8 @@ impl Storage for SqliteStorage {
             "secret has changed or no longer exists; reload before saving",
         );
         replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
+        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
+        collect_unused_icons(&transaction)?;
         transaction
             .commit()
             .context("could not finish secret update")
@@ -495,6 +539,7 @@ impl Storage for SqliteStorage {
             .execute("DELETE FROM secrets WHERE id = ?1", [id.0.to_string()])
             .map_err(|_| anyhow::anyhow!("could not delete secret"))?;
         ensure!(changed == 1, "secret does not exist");
+        collect_unused_icons(&transaction)?;
         transaction
             .commit()
             .context("could not finish secret deletion")
@@ -624,7 +669,7 @@ fn read_secrets(connection: &Connection) -> Result<Vec<Secret>> {
     let mut statement = connection
         .prepare(
             "SELECT id, folder_id, title, kind, favorite, trashed, revision, \
-                    length(ciphertext), ciphertext \
+                    length(ciphertext), ciphertext, icon_theme, icon_asset_id, icon_favicon_host \
              FROM secrets ORDER BY title COLLATE NOCASE, id",
         )
         .context("could not read secret metadata")?;
@@ -639,6 +684,9 @@ fn read_secrets(connection: &Connection) -> Result<Vec<Secret>> {
                 trashed: row.get(5)?,
                 revision: row.get(6)?,
                 ciphertext: read_ciphertext(row, 7, 8)?,
+                icon_theme: row.get(9)?,
+                icon_asset_id: row.get(10)?,
+                icon_favicon_host: row.get(11)?,
             })
         })
         .context("could not read secret metadata")?;
@@ -653,6 +701,7 @@ fn read_secrets(connection: &Connection) -> Result<Vec<Secret>> {
         let folder_id = raw.folder_id.as_deref().map(parse_folder_id).transpose()?;
         let recipients = load_secret_recipients(connection, id)?;
         secrets.push(Secret {
+            icon: parse_entry_icon(raw.icon_theme, raw.icon_asset_id, raw.icon_favicon_host)?,
             id,
             folder_id,
             title: raw.title,
@@ -671,7 +720,7 @@ fn read_secrets(connection: &Connection) -> Result<Vec<Secret>> {
 fn read_secret_metadata(connection: &Connection) -> Result<Vec<SecretMetadata>> {
     let mut statement = connection
         .prepare(
-            "SELECT id, folder_id, title, kind, favorite, trashed, revision \
+            "SELECT id, folder_id, title, kind, favorite, trashed, revision, icon_theme, icon_asset_id, icon_favicon_host \
              FROM secrets ORDER BY title COLLATE NOCASE, id",
         )
         .context("could not read secret list metadata")?;
@@ -685,6 +734,9 @@ fn read_secret_metadata(connection: &Connection) -> Result<Vec<SecretMetadata>> 
                 favorite: row.get(4)?,
                 trashed: row.get(5)?,
                 revision: row.get(6)?,
+                icon_theme: row.get(7)?,
+                icon_asset_id: row.get(8)?,
+                icon_favicon_host: row.get(9)?,
             })
         })
         .context("could not read secret list metadata")?;
@@ -699,6 +751,7 @@ fn read_secret_metadata(connection: &Connection) -> Result<Vec<SecretMetadata>> 
         let folder_id = raw.folder_id.as_deref().map(parse_folder_id).transpose()?;
         let recipients = load_secret_recipients(connection, id)?;
         secrets.push(SecretMetadata {
+            icon: parse_entry_icon(raw.icon_theme, raw.icon_asset_id, raw.icon_favicon_host)?,
             id,
             folder_id,
             title: raw.title,
@@ -761,7 +814,7 @@ fn column_data_error(index: usize, column_type: Type, message: &'static str) -> 
 
 fn initialize_schema(connection: &mut Connection) -> Result<()> {
     let version = pragma_i64(connection, "user_version")?;
-    if matches!(version, 0..=2) {
+    if matches!(version, 0..=3) {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not initialize the encrypted store")?;
@@ -802,6 +855,7 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 );
                 migrate_schema_v1_to_v2(&transaction)?;
                 migrate_schema_v2_to_v3(&transaction)?;
+                migrate_schema_v3_to_v4(&transaction)?;
             }
             2 => {
                 ensure!(
@@ -809,6 +863,14 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                     "database file is not a KryptoPass store"
                 );
                 migrate_schema_v2_to_v3(&transaction)?;
+                migrate_schema_v3_to_v4(&transaction)?;
+            }
+            3 => {
+                ensure!(
+                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
+                    "database file is not a KryptoPass store"
+                );
+                migrate_schema_v3_to_v4(&transaction)?;
             }
             SCHEMA_VERSION => {}
             _ => bail!("store schema version is unsupported"),
@@ -855,14 +917,29 @@ fn migrate_schema_v2_to_v3(transaction: &Transaction<'_>) -> Result<()> {
          UPDATE folders SET sort_position = (SELECT position FROM ordered WHERE ordered.id = folders.id);"
     ).context("could not migrate folder order")?;
     transaction
-        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .pragma_update(None, "user_version", 3)
         .context("could not version the encrypted store")
+}
+
+fn migrate_schema_v3_to_v4(transaction: &Transaction<'_>) -> Result<()> {
+    transaction.execute_batch(
+        "CREATE TABLE entry_icon_assets (id TEXT PRIMARY KEY NOT NULL, png BLOB NOT NULL
+             CHECK(typeof(png) = 'blob' AND length(png) BETWEEN 45 AND 524288));
+         ALTER TABLE secrets ADD COLUMN icon_theme TEXT;
+         ALTER TABLE secrets ADD COLUMN icon_favicon_host TEXT;
+         ALTER TABLE secrets ADD COLUMN icon_asset_id TEXT REFERENCES entry_icon_assets(id) ON DELETE RESTRICT;"
+    ).context("could not migrate entry icons")?;
+    transaction
+        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .context("could not version entry icons")
 }
 
 fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
     transaction
         .execute_batch(
-            "CREATE TABLE folders (
+            "CREATE TABLE entry_icon_assets (id TEXT PRIMARY KEY NOT NULL, png BLOB NOT NULL
+                 CHECK(typeof(png) = 'blob' AND length(png) BETWEEN 45 AND 524288));
+             CREATE TABLE folders (
                  id TEXT PRIMARY KEY NOT NULL,
                  parent_id TEXT REFERENCES folders(id) ON DELETE RESTRICT,
                  name TEXT NOT NULL CHECK(length(trim(name)) > 0),
@@ -878,6 +955,9 @@ fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
              );
              CREATE TABLE secrets (
                  id TEXT PRIMARY KEY NOT NULL,
+                 icon_theme TEXT,
+                 icon_favicon_host TEXT,
+                 icon_asset_id TEXT REFERENCES entry_icon_assets(id) ON DELETE RESTRICT,
                  folder_id TEXT REFERENCES folders(id) ON DELETE RESTRICT,
                  title TEXT NOT NULL CHECK(length(trim(title)) > 0),
                  kind TEXT NOT NULL,
@@ -935,7 +1015,7 @@ fn prevalidate_existing_database(path: &Path) -> Result<()> {
         "existing file is not a KryptoPass store"
     );
     ensure!(
-        matches!(version, 1 | 2 | SCHEMA_VERSION),
+        matches!(version, 1 | 2 | 3 | SCHEMA_VERSION),
         "existing store schema version is unsupported"
     );
 
@@ -1005,7 +1085,7 @@ fn load_secret(connection: &Connection, id: SecretId) -> Result<Option<Secret>> 
     let raw = connection
         .query_row(
             "SELECT id, folder_id, title, kind, favorite, trashed, revision, \
-                    length(ciphertext), ciphertext \
+                    length(ciphertext), ciphertext, icon_theme, icon_asset_id, icon_favicon_host \
              FROM secrets WHERE id = ?1",
             [id.0.to_string()],
             |row| {
@@ -1018,6 +1098,9 @@ fn load_secret(connection: &Connection, id: SecretId) -> Result<Option<Secret>> 
                     trashed: row.get(5)?,
                     revision: row.get(6)?,
                     ciphertext: read_ciphertext(row, 7, 8)?,
+                    icon_theme: row.get(9)?,
+                    icon_asset_id: row.get(10)?,
+                    icon_favicon_host: row.get(11)?,
                 })
             },
         )
@@ -1027,6 +1110,7 @@ fn load_secret(connection: &Connection, id: SecretId) -> Result<Option<Secret>> 
         let id = parse_secret_id(&raw.id)?;
         let folder_id = raw.folder_id.as_deref().map(parse_folder_id).transpose()?;
         Ok(Secret {
+            icon: parse_entry_icon(raw.icon_theme, raw.icon_asset_id, raw.icon_favicon_host)?,
             id,
             folder_id,
             title: raw.title,
@@ -1189,6 +1273,9 @@ fn validate_folder(folder: &Folder) -> Result<()> {
 }
 
 fn validate_secret(secret: &Secret) -> Result<()> {
+    if let Some(icon) = &secret.icon {
+        icon.validate()?;
+    }
     ensure!(
         !secret.title.trim().is_empty(),
         "secret title cannot be empty"
@@ -1217,7 +1304,8 @@ fn validate_backup_read_budget(connection: &Connection) -> Result<()> {
                  (SELECT COALESCE(SUM(length(CAST(name AS BLOB)) + length(CAST(icon AS BLOB)) + length(CAST(color AS BLOB))), 0) FROM folders)
                  + (SELECT COALESCE(SUM(length(CAST(title AS BLOB)) + length(CAST(kind AS BLOB)) + length(ciphertext)), 0) FROM secrets)
                  + (SELECT COALESCE(SUM(length(CAST(fingerprint AS BLOB))), 0) FROM folder_recipients)
-                 + (SELECT COALESCE(SUM(length(CAST(fingerprint AS BLOB))), 0) FROM secret_recipients)",
+                 + (SELECT COALESCE(SUM(length(CAST(fingerprint AS BLOB))), 0) FROM secret_recipients)
+                 + (SELECT COALESCE(SUM(length(png)), 0) FROM entry_icon_assets)",
             [],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
@@ -1587,6 +1675,9 @@ struct RawFolder {
 
 #[derive(Debug)]
 struct RawSecret {
+    icon_theme: Option<String>,
+    icon_asset_id: Option<String>,
+    icon_favicon_host: Option<String>,
     id: String,
     folder_id: Option<String>,
     title: String,
@@ -1599,6 +1690,9 @@ struct RawSecret {
 
 #[derive(Debug)]
 struct RawSecretMetadata {
+    icon_theme: Option<String>,
+    icon_asset_id: Option<String>,
+    icon_favicon_host: Option<String>,
     id: String,
     folder_id: Option<String>,
     title: String,
@@ -1671,6 +1765,7 @@ fn insert_encrypted_batch(
                 )
                 .map_err(|_| anyhow::anyhow!("could not restore encrypted secret"))?;
         replace_secret_recipients(transaction, secret.id, &secret.recipients)?;
+        set_secret_icon(transaction, secret.id, secret.icon.as_ref())?;
     }
 
     Ok(())
@@ -1704,4 +1799,97 @@ impl ImportStorage for SqliteStorage {
             .commit()
             .context("could not commit additive import")
     }
+}
+
+fn parse_entry_icon(
+    theme: Option<String>,
+    asset: Option<String>,
+    host: Option<String>,
+) -> Result<Option<EntryIcon>> {
+    let icon = match (theme, asset, host) {
+        (None, None, None) => None,
+        (None, None, Some(host)) => Some(EntryIcon::Favicon { host }),
+        (Some(name), None, None) => Some(EntryIcon::Theme { name }),
+        (None, Some(id), None) => Some(EntryIcon::Image {
+            asset_id: Uuid::parse_str(&id)?,
+        }),
+        _ => bail!("entry contains conflicting icon sources"),
+    };
+    if let Some(icon) = &icon {
+        icon.validate()?;
+    }
+    Ok(icon)
+}
+
+fn insert_icon_asset(connection: &Connection, asset: &EntryIconAsset) -> Result<()> {
+    asset.validate()?;
+    connection
+        .execute(
+            "INSERT INTO entry_icon_assets(id, png) VALUES (?1, ?2)",
+            params![asset.id.to_string(), &asset.png],
+        )
+        .context("could not save icon resource")?;
+    Ok(())
+}
+
+fn set_secret_icon(connection: &Connection, id: SecretId, icon: Option<&EntryIcon>) -> Result<()> {
+    let (theme, asset, host) = match icon {
+        Some(EntryIcon::Favicon { host }) => (None, None, Some(host.clone())),
+        Some(EntryIcon::Theme { name }) => (Some(name.clone()), None, None),
+        Some(EntryIcon::Image { asset_id }) => (None, Some(asset_id.to_string()), None),
+        None => (None, None, None),
+    };
+    connection
+        .execute(
+            "UPDATE secrets SET icon_theme = ?1, icon_asset_id = ?2, icon_favicon_host = ?3 WHERE id = ?4",
+            params![theme, asset, host, id.0.to_string()],
+        )
+        .context("could not save entry icon")?;
+    Ok(())
+}
+
+fn collect_unused_icons(connection: &Connection) -> Result<()> {
+    connection
+        .execute(
+            "DELETE FROM entry_icon_assets WHERE id NOT IN
+        (SELECT icon_asset_id FROM secrets WHERE icon_asset_id IS NOT NULL)",
+            [],
+        )
+        .context("could not collect unused icons")?;
+    Ok(())
+}
+
+fn read_icon_assets(connection: &Connection) -> Result<Vec<EntryIconAsset>> {
+    let total: i64 = connection.query_row(
+        "SELECT COALESCE(SUM(length(png)), 0) FROM entry_icon_assets",
+        [],
+        |row| row.get(0),
+    )?;
+    ensure!(
+        total >= 0 && total as u64 <= MAX_BACKUP_PLAINTEXT_BYTES as u64 / 2,
+        "icon resources exceed backup budget"
+    );
+    let mut statement =
+        connection.prepare("SELECT id, length(png), png FROM entry_icon_assets ORDER BY id")?;
+    let rows = statement.query_map([], |row| {
+        let size: i64 = row.get(1)?;
+        if !(45..=MAX_ENTRY_ICON_BYTES as i64).contains(&size) {
+            return Err(column_data_error(
+                1,
+                Type::Integer,
+                "invalid icon resource size",
+            ));
+        }
+        Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(2)?))
+    })?;
+    rows.map(|row| {
+        let (id, png) = row?;
+        let asset = EntryIconAsset {
+            id: Uuid::parse_str(&id)?,
+            png,
+        };
+        asset.validate()?;
+        Ok(asset)
+    })
+    .collect()
 }

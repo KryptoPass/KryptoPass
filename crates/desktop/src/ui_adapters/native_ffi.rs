@@ -1,7 +1,13 @@
-//! Shared native C++ functions used by the small Qt adapters.
+use crate::infrastructure::entry_icons::entry_icon_bytes;
+
+// Shared native C++ functions used by the small Qt adapters.
 
 #[cxx::bridge]
 pub(crate) mod ffi {
+    extern "Rust" {
+        #[namespace = "kryptopass::desktop::native"]
+        fn entry_icon_bytes(source: &str) -> Vec<u8>;
+    }
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("cxx-qt-lib/qstringlist.h");
@@ -9,6 +15,20 @@ pub(crate) mod ffi {
         include!("native/sensitive_clipboard.h");
         include!("native/kde_contacts.h");
         include!("native/online_services.h");
+        include!("native/entry_icons.h");
+        include!("cxx-qt-lib/qqmlengine.h");
+        type QQmlEngine = cxx_qt_lib::QQmlEngine;
+
+        #[namespace = "kryptopass::desktop::native"]
+        fn normalize_entry_icon(bytes: &[u8]) -> Vec<u8>;
+        #[namespace = "kryptopass::desktop::native"]
+        fn valid_entry_icon(bytes: &[u8]) -> bool;
+        #[namespace = "kryptopass::desktop::native"]
+        fn install_entry_icon_provider(engine: Pin<&mut QQmlEngine>, app_id: &QString);
+        #[namespace = "kryptopass::desktop::native"]
+        fn fetch_favicon(host: &QString) -> Vec<u8>;
+        #[namespace = "kryptopass::desktop::native"]
+        fn prefetch_favicons(hosts: &QString);
 
         type QString = cxx_qt_lib::QString;
         type QStringList = cxx_qt_lib::QStringList;
