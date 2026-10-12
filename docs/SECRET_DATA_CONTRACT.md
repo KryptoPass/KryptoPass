@@ -14,6 +14,7 @@ El dominio no conoce Qt, SQLite ni GPGME. `SecretsService` coordina los puertos
 | Título, icono y color de carpeta | `name`, nombre de icono del tema y color RGB o `transparent` en SQLite | Editor y navegación; el selector muestra el título |
 | Destinatarios | Huellas OpenPGP normalizadas y sin duplicados | Formulario y detalle |
 | Revisión | Entero que aumenta al modificar el registro | Control de edición concurrente |
+| Vínculo entre dos elementos | Dos UUID en `secret_links` | Lista, editor y navegación entre detalles |
 | Correo/usuario, contraseña, sitios web, TOTP, notas e historial | JSON dentro del ciphertext OpenPGP | Detalle o formulario abierto |
 | Texto y notas de una nota segura | JSON dentro del ciphertext OpenPGP | Detalle o formulario abierto |
 
@@ -43,8 +44,9 @@ La proyección pública de carpeta incluye `id`, `parent`, `name`, `icon` y
 en SQLite. Cambiar título, icono o color conserva el padre, los destinatarios
 por defecto y los elementos contenidos.
 
-SQLite utiliza el esquema 4. El esquema 2 incorporó apariencia de carpetas;
-el 3 agregó orden entre hermanos y el 4 agrega iconos de elementos. Al abrir un archivo propio del esquema 1, una
+SQLite utiliza el esquema 5. El esquema 2 incorporó apariencia de carpetas;
+el 3 agregó orden entre hermanos, el 4 agregó iconos de elementos y el 5 agrega
+parejas de elementos. Al abrir un archivo propio del esquema 1, una
 transacción añade las columnas de apariencia con `folder` y `transparent` como
 valores por defecto. La versión se vuelve a leer dentro de la transacción
 para coordinar aperturas concurrentes; la migración no modifica ciphertexts
@@ -132,7 +134,7 @@ anterior; el usuario puede corregirla o continuar sin cambiar el icono.
 
 ### Migración y respaldos
 
-SQLite usa esquema 4; la migración desde 3 agrega columnas y recursos con valores
+El esquema SQLite 4 agregó columnas y recursos con valores
 nulos para elementos existentes, sin descifrar ni reescribir credenciales. Las
 migraciones anteriores se aplican en la misma transacción. La migración de iconos no reescribe el payload cifrado. El sobre actual usa
 `CONTENT_SCHEMA_VERSION = 4`.
@@ -144,6 +146,42 @@ presupuesto de JSON. Restaurar valida UUID, tamaño, decodificación, unicidad y
 referencias; rechaza recursos ausentes o huérfanos antes de publicar la base.
 Los respaldos 1 y 2 siguen admitidos, con `icon = null` y sin recursos. Las
 versiones desconocidas se rechazan.
+
+## Elementos vinculados
+
+Un elemento puede vincularse con un único compañero, de cualquier tipo. El
+vínculo es bidireccional y pertenece a la bóveda: `secret_links` guarda los dos
+UUID sin copiar títulos ni contenido. La proyección de cada extremo incluye
+`relatedEntryId`, con cadena vacía cuando no tiene compañero. Son metadatos
+públicos, igual que los nombres y las carpetas.
+
+El editor guarda contenido, apariencia y vínculo en una única transacción con
+la revisión esperada. Omitir `relatedEntryId` conserva el vínculo; enviarlo vacío
+lo elimina. Se rechazan nuevos enlaces consigo mismo, con un elemento
+inexistente o en la papelera, y con un compañero que ya está vinculado con otro
+elemento. Editar una pareja existente conserva su vínculo aunque el compañero
+esté en la papelera; también se permite desvincularla.
+Cambiar el vínculo incrementa también la revisión de los compañeros afectados;
+una edición abierta debe recargarse si su relación cambió.
+
+Enviar un elemento a la papelera conserva su vínculo. El detalle indica ese
+estado y no abre el compañero desde allí. Eliminar definitivamente un extremo
+quita la relación e incrementa la revisión del superviviente. Desvincular no
+elimina ninguno de los dos elementos.
+
+El detalle usa únicamente metadatos para presentar la tarjeta del compañero.
+Abrirla pasa por la selección y autorización habituales; no descifra el otro
+contenido en segundo plano. Los filtros siguen aplicándose a cada elemento y
+las parejas visibles se muestran juntas, ordenadas por el primer título de
+cada pareja. «Crear seguridad» prepara un secreto personalizado con título
+«Seguridad de …», la misma carpeta y destinatarios, y el vínculo al elemento
+actual. La creación se hace efectiva al guardar ese borrador.
+
+Los respaldos con vínculos usan la versión 4 e incluyen una colección `links`
+de pares `first`/`second`. Los respaldos sin vínculos conservan la versión 3.
+Restaurar valida existencia de ambos extremos, ausencia de enlaces consigo
+mismo y un solo compañero por elemento antes de publicar la bóveda. Se admiten
+respaldos anteriores sin vínculos; las versiones 1–3 no admiten pares.
 
 ## Payload cifrado, versiones 3 y 4
 

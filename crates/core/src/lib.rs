@@ -23,7 +23,7 @@ pub use domain::entry_icon::{
 };
 pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,
-    SecretId, SecretKind, SecretMetadata,
+    SecretId, SecretKind, SecretLink, SecretLinkError, SecretMetadata,
 };
 pub use import::{
     ImportBatch, ImportFolder, ImportFolderPolicy, ImportItem, ImportOptions, ImportReceipt,

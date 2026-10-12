@@ -5,8 +5,8 @@ mod expanded;
 
 use kryptopass_core::{
     EntryIcon, Folder, FolderId, KeyFingerprint, LoginHistory, LoginHistoryEventKind,
-    RecipientSelection, RecipientSet, SecretContent, SecretId, SecretMetadata, TotpConfig,
-    generate_totp,
+    RecipientSelection, RecipientSet, SecretContent, SecretId, SecretLink, SecretMetadata,
+    TotpConfig, generate_totp,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -44,6 +44,7 @@ pub(super) struct OpenedEntry {
     pub(super) revision: u64,
     pub(super) recipients: Vec<String>,
     pub(super) icon: Option<EntryIcon>,
+    pub(super) related_entry: Option<SecretId>,
     pub(super) content: SecretContent,
 }
 
@@ -55,6 +56,7 @@ pub(super) struct PreparedSave {
     pub(super) content: SecretContent,
     pub(super) expected_revision: Option<u64>,
     pub(super) icon_update: Option<Option<EntryIcon>>,
+    pub(super) link_update: Option<Option<SecretId>>,
 }
 
 #[derive(serde::Serialize, Zeroize, ZeroizeOnDrop)]
@@ -105,7 +107,16 @@ struct HistoryAtProjection {
 }
 
 /// Projects list data without copying encrypted payload bytes into QML.
-pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>) -> StoreSnapshot {
+pub(super) fn store_snapshot_with_links(
+    folders: Vec<Folder>,
+    secrets: Vec<SecretMetadata>,
+    links: Vec<SecretLink>,
+) -> StoreSnapshot {
+    let mut companions = std::collections::HashMap::new();
+    for link in links {
+        companions.insert(link.first, link.second);
+        companions.insert(link.second, link.first);
+    }
     let favicon_hosts = secrets
         .iter()
         .filter_map(|secret| match secret.icon.as_ref() {
@@ -138,6 +149,7 @@ pub(super) fn store_snapshot(folders: Vec<Folder>, secrets: Vec<SecretMetadata>)
                 "id": secret.id.0.to_string(),
                 "folder": secret.folder_id.map_or_else(String::new, |id| id.0.to_string()),
                 "title": secret.title,
+                "relatedEntryId": companions.get(&secret.id).map_or_else(String::new, |id| id.0.to_string()),
                 "kind": secret.kind.as_str(),
                 "format": "Texto",
                 "iconSource": crate::infrastructure::entry_icons::source_for(display_icon),
@@ -175,6 +187,8 @@ pub(super) struct EntryDraft {
     #[serde(rename = "iconSource", default)]
     _icon_source: String,
     recipients: Vec<String>,
+    #[serde(rename = "relatedEntryId", default)]
+    related_entry_id: Option<String>,
 }
 
 #[derive(Default)]
@@ -254,6 +268,23 @@ pub(super) fn prepare_save(
         icon.validate()?;
     }
     let folder = parse_optional_folder_id(&draft.folder)?;
+    let link_update = draft
+        .related_entry_id
+        .as_deref()
+        .map(|value| -> anyhow::Result<Option<SecretId>> {
+            if value.is_empty() {
+                Ok(None)
+            } else {
+                let id = Uuid::parse_str(value)
+                    .ok()
+                    .filter(|id| !id.is_nil())
+                    .map(SecretId)
+                    .ok_or_else(|| anyhow::anyhow!("related entry identifier is invalid"))?;
+                anyhow::ensure!(Some(id) != session_id, "a secret cannot link to itself");
+                Ok(Some(id))
+            }
+        })
+        .transpose()?;
     let mut recipients = Vec::with_capacity(draft.recipients.len());
     for fingerprint in draft.recipients.drain(..) {
         recipients.push(KeyFingerprint::parse(&fingerprint)?);
@@ -275,6 +306,7 @@ pub(super) fn prepare_save(
         content,
         expected_revision: session_revision,
         icon_update: draft.icon.present.then(|| draft.icon.value.take()),
+        link_update,
     })
 }
 
@@ -326,6 +358,9 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing
         icon_source: crate::infrastructure::entry_icons::source_for(entry.icon.as_ref()),
         content: EditorContent::new(&entry.content)?,
         recipients: &entry.recipients,
+        related_entry_id: entry
+            .related_entry
+            .map_or_else(String::new, |id| id.0.to_string()),
     })
     .map(Zeroizing::new)
     .map_err(Into::into)
@@ -342,6 +377,7 @@ pub(super) fn new_editor_projection() -> anyhow::Result<Zeroizing<String>> {
         icon_source: String::new(),
         content: EditorContent::new(&content)?,
         recipients: &[],
+        related_entry_id: String::new(),
     };
     serde_json::to_string(&projection)
         .map(Zeroizing::new)
@@ -365,6 +401,8 @@ struct EditorProjection<'a> {
     icon_source: String,
     content: EditorContent<'a>,
     recipients: &'a [String],
+    #[serde(rename = "relatedEntryId")]
+    related_entry_id: String,
 }
 
 fn parse_optional_folder_id(value: &str) -> anyhow::Result<Option<FolderId>> {

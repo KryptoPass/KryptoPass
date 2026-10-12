@@ -3,7 +3,7 @@
 use anyhow::Result;
 use zeroize::Zeroizing;
 
-use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId, SecretMetadata};
+use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId, SecretLink, SecretMetadata};
 
 /// Persistence boundary for the local secret store.
 pub trait Storage {
@@ -26,12 +26,45 @@ pub trait Storage {
         self.replace_secret(secret, expected_revision)
     }
 
+    fn insert_secret_with_link(
+        &mut self,
+        secret: Secret,
+        asset: Option<crate::EntryIconAsset>,
+        related: Option<SecretId>,
+    ) -> Result<()> {
+        anyhow::ensure!(related.is_none(), "storage does not support linked items");
+        self.insert_secret_with_icon(secret, asset)
+    }
+
+    fn replace_secret_with_link(
+        &mut self,
+        secret: Secret,
+        expected_revision: u64,
+        asset: Option<crate::EntryIconAsset>,
+        related: Option<SecretId>,
+    ) -> Result<()> {
+        anyhow::ensure!(
+            related.is_none()
+                && self
+                    .list_secret_links()?
+                    .iter()
+                    .all(|link| { link.first != secret.id && link.second != secret.id }),
+            "storage does not support linked items"
+        );
+        self.replace_secret_with_icon(secret, expected_revision, asset)
+    }
+
     fn list_folders(&self) -> Result<Vec<Folder>>;
 
     fn list_secrets(&self) -> Result<Vec<Secret>>;
 
     /// Reads list metadata without loading encrypted payload bytes.
     fn list_secret_metadata(&self) -> Result<Vec<SecretMetadata>>;
+
+    /// Reads public pair metadata without loading encrypted payload bytes.
+    fn list_secret_links(&self) -> Result<Vec<SecretLink>> {
+        Ok(Vec::new())
+    }
 
     fn find_folder(&self, id: FolderId) -> Result<Option<Folder>>;
 

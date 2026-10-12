@@ -93,6 +93,7 @@ fn entry(content: SecretContent) -> OpenedEntry {
         revision: 1,
         recipients: vec!["0123456789ABCDEF0123456789ABCDEF01234567".to_owned()],
         icon: None,
+        related_entry: None,
         content,
     }
 }

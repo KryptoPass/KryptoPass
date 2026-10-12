@@ -6,7 +6,8 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::domain::content::LoginHistoryEventKind;
 use crate::domain::{
-    Folder, FolderAppearance, FolderId, RecipientSet, Secret, SecretId, SecretKind, SecretMetadata,
+    Folder, FolderAppearance, FolderId, RecipientSet, Secret, SecretId, SecretKind,
+    SecretLinkError, SecretMetadata,
     content::{MAX_CONTENT_BYTES, SecretContent, decode_content, encode_content},
 };
 use crate::ports::{OpenPgp, Storage};
@@ -187,6 +188,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
                 expected_revision,
             },
             None,
+            None,
         )
     }
 
@@ -196,13 +198,28 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         appearance: crate::EntryAppearanceUpdate,
     ) -> Result<SecretId> {
         appearance.validate()?;
-        self.save_content_impl(request, Some(appearance))
+        self.save_content_impl(request, Some(appearance), None)
+    }
+
+    /// Saves typed content and sets or clears the item's one companion link in
+    /// the same storage transaction as the content update.
+    pub fn save_content_with_link(
+        &mut self,
+        request: SaveContentRequest,
+        appearance: Option<crate::EntryAppearanceUpdate>,
+        related: Option<SecretId>,
+    ) -> Result<SecretId> {
+        if let Some(appearance) = &appearance {
+            appearance.validate()?;
+        }
+        self.save_content_impl(request, appearance, Some(related))
     }
 
     fn save_content_impl(
         &mut self,
         request: SaveContentRequest,
         appearance: Option<crate::EntryAppearanceUpdate>,
+        relationship: Option<Option<SecretId>>,
     ) -> Result<SecretId> {
         let SaveContentRequest {
             id,
@@ -234,6 +251,51 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             (Some(_), None) => anyhow::bail!("an edit requires its expected revision"),
             (None, Some(_)) => anyhow::bail!("a new secret cannot have an expected revision"),
             (None, None) => {}
+        }
+        let secret_id = id.unwrap_or_default();
+        if let Some(related) = relationship {
+            let links = self.storage.list_secret_links()?;
+            let current_target = links
+                .iter()
+                .find(|link| link.first == secret_id || link.second == secret_id)
+                .map(|link| {
+                    if link.first == secret_id {
+                        link.second
+                    } else {
+                        link.first
+                    }
+                });
+            if related != current_target {
+                if let Some(target_id) = related {
+                    if existing.as_ref().is_some_and(|secret| secret.trashed)
+                        || target_id == secret_id
+                    {
+                        return Err(SecretLinkError::InvalidTarget.into());
+                    }
+                    let target = self
+                        .storage
+                        .list_secret_metadata()?
+                        .into_iter()
+                        .find(|secret| secret.id == target_id)
+                        .ok_or(SecretLinkError::InvalidTarget)?;
+                    if target.trashed {
+                        return Err(SecretLinkError::InvalidTarget.into());
+                    }
+                    if let Some(link) = links
+                        .iter()
+                        .find(|link| link.first == target_id || link.second == target_id)
+                    {
+                        let current_companion = if link.first == target_id {
+                            link.second
+                        } else {
+                            link.first
+                        };
+                        if current_companion != secret_id {
+                            return Err(SecretLinkError::Occupied.into());
+                        }
+                    }
+                }
+            }
         }
         if let Some(secret) = &existing {
             ensure!(
@@ -280,7 +342,6 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
 
         let plaintext = encode_content(&content)?;
         let ciphertext = self.crypto.encrypt(plaintext.as_slice(), &recipients)?;
-        let secret_id = id.unwrap_or_default();
         let secret = Secret {
             icon: match appearance.as_ref().map(|update| update.icon.as_ref()) {
                 Some(Some(
@@ -312,8 +373,16 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         if existing.is_some() {
             let expected_revision =
                 expected_revision.context("an edit requires its expected revision")?;
+            if let Some(related) = relationship {
+                self.storage
+                    .replace_secret_with_link(secret, expected_revision, asset, related)?;
+            } else {
+                self.storage
+                    .replace_secret_with_icon(secret, expected_revision, asset)?;
+            }
+        } else if let Some(related) = relationship {
             self.storage
-                .replace_secret_with_icon(secret, expected_revision, asset)?;
+                .insert_secret_with_link(secret, asset, related)?;
         } else {
             self.storage.insert_secret_with_icon(secret, asset)?;
         }

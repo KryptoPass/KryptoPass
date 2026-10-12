@@ -25,6 +25,16 @@ pub enum DomainError {
     InvalidFolderColor,
 }
 
+/// Safe, typed failures that the UI can map to a relationship-specific message.
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum SecretLinkError {
+    #[error("linked item is unavailable")]
+    InvalidTarget,
+
+    #[error("linked item is already paired")]
+    Occupied,
+}
+
 /// Stable identifier for a folder in the local secret store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FolderId(pub Uuid);
@@ -55,6 +65,14 @@ impl Default for SecretId {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Public relationship between two secrets. Endpoints are stored in UUID
+/// order so each pair has one stable representation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SecretLink {
+    pub first: SecretId,
+    pub second: SecretId,
 }
 
 /// Canonical OpenPGP fingerprint used as a recipient reference.

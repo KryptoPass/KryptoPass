@@ -9,17 +9,17 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QDateTime, QString, QStringList, QTimeZone, QUrl};
 use kryptopass_core::{
     FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
-    SecretsService, Storage, generate_password as generate_secure_password, generate_totp,
+    SecretsService, generate_password as generate_secure_password, generate_totp,
 };
 use uuid::Uuid;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroizing;
 
 use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage, app_paths};
 
 use super::secrets_projection::{
     EntryDraft, OpenedEntry, StoreSnapshot, content_field, content_projection,
     content_projection_with_state, draft_matches_session, editor_projection, new_editor_projection,
-    prepare_save, snapshot_revision, store_snapshot,
+    prepare_save, snapshot_revision, store_snapshot_with_links,
 };
 
 #[cxx_qt::bridge]
@@ -766,14 +766,16 @@ impl qobject::SecretsController {
                     content: prepared.content,
                     expected_revision: prepared.expected_revision,
                 };
-                let id = if let Some(icon) = prepared.icon_update {
+                let appearance = prepared.icon_update.map(|icon| {
                     let asset = staged_icon.filter(|asset| {
                         icon == Some(kryptopass_core::EntryIcon::Image { asset_id: asset.id })
                     });
-                    service.save_content_with_appearance(
-                        request,
-                        kryptopass_core::EntryAppearanceUpdate { icon, asset },
-                    )?
+                    kryptopass_core::EntryAppearanceUpdate { icon, asset }
+                });
+                let id = if let Some(related) = prepared.link_update {
+                    service.save_content_with_link(request, appearance, related)?
+                } else if let Some(appearance) = appearance {
+                    service.save_content_with_appearance(request, appearance)?
                 } else {
                     service.save_content(
                         request.id,
@@ -1879,7 +1881,18 @@ impl qobject::SecretsController {
                     }
                     controller.as_mut().operation_succeeded();
                 }
-                Err(_) => controller.as_mut().fail(failure_message),
+                Err(error) => {
+                    let message = match error.downcast_ref::<kryptopass_core::SecretLinkError>() {
+                        Some(kryptopass_core::SecretLinkError::Occupied) => {
+                            "El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero."
+                        }
+                        Some(kryptopass_core::SecretLinkError::InvalidTarget) => {
+                            "El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo."
+                        }
+                        None => failure_message,
+                    };
+                    controller.as_mut().fail(message);
+                }
             }
         });
     }
@@ -2110,6 +2123,7 @@ fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
         revision: after.revision,
         recipients: after.recipients,
         icon: after.icon,
+        related_entry: after.related_entry,
         content,
     })
 }
@@ -2132,17 +2146,20 @@ struct EntryMetadata {
     title: String,
     revision: u64,
     recipients: Vec<String>,
+    related_entry: Option<SecretId>,
 }
 
 fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
     let storage = open_storage()?;
-    let mut secret = storage
-        .find_secret(id)?
+    let (_, secrets, links) = storage.read_snapshot_with_links()?;
+    let secret = secrets
+        .into_iter()
+        .find(|secret| secret.id == id)
         .ok_or_else(|| anyhow::anyhow!("secret does not exist"))?;
     let metadata = EntryMetadata {
-        icon: secret.icon.take(),
+        icon: secret.icon,
         folder: secret.folder_id,
-        title: std::mem::take(&mut secret.title),
+        title: secret.title,
         revision: secret.revision,
         recipients: secret
             .recipients
@@ -2150,8 +2167,16 @@ fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
             .iter()
             .map(|key| key.as_str().to_owned())
             .collect(),
+        related_entry: links.iter().find_map(|link| {
+            if link.first == id {
+                Some(link.second)
+            } else if link.second == id {
+                Some(link.first)
+            } else {
+                None
+            }
+        }),
     };
-    secret.ciphertext.zeroize();
     Ok(metadata)
 }
 
@@ -2202,16 +2227,16 @@ fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
 
 fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
     let storage = open_storage()?;
-    let (folders, secrets) = storage.read_snapshot()?;
-    Ok(store_snapshot(folders, secrets))
+    let (folders, secrets, links) = storage.read_snapshot_with_links()?;
+    Ok(store_snapshot_with_links(folders, secrets, links))
 }
 
 fn activate_store_snapshot(path: std::path::PathBuf) -> anyhow::Result<(StoreSnapshot, bool)> {
     let storage = SqliteStorage::open_existing(&path)?;
-    let (folders, secrets) = storage.read_snapshot()?;
+    let (folders, secrets, links) = storage.read_snapshot_with_links()?;
     let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
     crate::infrastructure::entry_icons::bind_store(&path);
-    let snapshot = store_snapshot(folders, secrets);
+    let snapshot = store_snapshot_with_links(folders, secrets, links);
     Ok((snapshot, durable))
 }
 

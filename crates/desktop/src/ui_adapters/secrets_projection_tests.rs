@@ -1,7 +1,10 @@
 #![allow(clippy::unwrap_used)]
 
 use super::*;
-use kryptopass_core::{LoginContent, NoteContent, TotpAlgorithm};
+use kryptopass_core::{
+    KeyFingerprint, LoginContent, NoteContent, RecipientSet, SecretKind, SecretLink,
+    SecretMetadata, TotpAlgorithm,
+};
 use serde_json::Value;
 
 const RECIPIENT: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
@@ -39,7 +42,22 @@ fn opened(content: SecretContent) -> OpenedEntry {
         revision: 7,
         recipients: vec![RECIPIENT.to_owned()],
         icon: None,
+        related_entry: None,
         content,
+    }
+}
+
+fn metadata(id: SecretId, title: &str) -> SecretMetadata {
+    SecretMetadata {
+        icon: None,
+        id,
+        folder_id: None,
+        title: title.to_owned(),
+        kind: SecretKind::SecureNote,
+        recipients: RecipientSet::new(vec![KeyFingerprint::parse(RECIPIENT).unwrap()]).unwrap(),
+        favorite: false,
+        trashed: false,
+        revision: 0,
     }
 }
 
@@ -114,6 +132,63 @@ fn note_editor_round_trip_uses_only_note_fields() {
     assert_eq!(saved.notes, "Notas adicionales");
     assert_eq!(prepared.title, entry.title);
     assert_eq!(prepared.folder, entry.folder);
+}
+
+#[test]
+fn editor_round_trip_preserves_related_entry_id() {
+    let related_entry = SecretId::new();
+    let mut entry = opened(SecretContent::Note(NoteContent {
+        value: "Private note".to_owned(),
+        notes: "Additional notes".to_owned(),
+    }));
+    entry.related_entry = Some(related_entry);
+
+    let projection = editor_projection(&entry).unwrap();
+    let json: Value = serde_json::from_str(&projection).unwrap();
+    assert_eq!(json["relatedEntryId"], related_entry.0.to_string());
+
+    let mut draft: EntryDraft = serde_json::from_str(&projection).unwrap();
+    let prepared = prepare_save(&mut draft, Some(entry.id), Some(entry.revision)).unwrap();
+    assert_eq!(prepared.link_update, Some(Some(related_entry)));
+}
+
+#[test]
+fn store_snapshot_projects_each_link_endpoint_to_its_companion() {
+    let left = SecretId::new();
+    let right = SecretId::new();
+    let link = if left.0 < right.0 {
+        SecretLink {
+            first: left,
+            second: right,
+        }
+    } else {
+        SecretLink {
+            first: right,
+            second: left,
+        }
+    };
+
+    let snapshot = store_snapshot_with_links(
+        vec![],
+        vec![metadata(left, "Left"), metadata(right, "Right")],
+        vec![link],
+    );
+    let entries = snapshot
+        .entries
+        .iter()
+        .map(|entry| serde_json::from_str::<Value>(entry).unwrap())
+        .collect::<Vec<_>>();
+    let left_entry = entries
+        .iter()
+        .find(|entry| entry["id"] == left.0.to_string())
+        .unwrap();
+    let right_entry = entries
+        .iter()
+        .find(|entry| entry["id"] == right.0.to_string())
+        .unwrap();
+
+    assert_eq!(left_entry["relatedEntryId"], right.0.to_string());
+    assert_eq!(right_entry["relatedEntryId"], left.0.to_string());
 }
 
 #[test]

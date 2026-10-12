@@ -16,6 +16,7 @@ Controls.Pane {
     required property Item focusedItem
 
     property string entryId: ""
+    property string relatedEntryId: ""
     property string draftFolderId: ""
     property var draftIcon: null
     property url draftIconSource: ""
@@ -31,6 +32,7 @@ Controls.Pane {
     property string pendingEntryId: ""
     property string discardAction: ""
     property string saveError: ""
+    property var pendingRelatedEntry: null
     property bool opened: false
     property var pendingNavigation: null
     readonly property string title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
@@ -70,6 +72,7 @@ Controls.Pane {
             content: { kind: fieldsHost.kind, fields: fieldsHost.currentFields() },
             icon: draftIcon,
             recipients: recipientChooser.selectedFingerprints.slice(),
+            relatedEntryId: relatedEntryId,
             revision: entryId ? revision : null
         };
     }
@@ -107,6 +110,26 @@ Controls.Pane {
         requestEntry(nextId);
     }
 
+    function openRelatedEntry(entry) {
+        if (!entry || entry.trashed || entry.relatedEntryId || storeAdapter.relatedEntryFor(entry)
+                || storeAdapter.controller.locked || saving || savePending || waitingForEditor
+                || externalModalOpen || preparingSecretMaterial || storeAdapter.controller.busy
+                || storeAdapter.controller.editorBusy || storeAdapter.controller.iconBusy)
+            return;
+        const source = {
+            id: entry.id,
+            title: entry.title || "",
+            folder: entry.folder || "",
+            recipients: Array.isArray(entry.recipients) ? entry.recipients.slice() : []
+        };
+        guardNavigation(function() {
+            editor.pendingRelatedEntry = source;
+            editor.openEntry(null);
+            if (!editor.waitingForEditor && !editor.opened)
+                editor.pendingRelatedEntry = null;
+        });
+    }
+
     function acceptEditorReady() {
         if (!waitingForEditor)
             return;
@@ -115,6 +138,7 @@ Controls.Pane {
             draft = JSON.parse(storeAdapter.controller.editorJson);
         } catch (error) {
             waitingForEditor = false;
+            pendingRelatedEntry = null;
             return;
         }
         const resultId = draft.id || "";
@@ -124,12 +148,16 @@ Controls.Pane {
         const kindIndex = kindField.model.findIndex(option => option.id === draft.content?.kind);
         if (kindIndex < 0) {
             waitingForEditor = false;
+            pendingRelatedEntry = null;
             saveError = qsTr("No se puede editar este tipo de elemento.");
             return;
         }
+        const relatedPrefill = !resultId ? pendingRelatedEntry : null;
+        pendingRelatedEntry = null;
         loaded = false;
         entryId = resultId;
         draftFolderId = draft.folder || "";
+        relatedEntryId = draft.relatedEntryId || "";
         revision = draft.revision === undefined ? null : draft.revision;
         titleField.text = draft.title || "";
         draftIcon = draft.icon?.kind === "favicon" ? null : draft.icon || null;
@@ -137,6 +165,21 @@ Controls.Pane {
         kindField.currentIndex = kindIndex;
         fieldsHost.loadContent(draft.content);
         recipientChooser.selectedFingerprints = Array.isArray(draft.recipients) ? draft.recipients.slice() : [];
+
+        if (relatedPrefill) {
+            const customIndex = kindField.model.findIndex(option => option.id === "custom");
+            if (customIndex < 0) {
+                waitingForEditor = false;
+                saveError = qsTr("No se puede crear el elemento de seguridad.");
+                return;
+            }
+            titleField.text = qsTr("Seguridad de %1").arg(relatedPrefill.title);
+            draftFolderId = relatedPrefill.folder;
+            kindField.currentIndex = customIndex;
+            fieldsHost.loadContent({ kind: "custom", fields: {} });
+            recipientChooser.selectedFingerprints = relatedPrefill.recipients.slice();
+            relatedEntryId = relatedPrefill.id;
+        }
 
         waitingForEditor = false;
         loaded = true;
@@ -225,6 +268,8 @@ Controls.Pane {
         baselineJson = "";
         requestedId = "";
         entryId = "";
+        relatedEntryId = "";
+        pendingRelatedEntry = null;
         draftFolderId = "";
         revision = null;
         saveError = "";
@@ -409,6 +454,7 @@ Controls.Pane {
                 editor.saveError = editor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar el elemento.");
             } else if (editor.waitingForEditor && !editor.storeAdapter.controller.editorBusy) {
                 editor.waitingForEditor = false;
+                editor.pendingRelatedEntry = null;
             }
         }
     }
@@ -569,6 +615,20 @@ Controls.Pane {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    RelatedEntryPicker {
+                        id: relatedEntryPicker
+                        Layout.fillWidth: true
+                        enabled: !editor.saving && !editor.savePending
+                        entries: editor.storeAdapter.entries
+                        kindOptions: editor.storeAdapter.kindOptions
+                        entryId: editor.entryId
+                        relatedEntryId: editor.relatedEntryId
+                        onSelectionChanged: function(relatedId) {
+                            editor.relatedEntryId = relatedId;
+                            editor.updateDirty();
                         }
                     }
 

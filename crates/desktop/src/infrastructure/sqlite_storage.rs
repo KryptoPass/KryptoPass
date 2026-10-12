@@ -9,8 +9,8 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{
     DomainError, EntryIcon, EntryIconAsset, Folder, FolderAppearance, FolderId, ImportStorage,
-    KeyFingerprint, MAX_ENTRY_ICON_BYTES, RecipientSet, Secret, SecretId, SecretKind,
-    SecretMetadata, Storage,
+    KeyFingerprint, MAX_ENTRY_ICON_BYTES, RecipientSet, Secret, SecretId, SecretKind, SecretLink,
+    SecretLinkError, SecretMetadata, Storage,
 };
 use rusqlite::types::{Type, ValueRef};
 use rusqlite::{
@@ -21,9 +21,16 @@ use uuid::Uuid;
 use super::MAX_CIPHERTEXT_BYTES;
 use super::backup::{MAX_BACKUP_PLAINTEXT_BYTES, MAX_BACKUP_RECIPIENTS, MAX_BACKUP_ROWS};
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 const APPLICATION_ID: i64 = 0x4b50_5331;
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub(crate) type EncryptedStoreSnapshot = (
+    Vec<Folder>,
+    Vec<Secret>,
+    Vec<EntryIconAsset>,
+    Vec<SecretLink>,
+);
 
 /// Persistent storage whose secret payload column contains ciphertext only.
 pub struct SqliteStorage {
@@ -86,6 +93,7 @@ impl SqliteStorage {
     }
 
     /// Reads folder and secret metadata from the same SQLite snapshot.
+    #[allow(dead_code)] // Kept as the original metadata-only snapshot API.
     pub fn read_snapshot(&self) -> Result<(Vec<Folder>, Vec<SecretMetadata>)> {
         let transaction = self
             .connection
@@ -99,10 +107,36 @@ impl SqliteStorage {
         Ok((folders, secrets))
     }
 
+    /// Reads navigation metadata and public pair relationships from one SQLite
+    /// snapshot without loading encrypted payloads.
+    pub fn read_snapshot_with_links(
+        &self,
+    ) -> Result<(Vec<Folder>, Vec<SecretMetadata>, Vec<SecretLink>)> {
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .context("could not read the encrypted store")?;
+        let folders = read_folders(&transaction)?;
+        let secrets = read_secret_metadata(&transaction)?;
+        let links = read_secret_links(&transaction)?;
+        transaction
+            .commit()
+            .context("could not finish reading store metadata")?;
+        Ok((folders, secrets, links))
+    }
+
     /// Reads the complete encrypted store under one bounded SQLite snapshot.
+    #[cfg(test)]
     pub(crate) fn backup_snapshot(
         &self,
     ) -> Result<(Vec<Folder>, Vec<Secret>, Vec<EntryIconAsset>)> {
+        let (folders, secrets, assets, _) = self.backup_snapshot_with_links()?;
+        Ok((folders, secrets, assets))
+    }
+
+    /// Reads encrypted records, local icon assets, and public pair metadata
+    /// under one bounded SQLite snapshot.
+    pub(crate) fn backup_snapshot_with_links(&self) -> Result<EncryptedStoreSnapshot> {
         let transaction = self
             .connection
             .unchecked_transaction()
@@ -111,20 +145,35 @@ impl SqliteStorage {
         let folders = read_folders(&transaction)?;
         let secrets = read_secrets(&transaction)?;
         let assets = read_icon_assets(&transaction)?;
+        let links = read_secret_links(&transaction)?;
         transaction
             .commit()
             .context("could not finish reading the encrypted backup")?;
-        Ok((folders, secrets, assets))
+        Ok((folders, secrets, assets, links))
     }
 
     /// Imports a validated backup into a newly created, empty store atomically.
+    #[cfg(test)]
     pub(crate) fn import_backup_snapshot(
         &mut self,
         folders: &[Folder],
         secrets: &[Secret],
         assets: &[EntryIconAsset],
     ) -> Result<()> {
+        self.import_backup_snapshot_with_links(folders, secrets, assets, &[])
+    }
+
+    /// Restores a complete backup snapshot and all public relationships in one
+    /// immediate transaction.
+    pub(crate) fn import_backup_snapshot_with_links(
+        &mut self,
+        folders: &[Folder],
+        secrets: &[Secret],
+        assets: &[EntryIconAsset],
+        links: &[SecretLink],
+    ) -> Result<()> {
         validate_backup_snapshot(folders, secrets)?;
+        validate_backup_links(links, secrets)?;
 
         let transaction = self
             .connection
@@ -134,7 +183,7 @@ impl SqliteStorage {
             .query_row(
                 "SELECT EXISTS(SELECT 1 FROM folders) OR EXISTS(SELECT 1 FROM secrets) \
                  OR EXISTS(SELECT 1 FROM folder_recipients) OR EXISTS(SELECT 1 FROM secret_recipients) \
-                 OR EXISTS(SELECT 1 FROM entry_icon_assets)",
+                 OR EXISTS(SELECT 1 FROM entry_icon_assets) OR EXISTS(SELECT 1 FROM secret_links)",
                 [],
                 |row| row.get(0),
             )
@@ -145,6 +194,7 @@ impl SqliteStorage {
             insert_icon_asset(&transaction, asset)?;
         }
         insert_encrypted_batch(&transaction, folders, secrets)?;
+        insert_imported_secret_links(&transaction, links)?;
 
         transaction
             .commit()
@@ -169,6 +219,120 @@ impl SqliteStorage {
         self.connection
             .close()
             .map_err(|_| anyhow::anyhow!("could not close the restored store"))
+    }
+
+    fn insert_secret_record(
+        &mut self,
+        secret: Secret,
+        asset: Option<EntryIconAsset>,
+        relationship: Option<Option<SecretId>>,
+    ) -> Result<()> {
+        validate_secret(&secret)?;
+        ensure!(
+            secret.revision == 0,
+            "a new secret must start at revision zero"
+        );
+
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .context("could not begin secret update")?;
+        if let Some(asset) = &asset {
+            ensure!(
+                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
+                "icon resource does not match secret"
+            );
+            insert_icon_asset(&transaction, asset)?;
+        }
+        transaction
+            .execute(
+                "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0)",
+                params![
+                    secret.id.0.to_string(),
+                    secret.folder_id.map(|id| id.0.to_string()),
+                    secret.title,
+                    secret.kind.as_str(),
+                    secret.favorite,
+                    secret.trashed,
+                    secret.ciphertext,
+                ],
+            )
+            .map_err(|_| anyhow::anyhow!("could not save secret"))?;
+        replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
+        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
+        if let Some(related) = relationship {
+            apply_secret_link_change(&transaction, secret.id, related)?;
+        }
+        collect_unused_icons(&transaction)?;
+        transaction
+            .commit()
+            .context("could not finish secret update")
+    }
+
+    fn replace_secret_record(
+        &mut self,
+        secret: Secret,
+        expected_revision: u64,
+        asset: Option<EntryIconAsset>,
+        relationship: Option<Option<SecretId>>,
+    ) -> Result<()> {
+        validate_secret(&secret)?;
+        ensure!(
+            secret.revision == expected_revision,
+            "secret revision does not match the expected revision",
+        );
+        ensure!(
+            expected_revision < i64::MAX as u64,
+            "secret revision is exhausted",
+        );
+
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .context("could not begin secret update")?;
+        if let Some(folder_id) = secret.folder_id {
+            ensure_folder_exists(&transaction, folder_id)?;
+        }
+
+        if let Some(asset) = &asset {
+            ensure!(
+                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
+                "icon resource does not match secret"
+            );
+            insert_icon_asset(&transaction, asset)?;
+        }
+        let changed = transaction
+            .execute(
+                "UPDATE secrets \
+                 SET folder_id = ?1, title = ?2, kind = ?3, favorite = ?4, trashed = ?5, \
+                     ciphertext = ?6, revision = revision + 1 \
+                 WHERE id = ?7 AND revision = ?8",
+                params![
+                    secret.folder_id.map(|id| id.0.to_string()),
+                    secret.title,
+                    secret.kind.as_str(),
+                    secret.favorite,
+                    secret.trashed,
+                    secret.ciphertext,
+                    secret.id.0.to_string(),
+                    i64::try_from(expected_revision).context("secret revision is invalid")?,
+                ],
+            )
+            .map_err(|_| anyhow::anyhow!("could not save secret"))?;
+        ensure!(
+            changed == 1,
+            "secret has changed or no longer exists; reload before saving",
+        );
+        replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
+        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
+        if let Some(related) = relationship {
+            apply_secret_link_change(&transaction, secret.id, related)?;
+        }
+        collect_unused_icons(&transaction)?;
+        transaction
+            .commit()
+            .context("could not finish secret update")
     }
 }
 
@@ -233,6 +397,18 @@ impl Storage for SqliteStorage {
         Ok(secrets)
     }
 
+    fn list_secret_links(&self) -> Result<Vec<SecretLink>> {
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .context("could not read the encrypted store")?;
+        let links = read_secret_links(&transaction)?;
+        transaction
+            .commit()
+            .context("could not finish reading linked item metadata")?;
+        Ok(links)
+    }
+
     fn insert_folder(&mut self, folder: Folder) -> Result<()> {
         validate_folder(&folder)?;
         let transaction = self
@@ -270,44 +446,16 @@ impl Storage for SqliteStorage {
         secret: Secret,
         asset: Option<EntryIconAsset>,
     ) -> Result<()> {
-        validate_secret(&secret)?;
-        ensure!(
-            secret.revision == 0,
-            "a new secret must start at revision zero"
-        );
+        self.insert_secret_record(secret, asset, None)
+    }
 
-        let transaction = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)
-            .context("could not begin secret update")?;
-        if let Some(asset) = &asset {
-            ensure!(
-                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
-                "icon resource does not match secret"
-            );
-            insert_icon_asset(&transaction, asset)?;
-        }
-        transaction
-            .execute(
-                "INSERT INTO secrets(id, folder_id, title, kind, favorite, trashed, ciphertext, revision) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0)",
-                params![
-                    secret.id.0.to_string(),
-                    secret.folder_id.map(|id| id.0.to_string()),
-                    secret.title,
-                    secret.kind.as_str(),
-                    secret.favorite,
-                    secret.trashed,
-                    secret.ciphertext,
-                ],
-            )
-            .map_err(|_| anyhow::anyhow!("could not save secret"))?;
-        replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
-        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
-        collect_unused_icons(&transaction)?;
-        transaction
-            .commit()
-            .context("could not finish secret update")
+    fn insert_secret_with_link(
+        &mut self,
+        secret: Secret,
+        asset: Option<EntryIconAsset>,
+        related: Option<SecretId>,
+    ) -> Result<()> {
+        self.insert_secret_record(secret, asset, Some(related))
     }
 
     fn move_secret(&mut self, id: SecretId, destination: Option<FolderId>) -> Result<()> {
@@ -391,59 +539,17 @@ impl Storage for SqliteStorage {
         expected_revision: u64,
         asset: Option<EntryIconAsset>,
     ) -> Result<()> {
-        validate_secret(&secret)?;
-        ensure!(
-            secret.revision == expected_revision,
-            "secret revision does not match the expected revision",
-        );
-        ensure!(
-            expected_revision < i64::MAX as u64,
-            "secret revision is exhausted",
-        );
+        self.replace_secret_record(secret, expected_revision, asset, None)
+    }
 
-        let transaction = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)
-            .context("could not begin secret update")?;
-        if let Some(folder_id) = secret.folder_id {
-            ensure_folder_exists(&transaction, folder_id)?;
-        }
-
-        if let Some(asset) = &asset {
-            ensure!(
-                secret.icon == Some(EntryIcon::Image { asset_id: asset.id }),
-                "icon resource does not match secret"
-            );
-            insert_icon_asset(&transaction, asset)?;
-        }
-        let changed = transaction
-            .execute(
-                "UPDATE secrets \
-                 SET folder_id = ?1, title = ?2, kind = ?3, favorite = ?4, trashed = ?5, \
-                     ciphertext = ?6, revision = revision + 1 \
-                 WHERE id = ?7 AND revision = ?8",
-                params![
-                    secret.folder_id.map(|id| id.0.to_string()),
-                    secret.title,
-                    secret.kind.as_str(),
-                    secret.favorite,
-                    secret.trashed,
-                    secret.ciphertext,
-                    secret.id.0.to_string(),
-                    i64::try_from(expected_revision).context("secret revision is invalid")?,
-                ],
-            )
-            .map_err(|_| anyhow::anyhow!("could not save secret"))?;
-        ensure!(
-            changed == 1,
-            "secret has changed or no longer exists; reload before saving",
-        );
-        replace_secret_recipients(&transaction, secret.id, &secret.recipients)?;
-        set_secret_icon(&transaction, secret.id, secret.icon.as_ref())?;
-        collect_unused_icons(&transaction)?;
-        transaction
-            .commit()
-            .context("could not finish secret update")
+    fn replace_secret_with_link(
+        &mut self,
+        secret: Secret,
+        expected_revision: u64,
+        asset: Option<EntryIconAsset>,
+        related: Option<SecretId>,
+    ) -> Result<()> {
+        self.replace_secret_record(secret, expected_revision, asset, Some(related))
     }
 
     fn replace_folder(&mut self, folder: Folder) -> Result<()> {
@@ -535,6 +641,13 @@ impl Storage for SqliteStorage {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not begin secret deletion")?;
+        if let Some(link) = stored_link_for_secret(&transaction, id)? {
+            increment_secret_revision(
+                &transaction,
+                other_endpoint(link, id),
+                "a linked item's revision is exhausted; deletion was cancelled",
+            )?;
+        }
         let changed = transaction
             .execute("DELETE FROM secrets WHERE id = ?1", [id.0.to_string()])
             .map_err(|_| anyhow::anyhow!("could not delete secret"))?;
@@ -766,6 +879,198 @@ fn read_secret_metadata(connection: &Connection) -> Result<Vec<SecretMetadata>> 
     Ok(secrets)
 }
 
+fn read_secret_links(connection: &Connection) -> Result<Vec<SecretLink>> {
+    let mut statement = connection
+        .prepare(
+            "SELECT first_secret_id, second_secret_id FROM secret_links \
+             ORDER BY first_secret_id, second_secret_id",
+        )
+        .context("could not read linked item metadata")?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .context("could not read linked item metadata")?;
+    let raw_links = rows
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .context("could not read linked item metadata")?;
+    drop(statement);
+
+    raw_links
+        .into_iter()
+        .map(|(first, second)| parse_secret_link(&first, &second))
+        .collect()
+}
+
+fn parse_secret_link(first: &str, second: &str) -> Result<SecretLink> {
+    let first = parse_secret_id(first)?;
+    let second = parse_secret_id(second)?;
+    ensure!(
+        first.0 < second.0,
+        "stored linked item endpoints are not in canonical order"
+    );
+    Ok(SecretLink { first, second })
+}
+
+fn canonical_secret_link(first: SecretId, second: SecretId) -> SecretLink {
+    if first.0 < second.0 {
+        SecretLink { first, second }
+    } else {
+        SecretLink {
+            first: second,
+            second: first,
+        }
+    }
+}
+
+fn stored_link_for_secret(connection: &Connection, id: SecretId) -> Result<Option<SecretLink>> {
+    let raw = connection
+        .query_row(
+            "SELECT first_secret_id, second_secret_id FROM secret_links \
+             WHERE first_secret_id = ?1 OR second_secret_id = ?1",
+            [id.0.to_string()],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .optional()
+        .context("could not read linked item metadata")?;
+    raw.map(|(first, second)| parse_secret_link(&first, &second))
+        .transpose()
+}
+
+fn other_endpoint(link: SecretLink, endpoint: SecretId) -> SecretId {
+    if link.first == endpoint {
+        link.second
+    } else {
+        link.first
+    }
+}
+
+fn increment_secret_revision(connection: &Connection, id: SecretId, message: &str) -> Result<()> {
+    let changed = connection.execute(
+        "UPDATE secrets SET revision = revision + 1 \
+         WHERE id = ?1 AND revision < 9223372036854775807",
+        [id.0.to_string()],
+    )?;
+    ensure!(changed == 1, "{message}");
+    Ok(())
+}
+
+fn apply_secret_link_change(
+    transaction: &Transaction<'_>,
+    source: SecretId,
+    related: Option<SecretId>,
+) -> Result<()> {
+    let source_trashed = transaction
+        .query_row(
+            "SELECT trashed FROM secrets WHERE id = ?1",
+            [source.0.to_string()],
+            |row| row.get::<_, i64>(0),
+        )
+        .optional()
+        .context("could not inspect linked item")?
+        .ok_or(SecretLinkError::InvalidTarget)?;
+    let current =
+        stored_link_for_secret(transaction, source)?.map(|link| other_endpoint(link, source));
+
+    if current == related {
+        return Ok(());
+    }
+
+    if let Some(target) = related {
+        if parse_bool(source_trashed)? {
+            return Err(SecretLinkError::InvalidTarget.into());
+        }
+        if target == source {
+            return Err(SecretLinkError::InvalidTarget.into());
+        }
+        let target_trashed = transaction
+            .query_row(
+                "SELECT trashed FROM secrets WHERE id = ?1",
+                [target.0.to_string()],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()
+            .context("could not inspect linked item")?
+            .ok_or(SecretLinkError::InvalidTarget)?;
+        if parse_bool(target_trashed)? {
+            return Err(SecretLinkError::InvalidTarget.into());
+        }
+        if let Some(target_link) = stored_link_for_secret(transaction, target)? {
+            if other_endpoint(target_link, target) != source {
+                return Err(SecretLinkError::Occupied.into());
+            }
+        }
+    }
+
+    if let Some(previous) = current {
+        increment_secret_revision(
+            transaction,
+            previous,
+            "a linked item's revision is exhausted; relationship update was cancelled",
+        )?;
+        let deleted = transaction.execute(
+            "DELETE FROM secret_links WHERE first_secret_id = ?1 OR second_secret_id = ?1",
+            [source.0.to_string()],
+        )?;
+        ensure!(
+            deleted == 1,
+            "linked item relationship changed unexpectedly"
+        );
+    }
+
+    if let Some(target) = related {
+        increment_secret_revision(
+            transaction,
+            target,
+            "a linked item's revision is exhausted; relationship update was cancelled",
+        )?;
+        let link = canonical_secret_link(source, target);
+        transaction
+            .execute(
+                "INSERT INTO secret_links(first_secret_id, second_secret_id) VALUES (?1, ?2)",
+                params![link.first.0.to_string(), link.second.0.to_string()],
+            )
+            .context("could not save linked item metadata")?;
+    }
+
+    Ok(())
+}
+
+fn validate_backup_links(links: &[SecretLink], secrets: &[Secret]) -> Result<()> {
+    let secret_ids = secrets
+        .iter()
+        .map(|secret| secret.id)
+        .collect::<HashSet<_>>();
+    let mut linked_ids = HashSet::with_capacity(links.len().saturating_mul(2));
+    for link in links {
+        ensure!(
+            link.first != link.second && link.first.0 < link.second.0,
+            "backup linked item endpoints are invalid"
+        );
+        ensure!(
+            secret_ids.contains(&link.first) && secret_ids.contains(&link.second),
+            "backup linked item target is missing"
+        );
+        ensure!(
+            linked_ids.insert(link.first) && linked_ids.insert(link.second),
+            "backup item is linked more than once"
+        );
+    }
+    Ok(())
+}
+
+fn insert_imported_secret_links(transaction: &Transaction<'_>, links: &[SecretLink]) -> Result<()> {
+    for link in links {
+        transaction
+            .execute(
+                "INSERT INTO secret_links(first_secret_id, second_secret_id) VALUES (?1, ?2)",
+                params![link.first.0.to_string(), link.second.0.to_string()],
+            )
+            .context("could not restore linked item metadata")?;
+    }
+    Ok(())
+}
+
 fn read_ciphertext(
     row: &Row<'_>,
     length_index: usize,
@@ -814,7 +1119,7 @@ fn column_data_error(index: usize, column_type: Type, message: &'static str) -> 
 
 fn initialize_schema(connection: &mut Connection) -> Result<()> {
     let version = pragma_i64(connection, "user_version")?;
-    if matches!(version, 0..=3) {
+    if matches!(version, 0..=4) {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not initialize the encrypted store")?;
@@ -856,6 +1161,7 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 migrate_schema_v1_to_v2(&transaction)?;
                 migrate_schema_v2_to_v3(&transaction)?;
                 migrate_schema_v3_to_v4(&transaction)?;
+                migrate_schema_v4_to_v5(&transaction)?;
             }
             2 => {
                 ensure!(
@@ -864,6 +1170,7 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 );
                 migrate_schema_v2_to_v3(&transaction)?;
                 migrate_schema_v3_to_v4(&transaction)?;
+                migrate_schema_v4_to_v5(&transaction)?;
             }
             3 => {
                 ensure!(
@@ -871,6 +1178,14 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
                     "database file is not a KryptoPass store"
                 );
                 migrate_schema_v3_to_v4(&transaction)?;
+                migrate_schema_v4_to_v5(&transaction)?;
+            }
+            4 => {
+                ensure!(
+                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
+                    "database file is not a KryptoPass store"
+                );
+                migrate_schema_v4_to_v5(&transaction)?;
             }
             SCHEMA_VERSION => {}
             _ => bail!("store schema version is unsupported"),
@@ -891,6 +1206,7 @@ fn initialize_schema(connection: &mut Connection) -> Result<()> {
         "database file is not a KryptoPass store",
     );
     ensure_schema_is_readable(connection)?;
+    ensure_secret_links_schema_is_readable(connection)?;
     Ok(())
 }
 
@@ -930,8 +1246,45 @@ fn migrate_schema_v3_to_v4(transaction: &Transaction<'_>) -> Result<()> {
          ALTER TABLE secrets ADD COLUMN icon_asset_id TEXT REFERENCES entry_icon_assets(id) ON DELETE RESTRICT;"
     ).context("could not migrate entry icons")?;
     transaction
-        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .pragma_update(None, "user_version", 4)
         .context("could not version entry icons")
+}
+
+fn migrate_schema_v4_to_v5(transaction: &Transaction<'_>) -> Result<()> {
+    transaction
+        .execute_batch(
+            "CREATE TABLE secret_links (
+                 first_secret_id TEXT PRIMARY KEY NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
+                 second_secret_id TEXT NOT NULL UNIQUE REFERENCES secrets(id) ON DELETE CASCADE,
+                 CHECK(first_secret_id < second_secret_id)
+             );
+             CREATE TRIGGER secret_links_unique_endpoints_insert
+             BEFORE INSERT ON secret_links
+             WHEN EXISTS (
+                 SELECT 1 FROM secret_links
+                 WHERE first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+             )
+             BEGIN
+                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
+             END;
+             CREATE TRIGGER secret_links_unique_endpoints_update
+             BEFORE UPDATE ON secret_links
+             WHEN EXISTS (
+                 SELECT 1 FROM secret_links
+                 WHERE (first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id))
+                   AND NOT (first_secret_id = OLD.first_secret_id
+                        AND second_secret_id = OLD.second_secret_id)
+             )
+             BEGIN
+                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
+             END;",
+        )
+        .context("could not migrate linked item metadata")?;
+    transaction
+        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .context("could not version linked item metadata")
 }
 
 fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
@@ -971,6 +1324,33 @@ fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
                  fingerprint TEXT NOT NULL,
                  PRIMARY KEY(secret_id, fingerprint)
              );
+             CREATE TABLE secret_links (
+                 first_secret_id TEXT PRIMARY KEY NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
+                 second_secret_id TEXT NOT NULL UNIQUE REFERENCES secrets(id) ON DELETE CASCADE,
+                 CHECK(first_secret_id < second_secret_id)
+             );
+             CREATE TRIGGER secret_links_unique_endpoints_insert
+             BEFORE INSERT ON secret_links
+             WHEN EXISTS (
+                 SELECT 1 FROM secret_links
+                 WHERE first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+             )
+             BEGIN
+                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
+             END;
+             CREATE TRIGGER secret_links_unique_endpoints_update
+             BEFORE UPDATE ON secret_links
+             WHEN EXISTS (
+                 SELECT 1 FROM secret_links
+                 WHERE (first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
+                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id))
+                   AND NOT (first_secret_id = OLD.first_secret_id
+                        AND second_secret_id = OLD.second_secret_id)
+             )
+             BEGIN
+                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
+             END;
              CREATE INDEX folders_by_parent ON folders(parent_id);
              CREATE INDEX secrets_by_folder ON secrets(folder_id);
              CREATE INDEX secrets_by_favorite ON secrets(favorite, trashed);
@@ -998,6 +1378,13 @@ fn ensure_schema_is_readable(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
+fn ensure_secret_links_schema_is_readable(connection: &Connection) -> Result<()> {
+    connection
+        .prepare("SELECT first_secret_id, second_secret_id FROM secret_links LIMIT 0")
+        .map_err(|_| anyhow::anyhow!("store schema is corrupt or unsupported"))?;
+    Ok(())
+}
+
 /// Checks an existing vault using a read-only connection before any writable
 /// connection, pragma changes, migration, or permission adjustment occurs.
 fn prevalidate_existing_database(path: &Path) -> Result<()> {
@@ -1015,7 +1402,7 @@ fn prevalidate_existing_database(path: &Path) -> Result<()> {
         "existing file is not a KryptoPass store"
     );
     ensure!(
-        matches!(version, 1 | 2 | 3 | SCHEMA_VERSION),
+        matches!(version, 1 | 2 | 3 | 4 | SCHEMA_VERSION),
         "existing store schema version is unsupported"
     );
 
@@ -1037,6 +1424,9 @@ fn prevalidate_existing_database(path: &Path) -> Result<()> {
             .map_err(|_| anyhow::anyhow!("existing store schema is corrupt or unsupported"))?;
     } else {
         ensure_schema_is_readable(&connection)?;
+        if version == SCHEMA_VERSION {
+            ensure_secret_links_schema_is_readable(&connection)?;
+        }
     }
     Ok(())
 }
@@ -1705,6 +2095,10 @@ struct RawSecretMetadata {
 #[cfg(test)]
 #[path = "folder_move_tests.rs"]
 mod folder_move_tests;
+
+#[cfg(test)]
+#[path = "entry_links_tests.rs"]
+mod entry_links_tests;
 
 fn insert_encrypted_batch(
     transaction: &Transaction<'_>,

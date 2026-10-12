@@ -9,6 +9,7 @@ QtObject {
     property string scope: "all"
     property string query: ""
     property string selectedId: ""
+    property bool navigatingToEntry: false
     property bool sortDescending: false
     readonly property string status: controller.status
     readonly property string errorMessage: controller.errorMessage
@@ -33,13 +34,40 @@ QtObject {
             const searchText = [entry.title, folderName(entry.folder), kindName(entry.kind)].join(" ").toLowerCase();
             return searchText.includes(needle);
         });
-        return filtered.sort((left, right) => {
+        const sorted = filtered.sort((left, right) => {
             const result = left.title.localeCompare(right.title, undefined, {
                 sensitivity: "base",
                 numeric: true
             }) || left.id.localeCompare(right.id);
             return sortDescending ? -result : result;
         });
+        const byId = Object.create(null);
+        const companionById = Object.create(null);
+        for (const entry of sorted)
+            byId[entry.id] = entry;
+        for (const entry of sorted) {
+            const companion = entry.relatedEntryId ? byId[entry.relatedEntryId] : null;
+            if (companion && companion.id !== entry.id) {
+                companionById[entry.id] = companion;
+                if (!companionById[companion.id])
+                    companionById[companion.id] = entry;
+            }
+        }
+        const ordered = [];
+        const emitted = new Set();
+        for (const entry of sorted) {
+            if (emitted.has(entry.id))
+                continue;
+            ordered.push(entry);
+            emitted.add(entry.id);
+
+            const companion = companionById[entry.id];
+            if (companion && !emitted.has(companion.id)) {
+                ordered.push(companion);
+                emitted.add(companion.id);
+            }
+        }
+        return ordered;
     }
     readonly property var folderRows: {
         const rows = [];
@@ -134,6 +162,18 @@ QtObject {
         return option ? option.icon : "dialog-warning";
     }
 
+    function relatedEntryFor(entry) {
+        if (!entry)
+            return null;
+        const relatedId = entry.relatedEntryId || "";
+        if (relatedId) {
+            const related = entries.find(candidate => candidate.id === relatedId);
+            if (related)
+                return related;
+        }
+        return entries.find(candidate => candidate.id !== entry.id && candidate.relatedEntryId === entry.id) || null;
+    }
+
     function count(id) {
         return entries.filter(entry => {
             if (id === "trash")
@@ -151,6 +191,16 @@ QtObject {
     function selectScope(id) {
         scope = id;
         selectedId = visibleEntries.length ? visibleEntries[0].id : "";
+    }
+
+    function navigateToEntry(entry) {
+        if (!entry)
+            return;
+        navigatingToEntry = true;
+        scope = entry.trashed ? "trash" : entry.folder || "all";
+        query = "";
+        selectedId = entry.id;
+        navigatingToEntry = false;
     }
 
     function updateEntry(id, changes) {
@@ -176,6 +226,8 @@ QtObject {
 
     onSelectedIdChanged: controller.selectEntry(selectedId)
     onVisibleEntriesChanged: {
+        if (navigatingToEntry)
+            return;
         if (!visibleEntries.some(entry => entry.id === selectedId))
             selectedId = visibleEntries.length ? visibleEntries[0].id : "";
     }

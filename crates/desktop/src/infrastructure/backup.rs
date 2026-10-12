@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{
     EntryIcon, EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, OpenPgp,
-    RecipientSet, Secret, SecretId, SecretKind,
+    RecipientSet, Secret, SecretId, SecretKind, SecretLink,
 };
 use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -17,10 +17,10 @@ use uuid::Uuid;
 use zeroize::{Zeroize, Zeroizing};
 
 use super::GnuPgOpenPgp;
-use super::sqlite_storage::SqliteStorage;
+use super::sqlite_storage::{EncryptedStoreSnapshot, SqliteStorage};
 
 const BACKUP_FORMAT: &str = "org.kryptopass.backup";
-const BACKUP_VERSION: u32 = 3;
+const BACKUP_VERSION: u32 = 4;
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const MAX_RECIPIENTS_PER_RECORD: usize = 64;
 const MAX_SELECTED_RECIPIENTS: usize = 256;
@@ -71,8 +71,8 @@ pub fn export_backup(
     protect_store_target(&database_path, &destination)?;
 
     let storage = SqliteStorage::open_existing(database_path)?;
-    let (folders, secrets, assets) = storage.backup_snapshot()?;
-    let plaintext = serialize_backup_with_icons(folders, secrets, assets)?;
+    let (folders, secrets, assets, links) = storage.backup_snapshot_with_links()?;
+    let plaintext = serialize_backup_with_links(folders, secrets, assets, links)?;
     let ciphertext = crypto.encrypt_bounded(
         plaintext.as_slice(),
         &recipients,
@@ -114,10 +114,10 @@ pub fn restore_backup(
             MAX_BACKUP_PLAINTEXT_BYTES,
         )
         .context(RestoreFailure::Decryption)?;
-    let (folders, secrets, assets) = deserialize_backup_with_icons(plaintext.as_slice())
+    let (folders, secrets, assets, links) = deserialize_backup_with_links(plaintext.as_slice())
         .context(RestoreFailure::InvalidBackup)?;
 
-    publish_restore_snapshot(&destination, &folders, &secrets, &assets)
+    publish_restore_snapshot(&destination, &folders, &secrets, &assets, &links)
 }
 
 /// Publishes a restored snapshot into an isolated, new private store.
@@ -126,6 +126,7 @@ fn publish_restore_snapshot(
     folders: &[Folder],
     secrets: &[Secret],
     assets: &[EntryIconAsset],
+    links: &[SecretLink],
 ) -> Result<BackupPublishOutcome> {
     let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let destination = prepare_destination(output, false)?;
@@ -139,7 +140,7 @@ fn publish_restore_snapshot(
     let mut stage_guard = StagingDirectory(stage.clone());
     let staged_database = stage.join(RESTORE_DATABASE_NAME);
     let mut storage = SqliteStorage::open(&staged_database)?;
-    storage.import_backup_snapshot(folders, secrets, assets)?;
+    storage.import_backup_snapshot_with_links(folders, secrets, assets, links)?;
     storage.finish_for_backup_publish()?;
     File::open(&staged_database)
         .and_then(|file| file.sync_all())
@@ -203,6 +204,15 @@ struct BackupDocument {
     secrets: BoundedVec<BackupSecret, MAX_BACKUP_ROWS>,
     #[serde(default)]
     assets: BoundedVec<BackupIconAsset, MAX_BACKUP_ROWS>,
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    links: BoundedVec<BackupLink, MAX_BACKUP_ROWS>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BackupLink {
+    first: String,
+    second: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -244,6 +254,12 @@ struct BackupSecret {
 #[derive(Serialize)]
 #[serde(transparent)]
 struct BoundedVec<T, const LIMIT: usize>(Vec<T>);
+
+impl<T, const LIMIT: usize> BoundedVec<T, LIMIT> {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
 
 impl<T, const LIMIT: usize> Default for BoundedVec<T, LIMIT> {
     fn default() -> Self {
@@ -373,16 +389,36 @@ fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<Zeroiz
     serialize_backup_with_icons(folders, secrets, Vec::new())
 }
 
+#[cfg(test)]
 fn serialize_backup_with_icons(
     folders: Vec<Folder>,
     secrets: Vec<Secret>,
     assets: Vec<EntryIconAsset>,
 ) -> Result<Zeroizing<Vec<u8>>> {
+    serialize_backup_with_links(folders, secrets, assets, Vec::new())
+}
+
+fn serialize_backup_with_links(
+    folders: Vec<Folder>,
+    secrets: Vec<Secret>,
+    assets: Vec<EntryIconAsset>,
+    links: Vec<SecretLink>,
+) -> Result<Zeroizing<Vec<u8>>> {
     validate_icon_resources(&secrets, &assets)?;
     validate_domain_records(&folders, &secrets)?;
+    validate_links(&secrets, &links)?;
     let document = BackupDocument {
         format: BACKUP_FORMAT.to_owned(),
-        version: BACKUP_VERSION,
+        version: if links.is_empty() { 3 } else { BACKUP_VERSION },
+        links: BoundedVec(
+            links
+                .into_iter()
+                .map(|link| BackupLink {
+                    first: link.first.0.min(link.second.0).to_string(),
+                    second: link.first.0.max(link.second.0).to_string(),
+                })
+                .collect(),
+        ),
         assets: BoundedVec(
             assets
                 .into_iter()
@@ -488,9 +524,15 @@ fn deserialize_backup(bytes: &[u8]) -> Result<(Vec<Folder>, Vec<Secret>)> {
     Ok((folders, secrets))
 }
 
+#[cfg(test)]
 fn deserialize_backup_with_icons(
     bytes: &[u8],
 ) -> Result<(Vec<Folder>, Vec<Secret>, Vec<EntryIconAsset>)> {
+    let (folders, secrets, assets, _) = deserialize_backup_with_links(bytes)?;
+    Ok((folders, secrets, assets))
+}
+
+fn deserialize_backup_with_links(bytes: &[u8]) -> Result<EncryptedStoreSnapshot> {
     ensure!(
         bytes.len() <= MAX_BACKUP_PLAINTEXT_BYTES,
         "backup exceeds the maximum size"
@@ -498,9 +540,26 @@ fn deserialize_backup_with_icons(
     let document: BackupDocument =
         serde_json::from_slice(bytes).context("backup document is invalid")?;
     ensure!(
-        document.format == BACKUP_FORMAT && matches!(document.version, 1 | 2 | BACKUP_VERSION),
+        document.format == BACKUP_FORMAT && matches!(document.version, 1 | 2 | 3 | BACKUP_VERSION),
         "backup format or version is unsupported"
     );
+    ensure!(
+        document.version >= 4 || document.links.0.is_empty(),
+        "links require backup version 4"
+    );
+    let links = document
+        .links
+        .0
+        .into_iter()
+        .map(|link| {
+            let first = parse_secret_id(&link.first)?;
+            let second = parse_secret_id(&link.second)?;
+            Ok(SecretLink {
+                first: SecretId(first.0.min(second.0)),
+                second: SecretId(first.0.max(second.0)),
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
     ensure!(
         document
             .folders
@@ -592,7 +651,26 @@ fn deserialize_backup_with_icons(
 
     validate_domain_records(&folders, &secrets)?;
     validate_icon_resources(&secrets, &assets)?;
-    Ok((folders, secrets, assets))
+    validate_links(&secrets, &links)?;
+    Ok((folders, secrets, assets, links))
+}
+
+fn validate_links(secrets: &[Secret], links: &[SecretLink]) -> Result<()> {
+    ensure!(links.len() <= MAX_BACKUP_ROWS / 2, "too many linked pairs");
+    let ids: HashSet<_> = secrets.iter().map(|secret| secret.id).collect();
+    let mut paired = HashSet::new();
+    for link in links {
+        ensure!(link.first != link.second, "a secret cannot link to itself");
+        ensure!(
+            ids.contains(&link.first) && ids.contains(&link.second),
+            "missing linked secret"
+        );
+        ensure!(
+            paired.insert(link.first) && paired.insert(link.second),
+            "a secret has more than one companion"
+        );
+    }
+    Ok(())
 }
 
 fn validate_domain_records(folders: &[Folder], secrets: &[Secret]) -> Result<()> {
@@ -1199,6 +1277,10 @@ impl Drop for TemporaryFile {
 #[cfg(test)]
 #[path = "backup_order_tests.rs"]
 mod backup_order_tests;
+
+#[cfg(test)]
+#[path = "backup_links_tests.rs"]
+mod backup_links_tests;
 
 fn validate_icon_resources(secrets: &[Secret], assets: &[EntryIconAsset]) -> Result<()> {
     ensure!(assets.len() <= MAX_BACKUP_ROWS, "too many icon resources");

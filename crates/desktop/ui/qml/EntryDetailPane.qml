@@ -23,6 +23,10 @@ Controls.Pane {
     readonly property var selected: storeAdapter.selected
     readonly property var selectedDetail: storeAdapter.detail && selected
             && storeAdapter.detail.id === selected.id ? storeAdapter.detail : null
+    readonly property var relatedEntry: storeAdapter.relatedEntryFor(selected)
+    readonly property bool hasRelatedEntryReference: !!selected
+        && (!!selected.relatedEntryId || storeAdapter.entries.some(entry => entry.id !== selected.id
+            && entry.relatedEntryId === selected.id))
 
     signal favoriteToggleRequested()
     signal restoreRequested()
@@ -33,6 +37,9 @@ Controls.Pane {
     signal copyTotpRequested(bool next)
     signal retryDetailRequested()
     signal notificationRequested(string message)
+    signal relatedEntryOpenRequested(var entry)
+    signal relatedEntryTrashRequested(var entry)
+    signal createSecurityRequested(var entry)
 
     function copySelectedFingerprint() {
         keyDetail.copyFingerprint();
@@ -230,6 +237,98 @@ Controls.Pane {
                                 elide: Text.ElideRight
                             }
                         }
+                    }
+
+                    Controls.Button {
+                        objectName: "relatedEntryCard"
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        visible: !!root.relatedEntry
+                        enabled: !root.relatedEntry?.trashed && !root.storeAdapter.controller.busy
+                        text: root.relatedEntry?.title || ""
+                        Accessible.name: root.relatedEntry?.trashed
+                            ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title)
+                            : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
+                        Accessible.description: root.relatedEntry
+                            ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
+                            : ""
+                        contentItem: RowLayout {
+                            spacing: Kirigami.Units.largeSpacing
+                            EntryIcon {
+                                entryIcon: root.relatedEntry?.icon || null
+                                imageSource: root.relatedEntry?.iconSource || ""
+                                fallbackIcon: root.storeAdapter.kindIcon(root.relatedEntry?.kind || "custom")
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
+                                Layout.preferredHeight: width
+                            }
+                            Kirigami.TitleSubtitle {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                textFormat: Text.PlainText
+                                title: root.relatedEntry?.title || ""
+                                subtitle: root.relatedEntry?.trashed
+                                    ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
+                                    : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
+                            }
+                            Kirigami.Icon {
+                                visible: !root.relatedEntry?.trashed
+                                source: "go-next"
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                                Layout.preferredHeight: width
+                            }
+                        }
+                        onClicked: {
+                            if (root.relatedEntry && !root.relatedEntry.trashed)
+                                root.relatedEntryOpenRequested(root.relatedEntry);
+                        }
+                    }
+
+                    Controls.Button {
+                        Layout.alignment: Qt.AlignRight
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        visible: !!root.relatedEntry?.trashed
+                        text: qsTr("Ver en la papelera")
+                        icon.name: "user-trash"
+                        onClicked: root.relatedEntryTrashRequested(root.relatedEntry)
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.largeSpacing
+                        visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
+                        spacing: Kirigami.Units.largeSpacing
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: root.storeAdapter.controller.locked
+                                    ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.")
+                                    : qsTr("Crea un secreto personalizado para acompañar este elemento.")
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                                color: Kirigami.Theme.disabledTextColor
+                            }
+                        }
+                        Controls.Button {
+                            objectName: "createSecurityButton"
+                            text: qsTr("Crear seguridad")
+                            icon.name: "list-add"
+                            enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy
+                                && !root.storeAdapter.controller.editorBusy
+                            onClicked: root.createSecurityRequested(root.selected)
+                        }
+                    }
+
+                    Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: root.hasRelatedEntryReference && !root.relatedEntry
+                        type: Kirigami.MessageType.Warning
+                        text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
                     }
 
                     Kirigami.InlineMessage {

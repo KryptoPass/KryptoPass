@@ -66,7 +66,7 @@ QtObject {
         {
             id: "ssh-key",
             name: qsTranslate("SecretStore", "Clave SSH"),
-            icon: "key",
+            icon: "dialog-password",
             editor: sshKeyEditor,
             detail: sshKeyDetail
         }

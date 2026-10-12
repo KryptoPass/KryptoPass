@@ -1164,6 +1164,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El archivo %1 ya existe; no se sobrescribió.</translation>
     </message>
     <message>
+      <source>El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero.</source>
+      <translation>El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero.</translation>
+    </message>
+    <message>
+      <source>El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo.</source>
+      <translation>El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo.</translation>
+    </message>
+    <message>
       <source>FULL</source>
       <translation>FULL</translation>
     </message>
@@ -1646,6 +1654,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>a bounded base64 icon string</source>
       <translation>a bounded base64 icon string</translation>
+    </message>
+    <message>
+      <source>a secret cannot link to itself</source>
+      <translation>a secret cannot link to itself</translation>
+    </message>
+    <message>
+      <source>a secret has more than one companion</source>
+      <translation>a secret has more than one companion</translation>
     </message>
     <message>
       <source>active store path is not valid UTF-8</source>
@@ -2252,12 +2268,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>legacy OpenPGP ciphertext without integrity protection is not accepted</translation>
     </message>
     <message>
+      <source>links require backup version 4</source>
+      <translation>links require backup version 4</translation>
+    </message>
+    <message>
       <source>local time zone unavailable</source>
       <translation>local time zone unavailable</translation>
     </message>
     <message>
       <source>missing icon resource</source>
       <translation>missing icon resource</translation>
+    </message>
+    <message>
+      <source>missing linked secret</source>
+      <translation>missing linked secret</translation>
     </message>
     <message>
       <source>no absolute application config directory is available</source>
@@ -2278,6 +2302,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>path is not a directory</source>
       <translation>path is not a directory</translation>
+    </message>
+    <message>
+      <source>related entry identifier is invalid</source>
+      <translation>related entry identifier is invalid</translation>
     </message>
     <message>
       <source>restore destination has no parent</source>
@@ -2358,6 +2386,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>too many icon resources</source>
       <translation>too many icon resources</translation>
+    </message>
+    <message>
+      <source>too many linked pairs</source>
+      <translation>too many linked pairs</translation>
     </message>
     <message>
       <source>unreferenced icon resource</source>
@@ -2866,6 +2898,42 @@ Huella(s) detectadas:
       <translation>%1 · %2</translation>
     </message>
     <message>
+      <source>Elemento vinculado %1, en la papelera</source>
+      <translation>Elemento vinculado %1, en la papelera</translation>
+    </message>
+    <message>
+      <source>Abrir elemento vinculado %1</source>
+      <translation>Abrir elemento vinculado %1</translation>
+    </message>
+    <message>
+      <source>Elemento vinculado · %1</source>
+      <translation>Elemento vinculado · %1</translation>
+    </message>
+    <message>
+      <source>Elemento vinculado · %1 · En la papelera</source>
+      <translation>Elemento vinculado · %1 · En la papelera</translation>
+    </message>
+    <message>
+      <source>Ver en la papelera</source>
+      <translation>Ver en la papelera</translation>
+    </message>
+    <message>
+      <source>Desbloquea la bóveda para crear un elemento vinculado.</source>
+      <translation>Desbloquea la bóveda para crear un elemento vinculado.</translation>
+    </message>
+    <message>
+      <source>Crea un secreto personalizado para acompañar este elemento.</source>
+      <translation>Crea un secreto personalizado para acompañar este elemento.</translation>
+    </message>
+    <message>
+      <source>Crear seguridad</source>
+      <translation>Crear seguridad</translation>
+    </message>
+    <message>
+      <source>El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.</source>
+      <translation>El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.</translation>
+    </message>
+    <message>
       <source>La bóveda está bloqueada. Desbloquéala para abrir este elemento.</source>
       <translation>La bóveda está bloqueada. Desbloquéala para abrir este elemento.</translation>
     </message>
@@ -2903,6 +2971,14 @@ Huella(s) detectadas:
     <message>
       <source>Cambiar orden por nombre</source>
       <translation>Cambiar orden por nombre</translation>
+    </message>
+    <message>
+      <source> · Vinculado con %1</source>
+      <translation> · Vinculado con %1</translation>
+    </message>
+    <message>
+      <source> · Vinculado</source>
+      <translation> · Vinculado</translation>
     </message>
     <message>
       <source>Reintentar</source>
@@ -4996,6 +5072,41 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>RelatedEntryPicker</name>
+    <message>
+      <source>Sin vínculo</source>
+      <translation>Sin vínculo</translation>
+    </message>
+    <message>
+      <source>%1 · %2</source>
+      <translation>%1 · %2</translation>
+    </message>
+    <message>
+      <source>Elemento vinculado no disponible</source>
+      <translation>Elemento vinculado no disponible</translation>
+    </message>
+    <message>
+      <source>%1 · %2 — En la papelera</source>
+      <translation>%1 · %2 — En la papelera</translation>
+    </message>
+    <message>
+      <source>%1 · %2 — No disponible</source>
+      <translation>%1 · %2 — No disponible</translation>
+    </message>
+    <message>
+      <source>Tipo desconocido</source>
+      <translation>Tipo desconocido</translation>
+    </message>
+    <message>
+      <source>Elemento vinculado</source>
+      <translation>Elemento vinculado</translation>
+    </message>
+    <message>
+      <source>Vincula un elemento complementario. Ambos elementos mostrarán esta relación.</source>
+      <translation>Vincula un elemento complementario. Ambos elementos mostrarán esta relación.</translation>
+    </message>
+  </context>
+  <context>
     <name>SecretDetail</name>
     <message>
       <source>Credencial creada</source>
@@ -5275,6 +5386,14 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>No se puede editar este tipo de elemento.</source>
       <translation>No se puede editar este tipo de elemento.</translation>
+    </message>
+    <message>
+      <source>No se puede crear el elemento de seguridad.</source>
+      <translation>No se puede crear el elemento de seguridad.</translation>
+    </message>
+    <message>
+      <source>Seguridad de %1</source>
+      <translation>Seguridad de %1</translation>
     </message>
     <message>
       <source>Elegir imagen del elemento</source>

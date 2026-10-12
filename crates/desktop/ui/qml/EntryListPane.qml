@@ -91,7 +91,16 @@ Controls.Pane {
                             id: entryDelegate
                             focus: true
                             readonly property var modelData: rowLoader.modelData
+                            readonly property var relatedEntry: root.storeAdapter.relatedEntryFor(modelData)
+                            readonly property string subtitleText: qsTranslate("Main", "%1 · %2")
+                                .arg(root.storeAdapter.folderName(modelData.folder))
+                                .arg(root.storeAdapter.kindName(modelData.kind))
+                                + (relatedEntry
+                                   ? qsTr(" · Vinculado con %1").arg(relatedEntry.title)
+                                   : modelData.relatedEntryId ? qsTr(" · Vinculado") : "")
                             text: modelData.title
+                            Accessible.name: modelData.title
+                            Accessible.description: subtitleText
                             icon.name: root.storeAdapter.kindIcon(modelData.kind)
                             icon.width: Kirigami.Units.iconSizes.smallMedium
                             icon.height: Kirigami.Units.iconSizes.smallMedium
@@ -185,7 +194,7 @@ Controls.Pane {
                                     Layout.fillWidth: true
                                     textFormat: Text.PlainText
                                     title: entryDelegate.text
-                                    subtitle: qsTranslate("Main", "%1 · %2").arg(root.storeAdapter.folderName(entryDelegate.modelData.folder)).arg(root.storeAdapter.kindName(entryDelegate.modelData.kind))
+                                    subtitle: entryDelegate.subtitleText
                                     selected: entryDelegate.highlighted || entryDelegate.down
                                     font: entryDelegate.font
                                     subtitleFont: entryDelegate.font

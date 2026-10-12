@@ -70,6 +70,14 @@ Controls.ApplicationWindow {
             store.controller.selectEntry(store.selectedId);
         }
     }
+    function navigateToRelatedEntry(entry) {
+        if (!entry)
+            return;
+        const target = store.entries.find(candidate => candidate.id === entry.id);
+        if (!target)
+            return;
+        store.navigateToEntry(target);
+    }
     function beginOperation(name, id) {
         pendingOperation = name;
         pendingOperationId = id || "";
@@ -899,6 +907,18 @@ Controls.ApplicationWindow {
                         onCopyPasswordRequested: store.controller.copyPassword()
                         onCopyTotpRequested: function(next) { store.controller.copyTotp(next); }
                         onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
+                        onRelatedEntryOpenRequested: function(entry) {
+                            if (!root.mutationsBlocked)
+                                editor.guardNavigation(function() { root.navigateToRelatedEntry(entry); });
+                        }
+                        onRelatedEntryTrashRequested: function(entry) {
+                            if (!root.mutationsBlocked)
+                                editor.guardNavigation(function() { root.navigateToRelatedEntry(entry); });
+                        }
+                        onCreateSecurityRequested: function(entry) {
+                            if (!root.mutationsBlocked && !store.controller.locked)
+                                editor.guardNavigation(function() { editor.openRelatedEntry(entry); });
+                        }
                     }
                 }
                 PanelFooter {
