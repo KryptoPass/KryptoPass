@@ -1,14 +1,18 @@
-//! Converts secret-store records into the JSON contracts consumed by QML.
+//! Common metadata, sessions and typed content projections consumed by QML.
+
+mod content;
 
 use kryptopass_core::{
-    EntryIcon, Folder, FolderId, KeyFingerprint, LoginContent, LoginHistory, LoginHistoryEventKind,
-    NoteContent, RecipientSelection, RecipientSet, SecretContent, SecretId, SecretMetadata,
-    TotpConfig, format_totp_input, generate_totp, parse_totp_input,
+    EntryIcon, Folder, FolderId, KeyFingerprint, LoginHistory, LoginHistoryEventKind,
+    RecipientSelection, RecipientSet, SecretContent, SecretId, SecretMetadata, TotpConfig,
+    generate_totp,
 };
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+
+use content::{DetailContent, DraftContent, EditorContent};
 
 /// Serialized records for the two metadata-only list properties.
 pub(super) struct StoreSnapshot {
@@ -147,16 +151,9 @@ pub(super) struct EntryDraft {
     revision: Option<u64>,
     folder: String,
     title: SensitiveText,
-    kind: String,
-    username: SensitiveText,
-    password: SensitiveText,
-    url: SensitiveText,
-    #[serde(default)]
-    urls: Option<Vec<SensitiveText>>,
-    #[serde(rename = "totpInput", default)]
-    totp_input: SensitiveText,
-    notes: SensitiveText,
-    value: SensitiveText,
+    content: DraftContent,
+    #[serde(rename = "iconSource", default)]
+    _icon_source: String,
     recipients: Vec<String>,
 }
 
@@ -226,45 +223,8 @@ pub(super) fn prepare_save(
     );
     let recipients = RecipientSelection::Explicit(RecipientSet::new(recipients)?);
 
-    let content = match draft.kind.as_str() {
-        "login" if draft.value.0.is_empty() => {
-            let urls = match draft.urls.take() {
-                Some(urls) => urls.into_iter().map(|mut value| value.take()).collect(),
-                None => {
-                    let legacy_url = draft.url.take();
-                    if legacy_url.is_empty() {
-                        Vec::new()
-                    } else {
-                        vec![legacy_url]
-                    }
-                }
-            };
-            let url = urls.first().cloned().unwrap_or_default();
-            let totp = parse_totp_input(&draft.totp_input.0)?;
-            SecretContent::Login(LoginContent {
-                username: draft.username.take(),
-                password: draft.password.take(),
-                url,
-                notes: draft.notes.take(),
-                urls,
-                totp,
-                history: Box::default(),
-            })
-        }
-        "note"
-            if draft.username.0.is_empty()
-                && draft.password.0.is_empty()
-                && draft.url.0.is_empty()
-                && draft.urls.as_ref().is_none_or(Vec::is_empty)
-                && draft.totp_input.0.is_empty() =>
-        {
-            SecretContent::Note(NoteContent {
-                value: draft.value.take(),
-                notes: draft.notes.take(),
-            })
-        }
-        _ => anyhow::bail!("unsupported or inconsistent secret content"),
-    };
+    let content = draft.content.prepare()?;
+    content.validate()?;
 
     Ok(PreparedSave {
         id: session_id,
@@ -283,154 +243,62 @@ pub(super) fn content_projection(
     reveal_password: bool,
     unix_seconds: u64,
 ) -> anyhow::Result<Zeroizing<String>> {
-    let (kind, username, url, urls, notes, value, password, password_revealed, totp, history) =
-        match content {
-            SecretContent::Login(login) => {
-                let totp = login
-                    .totp
-                    .as_ref()
-                    .map(|config| totp_projection(config, unix_seconds))
-                    .transpose()?;
-                let history = Some(history_projection(&login.history));
-                (
-                    "login",
-                    login.username.as_str(),
-                    login.url.as_str(),
-                    login.urls.as_slice(),
-                    login.notes.as_str(),
-                    "",
-                    if reveal_password {
-                        login.password.as_str()
-                    } else {
-                        ""
-                    },
-                    reveal_password,
-                    totp,
-                    history,
-                )
-            }
-            SecretContent::Note(note) => (
-                "note",
-                "",
-                "",
-                &[] as &[String],
-                note.notes.as_str(),
-                note.value.as_str(),
-                "",
-                false,
-                None,
-                None,
-            ),
-        };
     serde_json::to_string(&ContentProjection {
         id: id.0.to_string(),
-        kind,
-        password_revealed,
-        username,
-        url,
-        urls,
-        notes,
-        value,
-        password,
-        totp,
-        history,
+        content: DetailContent::new(content, reveal_password, unix_seconds)?,
     })
     .map(Zeroizing::new)
     .map_err(Into::into)
 }
 
 pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing<String>> {
-    let (kind, username, password, url, urls, totp_input, notes, value) = match &entry.content {
-        SecretContent::Login(login) => {
-            let totp_input = login
-                .totp
-                .as_ref()
-                .map(format_totp_input)
-                .transpose()?
-                .unwrap_or_else(Zeroizing::default);
-            (
-                "login",
-                login.username.as_str(),
-                login.password.as_str(),
-                login.url.as_str(),
-                login.urls.as_slice(),
-                totp_input,
-                login.notes.as_str(),
-                "",
-            )
-        }
-        SecretContent::Note(note) => (
-            "note",
-            "",
-            "",
-            "",
-            &[] as &[String],
-            Zeroizing::default(),
-            note.notes.as_str(),
-            note.value.as_str(),
-        ),
-    };
     serde_json::to_string(&EditorProjection {
         id: entry.id.0.to_string(),
-        revision: entry.revision,
+        revision: Some(entry.revision),
         folder: entry.folder.map_or_else(String::new, |id| id.0.to_string()),
         title: &entry.title,
         icon: &entry.icon,
         icon_source: crate::infrastructure::entry_icons::source_for(entry.icon.as_ref()),
-        kind,
-        username,
-        password,
-        url,
-        urls,
-        totp_input: totp_input.as_str(),
-        notes,
-        value,
+        content: EditorContent::new(&entry.content)?,
         recipients: &entry.recipients,
     })
     .map(Zeroizing::new)
     .map_err(Into::into)
 }
 
-pub(super) fn new_editor_projection() -> Zeroizing<String> {
-    Zeroizing::new(
-        r#"{"id":"","revision":null,"folder":"","title":"","kind":"login","icon":null,"iconSource":"","username":"","password":"","url":"","urls":[],"totpInput":"","notes":"","value":"","recipients":[]}"#.to_owned(),
-    )
+pub(super) fn new_editor_projection() -> anyhow::Result<Zeroizing<String>> {
+    let content = SecretContent::Login(kryptopass_core::LoginContent::default());
+    let projection = EditorProjection {
+        id: String::new(),
+        revision: None,
+        folder: String::new(),
+        title: "",
+        icon: &None,
+        icon_source: String::new(),
+        content: EditorContent::new(&content)?,
+        recipients: &[],
+    };
+    serde_json::to_string(&projection)
+        .map(Zeroizing::new)
+        .map_err(Into::into)
 }
 
 #[derive(serde::Serialize)]
 struct ContentProjection<'a> {
     id: String,
-    kind: &'static str,
-    #[serde(rename = "passwordRevealed")]
-    password_revealed: bool,
-    username: &'a str,
-    url: &'a str,
-    urls: &'a [String],
-    notes: &'a str,
-    value: &'a str,
-    password: &'a str,
-    totp: Option<TotpProjection>,
-    history: Option<HistoryProjection>,
+    content: DetailContent<'a>,
 }
 
 #[derive(serde::Serialize)]
 struct EditorProjection<'a> {
     id: String,
-    revision: u64,
+    revision: Option<u64>,
     folder: String,
     title: &'a str,
     icon: &'a Option<EntryIcon>,
     #[serde(rename = "iconSource")]
     icon_source: String,
-    kind: &'static str,
-    username: &'a str,
-    password: &'a str,
-    url: &'a str,
-    urls: &'a [String],
-    #[serde(rename = "totpInput")]
-    totp_input: &'a str,
-    notes: &'a str,
-    value: &'a str,
+    content: EditorContent<'a>,
     recipients: &'a [String],
 }
 
@@ -506,3 +374,7 @@ fn history_event_kind_name(kind: &LoginHistoryEventKind) -> &'static str {
         LoginHistoryEventKind::CopyNextTotp => "copyNextTotp",
     }
 }
+
+#[cfg(test)]
+#[path = "secrets_projection_tests.rs"]
+mod tests;
