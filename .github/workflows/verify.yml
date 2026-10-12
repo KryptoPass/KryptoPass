@@ -12,7 +12,7 @@ jobs:
       - name: Install build and desktop dependencies
         run: >-
           pacman -Syu --noconfirm --needed
-          git rustup just cmake pkgconf clang lld python reuse
+          git rustup just cmake pkgconf clang lld python reuse extra-cmake-modules
           qt6-base qt6-declarative qt6-tools qt6-svg kirigami qqc2-desktop-style
           kcontacts akonadi-contacts kxmlgui kconfig gpgme sqlite
           appstream desktop-file-utils
