@@ -1068,12 +1068,28 @@ No incluye contraseñas ni valores de credenciales.
       </translation>
     </message>
     <message>
+      <source>Abierta</source>
+      <translation>Abierta</translation>
+    </message>
+    <message>
+      <source>Algoritmo</source>
+      <translation>Algoritmo</translation>
+    </message>
+    <message>
+      <source>Apellidos</source>
+      <translation>Apellidos</translation>
+    </message>
+    <message>
       <source>Autenticar</source>
       <translation>Autenticar</translation>
     </message>
     <message>
       <source>Caducada</source>
       <translation>Caducada</translation>
+    </message>
+    <message>
+      <source>Campos de origen conservados en registros ocultos</source>
+      <translation>Campos de origen conservados en registros ocultos</translation>
     </message>
     <message>
       <source>Certificar</source>
@@ -1096,6 +1112,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave OpenPGP creada con subclave de cifrado: %1.</translation>
     </message>
     <message>
+      <source>Clave de licencia</source>
+      <translation>Clave de licencia</translation>
+    </message>
+    <message>
+      <source>Clave pública</source>
+      <translation>Clave pública</translation>
+    </message>
+    <message>
       <source>Clave pública exportada a %1.%2</source>
       <translation>Clave pública exportada a %1.%2</translation>
     </message>
@@ -1108,8 +1132,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave pública y material privado eliminados para %1.</translation>
     </message>
     <message>
+      <source>Contraseña</source>
+      <translation>Contraseña</translation>
+    </message>
+    <message>
+      <source>Correo</source>
+      <translation>Correo</translation>
+    </message>
+    <message>
+      <source>Código de seguridad</source>
+      <translation>Código de seguridad</translation>
+    </message>
+    <message>
       <source>Deshabilitada</source>
       <translation>Deshabilitada</translation>
+    </message>
+    <message>
+      <source>Dirección</source>
+      <translation>Dirección</translation>
+    </message>
+    <message>
+      <source>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</source>
+      <translation>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</translation>
     </message>
     <message>
       <source>El archivo %1 ya existe; la exportación no lo sobrescribirá.</source>
@@ -1122,6 +1166,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>FULL</source>
       <translation>FULL</translation>
+    </message>
+    <message>
+      <source>Fecha de compra</source>
+      <translation>Fecha de compra</translation>
     </message>
     <message>
       <source>Firmar</source>
@@ -1148,6 +1196,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>HOME</translation>
     </message>
     <message>
+      <source>Host</source>
+      <translation>Host</translation>
+    </message>
+    <message>
+      <source>Huella</source>
+      <translation>Huella</translation>
+    </message>
+    <message>
       <source>Identidad añadida a %1.</source>
       <translation>Identidad añadida a %1.</translation>
     </message>
@@ -1158,6 +1214,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Identidad revocada en %1.</source>
       <translation>Identidad revocada en %1.</translation>
+    </message>
+    <message>
+      <source>Importa una clave SSH antes de guardar el elemento.</source>
+      <translation>Importa una clave SSH antes de guardar el elemento.</translation>
     </message>
     <message>
       <source>Importación OpenPGP completada; GnuPG incorporó %1 elemento(s).</source>
@@ -1210,6 +1270,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Navegación gestionada por Rust · %1</source>
       <translation>Navegación gestionada por Rust · %1</translation>
+    </message>
+    <message>
+      <source>No</source>
+      <translation>No</translation>
     </message>
     <message>
       <source>No existe la clave %1 en el llavero local.</source>
@@ -1324,8 +1388,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo esperar a GnuPG: %1</translation>
     </message>
     <message>
+      <source>No se pudo generar el QR. El contenido puede superar la capacidad del código.</source>
+      <translation>No se pudo generar el QR. El contenido puede superar la capacidad del código.</translation>
+    </message>
+    <message>
       <source>No se pudo importar el material OpenPGP: %1</source>
       <translation>No se pudo importar el material OpenPGP: %1</translation>
+    </message>
+    <message>
+      <source>No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña.</source>
+      <translation>No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña.</translation>
     </message>
     <message>
       <source>No se pudo iniciar GnuPG para preparar la revocación: %1</source>
@@ -1344,6 +1416,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo leer el archivo de importación: %1</translation>
     </message>
     <message>
+      <source>No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido.</source>
+      <translation>No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido.</translation>
+    </message>
+    <message>
       <source>No se pudo leer el estado de GnuPG: %1</source>
       <translation>No se pudo leer el estado de GnuPG: %1</translation>
     </message>
@@ -1358,6 +1434,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo preparar el certificado de revocación: %1</source>
       <translation>No se pudo preparar el certificado de revocación: %1</translation>
+    </message>
+    <message>
+      <source>No se pudo preparar la configuración TOTP.</source>
+      <translation>No se pudo preparar la configuración TOTP.</translation>
     </message>
     <message>
       <source>No se pudo preparar la consulta de claves: %1</source>
@@ -1388,12 +1468,60 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo sincronizar la exportación: %1</translation>
     </message>
     <message>
+      <source>Nombre</source>
+      <translation>Nombre</translation>
+    </message>
+    <message>
+      <source>Nombre de red</source>
+      <translation>Nombre de red</translation>
+    </message>
+    <message>
+      <source>Número de documento</source>
+      <translation>Número de documento</translation>
+    </message>
+    <message>
+      <source>Número de tarjeta</source>
+      <translation>Número de tarjeta</translation>
+    </message>
+    <message>
       <source>Organize credentials and secure notes with OpenPGP encryption</source>
       <translation>Organiza credenciales y notas seguras con cifrado OpenPGP</translation>
     </message>
     <message>
+      <source>PIN</source>
+      <translation>PIN</translation>
+    </message>
+    <message>
+      <source>País</source>
+      <translation>País</translation>
+    </message>
+    <message>
+      <source>Producto</source>
+      <translation>Producto</translation>
+    </message>
+    <message>
       <source>Puente Rust/QML verificado · prueba #%1</source>
       <translation>Puente Rust/QML verificado · prueba #%1</translation>
+    </message>
+    <message>
+      <source>QR content exceeds capacity</source>
+      <translation>QR content exceeds capacity</translation>
+    </message>
+    <message>
+      <source>QR does not contain a TOTP configuration</source>
+      <translation>QR does not contain a TOTP configuration</translation>
+    </message>
+    <message>
+      <source>QR image exceeds size limit</source>
+      <translation>QR image exceeds size limit</translation>
+    </message>
+    <message>
+      <source>QR unavailable for this item</source>
+      <translation>QR unavailable for this item</translation>
+    </message>
+    <message>
+      <source>Red oculta</source>
+      <translation>Red oculta</translation>
     </message>
     <message>
       <source>Revocada</source>
@@ -1408,6 +1536,22 @@ No incluye contraseñas ni valores de credenciales.
       <translation>RustQt</translation>
     </message>
     <message>
+      <source>SSH key exceeds size limit</source>
+      <translation>SSH key exceeds size limit</translation>
+    </message>
+    <message>
+      <source>Seguridad</source>
+      <translation>Seguridad</translation>
+    </message>
+    <message>
+      <source>Selecciona un archivo local de clave privada SSH.</source>
+      <translation>Selecciona un archivo local de clave privada SSH.</translation>
+    </message>
+    <message>
+      <source>Selecciona una imagen local con el QR del autenticador.</source>
+      <translation>Selecciona una imagen local con el QR del autenticador.</translation>
+    </message>
+    <message>
       <source>Subclave %1 revocada.</source>
       <translation>Subclave %1 revocada.</translation>
     </message>
@@ -1416,8 +1560,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Subclave de %1 creada para %2.</translation>
     </message>
     <message>
+      <source>Sí</source>
+      <translation>Sí</translation>
+    </message>
+    <message>
+      <source>Teléfono</source>
+      <translation>Teléfono</translation>
+    </message>
+    <message>
       <source>Texto</source>
       <translation>Texto</translation>
+    </message>
+    <message>
+      <source>Tipo de documento</source>
+      <translation>Tipo de documento</translation>
+    </message>
+    <message>
+      <source>Titular</source>
+      <translation>Titular</translation>
     </message>
     <message>
       <source>Un elemento supera los límites actuales de KryptoPass o contiene un TOTP incompatible. Conserva el original y revisa la documentación de importación.</source>
@@ -1426,6 +1586,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Unix {}</source>
       <translation>Unix {}</translation>
+    </message>
+    <message>
+      <source>Usuario</source>
+      <translation>Usuario</translation>
     </message>
     <message>
       <source>Usuario copiado</source>
@@ -1448,12 +1612,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Validez plena según GnuPG</translation>
     </message>
     <message>
+      <source>Vencimiento</source>
+      <translation>Vencimiento</translation>
+    </message>
+    <message>
+      <source>Versión</source>
+      <translation>Versión</translation>
+    </message>
+    <message>
       <source>Vigente</source>
       <translation>Vigente</translation>
     </message>
     <message>
       <source>WAL</source>
       <translation>WAL</translation>
+    </message>
+    <message>
+      <source>WEP</source>
+      <translation>WEP</translation>
     </message>
     <message>
       <source>[GNUPG:] </source>
@@ -1530,6 +1706,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>autenticación</source>
       <translation>autenticación</translation>
+    </message>
+    <message>
+      <source>authenticator configuration is required</source>
+      <translation>authenticator configuration is required</translation>
     </message>
     <message>
       <source>backup ciphertext encoding is invalid</source>
@@ -2016,6 +2196,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>icons require backup version 3</translation>
     </message>
     <message>
+      <source>image contains multiple authenticator codes</source>
+      <translation>image contains multiple authenticator codes</translation>
+    </message>
+    <message>
+      <source>image contains no readable authenticator code</source>
+      <translation>image contains no readable authenticator code</translation>
+    </message>
+    <message>
+      <source>import an SSH key before saving</source>
+      <translation>import an SSH key before saving</translation>
+    </message>
+    <message>
       <source>import destination already exists</source>
       <translation>import destination already exists</translation>
     </message>
@@ -2128,6 +2320,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>secret revision is exhausted</translation>
     </message>
     <message>
+      <source>select a regular image file</source>
+      <translation>select a regular image file</translation>
+    </message>
+    <message>
+      <source>select a regular key file</source>
+      <translation>select a regular key file</translation>
+    </message>
+    <message>
       <source>select between one and 256 backup recipients</source>
       <translation>select between one and 256 backup recipients</translation>
     </message>
@@ -2164,6 +2364,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>unreferenced icon resource</translation>
     </message>
     <message>
+      <source>unsupported field projection</source>
+      <translation>unsupported field projection</translation>
+    </message>
+    <message>
       <source>vault directory is unavailable</source>
       <translation>vault directory is unavailable</translation>
     </message>
@@ -2182,8 +2386,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>{label}: {count}.</translation>
     </message>
     <message>
-      <source>{} bóvedas · {} carpetas · {} logins · {} notas · {} omitidos · {} en la papelera</source>
-      <translation>{} bóvedas · {} carpetas · {} logins · {} notas · {} omitidos · {} en la papelera</translation>
+      <source>{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera</source>
+      <translation>{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera</translation>
     </message>
     <message>
       <source>{}identidad(es) certificada(s) en {fingerprint}.</source>
@@ -2346,6 +2550,53 @@ No incluye contraseñas ni valores de credenciales.
     </message>
   </context>
   <context>
+    <name>CardFields</name>
+    <message>
+      <source>Titular</source>
+      <translation>Titular</translation>
+    </message>
+    <message>
+      <source>Número de tarjeta</source>
+      <translation>Número de tarjeta</translation>
+    </message>
+    <message>
+      <source>Mes de vencimiento</source>
+      <translation>Mes de vencimiento</translation>
+    </message>
+    <message>
+      <source>1–12</source>
+      <translation>1–12</translation>
+    </message>
+    <message>
+      <source>Año de vencimiento</source>
+      <translation>Año de vencimiento</translation>
+    </message>
+    <message>
+      <source>AAAA</source>
+      <translation>AAAA</translation>
+    </message>
+    <message>
+      <source>Escribe el año con cuatro cifras.</source>
+      <translation>Escribe el año con cuatro cifras.</translation>
+    </message>
+    <message>
+      <source>CVV</source>
+      <translation>CVV</translation>
+    </message>
+    <message>
+      <source>Usa 3 o 4 cifras.</source>
+      <translation>Usa 3 o 4 cifras.</translation>
+    </message>
+    <message>
+      <source>PIN</source>
+      <translation>PIN</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+  </context>
+  <context>
     <name>Contacts</name>
     <message>
       <source>No se pudo guardar el contacto en KDE Contacts.</source>
@@ -2433,6 +2684,69 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>CustomFields</name>
+    <message>
+      <source>Campos personalizados</source>
+      <translation>Campos personalizados</translation>
+    </message>
+    <message>
+      <source>Añade los datos que necesites. Los campos pueden repetirse y cambiar de orden.</source>
+      <translation>Añade los datos que necesites. Los campos pueden repetirse y cambiar de orden.</translation>
+    </message>
+    <message>
+      <source>Nombre del campo</source>
+      <translation>Nombre del campo</translation>
+    </message>
+    <message>
+      <source>Nombre del campo %1</source>
+      <translation>Nombre del campo %1</translation>
+    </message>
+    <message>
+      <source>Mover campo hacia arriba</source>
+      <translation>Mover campo hacia arriba</translation>
+    </message>
+    <message>
+      <source>Mover campo hacia abajo</source>
+      <translation>Mover campo hacia abajo</translation>
+    </message>
+    <message>
+      <source>Quitar campo %1</source>
+      <translation>Quitar campo %1</translation>
+    </message>
+    <message>
+      <source>Valor</source>
+      <translation>Valor</translation>
+    </message>
+    <message>
+      <source>Permitir varias líneas</source>
+      <translation>Permitir varias líneas</translation>
+    </message>
+    <message>
+      <source>Permitir varias líneas en %1</source>
+      <translation>Permitir varias líneas en %1</translation>
+    </message>
+    <message>
+      <source>campo sin nombre</source>
+      <translation>campo sin nombre</translation>
+    </message>
+    <message>
+      <source>Ocultar en el detalle</source>
+      <translation>Ocultar en el detalle</translation>
+    </message>
+    <message>
+      <source>Ocultar %1 en el detalle</source>
+      <translation>Ocultar %1 en el detalle</translation>
+    </message>
+    <message>
+      <source>Agregar campo</source>
+      <translation>Agregar campo</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+  </context>
+  <context>
     <name>DeleteEntryDialog</name>
     <message>
       <source>Eliminar definitivamente</source>
@@ -2489,12 +2803,12 @@ Huella(s) detectadas:
       <translation>Copiar %1</translation>
     </message>
     <message>
-      <source>Ocultar contraseña</source>
-      <translation>Ocultar contraseña</translation>
+      <source>Mostrar %1</source>
+      <translation>Mostrar %1</translation>
     </message>
     <message>
-      <source>Mostrar contraseña</source>
-      <translation>Mostrar contraseña</translation>
+      <source>Ocultar %1</source>
+      <translation>Ocultar %1</translation>
     </message>
     <message>
       <source>Tiempo restante del código de verificación</source>
@@ -2857,6 +3171,97 @@ Huella(s) detectadas:
     <message>
       <source>Seleccionar carpeta</source>
       <translation>Seleccionar carpeta</translation>
+    </message>
+  </context>
+  <context>
+    <name>IdentityFields</name>
+    <message>
+      <source>Nombre</source>
+      <translation>Nombre</translation>
+    </message>
+    <message>
+      <source>Apellidos</source>
+      <translation>Apellidos</translation>
+    </message>
+    <message>
+      <source>Documentos</source>
+      <translation>Documentos</translation>
+    </message>
+    <message>
+      <source>Guarda solo los datos que necesites tener a mano.</source>
+      <translation>Guarda solo los datos que necesites tener a mano.</translation>
+    </message>
+    <message>
+      <source>Documento %1</source>
+      <translation>Documento %1</translation>
+    </message>
+    <message>
+      <source>Mover documento hacia arriba</source>
+      <translation>Mover documento hacia arriba</translation>
+    </message>
+    <message>
+      <source>Mover documento hacia abajo</source>
+      <translation>Mover documento hacia abajo</translation>
+    </message>
+    <message>
+      <source>Quitar documento %1</source>
+      <translation>Quitar documento %1</translation>
+    </message>
+    <message>
+      <source>Tipo de documento</source>
+      <translation>Tipo de documento</translation>
+    </message>
+    <message>
+      <source>Número</source>
+      <translation>Número</translation>
+    </message>
+    <message>
+      <source>País o región</source>
+      <translation>País o región</translation>
+    </message>
+    <message>
+      <source>Fecha de vencimiento</source>
+      <translation>Fecha de vencimiento</translation>
+    </message>
+    <message>
+      <source>Fecha opcional</source>
+      <translation>Fecha opcional</translation>
+    </message>
+    <message>
+      <source>Agregar documento</source>
+      <translation>Agregar documento</translation>
+    </message>
+    <message>
+      <source>Correos</source>
+      <translation>Correos</translation>
+    </message>
+    <message>
+      <source>Correo</source>
+      <translation>Correo</translation>
+    </message>
+    <message>
+      <source>Agregar correo</source>
+      <translation>Agregar correo</translation>
+    </message>
+    <message>
+      <source>Teléfonos</source>
+      <translation>Teléfonos</translation>
+    </message>
+    <message>
+      <source>Teléfono</source>
+      <translation>Teléfono</translation>
+    </message>
+    <message>
+      <source>Agregar teléfono</source>
+      <translation>Agregar teléfono</translation>
+    </message>
+    <message>
+      <source>Dirección</source>
+      <translation>Dirección</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
     </message>
   </context>
   <context>
@@ -3710,6 +4115,41 @@ Huella(s) detectadas:
     <message>
       <source>Todos los archivos (*)</source>
       <translation>Todos los archivos (*)</translation>
+    </message>
+  </context>
+  <context>
+    <name>LicenseFields</name>
+    <message>
+      <source>Producto o servicio</source>
+      <translation>Producto o servicio</translation>
+    </message>
+    <message>
+      <source>Clave de licencia</source>
+      <translation>Clave de licencia</translation>
+    </message>
+    <message>
+      <source>Titular</source>
+      <translation>Titular</translation>
+    </message>
+    <message>
+      <source>Correo</source>
+      <translation>Correo</translation>
+    </message>
+    <message>
+      <source>Versión</source>
+      <translation>Versión</translation>
+    </message>
+    <message>
+      <source>Fecha de compra</source>
+      <translation>Fecha de compra</translation>
+    </message>
+    <message>
+      <source>Fecha de vencimiento</source>
+      <translation>Fecha de vencimiento</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
     </message>
   </context>
   <context>
@@ -4994,6 +5434,17 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>SecretInput</name>
+    <message>
+      <source>Ocultar %1</source>
+      <translation>Ocultar %1</translation>
+    </message>
+    <message>
+      <source>Mostrar %1</source>
+      <translation>Mostrar %1</translation>
+    </message>
+  </context>
+  <context>
     <name>SecretStore</name>
     <message>
       <source>Inicio de sesión</source>
@@ -5002,6 +5453,34 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Nota</source>
       <translation>Nota</translation>
+    </message>
+    <message>
+      <source>Secreto personalizado</source>
+      <translation>Secreto personalizado</translation>
+    </message>
+    <message>
+      <source>Tarjeta de pago</source>
+      <translation>Tarjeta de pago</translation>
+    </message>
+    <message>
+      <source>Autenticador TOTP</source>
+      <translation>Autenticador TOTP</translation>
+    </message>
+    <message>
+      <source>Identidad</source>
+      <translation>Identidad</translation>
+    </message>
+    <message>
+      <source>Red Wi-Fi</source>
+      <translation>Red Wi-Fi</translation>
+    </message>
+    <message>
+      <source>Licencia de software</source>
+      <translation>Licencia de software</translation>
+    </message>
+    <message>
+      <source>Clave SSH</source>
+      <translation>Clave SSH</translation>
     </message>
     <message>
       <source>Sin carpeta</source>
@@ -5079,10 +5558,277 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>SshKeyFields</name>
+    <message>
+      <source>Importar clave privada OpenSSH</source>
+      <translation>Importar clave privada OpenSSH</translation>
+    </message>
+    <message>
+      <source>Claves privadas OpenSSH (*)</source>
+      <translation>Claves privadas OpenSSH (*)</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
+    </message>
+    <message>
+      <source>Clave privada</source>
+      <translation>Clave privada</translation>
+    </message>
+    <message>
+      <source>Importa un archivo de clave privada OpenSSH. Si está cifrado, escribe su frase de contraseña.</source>
+      <translation>Importa un archivo de clave privada OpenSSH. Si está cifrado, escribe su frase de contraseña.</translation>
+    </message>
+    <message>
+      <source>Frase de contraseña</source>
+      <translation>Frase de contraseña</translation>
+    </message>
+    <message>
+      <source>Elegir archivo de clave…</source>
+      <translation>Elegir archivo de clave…</translation>
+    </message>
+    <message>
+      <source>La clave seleccionada está lista para guardar.</source>
+      <translation>La clave seleccionada está lista para guardar.</translation>
+    </message>
+    <message>
+      <source>Datos públicos de la clave</source>
+      <translation>Datos públicos de la clave</translation>
+    </message>
+    <message>
+      <source>Algoritmo: %1</source>
+      <translation>Algoritmo: %1</translation>
+    </message>
+    <message>
+      <source>Huella: %1</source>
+      <translation>Huella: %1</translation>
+    </message>
+    <message>
+      <source>Huella de la clave SSH</source>
+      <translation>Huella de la clave SSH</translation>
+    </message>
+    <message>
+      <source>Clave pública SSH</source>
+      <translation>Clave pública SSH</translation>
+    </message>
+    <message>
+      <source>Usuario</source>
+      <translation>Usuario</translation>
+    </message>
+    <message>
+      <source>Equipos</source>
+      <translation>Equipos</translation>
+    </message>
+    <message>
+      <source>Equipo o host</source>
+      <translation>Equipo o host</translation>
+    </message>
+    <message>
+      <source>Agregar equipo</source>
+      <translation>Agregar equipo</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+  </context>
+  <context>
+    <name>StringListEditor</name>
+    <message>
+      <source>Agregar elemento</source>
+      <translation>Agregar elemento</translation>
+    </message>
+    <message>
+      <source>Mover %1 hacia arriba</source>
+      <translation>Mover %1 hacia arriba</translation>
+    </message>
+    <message>
+      <source>Mover %1 hacia abajo</source>
+      <translation>Mover %1 hacia abajo</translation>
+    </message>
+    <message>
+      <source>Quitar %1 %2</source>
+      <translation>Quitar %1 %2</translation>
+    </message>
+  </context>
+  <context>
+    <name>StructuredSecretDetail</name>
+    <message>
+      <source>Código de verificación</source>
+      <translation>Código de verificación</translation>
+    </message>
+    <message>
+      <source>Copiar código de verificación</source>
+      <translation>Copiar código de verificación</translation>
+    </message>
+    <message>
+      <source>Se renueva en %1 s</source>
+      <translation>Se renueva en %1 s</translation>
+    </message>
+    <message>
+      <source>Copiar próximo código</source>
+      <translation>Copiar próximo código</translation>
+    </message>
+    <message>
+      <source>Emisor: %1</source>
+      <translation>Emisor: %1</translation>
+    </message>
+    <message>
+      <source>Cuenta: %1</source>
+      <translation>Cuenta: %1</translation>
+    </message>
+    <message>
+      <source>Algoritmo: %1</source>
+      <translation>Algoritmo: %1</translation>
+    </message>
+    <message>
+      <source>Dígitos: %1</source>
+      <translation>Dígitos: %1</translation>
+    </message>
+    <message>
+      <source>Periodo: %1 s</source>
+      <translation>Periodo: %1 s</translation>
+    </message>
+    <message>
+      <source>Ocultar código QR</source>
+      <translation>Ocultar código QR</translation>
+    </message>
+    <message>
+      <source>Mostrar código QR</source>
+      <translation>Mostrar código QR</translation>
+    </message>
+    <message>
+      <source>Código QR</source>
+      <translation>Código QR</translation>
+    </message>
+    <message>
+      <source>Campo</source>
+      <translation>Campo</translation>
+    </message>
+    <message>
+      <source>Sin valor</source>
+      <translation>Sin valor</translation>
+    </message>
+    <message>
+      <source>Copiar %1</source>
+      <translation>Copiar %1</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+    <message>
+      <source>Notas del elemento</source>
+      <translation>Notas del elemento</translation>
+    </message>
+  </context>
+  <context>
     <name>ToastHost</name>
     <message>
       <source>Cerrar notificación</source>
       <translation>Cerrar notificación</translation>
+    </message>
+  </context>
+  <context>
+    <name>TotpFields</name>
+    <message>
+      <source>Importar código QR de TOTP</source>
+      <translation>Importar código QR de TOTP</translation>
+    </message>
+    <message>
+      <source>Imágenes PNG o JPEG (*.png *.jpg *.jpeg)</source>
+      <translation>Imágenes PNG o JPEG (*.png *.jpg *.jpeg)</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
+    </message>
+    <message>
+      <source>Semilla o URI TOTP</source>
+      <translation>Semilla o URI TOTP</translation>
+    </message>
+    <message>
+      <source>Base32 u otpauth://</source>
+      <translation>Base32 u otpauth://</translation>
+    </message>
+    <message>
+      <source>Semilla o URI TOTP, inicialmente oculta</source>
+      <translation>Semilla o URI TOTP, inicialmente oculta</translation>
+    </message>
+    <message>
+      <source>Ocultar semilla TOTP</source>
+      <translation>Ocultar semilla TOTP</translation>
+    </message>
+    <message>
+      <source>Mostrar semilla TOTP</source>
+      <translation>Mostrar semilla TOTP</translation>
+    </message>
+    <message>
+      <source>Introduce la semilla Base32 completa o una URI otpauth://. También puedes leerla desde una imagen QR.</source>
+      <translation>Introduce la semilla Base32 completa o una URI otpauth://. También puedes leerla desde una imagen QR.</translation>
+    </message>
+    <message>
+      <source>Leer código QR de una imagen…</source>
+      <translation>Leer código QR de una imagen…</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+  </context>
+  <context>
+    <name>WifiFields</name>
+    <message>
+      <source>Nombre de la red (SSID)</source>
+      <translation>Nombre de la red (SSID)</translation>
+    </message>
+    <message>
+      <source>Seguridad</source>
+      <translation>Seguridad</translation>
+    </message>
+    <message>
+      <source>Abierta</source>
+      <translation>Abierta</translation>
+    </message>
+    <message>
+      <source>WEP</source>
+      <translation>WEP</translation>
+    </message>
+    <message>
+      <source>WPA / WPA2</source>
+      <translation>WPA / WPA2</translation>
+    </message>
+    <message>
+      <source>WPA3</source>
+      <translation>WPA3</translation>
+    </message>
+    <message>
+      <source>Tipo de seguridad Wi-Fi</source>
+      <translation>Tipo de seguridad Wi-Fi</translation>
+    </message>
+    <message>
+      <source>Contraseña de la red</source>
+      <translation>Contraseña de la red</translation>
+    </message>
+    <message>
+      <source>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</source>
+      <translation>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</translation>
+    </message>
+    <message>
+      <source>Déjala vacía para una red abierta.</source>
+      <translation>Déjala vacía para una red abierta.</translation>
+    </message>
+    <message>
+      <source>Red oculta</source>
+      <translation>Red oculta</translation>
+    </message>
+    <message>
+      <source>La red Wi-Fi está oculta</source>
+      <translation>La red Wi-Fi está oculta</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
     </message>
   </context>
 </TS>

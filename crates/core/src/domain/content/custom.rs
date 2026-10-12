@@ -35,13 +35,19 @@ pub struct CustomRecord {
 
 impl CustomContent {
     pub(super) fn validate(&self) -> Result<()> {
-        ensure!(self.records.len() <= MAX_RECORDS, "too many custom secret records");
+        ensure!(
+            self.records.len() <= MAX_RECORDS,
+            "too many custom secret records"
+        );
         ensure_field_size("custom secret notes", &self.notes, MAX_NOTES_BYTES)?;
         let mut ids = HashSet::with_capacity(self.records.len());
         for record in &self.records {
             let id = Uuid::parse_str(&record.id).context("invalid custom record ID")?;
             ensure!(!id.is_nil(), "invalid custom record ID");
-            ensure!(id.to_string() == record.id, "custom record ID is not canonical");
+            ensure!(
+                id.to_string() == record.id,
+                "custom record ID is not canonical"
+            );
             ensure!(ids.insert(id), "duplicate custom record ID");
             ensure!(
                 !record.key.is_empty() && record.key.len() <= MAX_KEY_BYTES,

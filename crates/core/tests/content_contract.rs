@@ -104,7 +104,7 @@ fn current_login_roundtrip_preserves_credentials_sites_totp_and_history() {
 
 #[test]
 fn all_supported_note_schemas_decode_without_changing_the_fields() {
-    for schema in 1..=3 {
+    for schema in 1..=CONTENT_SCHEMA_VERSION {
         let content = decode_fixture(&envelope("note", schema));
         let SecretContent::Note(note) = &content else {
             panic!("expected note content for schema {schema}");
@@ -119,7 +119,7 @@ fn all_supported_note_schemas_decode_without_changing_the_fields() {
 
 #[test]
 fn all_supported_login_schemas_preserve_credentials_and_upgrade_to_current() {
-    for schema in 1..=3 {
+    for schema in 1..=CONTENT_SCHEMA_VERSION {
         let content = decode_fixture(&envelope("login", schema));
         let SecretContent::Login(login) = &content else {
             panic!("expected login content for schema {schema}");
@@ -173,7 +173,7 @@ fn legacy_login_with_an_empty_primary_url_upgrades_to_an_empty_site_list() {
 
 #[test]
 fn login_rejects_note_fields_even_when_null() {
-    for schema in 1..=3 {
+    for schema in 1..=CONTENT_SCHEMA_VERSION {
         for value in [Value::Null, json!("unexpected note")] {
             let mut fixture = envelope("login", schema);
             fixture["fields"]["value"] = value;
@@ -198,7 +198,7 @@ fn note_rejects_login_fields_even_when_null() {
         ),
         ("history", json!({"events": [], "previousPasswords": []})),
     ];
-    for schema in 1..=3 {
+    for schema in 1..=CONTENT_SCHEMA_VERSION {
         for (field, value) in &login_fields {
             for value in [Value::Null, value.clone()] {
                 let mut fixture = envelope("note", schema);
@@ -211,7 +211,7 @@ fn note_rejects_login_fields_even_when_null() {
 
 #[test]
 fn legacy_login_rejects_newer_fields_even_when_null() {
-    let current = envelope("login", 3);
+    let current = envelope("login", CONTENT_SCHEMA_VERSION);
     for field in ["urls", "totp", "history"] {
         for value in [Value::Null, current["fields"][field].clone()] {
             let mut fixture = envelope("login", 1);
@@ -224,7 +224,7 @@ fn legacy_login_rejects_newer_fields_even_when_null() {
 #[test]
 fn unknown_fields_are_rejected_in_the_envelope_and_each_content_variant() {
     for kind in ["login", "note"] {
-        for schema in 1..=3 {
+        for schema in 1..=CONTENT_SCHEMA_VERSION {
             for value in [Value::Null, json!("unknown")] {
                 let mut fixture = envelope(kind, schema);
                 fixture["unknown"] = value.clone();
@@ -271,7 +271,7 @@ fn unsupported_schema_versions_are_rejected_for_every_content_variant() {
 #[test]
 fn required_envelope_fields_cannot_be_absent_or_null() {
     for kind in ["login", "note"] {
-        for schema in 1..=3 {
+        for schema in 1..=CONTENT_SCHEMA_VERSION {
             for field in ["schemaVersion", "kind", "fields"] {
                 let mut fixture = envelope(kind, schema);
                 fixture.as_object_mut().unwrap().remove(field);
@@ -288,7 +288,7 @@ fn required_envelope_fields_cannot_be_absent_or_null() {
 #[test]
 fn required_content_fields_cannot_be_absent() {
     for kind in ["login", "note"] {
-        for schema in 1..=3 {
+        for schema in 1..=CONTENT_SCHEMA_VERSION {
             let fixture = envelope(kind, schema);
             for field in fixture["fields"].as_object().unwrap().keys() {
                 let mut malformed = fixture.clone();
@@ -302,7 +302,7 @@ fn required_content_fields_cannot_be_absent() {
 #[test]
 fn only_totp_can_be_null_among_required_content_fields() {
     for kind in ["login", "note"] {
-        for schema in 1..=3 {
+        for schema in 1..=CONTENT_SCHEMA_VERSION {
             let fixture = envelope(kind, schema);
             for field in fixture["fields"].as_object().unwrap().keys() {
                 let mut malformed = fixture.clone();

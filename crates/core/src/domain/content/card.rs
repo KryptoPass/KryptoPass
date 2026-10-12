@@ -2,7 +2,7 @@
 
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::ensure_field_size;
 
@@ -33,10 +33,14 @@ impl CardContent {
             "card expiry month must be between 1 and 12"
         );
         ensure!(
-            (2000..=9999).contains(&self.expiry_year),
+            (1900..=9999).contains(&self.expiry_year),
             "card expiry year is invalid"
         );
-        let digits = self.number.bytes().filter(|byte| byte.is_ascii_digit()).count();
+        let digits = self
+            .number
+            .bytes()
+            .filter(|byte| byte.is_ascii_digit())
+            .count();
         ensure!(
             self.number
                 .bytes()
@@ -59,10 +63,12 @@ impl CardContent {
     }
 
     /// Returns the number with only spaces and hyphens removed.
-    pub fn normalized_number(&self) -> String {
-        self.number
-            .chars()
-            .filter(|character| !matches!(character, ' ' | '-'))
-            .collect()
+    pub fn normalized_number(&self) -> Zeroizing<String> {
+        Zeroizing::new(
+            self.number
+                .chars()
+                .filter(|character| !matches!(character, ' ' | '-'))
+                .collect(),
+        )
     }
 }

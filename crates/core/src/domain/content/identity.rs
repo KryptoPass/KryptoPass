@@ -43,15 +43,25 @@ impl IdentityContent {
     pub(super) fn validate(&self) -> Result<()> {
         ensure_field_size("identity first name", &self.first_name, MAX_FIELD_BYTES)?;
         ensure_field_size("identity last name", &self.last_name, MAX_FIELD_BYTES)?;
-        ensure!(self.documents.len() <= MAX_DOCUMENTS, "too many identity documents");
+        ensure!(
+            self.documents.len() <= MAX_DOCUMENTS,
+            "too many identity documents"
+        );
         let mut document_ids = HashSet::with_capacity(self.documents.len());
         for document in &self.documents {
             let id = Uuid::parse_str(&document.id).context("invalid identity document ID")?;
             ensure!(!id.is_nil(), "invalid identity document ID");
-            ensure!(id.to_string() == document.id, "identity document ID is not canonical");
+            ensure!(
+                id.to_string() == document.id,
+                "identity document ID is not canonical"
+            );
             ensure!(document_ids.insert(id), "duplicate identity document ID");
             ensure_field_size("identity document type", &document.document_type, 256)?;
-            ensure_field_size("identity document number", &document.number, MAX_FIELD_BYTES)?;
+            ensure_field_size(
+                "identity document number",
+                &document.number,
+                MAX_FIELD_BYTES,
+            )?;
             ensure_field_size("identity document country", &document.country, 256)?;
             ensure_field_size("identity document expiration", &document.expires, 256)?;
         }

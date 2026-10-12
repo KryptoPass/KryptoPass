@@ -470,7 +470,7 @@ impl StoredFields {
                 };
                 (urls, None, LoginHistory::default())
             }
-            LOGIN_HISTORY_SCHEMA_VERSION | CONTENT_SCHEMA_VERSION => (
+            LOGIN_HISTORY_SCHEMA_VERSION | 3 | CONTENT_SCHEMA_VERSION => (
                 take_value(&mut self.urls, "login content is missing URLs")?,
                 take_nullable(&mut self.totp, "login content is missing TOTP field")?,
                 take_value(&mut self.history, "login content is missing history")?,

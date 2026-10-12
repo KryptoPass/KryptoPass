@@ -260,6 +260,9 @@ Controls.Pane {
                         onVersionCloseRequested: root.storeAdapter.controller.closeHistoryVersion()
                         onVersionCopyRequested: function(field) { root.storeAdapter.controller.copyHistoryValue(field); }
                         onActivityExportRequested: root.storeAdapter.controller.exportActivity()
+                        onCopyFieldRequested: function(field) { root.storeAdapter.controller.copyField(field); }
+                        onRevealFieldRequested: function(field) { root.storeAdapter.controller.toggleField(field); }
+                        onQrRequested: root.storeAdapter.controller.showQr()
                         onRevealToggled: root.revealToggleRequested()
                         onCopyUsernameRequested: root.copyUsernameRequested()
                         onCopyPasswordRequested: root.copyPasswordRequested()

@@ -1,6 +1,7 @@
 //! Common metadata, sessions and typed content projections consumed by QML.
 
 mod content;
+mod expanded;
 
 use kryptopass_core::{
     EntryIcon, Folder, FolderId, KeyFingerprint, LoginHistory, LoginHistoryEventKind,
@@ -69,6 +70,11 @@ struct TotpProjection {
     valid_until: u64,
     #[serde(rename = "nextValidFrom")]
     next_valid_from: u64,
+    issuer: Option<String>,
+    account: Option<String>,
+    #[zeroize(skip)]
+    algorithm: &'static str,
+    digits: u8,
 }
 
 #[derive(serde::Serialize)]
@@ -203,6 +209,27 @@ impl SensitiveText {
     }
 }
 
+impl EntryDraft {
+    pub(super) fn ssh_import_token(&self) -> Option<&str> {
+        match &self.content {
+            DraftContent::SshKey(value) => Some(&value.import_token),
+            _ => None,
+        }
+    }
+    pub(super) fn attach_ssh(&mut self, content: kryptopass_core::SshKeyContent) {
+        if let DraftContent::SshKey(value) = &mut self.content {
+            value.prepared = Some(content);
+        }
+    }
+}
+
+pub(super) fn content_field<'a>(
+    content: &'a SecretContent,
+    id: &str,
+) -> Option<(std::borrow::Cow<'a, str>, bool)> {
+    expanded::field(content, id)
+}
+
 pub(super) fn draft_matches_session(
     draft: &EntryDraft,
     session_id: Option<SecretId>,
@@ -257,9 +284,33 @@ pub(super) fn content_projection(
     reveal_password: bool,
     unix_seconds: u64,
 ) -> anyhow::Result<Zeroizing<String>> {
+    content_projection_with_state(
+        id,
+        content,
+        reveal_password,
+        unix_seconds,
+        &std::collections::BTreeSet::new(),
+        None,
+    )
+}
+
+pub(super) fn content_projection_with_state(
+    id: SecretId,
+    content: &SecretContent,
+    reveal_password: bool,
+    unix_seconds: u64,
+    revealed_fields: &std::collections::BTreeSet<String>,
+    qr_source: Option<&str>,
+) -> anyhow::Result<Zeroizing<String>> {
     serde_json::to_string(&ContentProjection {
         id: id.0.to_string(),
-        content: DetailContent::new(content, reveal_password, unix_seconds)?,
+        content: DetailContent::new(
+            content,
+            reveal_password,
+            unix_seconds,
+            revealed_fields,
+            qr_source,
+        )?,
     })
     .map(Zeroizing::new)
     .map_err(Into::into)
@@ -342,6 +393,14 @@ fn totp_projection(config: &TotpConfig, unix_seconds: u64) -> anyhow::Result<Tot
         remaining_seconds: snapshot.remaining,
         valid_until,
         next_valid_from: valid_until,
+        issuer: config.issuer.clone(),
+        account: config.account.clone(),
+        algorithm: match config.algorithm {
+            kryptopass_core::TotpAlgorithm::Sha1 => "SHA1",
+            kryptopass_core::TotpAlgorithm::Sha256 => "SHA256",
+            kryptopass_core::TotpAlgorithm::Sha512 => "SHA512",
+        },
+        digits: config.digits,
     })
 }
 
@@ -392,3 +451,7 @@ fn history_event_kind_name(kind: &LoginHistoryEventKind) -> &'static str {
 #[cfg(test)]
 #[path = "secrets_projection_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "expanded_projection_tests.rs"]
+mod expanded_tests;

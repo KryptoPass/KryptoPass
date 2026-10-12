@@ -9,6 +9,7 @@ pub mod keyring_controller;
 mod keyring_projection;
 pub mod markdown_document;
 pub(crate) mod native_ffi;
+mod secret_qr;
 pub mod secrets_controller;
 mod secrets_projection;
 pub mod sensitive_clipboard;

@@ -14,6 +14,9 @@ Item {
 
     signal edited
     signal generatePasswordRequested
+    signal prepareSshKeyRequested(url fileUrl, string passphrase)
+    signal prepareTotpQrRequested(url fileUrl)
+    signal externalModalRequested(bool opened)
 
     implicitHeight: formLoader.implicitHeight
 
@@ -62,6 +65,16 @@ Item {
             form.applyGeneratedPassword(value);
     }
 
+    function applyPreparedSshKey(json) {
+        if (form)
+            form.applyPreparedSshKey(json);
+    }
+
+    function applyPreparedTotp(json) {
+        if (form)
+            form.applyPreparedTotp(json);
+    }
+
     Loader {
         id: formLoader
         width: root.width
@@ -83,6 +96,15 @@ Item {
         }
         function onGeneratePasswordRequested() {
             root.generatePasswordRequested();
+        }
+        function onPrepareSshKeyRequested(fileUrl, passphrase) {
+            root.prepareSshKeyRequested(fileUrl, passphrase);
+        }
+        function onPrepareTotpQrRequested(fileUrl) {
+            root.prepareTotpQrRequested(fileUrl);
+        }
+        function onExternalModalRequested(opened) {
+            root.externalModalRequested(opened);
         }
     }
 }

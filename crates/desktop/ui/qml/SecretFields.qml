@@ -6,6 +6,9 @@ import QtQuick.Layouts
 ColumnLayout {
     signal edited
     signal generatePasswordRequested
+    signal prepareSshKeyRequested(url fileUrl, string passphrase)
+    signal prepareTotpQrRequested(url fileUrl)
+    signal externalModalRequested(bool opened)
 
     function loadFields(fields) {
         throw new Error("SecretFields.loadFields must be implemented by the form");
@@ -17,6 +20,10 @@ ColumnLayout {
         loadFields({});
     }
     function applyGeneratedPassword(value) {
+    }
+    function applyPreparedSshKey(json) {
+    }
+    function applyPreparedTotp(json) {
     }
 
     Component.onDestruction: clearFields()

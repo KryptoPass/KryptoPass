@@ -12,8 +12,11 @@ Controls.Frame {
     property string hint: ""
     property string copyLabel: qsTr("Copiar %1").arg(label)
     property bool copyEnabled: value.length > 0
+    property bool multiline: false
     property bool revealable: false
     property bool revealed: false
+    property string revealLabel: qsTr("Mostrar %1").arg(label)
+    property string hideLabel: qsTr("Ocultar %1").arg(label)
     property bool prominent: false
     property real progress: -1
     default property alias extraActions: extraActions.data
@@ -38,7 +41,22 @@ Controls.Frame {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
+            Controls.TextArea {
+                visible: root.multiline
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 5)
+                text: root.value
+                textFormat: TextEdit.PlainText
+                wrapMode: TextEdit.Wrap
+                readOnly: true
+                selectByMouse: true
+                Accessible.name: root.label
+                Accessible.description: root.hint
+            }
+
             Controls.TextField {
+                visible: !root.multiline
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 text: root.value
@@ -60,7 +78,7 @@ Controls.Frame {
             }
             Controls.ToolButton {
                 visible: root.revealable
-                text: root.revealed ? qsTr("Ocultar contraseña") : qsTr("Mostrar contraseña")
+                text: root.revealed ? root.hideLabel : root.revealLabel
                 icon.name: root.revealed ? "view-hidden" : "view-visible"
                 display: Controls.AbstractButton.IconOnly
                 onClicked: root.revealRequested()

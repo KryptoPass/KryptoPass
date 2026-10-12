@@ -18,8 +18,9 @@ Formulario SecretFields
 
 El JSON del bridge es independiente del envelope cifrado. El bridge agrupa
 los campos por variante en `content`; el formato persistente conserva
-`schemaVersion`, `kind` y `fields` en la raíz. Este refactor conserva el formato
-3 y la lectura de los formatos 1, 2 y 3. Los IDs persistentes nunca se renombran.
+`schemaVersion`, `kind` y `fields` en la raíz. El formato actual es el 4; los
+logins y notas de los formatos 1, 2 y 3 siguen siendo legibles. Los IDs
+persistentes nunca se renombran.
 Se rechazan tipos, campos y versiones desconocidos, incluidos campos de otra
 variante con valor `null`.
 

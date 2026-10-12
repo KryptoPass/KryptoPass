@@ -154,7 +154,7 @@ pub(super) enum EditorContent<'a> {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct TotpEditor<'a> {
+pub(super) struct TotpEditor<'a> {
     #[serde(serialize_with = "serialize_sensitive_text")]
     totp_input: Zeroizing<String>,
     notes: &'a str,
@@ -162,7 +162,7 @@ struct TotpEditor<'a> {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct SshKeyEditor<'a> {
+pub(super) struct SshKeyEditor<'a> {
     import_token: &'static str,
     public_key: &'a str,
     fingerprint: &'a str,
@@ -283,21 +283,48 @@ impl<'a> DetailContent<'a> {
                 history: history_projection(&login.history),
             })),
             SecretContent::Note(note) => Self::Note(note),
-            SecretContent::Custom(_) => {
-                Self::Custom(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?)
-            }
-            SecretContent::Card(_) => Self::Card(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?),
-            SecretContent::Identity(_) => {
-                Self::Identity(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?)
-            }
-            SecretContent::Wifi(_) => Self::Wifi(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?),
-            SecretContent::License(_) => {
-                Self::License(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?)
-            }
-            SecretContent::Totp(_) => Self::Totp(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?),
-            SecretContent::SshKey(_) => {
-                Self::SshKey(super::expanded::detail(content, unix_seconds, revealed_fields, qr_source)?)
-            }
+            SecretContent::Custom(_) => Self::Custom(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::Card(_) => Self::Card(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::Identity(_) => Self::Identity(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::Wifi(_) => Self::Wifi(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::License(_) => Self::License(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::Totp(_) => Self::Totp(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
+            SecretContent::SshKey(_) => Self::SshKey(super::expanded::detail(
+                content,
+                unix_seconds,
+                revealed_fields,
+                qr_source,
+            )?),
         })
     }
 }

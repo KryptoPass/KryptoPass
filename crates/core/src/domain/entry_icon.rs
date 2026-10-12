@@ -165,7 +165,14 @@ pub fn automatic_entry_icon(content: &SecretContent) -> Option<EntryIcon> {
                 .map_or(login.url.as_str(), String::as_str);
             favicon_for_url(url).or_else(|| server_theme_for_url(url))
         }
-        SecretContent::Note(_) => None,
+        SecretContent::Note(_)
+        | SecretContent::Custom(_)
+        | SecretContent::Card(_)
+        | SecretContent::Totp(_)
+        | SecretContent::Identity(_)
+        | SecretContent::Wifi(_)
+        | SecretContent::License(_)
+        | SecretContent::SshKey(_) => None,
     }
 }
 

@@ -1,11 +1,11 @@
 //! Typed plaintext payloads and their versioned storage envelope.
 
-mod login;
-mod note;
 mod card;
 mod custom;
 mod identity;
 mod license;
+mod login;
+mod note;
 mod ssh_key;
 mod totp;
 mod wifi;
@@ -15,19 +15,19 @@ use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::SecretKind;
+pub use crate::otp::TotpUriParameter;
 pub use crate::otp::{TotpAlgorithm, TotpConfig};
-pub use login::{
-    HistoricalPassword, LoginContent, LoginHistory, LoginHistoryEvent, LoginHistoryEventKind,
-};
-pub use note::NoteContent;
 pub use card::CardContent;
 pub use custom::{CustomContent, CustomRecord};
 pub use identity::{IdentityContent, IdentityDocument};
 pub use license::LicenseContent;
+pub use login::{
+    HistoricalPassword, LoginContent, LoginHistory, LoginHistoryEvent, LoginHistoryEventKind,
+};
+pub use note::NoteContent;
 pub use ssh_key::SshKeyContent;
 pub use totp::TotpContent;
 pub use wifi::{WifiContent, WifiSecurity, wifi_qr_payload};
-pub use crate::otp::TotpUriParameter;
 
 /// Current encrypted content envelope version.
 pub const CONTENT_SCHEMA_VERSION: u32 = 4;
@@ -90,7 +90,14 @@ impl SecretContent {
     pub(crate) const fn needs_previous_content(&self) -> bool {
         match self {
             Self::Login(_) => true,
-            Self::Note(_) => false,
+            Self::Note(_)
+            | Self::Custom(_)
+            | Self::Card(_)
+            | Self::Totp(_)
+            | Self::Identity(_)
+            | Self::Wifi(_)
+            | Self::License(_)
+            | Self::SshKey(_) => false,
         }
     }
 
@@ -315,31 +322,52 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
                 notes: std::mem::take(&mut fields.notes),
             })
         }
-        StoredEnvelope::Custom { schema_version, fields } => {
+        StoredEnvelope::Custom {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::Custom(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::Card { schema_version, fields } => {
+        StoredEnvelope::Card {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::Card(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::Totp { schema_version, fields } => {
+        StoredEnvelope::Totp {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::Totp(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::Identity { schema_version, fields } => {
+        StoredEnvelope::Identity {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::Identity(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::Wifi { schema_version, fields } => {
+        StoredEnvelope::Wifi {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::Wifi(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::License { schema_version, fields } => {
+        StoredEnvelope::License {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::License(fields.take().context("secret content is missing fields")?)
         }
-        StoredEnvelope::SshKey { schema_version, fields } => {
+        StoredEnvelope::SshKey {
+            schema_version,
+            fields,
+        } => {
             validate_new_schema_version(*schema_version)?;
             SecretContent::SshKey(fields.take().context("secret content is missing fields")?)
         }

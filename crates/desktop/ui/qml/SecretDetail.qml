@@ -18,6 +18,9 @@ ColumnLayout {
     signal copyUsernameRequested
     signal copyPasswordRequested
     signal copyTotpRequested(bool next)
+    signal copyFieldRequested(string field)
+    signal revealFieldRequested(string field)
+    signal qrRequested
     signal versionOpenRequested(int index)
     signal versionCloseRequested
     signal versionCopyRequested(string field)
@@ -69,6 +72,15 @@ ColumnLayout {
         }
         function onCopyTotpRequested(next) {
             root.copyTotpRequested(next);
+        }
+        function onCopyFieldRequested(field) {
+            root.copyFieldRequested(field);
+        }
+        function onRevealFieldRequested(field) {
+            root.revealFieldRequested(field);
+        }
+        function onQrRequested() {
+            root.qrRequested();
         }
         function onVersionOpenRequested(index) {
             root.versionOpenRequested(index);

@@ -42,6 +42,78 @@ TestCase {
             };
         case "note":
             return { value: "Private note content", notes: "Additional context" };
+        case "custom":
+            return {
+                records: [{
+                    id: "00000000-0000-4000-8000-000000000001",
+                    key: "Recovery code",
+                    value: "private recovery value",
+                    multiline: true,
+                    concealed: true
+                }],
+                notes: "Custom content notes"
+            };
+        case "card":
+            return {
+                holder: "Ada Example",
+                number: "4111111111111111",
+                expiryMonth: 12,
+                expiryYear: 2032,
+                cvv: "123",
+                pin: "2468",
+                notes: "Card notes"
+            };
+        case "totp":
+            return {
+                totpInput: "otpauth://totp/Example%3Aada?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA256&digits=8&period=60",
+                notes: "TOTP notes"
+            };
+        case "identity":
+            return {
+                firstName: "Ada",
+                lastName: "Example",
+                documents: [{
+                    id: "00000000-0000-4000-8000-000000000002",
+                    documentType: "Passport",
+                    number: "P123456",
+                    country: "GB",
+                    expires: "2032-12-31"
+                }],
+                emails: ["ada@example.invalid"],
+                phones: ["+1 555 0100"],
+                address: "1 Example Street",
+                notes: "Identity notes"
+            };
+        case "wifi":
+            return {
+                ssid: "Example network",
+                security: "wpa3",
+                password: "example-network-password",
+                hidden: true,
+                notes: "Wi-Fi notes"
+            };
+        case "license":
+            return {
+                product: "Example Product",
+                licenseKey: "AAAA-BBBB-CCCC-DDDD",
+                holder: "Ada Example",
+                email: "ada@example.invalid",
+                version: "2.1",
+                purchased: "2025-01-02",
+                expires: "2030-01-02",
+                notes: "License notes"
+            };
+        case "ssh-key":
+            return {
+                importToken: "opaque-import-token",
+                passphrase: "",
+                publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEexample synthetic",
+                fingerprint: "SHA256:synthetic-fingerprint",
+                algorithm: "ssh-ed25519",
+                user: "ada",
+                hosts: ["example.invalid"],
+                notes: "SSH notes"
+            };
         default:
             fail("Add an editor contract fixture for " + kind);
         }
@@ -53,6 +125,29 @@ TestCase {
             return { username: "", password: "", url: "", urls: [], totpInput: "", notes: "" };
         case "note":
             return { value: "", notes: "" };
+        case "custom":
+            return { records: [], notes: "" };
+        case "card":
+            return {
+                holder: "", number: "", expiryMonth: 0, expiryYear: 0,
+                cvv: "", pin: "", notes: ""
+            };
+        case "totp":
+            return { totpInput: "", notes: "" };
+        case "identity":
+            return {
+                firstName: "", lastName: "", documents: [], emails: [], phones: [],
+                address: "", notes: ""
+            };
+        case "wifi":
+            return { ssid: "", security: "wpa", password: "", hidden: false, notes: "" };
+        case "license":
+            return {
+                product: "", licenseKey: "", holder: "", email: "", version: "",
+                purchased: "", expires: "", notes: ""
+            };
+        case "ssh-key":
+            return { importToken: "", passphrase: "", user: "", hosts: [], notes: "" };
         default:
             fail("Add an empty editor fixture for " + kind);
         }
@@ -72,6 +167,33 @@ TestCase {
                 events: [{ at: 1700000000, kind: "create" }],
                 versions: [{ index: 0, at: 1700000000, passwordOnly: false }]
             };
+        } else if (kind !== "note") {
+            const structuredFields = {
+                rows: [{
+                    id: "field:test",
+                    label: "Example field",
+                    value: "Example value",
+                    multiline: false,
+                    concealed: false,
+                    revealed: false,
+                    hasValue: true
+                }],
+                notes: fields.notes,
+                hasQr: false
+            };
+            if (kind === "totp") {
+                structuredFields.totp = {
+                    currentCode: "123456",
+                    nextCode: "654321",
+                    period: 30,
+                    remainingSeconds: 15,
+                    issuer: "Example",
+                    account: "ada",
+                    algorithm: "sha1",
+                    digits: 6
+                };
+            }
+            return structuredFields;
         }
         return fields;
     }
@@ -132,11 +254,17 @@ TestCase {
 
         const fields = editorFields(row.option.id);
         editor.loadFields(fields);
-        compare(editor.currentFields(), fields);
+        const currentFields = Object.assign({}, fields);
+        if (row.option.id === "ssh-key") {
+            delete currentFields.publicKey;
+            delete currentFields.fingerprint;
+            delete currentFields.algorithm;
+        }
+        compare(editor.currentFields(), currentFields);
         editor.clearFields();
         compare(editor.currentFields(), emptyFields(row.option.id));
         editor.loadFields(fields);
-        compare(editor.currentFields(), fields);
+        compare(editor.currentFields(), currentFields);
 
         const view = createTemporaryObject(row.option.detail, testCase, {
             width: 1000,

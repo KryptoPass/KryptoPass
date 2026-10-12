@@ -179,6 +179,9 @@ pub enum SecretKind {
     SecureNote,
     Card,
     Identity,
+    Custom,
+    Wifi,
+    License,
 }
 
 impl SecretKind {
@@ -193,6 +196,9 @@ impl SecretKind {
             Self::SecureNote => "note",
             Self::Card => "card",
             Self::Identity => "identity",
+            Self::Custom => "custom",
+            Self::Wifi => "wifi",
+            Self::License => "license",
         }
     }
 
@@ -206,6 +212,9 @@ impl SecretKind {
             "note" => Ok(Self::SecureNote),
             "card" => Ok(Self::Card),
             "identity" => Ok(Self::Identity),
+            "custom" => Ok(Self::Custom),
+            "wifi" => Ok(Self::Wifi),
+            "license" => Ok(Self::License),
             _ => Err(DomainError::UnsupportedSecretKind),
         }
     }

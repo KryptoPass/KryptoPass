@@ -95,7 +95,7 @@ impl qobject::ImportController {
                 match result {
                     Ok(plan) => {
                         let s = plan.summary;
-                        controller.as_mut().set_summary(QString::from(format!("{} bóvedas · {} carpetas · {} logins · {} notas · {} omitidos · {} en la papelera", s.vaults, s.folders, s.logins, s.notes, s.skipped, s.trashed)));
+                        controller.as_mut().set_summary(QString::from(format!("{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera", s.vaults, s.folders, s.logins, s.notes, s.other_items, s.skipped, s.trashed)));
                         controller
                             .as_mut()
                             .set_warnings(QString::from(warning_text(&plan)));
@@ -262,6 +262,10 @@ fn warning_text(plan: &ImportPlan) -> String {
         (
             IssueKind::ExtraFieldsInNotes,
             "Campos personalizados conservados como texto en las notas",
+        ),
+        (
+            IssueKind::SourceFieldsPreserved,
+            "Campos de origen conservados en registros ocultos",
         ),
         (
             IssueKind::PasskeysInNotes,

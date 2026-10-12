@@ -3,7 +3,7 @@
 use kryptopass_core::{
     CONTENT_SCHEMA_VERSION, LoginContent, LoginHistory, LoginHistoryEventKind,
     MAX_HISTORY_PASSWORD_BYTES, SecretContent, TotpAlgorithm, TotpConfig, decode_content,
-    encode_content,
+    encode_content, format_totp_input, parse_totp_input,
 };
 
 fn sample_login() -> LoginContent {
@@ -58,7 +58,7 @@ fn assert_snapshot_fields(actual: &LoginContent, expected: &LoginContent) {
 }
 
 #[test]
-fn schema_three_roundtrip_preserves_complete_old_login_without_nested_history() {
+fn current_schema_roundtrip_preserves_complete_login_without_nested_history() {
     let mut previous = sample_login();
     previous
         .history
@@ -80,8 +80,8 @@ fn schema_three_roundtrip_preserves_complete_old_login_without_nested_history() 
 
     let bytes = encode_content(&SecretContent::Login(previous)).unwrap();
     let envelope: serde_json::Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-    assert_eq!(CONTENT_SCHEMA_VERSION, 3);
-    assert_eq!(envelope["schemaVersion"], 3);
+    assert_eq!(CONTENT_SCHEMA_VERSION, 4);
+    assert_eq!(envelope["schemaVersion"], CONTENT_SCHEMA_VERSION);
     let current = decode_login(bytes.as_slice());
 
     assert_eq!(current.username, "changed@example.org");
@@ -500,4 +500,51 @@ fn service_edits_snapshot_previous_login_and_copy_events_keep_versions_unchanged
     assert!(login.history.events()[0].kind == LoginHistoryEventKind::CopyPassword);
     assert_eq!(login.history.events()[0].timestamp, u64::MAX);
     assert_eq!(service.list_secrets().unwrap()[0].revision, 2);
+}
+
+#[test]
+fn equivalent_totp_uri_with_retained_canonical_label_does_not_create_a_content_version() {
+    use kryptopass_core::{KeyFingerprint, RecipientSelection, RecipientSet, SecretsService};
+
+    let recipients = RecipientSet::new(vec![
+        KeyFingerprint::parse("0123456789ABCDEF0123456789ABCDEF01234567").unwrap(),
+    ])
+    .unwrap();
+    let mut service = SecretsService::new(SingleSecretStorage::default(), ReversibleTestCrypto);
+    let existing = sample_login();
+    let id = service
+        .save_content(
+            None,
+            None,
+            "Authenticator".to_owned(),
+            RecipientSelection::Explicit(recipients.clone()),
+            SecretContent::Login(existing.clone()),
+            None,
+        )
+        .unwrap();
+
+    let uri = format_totp_input(existing.totp.as_ref().unwrap()).unwrap();
+    let parsed = parse_totp_input(uri.as_str()).unwrap().unwrap();
+    assert!(parsed.original_label.is_some());
+    let mut updated = existing;
+    updated.totp = Some(parsed);
+    service
+        .save_content(
+            Some(id),
+            None,
+            "Authenticator".to_owned(),
+            RecipientSelection::Explicit(recipients),
+            SecretContent::Login(updated),
+            Some(0),
+        )
+        .unwrap();
+
+    let content = service.read_content(id).unwrap();
+    let SecretContent::Login(login) = &content else {
+        panic!("expected login content");
+    };
+    assert!(login.history.version_metadata().is_empty());
+    assert_eq!(login.history.events().len(), 1);
+    assert!(login.history.events()[0].kind == LoginHistoryEventKind::Create);
+    assert!(login.totp.as_ref().unwrap().original_label.is_some());
 }

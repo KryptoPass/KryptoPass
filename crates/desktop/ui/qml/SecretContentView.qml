@@ -11,6 +11,9 @@ Item {
     signal copyUsernameRequested
     signal copyPasswordRequested
     signal copyTotpRequested(bool next)
+    signal copyFieldRequested(string field)
+    signal revealFieldRequested(string field)
+    signal qrRequested
     signal versionOpenRequested(int index)
     signal versionCloseRequested
     signal versionCopyRequested(string field)

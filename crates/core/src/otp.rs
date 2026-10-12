@@ -3,6 +3,7 @@
 use anyhow::{Context, Result, bail, ensure};
 use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use totp_rs::{Algorithm, Secret, TOTP};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
@@ -10,6 +11,12 @@ use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 pub const MAX_TOTP_SECRET_BYTES: usize = 8 * 1024;
 /// Maximum byte length of either optional TOTP label.
 pub const MAX_TOTP_LABEL_BYTES: usize = 8 * 1024;
+/// Maximum size of one URI extension key or value after decoding.
+pub const MAX_TOTP_EXTENSION_BYTES: usize = 8 * 1024;
+/// Maximum number of unknown URI parameters retained with a configuration.
+pub const MAX_TOTP_EXTENSIONS: usize = 100;
+/// Maximum accepted size of a complete `otpauth` URI.
+pub const MAX_TOTP_URI_BYTES: usize = 128 * 1024;
 
 /// Hash algorithm used to calculate a TOTP value.
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,9 +38,9 @@ impl TotpAlgorithm {
 
     const fn as_str(self) -> &'static str {
         match self {
-            Self::Sha1 => "sha1",
-            Self::Sha256 => "sha256",
-            Self::Sha512 => "sha512",
+            Self::Sha1 => "SHA1",
+            Self::Sha256 => "SHA256",
+            Self::Sha512 => "SHA512",
         }
     }
 
@@ -53,7 +60,7 @@ impl TotpAlgorithm {
 /// TOTP parameters stored inside the encrypted login payload.
 ///
 /// `secret` is the canonical uppercase Base32 representation without padding.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TotpConfig {
     pub secret: String,
@@ -65,6 +72,49 @@ pub struct TotpConfig {
     pub period: u64,
     pub issuer: Option<String>,
     pub account: Option<String>,
+    /// Original percent-encoded label path segment from an `otpauth` URI.
+    #[serde(default)]
+    pub original_label: Option<String>,
+    /// Unknown URI parameters, retained in source order for lossless editing.
+    #[serde(default)]
+    pub extensions: Vec<TotpUriParameter>,
+}
+
+impl PartialEq for TotpConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.secret == other.secret
+            && self.algorithm == other.algorithm
+            && self.digits == other.digits
+            && self.period == other.period
+            && self.issuer == other.issuer
+            && self.account == other.account
+            && self.extensions == other.extensions
+    }
+}
+
+impl Eq for TotpConfig {}
+
+impl Default for TotpConfig {
+    fn default() -> Self {
+        Self {
+            secret: String::new(),
+            algorithm: TotpAlgorithm::Sha1,
+            digits: 6,
+            period: 30,
+            issuer: None,
+            account: None,
+            original_label: None,
+            extensions: Vec::new(),
+        }
+    }
+}
+
+/// An unknown `otpauth` query parameter preserved as decoded UTF-8.
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TotpUriParameter {
+    pub key: String,
+    pub value: String,
 }
 
 /// The current and next TOTP code, plus their step timing.
@@ -76,10 +126,11 @@ pub struct TotpSnapshot {
     pub remaining: u64,
 }
 
-/// Parses a Base32 secret or a strict `otpauth://totp/...` URI.
+/// Parses a Base32 secret or an `otpauth://totp/...` URI.
 ///
-/// Empty input maps to `None`. HOTP URIs, duplicate parameters, unknown
-/// parameters, malformed percent encoding, and unsupported values are errors.
+/// Empty input maps to `None`. Unknown URI parameters are retained. HOTP URIs,
+/// duplicate parameters, malformed percent encoding, and unsupported values
+/// are errors.
 pub fn parse_totp_input(input: &str) -> Result<Option<TotpConfig>> {
     let input = input.trim();
     if input.is_empty() {
@@ -87,11 +138,21 @@ pub fn parse_totp_input(input: &str) -> Result<Option<TotpConfig>> {
     }
 
     ensure!(
-        input.len() <= MAX_TOTP_SECRET_BYTES + MAX_TOTP_LABEL_BYTES * 3 + 256,
+        input.len() <= MAX_TOTP_URI_BYTES,
         "TOTP input exceeds the maximum size"
     );
 
-    let config = if let Some(uri) = input.strip_prefix("otpauth://") {
+    let config = if input
+        .get(.."otpauth://".len())
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("otpauth://"))
+    {
+        let uri = &input["otpauth://".len()..];
+        if uri
+            .get(.."hotp/".len())
+            .is_some_and(|path| path.eq_ignore_ascii_case("hotp/"))
+        {
+            bail!("HOTP is not supported as a TOTP configuration");
+        }
         parse_otpauth_uri(uri)?
     } else {
         TotpConfig {
@@ -101,6 +162,8 @@ pub fn parse_totp_input(input: &str) -> Result<Option<TotpConfig>> {
             period: 30,
             issuer: None,
             account: None,
+            original_label: None,
+            extensions: Vec::new(),
         }
     };
 
@@ -127,12 +190,16 @@ pub fn format_totp_input(config: &TotpConfig) -> Result<Zeroizing<String>> {
     ));
 
     uri.push_str("otpauth://totp/");
-    if let Some(issuer) = config.issuer.as_deref() {
-        push_percent_encoded(&mut uri, issuer);
-        uri.push_str("%3A");
-    }
-    if let Some(account) = config.account.as_deref() {
-        push_percent_encoded(&mut uri, account);
+    if let Some(original_label) = config.original_label.as_deref() {
+        uri.push_str(original_label);
+    } else {
+        if let Some(issuer) = config.issuer.as_deref() {
+            push_percent_encoded(&mut uri, issuer);
+            uri.push_str("%3A");
+        }
+        if let Some(account) = config.account.as_deref() {
+            push_percent_encoded(&mut uri, account);
+        }
     }
 
     uri.push_str("?secret=");
@@ -147,6 +214,12 @@ pub fn format_totp_input(config: &TotpConfig) -> Result<Zeroizing<String>> {
     uri.push_str(&config.digits.to_string());
     uri.push_str("&period=");
     uri.push_str(&config.period.to_string());
+    for extension in &config.extensions {
+        uri.push('&');
+        push_percent_encoded(&mut uri, &extension.key);
+        uri.push('=');
+        push_percent_encoded(&mut uri, &extension.value);
+    }
 
     Ok(uri)
 }
@@ -177,10 +250,7 @@ pub(crate) fn validate_totp_config(config: &TotpConfig) -> Result<()> {
         "TOTP secret exceeds the maximum size"
     );
     ensure!(matches!(config.digits, 6 | 8), "TOTP digits must be 6 or 8");
-    ensure!(
-        (15..=120).contains(&config.period),
-        "TOTP period must be between 15 and 120 seconds"
-    );
+    ensure!(config.period > 0, "TOTP period must be greater than zero");
     validate_label("issuer", config.issuer.as_deref())?;
     validate_label("account", config.account.as_deref())?;
     let secret = parse_base32_secret(&config.secret)?;
@@ -189,6 +259,78 @@ pub(crate) fn validate_totp_config(config: &TotpConfig) -> Result<()> {
         config.secret == *canonical_secret,
         "TOTP secret must use canonical Base32"
     );
+    validate_original_label(config)?;
+    validate_extensions(&config.extensions)?;
+    Ok(())
+}
+
+fn validate_original_label(config: &TotpConfig) -> Result<()> {
+    let Some(label) = config.original_label.as_deref() else {
+        return Ok(());
+    };
+    ensure!(
+        label.len() <= MAX_TOTP_LABEL_BYTES * 3
+            && !label.contains('#')
+            && !label.contains('/')
+            && !label.contains('\\'),
+        "TOTP original label exceeds the maximum size or contains an invalid character"
+    );
+    validate_percent_encoding(label)?;
+    let decoded = percent_decode_str(label)
+        .decode_utf8()
+        .context("TOTP URI label is not valid UTF-8")?;
+    let (issuer, account) = parse_label(&decoded)?;
+    ensure!(
+        account == config.account,
+        "TOTP original label account does not match parsed fields"
+    );
+    if let Some(path_issuer) = issuer {
+        ensure!(
+            Some(path_issuer) == config.issuer,
+            "TOTP original label issuer does not match parsed fields"
+        );
+    }
+    Ok(())
+}
+
+fn validate_extensions(extensions: &[TotpUriParameter]) -> Result<()> {
+    ensure!(
+        extensions.len() <= MAX_TOTP_EXTENSIONS,
+        "too many TOTP URI extensions"
+    );
+    let mut names = HashSet::with_capacity(extensions.len());
+    let mut total_bytes = 0usize;
+    for extension in extensions {
+        ensure!(
+            !extension.key.is_empty()
+                && extension.key.len() <= MAX_TOTP_EXTENSION_BYTES
+                && !extension.key.chars().any(char::is_control),
+            "invalid TOTP URI extension name"
+        );
+        ensure!(
+            !matches!(
+                extension.key.as_str(),
+                "secret" | "issuer" | "algorithm" | "digits" | "period"
+            ),
+            "TOTP extension conflicts with a standard parameter"
+        );
+        ensure!(
+            names.insert(extension.key.as_str()),
+            "duplicate TOTP URI parameter"
+        );
+        ensure!(
+            extension.value.len() <= MAX_TOTP_EXTENSION_BYTES,
+            "TOTP URI extension value exceeds the maximum size"
+        );
+        total_bytes = total_bytes
+            .checked_add(extension.key.len())
+            .and_then(|value| value.checked_add(extension.value.len()))
+            .context("TOTP URI extensions exceed the maximum size")?;
+        ensure!(
+            total_bytes <= MAX_TOTP_EXTENSION_BYTES * 2,
+            "TOTP URI extensions exceed the maximum size"
+        );
+    }
     Ok(())
 }
 
@@ -291,7 +433,10 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
         .split_once('?')
         .context("TOTP URI is missing query parameters")?;
     ensure!(
-        authority_path.starts_with("totp/") && authority_path.matches('/').count() == 1,
+        authority_path
+            .get(..5)
+            .is_some_and(|kind| kind.eq_ignore_ascii_case("totp/"))
+            && authority_path.matches('/').count() == 1,
         "only otpauth://totp URIs with one label path segment are supported"
     );
 
@@ -310,9 +455,16 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
     let mut digits: Option<Zeroizing<String>> = None;
     let mut period: Option<Zeroizing<String>> = None;
     let mut issuer: Option<Zeroizing<String>> = None;
+    let mut extensions = Vec::new();
+    let mut seen_parameters = HashSet::new();
     for (key, value) in form_urlencoded::parse(raw_query.as_bytes()) {
-        let value = Zeroizing::new(value.into_owned());
-        match key.as_ref() {
+        let key = key.into_owned();
+        ensure!(
+            seen_parameters.insert(key.clone()),
+            "duplicate TOTP URI parameter"
+        );
+        let mut value = Zeroizing::new(value.into_owned());
+        match key.as_str() {
             "secret" => set_once(&mut secret, value, "secret")?,
             "issuer" => {
                 ensure!(!value.is_empty(), "TOTP URI issuer is empty");
@@ -321,7 +473,26 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
             "algorithm" => set_once(&mut algorithm, value, "algorithm")?,
             "digits" => set_once(&mut digits, value, "digits")?,
             "period" => set_once(&mut period, value, "period")?,
-            _ => bail!("unsupported TOTP URI parameter"),
+            _ => {
+                ensure!(
+                    !key.is_empty()
+                        && key.len() <= MAX_TOTP_EXTENSION_BYTES
+                        && !key.chars().any(char::is_control),
+                    "invalid TOTP URI extension name"
+                );
+                ensure!(
+                    value.len() <= MAX_TOTP_EXTENSION_BYTES,
+                    "TOTP URI extension value exceeds the maximum size"
+                );
+                extensions.push(TotpUriParameter {
+                    key,
+                    value: std::mem::take(&mut *value),
+                });
+                ensure!(
+                    extensions.len() <= MAX_TOTP_EXTENSIONS,
+                    "too many TOTP URI extensions"
+                );
+            }
         }
     }
 
@@ -360,6 +531,8 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
         period,
         issuer,
         account,
+        original_label: Some(raw_label.to_owned()),
+        extensions,
     })
 }
 
@@ -378,8 +551,14 @@ fn validate_query(raw_query: &str) -> Result<()> {
         let (key, value) = pair
             .split_once('=')
             .context("TOTP URI parameter is missing a value")?;
+        ensure!(!key.is_empty(), "invalid TOTP URI parameter name");
+        validate_percent_encoding(key)?;
+        let decoded_key = percent_decode_str(key)
+            .decode_utf8()
+            .context("TOTP URI parameter name is not valid UTF-8")?;
+        ensure!(!decoded_key.is_empty(), "invalid TOTP URI parameter name");
         ensure!(
-            !key.is_empty() && !key.contains('%') && key.is_ascii(),
+            !decoded_key.chars().any(char::is_control),
             "invalid TOTP URI parameter name"
         );
         validate_percent_encoding(value)?;
@@ -434,10 +613,7 @@ fn parse_period(value: &str) -> Result<u64> {
         "invalid TOTP period"
     );
     let period = value.parse::<u64>().context("invalid TOTP period")?;
-    ensure!(
-        (15..=120).contains(&period),
-        "TOTP period must be between 15 and 120 seconds"
-    );
+    ensure!(period > 0, "TOTP period must be greater than zero");
     Ok(period)
 }
 

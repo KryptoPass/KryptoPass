@@ -80,9 +80,11 @@ adicionales, con las limitaciones de la tabla siguiente.
 | Historial de versiones/contraseñas | Login importado comienza con historial vacío; no se inventan eventos | Importar historial cuando el origen lo exporte |
 | Descripción de bóveda | No se importa; advertencia por bóveda | Descripción de carpeta/bóveda |
 | Apariencia (`display`), orden de origen | Apariencia predeterminada y orden determinista por ID de bóveda/orden de exportación | Mapeo de colores/iconos y orden nativo |
-| Tarjetas, identidades, claves SSH, otros tipos | Elementos omitidos y contabilizados; nunca convertidos en logins | Extender `SecretContent` y su sobre antes de añadir los mapeos |
+| Tarjetas, identidades, Wi-Fi y elementos personalizados | Los tipos compatibles se importan a su contenido cifrado; cardType escalar se conserva como referencia en notas y campos personalizados desconocidos como registros ocultos | Si tarjeta/identidad tienen extras sin modelo, `cardType` no es escalar, Wi-Fi tiene secciones/extras o seguridad desconocida, o el formato no se puede leer, el contenido de origen se conserva en registros personalizados ocultos y los extras de `item.data` como filas ocultas. Licencias y TOTP independiente no existen como tipos Proton examinados |
+| Claves SSH | Las claves OpenSSH compatibles sin secciones ni extras se importan a su tipo cifrado; se derivan clave pública, huella y algoritmo desde la privada. Una `publicKey` distinta se conserva como referencia | Claves cifradas con contraseña, secciones, extras o formatos no compatibles se omiten con advertencia; la clave privada nunca se convierte a nota ni a elemento personalizado |
 | `userId`, `shareId`, `itemId`, `folderId`, `itemUuid` | IDs usados para resolver jerarquía/duplicados cuando corresponde; IDs nuevos en destino, sin persistir procedencia | Procedencia cifrada, deduplicación y reimportación |
-| `contentFormatVersion`, `platformSpecific`, `shareCount`, permisos y campos futuros desconocidos | No se trasladan; sin advertencia individual para campos desconocidos | Contratos explícitos según necesidad; revisar cambios del proveedor |
+| `contentFormatVersion`, `platformSpecific`, `shareCount` y permisos | No se trasladan; sin advertencia individual | Contratos explícitos según necesidad; revisar cambios del proveedor |
+| Campos futuros desconocidos dentro de un login | El login se omite con advertencia en vez de descartar esos campos silenciosamente | Revisar el esquema Proton antes de importar esos elementos |
 
 ### Logos e imágenes
 
@@ -126,9 +128,11 @@ No se muestran títulos ni valores sensibles en el informe.
 ## Verificación y referencia
 
 Las recetas existentes de `just` y los jobs de `bacon` cubren ahora todo el
-workspace, incluido el crate de importación. No se añadieron tests por petición
-expresa del usuario. La comprobación manual del archivo real se limita a
-estructura, conteos y cifrado/persistencia, sin incorporar datos reales al repo.
+workspace, incluido el crate de importación. En la integración inicial no se
+añadieron tests por petición expresa del usuario; la ampliación posterior de
+tipos se cubre con pruebas sintéticas de core/import, proyecciones y QML. La
+comprobación manual del archivo real se limita a estructura, conteos y
+cifrado/persistencia, sin incorporar datos reales al repo.
 
 Comprobación inicial del formato el 2026-10-11, en un directorio y llavero temporales
 (antes de corregir el destino para importar de forma aditiva):

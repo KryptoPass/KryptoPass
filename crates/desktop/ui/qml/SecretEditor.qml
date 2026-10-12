@@ -25,6 +25,7 @@ Controls.Pane {
     property bool savePending: false
     property bool dirty: false
     property bool externalModalOpen: false
+    property bool preparingSecretMaterial: false
     property string baselineJson: ""
     property string requestedId: ""
     property string pendingEntryId: ""
@@ -35,7 +36,7 @@ Controls.Pane {
     readonly property string title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
 
     readonly property bool saving: storeAdapter.controller.saving
-    readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
+    readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !preparingSecretMaterial && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
 
     signal saveRequested(string draftJson)
     signal generatePasswordRequested()
@@ -48,7 +49,7 @@ Controls.Pane {
     padding: 0
 
     function guardNavigation(action) {
-        if (saving || savePending || waitingForEditor || externalModalOpen || storeAdapter.controller.iconBusy)
+        if (saving || savePending || waitingForEditor || externalModalOpen || preparingSecretMaterial || storeAdapter.controller.iconBusy)
             return;
         if (opened && dirty) {
             pendingNavigation = action;
@@ -85,7 +86,7 @@ Controls.Pane {
 
     function openEntry(entry) {
         const nextId = entry ? entry.id : "";
-        if (saving || savePending || externalModalOpen || storeAdapter.controller.iconBusy)
+        if (saving || savePending || externalModalOpen || preparingSecretMaterial || storeAdapter.controller.iconBusy)
             return;
         if (waitingForEditor) {
             requestEntry(nextId);
@@ -163,7 +164,7 @@ Controls.Pane {
     }
 
     function requestClose() {
-        if (saving || storeAdapter.controller.editorBusy)
+        if (saving || storeAdapter.controller.editorBusy || preparingSecretMaterial)
             return;
         if (dirty) {
             discardAction = "close";
@@ -174,7 +175,7 @@ Controls.Pane {
     }
 
     function requestWindowClose() {
-        if (saving || storeAdapter.controller.editorBusy)
+        if (saving || storeAdapter.controller.editorBusy || preparingSecretMaterial)
             return;
         if (dirty) {
             discardAction = "window";
@@ -186,7 +187,7 @@ Controls.Pane {
     }
 
     function requestVaultLock() {
-        if (saving || savePending || waitingForEditor || storeAdapter.controller.editorBusy)
+        if (saving || savePending || waitingForEditor || storeAdapter.controller.editorBusy || preparingSecretMaterial)
             return;
         if (dirty) {
             discardAction = "lock";
@@ -217,6 +218,7 @@ Controls.Pane {
 
     function closeAndClear() {
         savePending = false;
+        preparingSecretMaterial = false;
         waitingForEditor = false;
         loaded = false;
         dirty = false;
@@ -369,6 +371,24 @@ Controls.Pane {
             editor.saveError = "";
         }
 
+        function onSshKeyPrepared(json) {
+            editor.preparingSecretMaterial = false;
+            if (!editor.opened || !editor.loaded || fieldsHost.kind !== "ssh-key")
+                return;
+            fieldsHost.applyPreparedSshKey(json);
+            editor.updateDirty();
+            editor.saveError = "";
+        }
+
+        function onTotpQrPrepared(json) {
+            editor.preparingSecretMaterial = false;
+            if (!editor.opened || !editor.loaded || fieldsHost.kind !== "totp")
+                return;
+            fieldsHost.applyPreparedTotp(json);
+            editor.updateDirty();
+            editor.saveError = "";
+        }
+
         function onEditorReady() {
             editor.acceptEditorReady();
         }
@@ -381,6 +401,7 @@ Controls.Pane {
         }
 
         function onOperationFailed() {
+            editor.preparingSecretMaterial = false;
             if (editor.opened && !editor.savePending && !editor.waitingForEditor)
                 editor.saveError = editor.storeAdapter.controller.errorMessage;
             if (editor.savePending && !editor.storeAdapter.controller.saving) {
@@ -526,8 +547,8 @@ Controls.Pane {
                                     textRole: "name"
                                     valueRole: "id"
                                     Accessible.name: qsTr("Tipo de elemento")
-                                    enabled: !editor.entryId
-                                    onActivated: { if (!editor.entryId) fieldsHost.selectType(currentValue); }
+                                    enabled: !editor.entryId && !editor.preparingSecretMaterial
+                                    onActivated: { if (!editor.entryId && !editor.preparingSecretMaterial) fieldsHost.selectType(currentValue); }
                                 }
                             }
                             ColumnLayout {
@@ -554,9 +575,18 @@ Controls.Pane {
                     SecretFieldsHost {
                         id: fieldsHost
                         Layout.fillWidth: true
-                        enabled: !editor.saving && !editor.savePending
+                        enabled: !editor.saving && !editor.savePending && !editor.preparingSecretMaterial
                         onEdited: editor.updateDirty()
                         onGeneratePasswordRequested: editor.generatePasswordRequested()
+                        onExternalModalRequested: function(opened) { editor.externalModalOpen = opened; }
+                        onPrepareSshKeyRequested: function(fileUrl, passphrase) {
+                            editor.preparingSecretMaterial = true;
+                            editor.storeAdapter.controller.prepareSshKey(fileUrl, passphrase);
+                        }
+                        onPrepareTotpQrRequested: function(fileUrl) {
+                            editor.preparingSecretMaterial = true;
+                            editor.storeAdapter.controller.prepareTotpQr(fileUrl);
+                        }
                     }
 
                     RecipientsChooser {

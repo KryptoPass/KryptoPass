@@ -2,7 +2,7 @@
 
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::ensure_field_size;
 
@@ -39,8 +39,13 @@ impl WifiContent {
         ensure_field_size("Wi-Fi password", &self.password, 64)?;
         ensure_field_size("Wi-Fi notes", &self.notes, MAX_NOTES_BYTES)?;
         match &self.security {
-            WifiSecurity::Open => ensure!(self.password.is_empty(), "open Wi-Fi cannot have a password"),
-            WifiSecurity::Wep => ensure!(valid_wep_password(&self.password), "invalid WEP password"),
+            WifiSecurity::Open => ensure!(
+                self.password.is_empty(),
+                "open Wi-Fi cannot have a password"
+            ),
+            WifiSecurity::Wep => {
+                ensure!(valid_wep_password(&self.password), "invalid WEP password")
+            }
             WifiSecurity::Wpa | WifiSecurity::Wpa3 => ensure!(
                 valid_wpa_password(&self.password),
                 "WPA password must contain 8 to 63 bytes or 64 hexadecimal digits"
@@ -51,14 +56,21 @@ impl WifiContent {
 }
 
 /// Builds a ZXing-compatible Wi-Fi provisioning payload for a QR encoder.
-pub fn wifi_qr_payload(content: &WifiContent) -> Result<String> {
+pub fn wifi_qr_payload(content: &WifiContent) -> Result<Zeroizing<String>> {
     content.validate()?;
+    ensure!(
+        content.security != WifiSecurity::Wpa3,
+        "WPA3 uses SAE and cannot be represented by the compatible Wi-Fi QR format"
+    );
     let security = match &content.security {
         WifiSecurity::Open => "nopass",
         WifiSecurity::Wep => "WEP",
-        WifiSecurity::Wpa | WifiSecurity::Wpa3 => "WPA",
+        WifiSecurity::Wpa => "WPA",
+        WifiSecurity::Wpa3 => unreachable!("WPA3 is rejected above"),
     };
-    let mut payload = String::with_capacity(content.ssid.len() + content.password.len() + 32);
+    let mut payload = Zeroizing::new(String::with_capacity(
+        content.ssid.len() + content.password.len() + 32,
+    ));
     payload.push_str("WIFI:T:");
     payload.push_str(security);
     payload.push_str(";S:");
@@ -75,7 +87,8 @@ pub fn wifi_qr_payload(content: &WifiContent) -> Result<String> {
 }
 
 fn valid_wep_password(value: &str) -> bool {
-    matches!(value.len(), 5 | 13) || matches!(value.len(), 10 | 26) && value.bytes().all(|b| b.is_ascii_hexdigit())
+    (matches!(value.len(), 5 | 13) && value.is_ascii())
+        || matches!(value.len(), 10 | 26) && value.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 fn valid_wpa_password(value: &str) -> bool {
@@ -86,12 +99,10 @@ fn valid_wpa_password(value: &str) -> bool {
 fn push_wifi_escaped(output: &mut String, value: &str) {
     for character in value.chars() {
         match character {
-            '\\' | ';' | ',' | '"' => {
+            '\\' | ';' | ',' | ':' | '"' => {
                 output.push('\\');
                 output.push(character);
             }
-            '\n' => output.push_str("\\n"),
-            '\r' => output.push_str("\\r"),
             character => output.push(character),
         }
     }

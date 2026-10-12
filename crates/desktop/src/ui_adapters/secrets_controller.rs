@@ -17,8 +17,9 @@ use zeroize::{Zeroize, Zeroizing};
 use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage, app_paths};
 
 use super::secrets_projection::{
-    EntryDraft, OpenedEntry, StoreSnapshot, content_projection, draft_matches_session,
-    editor_projection, new_editor_projection, prepare_save, snapshot_revision, store_snapshot,
+    EntryDraft, OpenedEntry, StoreSnapshot, content_field, content_projection,
+    content_projection_with_state, draft_matches_session, editor_projection, new_editor_projection,
+    prepare_save, snapshot_revision, store_snapshot,
 };
 
 #[cxx_qt::bridge]
@@ -79,6 +80,21 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "prepareEntryIcon"]
         fn prepare_entry_icon(self: Pin<&mut Self>, path: &QUrl);
+        #[qinvokable]
+        #[cxx_name = "prepareSshKey"]
+        fn prepare_ssh_key(self: Pin<&mut Self>, path: &QUrl, passphrase: &QString);
+        #[qinvokable]
+        #[cxx_name = "prepareTotpQr"]
+        fn prepare_totp_qr(self: Pin<&mut Self>, path: &QUrl);
+        #[qinvokable]
+        #[cxx_name = "copyField"]
+        fn copy_field(self: Pin<&mut Self>, field: &QString);
+        #[qinvokable]
+        #[cxx_name = "toggleField"]
+        fn toggle_field(self: Pin<&mut Self>, field: &QString);
+        #[qinvokable]
+        #[cxx_name = "showQr"]
+        fn show_qr(self: Pin<&mut Self>);
         #[qinvokable]
         #[cxx_name = "clearEditor"]
         fn clear_editor(self: Pin<&mut Self>);
@@ -165,6 +181,12 @@ pub mod qobject {
         #[cxx_name = "iconPrepared"]
         fn icon_prepared(self: Pin<&mut Self>, json: &QString);
         #[qsignal]
+        #[cxx_name = "sshKeyPrepared"]
+        fn ssh_key_prepared(self: Pin<&mut Self>, json: &QString);
+        #[qsignal]
+        #[cxx_name = "totpQrPrepared"]
+        fn totp_qr_prepared(self: Pin<&mut Self>, json: &QString);
+        #[qsignal]
         #[cxx_name = "editorReady"]
         fn editor_ready(self: Pin<&mut Self>);
         #[qsignal]
@@ -225,6 +247,11 @@ pub struct SecretsControllerRust {
     selected_revision: Option<u64>,
     detail_content: Option<SecretContent>,
     password_revealed: bool,
+    revealed_fields: std::collections::BTreeSet<String>,
+    qr_source: Option<Zeroizing<String>>,
+    editor_ssh: Option<kryptopass_core::SshKeyContent>,
+    staged_ssh: Option<(String, kryptopass_core::SshKeyContent)>,
+    prepare_operation: u64,
     pending_copy: Option<PendingCopy>,
     editor_session: Option<EditorSession>,
     load_operation: u64,
@@ -261,6 +288,11 @@ impl Default for SecretsControllerRust {
             selected_revision: None,
             detail_content: None,
             password_revealed: false,
+            revealed_fields: std::collections::BTreeSet::new(),
+            qr_source: None,
+            editor_ssh: None,
+            staged_ssh: None,
+            prepare_operation: 0,
             pending_copy: None,
             editor_session: None,
             load_operation: 0,
@@ -621,6 +653,10 @@ impl qobject::SecretsController {
                         let draft = editor_projection(&entry);
                         match draft {
                             Ok(draft) => {
+                                if let SecretContent::SshKey(content) = &entry.content {
+                                    controller.as_mut().rust_mut().editor_ssh =
+                                        Some(content.clone());
+                                }
                                 controller.as_mut().rust_mut().editor_session =
                                     Some(EditorSession {
                                         id: Some(entry.id),
@@ -687,6 +723,25 @@ impl qobject::SecretsController {
             return;
         }
 
+        if let Some(token) = draft.ssh_import_token() {
+            let object = self.as_ref();
+            let state = object.rust();
+            let content = if token.is_empty() {
+                state.editor_ssh.clone()
+            } else {
+                state
+                    .staged_ssh
+                    .as_ref()
+                    .filter(|(staged_token, _)| staged_token == token)
+                    .map(|(_, content)| content.clone())
+            };
+            let Some(content) = content else {
+                self.as_mut()
+                    .fail("Importa una clave SSH antes de guardar el elemento.");
+                return;
+            };
+            draft.attach_ssh(content);
+        }
         let prepared = match prepare_save(&mut draft, session.id, session.revision) {
             Ok(prepared) => prepared,
             Err(_) => {
@@ -774,6 +829,233 @@ impl qobject::SecretsController {
                 }
             });
         });
+    }
+
+    fn can_read_detail(self: Pin<&Self>) -> bool {
+        let state = self.rust();
+        !*self.locked()
+            && !*self.busy()
+            && !*self.saving()
+            && !*self.detail_busy()
+            && state.editor_session.is_none()
+            && state.selected_revision.is_some()
+            && state.detail_content.is_some()
+    }
+
+    fn publish_detail(mut self: Pin<&mut Self>) {
+        let projection = {
+            let object = self.as_ref();
+            let state = object.rust();
+            state
+                .selected_entry
+                .zip(state.detail_content.as_ref())
+                .map(|(id, content)| {
+                    content_projection_with_state(
+                        id,
+                        content,
+                        state.password_revealed,
+                        unix_seconds(),
+                        &state.revealed_fields,
+                        state.qr_source.as_deref().map(|value| value.as_str()),
+                    )
+                })
+        };
+        if let Some(Ok(projection)) = projection {
+            self.as_mut()
+                .set_detail_json(QString::from(projection.as_str()));
+        }
+    }
+
+    pub fn toggle_field(mut self: Pin<&mut Self>, field: &QString) {
+        if !self.as_ref().can_read_detail() {
+            return;
+        }
+        let id = field.to_string();
+        let allowed = self
+            .as_ref()
+            .rust()
+            .detail_content
+            .as_ref()
+            .and_then(|content| content_field(content, &id))
+            .is_some_and(|(_, concealed)| concealed);
+        if !allowed {
+            return;
+        }
+        {
+            let mut state = self.as_mut().rust_mut();
+            if !state.revealed_fields.remove(&id) {
+                state.revealed_fields.insert(id);
+            }
+        }
+        self.publish_detail();
+    }
+
+    pub fn copy_field(mut self: Pin<&mut Self>, field: &QString) {
+        if !self.as_ref().can_read_detail() {
+            return;
+        }
+        let value = self
+            .as_ref()
+            .rust()
+            .detail_content
+            .as_ref()
+            .and_then(|content| content_field(content, &field.to_string()))
+            .filter(|(value, _)| !value.is_empty())
+            .map(|(value, _)| Zeroizing::new(value.into_owned()));
+        if let Some(value) = value {
+            self.as_mut().request_copy(CopyKind::Password, value);
+        }
+    }
+
+    pub fn show_qr(mut self: Pin<&mut Self>) {
+        if !self.as_ref().can_read_detail() {
+            return;
+        }
+        if self.as_ref().rust().qr_source.is_some() {
+            self.as_mut().rust_mut().qr_source = None;
+            self.publish_detail();
+            return;
+        }
+        let result = (|| -> anyhow::Result<Zeroizing<String>> {
+            let object = self.as_ref();
+            let state = object.rust();
+            let payload = match state.detail_content.as_ref() {
+                Some(SecretContent::Wifi(value)) => kryptopass_core::wifi_qr_payload(value)?,
+                Some(SecretContent::Totp(value)) => {
+                    kryptopass_core::format_totp_input(&value.config)?
+                }
+                _ => anyhow::bail!("QR unavailable for this item"),
+            };
+            super::secret_qr::source(&payload)
+        })();
+        match result {
+            Ok(source) => {
+                self.as_mut().rust_mut().qr_source = Some(source);
+                self.publish_detail();
+            }
+            Err(_) => self.as_mut().fail(
+                "No se pudo generar el QR. El contenido puede superar la capacidad del código.",
+            ),
+        }
+    }
+
+    pub fn prepare_ssh_key(mut self: Pin<&mut Self>, path: &QUrl, passphrase: &QString) {
+        if *self.locked()
+            || *self.busy()
+            || *self.saving()
+            || *self.editor_busy()
+            || self.as_ref().rust().editor_session.is_none()
+        {
+            return;
+        }
+        let Some(path) = path.to_local_file() else {
+            self.as_mut()
+                .fail("Selecciona un archivo local de clave privada SSH.");
+            return;
+        };
+        let path = std::path::PathBuf::from(path.to_string());
+        let passphrase = Zeroizing::new(passphrase.to_string());
+        let (editor_operation, prepare_operation) = {
+            let mut state = self.as_mut().rust_mut();
+            state.prepare_operation = state.prepare_operation.wrapping_add(1);
+            (state.editor_operation, state.prepare_operation)
+        };
+        self.as_mut().clear_error();
+        self.as_mut().set_editor_busy(true);
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || -> anyhow::Result<_> {
+                use std::io::Read;
+                let file = std::fs::File::open(path)?;
+                anyhow::ensure!(file.metadata()?.is_file(), "select a regular key file");
+                let mut bytes = Zeroizing::new(String::new());
+                file.take(256 * 1024 + 1).read_to_string(&mut bytes)?;
+                anyhow::ensure!(bytes.len() <= 256 * 1024, "SSH key exceeds size limit");
+                kryptopass_core::SshKeyContent::import(
+                    std::mem::take(&mut *bytes),
+                    passphrase.as_str().to_owned(),
+                )
+            },
+            move |mut controller, result| {
+                let object = controller.as_ref();
+                let state = object.rust();
+                if state.editor_operation != editor_operation
+                    || state.prepare_operation != prepare_operation
+                    || state.editor_session.is_none()
+                    || *controller.locked()
+                {
+                    return;
+                }
+                controller.as_mut().set_editor_busy(false);
+                match result {
+                Ok(content) => {
+                    let token = Uuid::new_v4().to_string();
+                    let json = serde_json::json!({"importToken": token, "publicKey": content.public_key,
+                        "fingerprint": content.fingerprint, "algorithm": content.algorithm}).to_string();
+                    controller.as_mut().rust_mut().staged_ssh = Some((token, content));
+                    controller.as_mut().ssh_key_prepared(&QString::from(json));
+                }
+                Err(_) => controller.as_mut().fail("No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña."),
+            }
+            },
+        );
+    }
+
+    pub fn prepare_totp_qr(mut self: Pin<&mut Self>, path: &QUrl) {
+        if *self.locked()
+            || *self.busy()
+            || *self.saving()
+            || *self.editor_busy()
+            || self.as_ref().rust().editor_session.is_none()
+        {
+            return;
+        }
+        let Some(path) = path.to_local_file() else {
+            self.as_mut()
+                .fail("Selecciona una imagen local con el QR del autenticador.");
+            return;
+        };
+        let path = std::path::PathBuf::from(path.to_string());
+        let (editor_operation, prepare_operation) = {
+            let mut state = self.as_mut().rust_mut();
+            state.prepare_operation = state.prepare_operation.wrapping_add(1);
+            (state.editor_operation, state.prepare_operation)
+        };
+        self.as_mut().clear_error();
+        self.as_mut().set_editor_busy(true);
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || super::secret_qr::read_totp(&path),
+            move |mut controller, result| {
+                let object = controller.as_ref();
+                let state = object.rust();
+                if state.editor_operation != editor_operation
+                    || state.prepare_operation != prepare_operation
+                    || state.editor_session.is_none()
+                    || *controller.locked()
+                {
+                    return;
+                }
+                controller.as_mut().set_editor_busy(false);
+                match result {
+                Ok(uri) => {
+                    #[derive(serde::Serialize)]
+                    #[serde(rename_all = "camelCase")]
+                    struct PreparedTotp<'a> {
+                        totp_input: &'a str,
+                    }
+                    let prepared = PreparedTotp { totp_input: uri.as_str() };
+                    let Ok(json) = serde_json::to_string(&prepared) else {
+                        controller.as_mut().fail("No se pudo preparar la configuración TOTP.");
+                        return;
+                    };
+                    let json = Zeroizing::new(json);
+                    controller.as_mut().totp_qr_prepared(&QString::from(json.as_str()));
+                }
+                Err(_) => controller.as_mut().fail("No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido."),
+            }
+            },
+        );
     }
 
     pub fn clear_editor(mut self: Pin<&mut Self>) {
@@ -972,12 +1254,19 @@ impl qobject::SecretsController {
             let Some(content) = state.detail_content.as_ref() else {
                 return;
             };
-            if !matches!(content, SecretContent::Login(_)) {
+            if !matches!(content, SecretContent::Login(_) | SecretContent::Totp(_)) {
                 return;
             }
             (
                 id,
-                content_projection(id, content, state.password_revealed, unix_seconds()),
+                content_projection_with_state(
+                    id,
+                    content,
+                    state.password_revealed,
+                    unix_seconds(),
+                    &state.revealed_fields,
+                    state.qr_source.as_deref().map(|value| value.as_str()),
+                ),
             )
         };
         if let Ok(projection) = projection {
@@ -989,16 +1278,18 @@ impl qobject::SecretsController {
     }
 
     pub fn copy_totp(mut self: Pin<&mut Self>, next: bool) {
-        if !self.as_ref().can_copy_login_value() {
+        if !self.as_ref().can_read_detail() {
             return;
         }
         let value = {
             let object = self.as_ref();
             let state = object.rust();
-            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
-                return;
+            let config = match state.detail_content.as_ref() {
+                Some(SecretContent::Login(login)) => login.totp.as_ref(),
+                Some(SecretContent::Totp(value)) => Some(&value.config),
+                _ => None,
             };
-            let Some(config) = login.totp.as_ref() else {
+            let Some(config) = config else {
                 return;
             };
             let Ok(mut snapshot) = generate_totp(config, unix_seconds()) else {
@@ -1042,7 +1333,12 @@ impl qobject::SecretsController {
         if !valid || *self.busy() {
             return;
         }
-        self.as_mut().start_copy_history_record(pending);
+        if matches!(
+            self.as_ref().rust().detail_content,
+            Some(SecretContent::Login(_))
+        ) {
+            self.as_mut().start_copy_history_record(pending);
+        }
     }
 
     fn can_copy_login_value(self: Pin<&Self>) -> bool {
@@ -1690,6 +1986,8 @@ impl qobject::SecretsController {
         state.selected_entry = None;
         state.selected_revision = None;
         state.password_revealed = false;
+        state.revealed_fields.clear();
+        state.qr_source = None;
         state.pending_copy = None;
         self.as_mut().set_detail_json(QString::default());
     }
@@ -1710,7 +2008,7 @@ impl qobject::SecretsController {
         }
         self.as_mut().clear_detail();
         self.as_mut().set_detail_busy(false);
-        self.as_mut().set_editor_json(QString::default());
+        self.as_mut().clear_editor_projection();
         self.as_mut().set_editor_busy(false);
     }
 
@@ -1729,7 +2027,13 @@ impl qobject::SecretsController {
 
     fn clear_editor_projection(mut self: Pin<&mut Self>) {
         self.as_mut().rust_mut().editor_session = None;
-        self.as_mut().rust_mut().staged_icon = None;
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.staged_icon = None;
+            state.editor_ssh = None;
+            state.staged_ssh = None;
+            state.prepare_operation = state.prepare_operation.wrapping_add(1);
+        }
         crate::infrastructure::entry_icons::clear_stage();
         self.as_mut().set_icon_busy(false);
         self.set_editor_json(QString::default());

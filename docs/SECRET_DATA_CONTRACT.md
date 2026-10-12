@@ -49,7 +49,7 @@ transacción añade las columnas de apariencia con `folder` y `transparent` como
 valores por defecto. La versión se vuelve a leer dentro de la transacción
 para coordinar aperturas concurrentes; la migración no modifica ciphertexts
 ni destinatarios. Las bases que ya usan el esquema 2 conservan los colores
-elegidos. La versión del payload cifrado es independiente: las nuevas escrituras usan la versión 3.
+elegidos. La versión del payload cifrado es independiente: las nuevas escrituras usan la versión 4.
 
 Los iconos se resuelven mediante el tema instalado, con respaldo de carpeta.
 Los colores e iconos disponibles en el editor son opciones de presentación;
@@ -134,8 +134,8 @@ anterior; el usuario puede corregirla o continuar sin cambiar el icono.
 
 SQLite usa esquema 4; la migración desde 3 agrega columnas y recursos con valores
 nulos para elementos existentes, sin descifrar ni reescribir credenciales. Las
-migraciones anteriores se aplican en la misma transacción. El payload cifrado
-mantiene `CONTENT_SCHEMA_VERSION = 3`.
+migraciones anteriores se aplican en la misma transacción. La migración de iconos no reescribe el payload cifrado. El sobre actual usa
+`CONTENT_SCHEMA_VERSION = 4`.
 
 El respaldo versión 3 incluye referencias y cada recurso normalizado una sola
 vez. Se mantienen los límites globales de 64 MiB de JSON y 10 000 registros;
@@ -145,7 +145,7 @@ referencias; rechaza recursos ausentes o huérfanos antes de publicar la base.
 Los respaldos 1 y 2 siguen admitidos, con `icon = null` y sin recursos. Las
 versiones desconocidas se rechazan.
 
-## Payload cifrado, versión 3
+## Payload cifrado, versiones 3 y 4
 
 Credencial (`login`):
 
@@ -184,10 +184,12 @@ campo sin valor. `urls` es la lista completa y ordenada de sitios (hasta 100,
 sitio, o estar vacío cuando no hay sitios. `username` admite correo o un
 usuario que no sea correo. `totp` es `null` o una configuración con `secret`
 (Base32), `algorithm` (`sha1`, `sha256`, `sha512`), `digits` (6 u 8), `period`
-(15 a 120 segundos), `issuer` y `account` (cadenas opcionales).
+(un número positivo de segundos representable en `u64`), `issuer` y `account`
+(cadenas opcionales). La generación comprueba los desbordamientos al calcular
+los tiempos del código actual y siguiente.
 
 El decodificador también acepta la versión 1: migra su URL a `urls` y crea
-TOTP vacío e historial vacío en memoria. Solo al guardar se escribe versión 3.
+TOTP vacío e historial vacío en memoria. Solo al guardar se escribe versión 4.
 La versión 1 rechaza los campos nuevos aunque sean `null`; las notas seguras
 rechazan campos exclusivos de credenciales. Campos y versiones desconocidos
 se rechazan para evitar guardar una representación que pierda información.
@@ -219,11 +221,19 @@ inmutable en el guardado habitual; las conversiones necesitan una operación
 explícita. El catálogo de presentación y la receta para añadir tipos están en
 [`ADDING_ITEM_TYPES.md`](ADDING_ITEM_TYPES.md).
 
+## Tipos adicionales y versión 4
+
+Los tipos implementados y sus proyecciones temporales se describen en
+[Tipos de elementos](EXPANDED_ITEM_TYPES.md). El sobre actual es versión 4;
+los logins y notas de versiones 1, 2 y 3 siguen admitidos. La configuración
+TOTP conserva etiqueta original y extensiones cifradas durante la edición.
+Las claves privadas SSH se importan y permanecen en Rust.
+
 ## TOTP e historial cifrado
 
 El editor acepta una semilla Base32 o una URI `otpauth://totp/...`. Se rechazan
-HOTP, parámetros duplicados o desconocidos, escapes malformados y parámetros
-fuera de los límites admitidos. El valor por defecto es SHA-1, 6 dígitos y
+HOTP, parámetros duplicados, escapes malformados y parámetros
+fuera de los límites admitidos. Los parámetros URI adicionales se conservan cifrados. El valor por defecto es SHA-1, 6 dígitos y
 30 segundos. La semilla se oculta inicialmente y solo se proyecta al editor;
 el detalle recibe códigos y tiempos, nunca la semilla ni la URI.
 
