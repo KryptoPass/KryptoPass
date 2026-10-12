@@ -9,9 +9,21 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "GPL-3.0-or-later"
-description = "KryptoPass desktop application built with Rust, CXX-Qt, and QML"
-# Nota: homepage/repository/documentation se centralizan aquí cuando se
-# confirmen las URLs oficiales; app_info los lee con option_env!.
+description = "Organize credentials and secure notes with OpenPGP encryption"
+homepage = "https://github.com/KryptoPass/KryptoPass"
+repository = "https://github.com/KryptoPass/KryptoPass"
+authors = ["KryptoPass contributors"]
+
+[workspace.metadata.kryptopass]
+app-id = "org.kryptopass.desktop"
+display-name = "KryptoPass"
+organization = "KryptoPass"
+organization-domain = "kryptopass.org"
+summary = "Organize credentials and secure notes with OpenPGP encryption"
+developer-id = "org.kryptopass"
+developer-name = "KryptoPass contributors"
+copyright = "2026 KryptoPass contributors"
+release-date = "2026-10-09"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

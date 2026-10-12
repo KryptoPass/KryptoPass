@@ -2,9 +2,12 @@
 Type=Application
 Name=@APP_NAME@
 GenericName=Credential vault
+GenericName[es]=Bóveda de credenciales
 Comment=@APP_COMMENT@
 Exec=@APP_BIN@
 Icon=@APP_ICON@
 Terminal=false
-Categories=Utility;Security;
+Categories=System;Security;
+Keywords=password;credentials;vault;OpenPGP;
+Keywords[es]=contraseña;credenciales;bóveda;OpenPGP;
 StartupNotify=true

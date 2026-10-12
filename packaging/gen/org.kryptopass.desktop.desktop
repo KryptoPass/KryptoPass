@@ -2,9 +2,12 @@
 Type=Application
 Name=KryptoPass
 GenericName=Credential vault
-Comment=KryptoPass desktop application built with Rust, CXX-Qt, and QML
+GenericName[es]=Bóveda de credenciales
+Comment=Organize credentials and secure notes with OpenPGP encryption
 Exec=kryptopass-desktop
 Icon=org.kryptopass.desktop
 Terminal=false
-Categories=Utility;Security;
+Categories=System;Security;
+Keywords=password;credentials;vault;OpenPGP;
+Keywords[es]=contraseña;credenciales;bóveda;OpenPGP;
 StartupNotify=true

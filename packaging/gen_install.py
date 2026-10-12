@@ -1,66 +1,57 @@
 #!/usr/bin/env python3
-"""Render install files from Cargo.toml metadata (single source of truth).
+"""Generate deterministic desktop and AppStream files from Cargo.toml."""
 
-Reads name/version/description/license of kryptopass-desktop via
-`cargo metadata` and fills packaging/*.in templates into packaging/gen/.
-Never edit gen/ by hand: fix the template or Cargo.toml and re-run.
-"""
-
-import json
-import os
-import subprocess
-import sys
-from datetime import datetime, timezone
+import argparse
+from html import escape
 from pathlib import Path
+import sys
 
-ROOT = Path(__file__).resolve().parent
-GEN = ROOT / "gen"
-APP_ID = "org.kryptopass.desktop"
+from metadata import ROOT, load_metadata
 
-FIELDS = subprocess.run(
-    [
-        "cargo",
-        "metadata",
-        "--no-deps",
-        "--format-version",
-        "1",
-        "--filter-platform",
-        "x86_64-unknown-linux-gnu",
-    ],
-    cwd=ROOT.parent,
-    capture_output=True,
-    text=True,
-    check=True,
-).stdout
-pkg = next(
-    p for p in json.loads(FIELDS)["packages"] if p["name"] == "kryptopass-desktop"
-)
 
-release_date = os.environ.get("RELEASE_DATE")
-if release_date is None:
-    release_date = datetime.now(timezone.utc).date().isoformat()
-    print("RELEASE_DATE unset: using today (UTC) for the release stanza", file=sys.stderr)
+def render():
+    meta = load_metadata()
+    values = {
+        "APP_ID": meta["app-id"], "APP_NAME": meta["display-name"],
+        "APP_VERSION": meta["version"], "APP_COMMENT": meta["summary"],
+        "APP_BIN": meta["binary"], "APP_ICON": meta["app-id"],
+        "APP_LICENSE": meta["license"], "RELEASE_DATE": meta["release-date"],
+        "APP_HOMEPAGE": meta["homepage"], "APP_REPOSITORY": meta["repository"],
+        "DEVELOPER_ID": meta["developer-id"], "DEVELOPER_NAME": meta["developer-name"],
+    }
+    for template in sorted((ROOT / "packaging").glob("*.in")):
+        content = template.read_text()
+        for key, value in values.items():
+            encoded = escape(value, quote=True) if template.name.endswith("xml.in") else (
+                value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
+            )
+            content = content.replace(f"@{key}@", encoded)
+        if "@APP_" in content or "@DEVELOPER_" in content or "@RELEASE_" in content:
+            raise ValueError(f"Unresolved metadata in {template.name}")
+        suffix = ".metainfo.xml" if template.name.endswith("xml.in") else ".desktop"
+        yield meta["app-id"] + suffix, content
 
-tokens = {
-    "@APP_ID@": APP_ID,
-    "@APP_NAME@": "KryptoPass",
-    "@APP_VERSION@": pkg["version"],
-    "@APP_COMMENT@": pkg["description"],
-    "@APP_BIN@": pkg["name"],
-    "@APP_ICON@": APP_ID,  # pending real asset under packaging/icons/
-    "@APP_LICENSE@": pkg["license"],
-    "@RELEASE_DATE@": release_date,
-}
 
-GEN.mkdir(exist_ok=True)
-for template in sorted(ROOT.glob("*.in")):
-    text = template.read_text(encoding="utf-8")
-    for key, value in tokens.items():
-        text = text.replace(key, value)
-    leftovers = [line for line in text.splitlines() if "@APP_" in line]
-    if leftovers:
-        print(f"unreplaced tokens in {template.name}: {leftovers}", file=sys.stderr)
-        sys.exit(1)
-    out = GEN / template.name.removesuffix(".in")
-    out.write_text(text, encoding="utf-8")
-    print(f"wrote {out.relative_to(ROOT.parent)}")
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=ROOT / "packaging/gen")
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    stale = []
+    if not args.check:
+        args.output.mkdir(parents=True, exist_ok=True)
+    for name, content in render():
+        path = args.output / name
+        if args.check:
+            if not path.exists() or path.read_text() != content:
+                stale.append(str(path))
+        else:
+            path.write_text(content)
+    if stale:
+        print("Stale installation metadata: " + ", ".join(stale), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

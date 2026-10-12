@@ -5,9 +5,25 @@
   <project_license>@APP_LICENSE@</project_license>
   <name>@APP_NAME@</name>
   <summary>@APP_COMMENT@</summary>
+  <summary xml:lang="es">Organiza credenciales y notas seguras con cifrado OpenPGP</summary>
   <description>
-    <p>@APP_COMMENT@</p>
+    <p>KryptoPass organizes credentials and secure notes in folders. Sensitive content is encrypted with OpenPGP before it is stored locally, using the existing GnuPG keyring.</p>
+    <p>Generate passwords, use time-based verification codes, keep previous credential versions, and create encrypted backups. Names, folders, and recipient fingerprints remain unencrypted metadata.</p>
+    <p xml:lang="es">KryptoPass organiza credenciales y notas seguras en carpetas. El contenido sensible se cifra con OpenPGP antes de guardarse localmente, usando el llavero GnuPG existente.</p>
+    <p xml:lang="es">Genera contraseñas, usa códigos de verificación temporales, conserva versiones anteriores y crea copias de seguridad cifradas. Los nombres, las carpetas y las huellas de destinatarios permanecen como metadatos sin cifrar.</p>
   </description>
+  <developer id="@DEVELOPER_ID@"><name>@DEVELOPER_NAME@</name></developer>
+  <url type="homepage">@APP_HOMEPAGE@</url>
+  <url type="vcs-browser">@APP_REPOSITORY@</url>
+  <url type="bugtracker">@APP_REPOSITORY@/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Credential folders and vault workspace</caption>
+      <caption xml:lang="es">Carpetas de credenciales y espacio de la bóveda</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/KryptoPass/KryptoPass/main/packaging/screenshots/vault.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
   <launchable type="desktop-id">@APP_ID@.desktop</launchable>
   <provides>
     <binary>@APP_BIN@</binary>

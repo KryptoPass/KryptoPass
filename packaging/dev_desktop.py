@@ -4,14 +4,13 @@
 import argparse
 import json
 import os
-import re
 import stat
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from metadata import ROOT, load_metadata
 MARKER = "X-KryptoPass-Development=true"
 
 
@@ -20,7 +19,7 @@ def entry_source():
     if len(templates) != 1:
         raise RuntimeError("expected one .desktop.in template")
     template = templates[0]
-    return template.name[: -len(".desktop.in")], template
+    return load_metadata()["app-id"], template
 
 
 def app_metadata():
@@ -38,13 +37,6 @@ def app_metadata():
         target_dir = ROOT / target_dir
     return package, target_dir / "debug" / target["name"]
 
-
-def display_name():
-    source = (ROOT / "crates/desktop/src/app_info.rs").read_text(encoding="utf-8")
-    match = re.search(r'^\s*display_name:\s*"([^"\r\n]+)"\s*,?\s*$', source, re.M)
-    if not match:
-        raise RuntimeError("could not read application display name")
-    return match.group(1)
 
 
 def keyfile_escape(value):
@@ -64,9 +56,9 @@ def exec_value(binary):
 
 def rendered_entry(app_id, template):
     package, binary = app_metadata()
-    description = package.get("description") or ""
+    description = load_metadata()["summary"]
     values = {
-        "@APP_NAME@": keyfile_escape(display_name()),
+        "@APP_NAME@": keyfile_escape(load_metadata()["display-name"]),
         "@APP_COMMENT@": keyfile_escape(description),
         "@APP_BIN@": exec_value(binary),
         "@APP_ICON@": app_id,

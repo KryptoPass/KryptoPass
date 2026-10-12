@@ -2,8 +2,28 @@ use cxx_qt_build::{CxxQtBuilder, QmlFile, QmlModule};
 use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo:rerun-if-changed=../../Cargo.toml");
+    println!("cargo:rerun-if-changed=../../packaging/gen_identity.py");
+    println!("cargo:rerun-if-changed=../../packaging/metadata.py");
+    println!("cargo:rerun-if-changed=../../packaging/icons");
+    let generated = PathBuf::from(env::var_os("OUT_DIR").ok_or("Cargo OUT_DIR is missing")?);
+    for (script, args) in [
+        (
+            "gen_identity.py",
+            vec![generated.to_string_lossy().into_owned()],
+        ),
+    ] {
+        if !Command::new("python3")
+            .arg(format!("../../packaging/{script}"))
+            .args(args)
+            .status()?
+            .success()
+        {
+            return Err(format!("{script} failed").into());
+        }
+    }
     let kde_includes = kde_dependencies()?;
-    let qml_module = QmlModule::new("org.kryptopass.desktop")
+    let qml_module = QmlModule::new(fs::read_to_string(generated.join("app_id"))?.trim())
         .qml_file("ui/qml/Main.qml")
         .qml_file("ui/qml/PanelHeader.qml")
         .qml_file("ui/qml/PanelFooter.qml")
@@ -89,6 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         builder.cc_builder(|cc| {
             cc.include("src");
+            cc.include(&generated);
             for include in &kde_includes {
                 cc.include(include);
             }

@@ -4,10 +4,26 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>KryptoPass</name>
-  <summary>KryptoPass desktop application built with Rust, CXX-Qt, and QML</summary>
+  <summary>Organize credentials and secure notes with OpenPGP encryption</summary>
+  <summary xml:lang="es">Organiza credenciales y notas seguras con cifrado OpenPGP</summary>
   <description>
-    <p>KryptoPass desktop application built with Rust, CXX-Qt, and QML</p>
+    <p>KryptoPass organizes credentials and secure notes in folders. Sensitive content is encrypted with OpenPGP before it is stored locally, using the existing GnuPG keyring.</p>
+    <p>Generate passwords, use time-based verification codes, keep previous credential versions, and create encrypted backups. Names, folders, and recipient fingerprints remain unencrypted metadata.</p>
+    <p xml:lang="es">KryptoPass organiza credenciales y notas seguras en carpetas. El contenido sensible se cifra con OpenPGP antes de guardarse localmente, usando el llavero GnuPG existente.</p>
+    <p xml:lang="es">Genera contraseñas, usa códigos de verificación temporales, conserva versiones anteriores y crea copias de seguridad cifradas. Los nombres, las carpetas y las huellas de destinatarios permanecen como metadatos sin cifrar.</p>
   </description>
+  <developer id="org.kryptopass"><name>KryptoPass contributors</name></developer>
+  <url type="homepage">https://github.com/KryptoPass/KryptoPass</url>
+  <url type="vcs-browser">https://github.com/KryptoPass/KryptoPass</url>
+  <url type="bugtracker">https://github.com/KryptoPass/KryptoPass/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Credential folders and vault workspace</caption>
+      <caption xml:lang="es">Carpetas de credenciales y espacio de la bóveda</caption>
+      <image type="source" width="1280" height="800">https://raw.githubusercontent.com/KryptoPass/KryptoPass/main/packaging/screenshots/vault.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
   <launchable type="desktop-id">org.kryptopass.desktop.desktop</launchable>
   <provides>
     <binary>kryptopass-desktop</binary>
