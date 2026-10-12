@@ -154,14 +154,48 @@ fn wait_for_pending_access() -> Value {
     loop {
         let pending = access::pending_access();
         if !pending.is_empty() {
-            return serde_json::from_str(&pending).expect("parse pending access JSON");
+            let pending: Value = serde_json::from_str(&pending).expect("parse pending access JSON");
+            if pending["previewReady"] == true {
+                return pending;
+            }
         }
         assert!(
             Instant::now() < deadline,
-            "transport get-logins request did not become pending"
+            "transport get-logins request preview did not become ready"
         );
         thread::sleep(Duration::from_millis(10));
     }
+}
+
+fn wait_for_username_state(token: &str, entry_id: &str, expected: &str) -> Value {
+    let deadline = Instant::now() + IO_TIMEOUT;
+    loop {
+        let pending = access::pending_access();
+        if !pending.is_empty() {
+            let pending: Value = serde_json::from_str(&pending).expect("parse pending access JSON");
+            let candidate = pending["candidates"].as_array().and_then(|candidates| {
+                candidates
+                    .iter()
+                    .find(|candidate| candidate["id"] == entry_id)
+            });
+            if pending["token"] == token
+                && candidate.is_some_and(|candidate| candidate["usernameState"] == expected)
+            {
+                return pending;
+            }
+        }
+        assert!(
+            Instant::now() < deadline,
+            "transport username preview did not reach state {expected}"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn request_username_and_wait(pending: &Value, entry_id: &str) -> Value {
+    let token = pending["token"].as_str().expect("access token").to_owned();
+    access::request_username(&token, entry_id);
+    wait_for_username_state(&token, entry_id, "ready")
 }
 
 struct BrowserPeer {
@@ -310,6 +344,7 @@ fn encrypted_get_logins_is_cancelled_when_vault_locks() {
     let pending = wait_for_pending_access();
     assert_eq!(pending["origin"], "https://login.transport.example.test");
     assert_eq!(pending["candidates"][0]["id"], ENTRY_ID);
+    assert_eq!(pending["candidates"][0]["usernameState"], "unloaded");
     assert_eq!(provider.login_calls.load(Ordering::Relaxed), 0);
 
     set_locked(true, false);
@@ -349,7 +384,9 @@ fn encrypted_approved_get_logins_matches_native_protocol() {
         &serde_json::to_vec(&get_logins_request(&mut browser)).expect("serialize request"),
     );
 
-    let pending = wait_for_pending_access();
+    let pending = request_username_and_wait(&wait_for_pending_access(), ENTRY_ID);
+    assert_eq!(pending["candidates"][0]["username"], "");
+    assert_eq!(pending["candidates"][0]["usernameState"], "ready");
     decide_access(
         pending["token"].as_str().expect("access token"),
         ENTRY_ID,
@@ -404,6 +441,7 @@ fn denied_get_logins_leaves_encrypted_transport_usable() {
     );
 
     let pending = wait_for_pending_access();
+    assert_eq!(pending["candidates"][0]["usernameState"], "unloaded");
     decide_access(pending["token"].as_str().expect("access token"), "", false);
 
     let denied = read_json_frame(connection.peer());

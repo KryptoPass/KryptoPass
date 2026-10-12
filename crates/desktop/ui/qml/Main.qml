@@ -36,6 +36,7 @@ Controls.ApplicationWindow {
         folders: store.folders
         folderRows: store.folderRows
         vaultLocked: store.controller.locked
+        onUsernameRequested: function(token, entryId) { store.controller.requestBrowserUsername(token, entryId); }
         onDecisionRequested: function(token, entryId, approve) {
             store.controller.decideBrowserAccess(token, entryId, approve);
         }

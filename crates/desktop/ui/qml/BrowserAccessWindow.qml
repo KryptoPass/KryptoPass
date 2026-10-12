@@ -13,6 +13,7 @@ Controls.ApplicationWindow {
     property bool dismissed: false
 
     signal decisionRequested(string token, string entryId, bool approve)
+    signal usernameRequested(string token, string entryId)
 
     transientParent: null
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowStaysOnTopHint
@@ -62,6 +63,7 @@ Controls.ApplicationWindow {
         kindOptions: requestWindow.kindOptions
         folders: requestWindow.folders
         folderRows: requestWindow.folderRows
+        onUsernameRequested: function(token, entryId) { requestWindow.usernameRequested(token, entryId); }
         onDecisionRequested: function(token, entryId, approve) {
             requestWindow.dismissed = true;
             requestWindow.decisionRequested(token, entryId, approve);

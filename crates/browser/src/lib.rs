@@ -4,7 +4,7 @@ mod access;
 mod persistence;
 pub use access::{
     Candidate, CredentialProvider, Login, configure_vault, decide_access, pending_access,
-    site_origin,
+    request_username, site_origin,
 };
 
 use std::collections::{BTreeMap, BTreeSet};

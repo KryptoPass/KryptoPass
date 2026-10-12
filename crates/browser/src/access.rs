@@ -1,5 +1,6 @@
-//! Requests expose only candidate metadata to Qt and release one explicitly selected login.
+//! Requests project account names temporarily to Qt and release one explicitly selected login.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -29,6 +30,14 @@ pub struct Login {
 pub trait CredentialProvider: Send + Sync {
     /// Lists metadata only. Implementations must exclude trash and non-login entries.
     fn candidates(&self) -> Result<Vec<Candidate>>;
+    /// Projects only the username for the open request, rejecting stale or inactive entries.
+    fn username(
+        &self,
+        _candidate: &Candidate,
+        _still_current: &dyn Fn() -> bool,
+    ) -> Result<Option<Zeroizing<String>>> {
+        Ok(None)
+    }
     /// Reads only the approved revision, rejecting stale/trash/non-login entries.
     fn login(&self, candidate: &Candidate, still_authorized: &dyn Fn() -> bool) -> Result<Login>;
 }
@@ -37,6 +46,10 @@ pub(crate) struct Access {
     token: String,
     origin: String,
     candidates: Vec<Candidate>,
+    usernames: BTreeMap<String, Zeroizing<String>>,
+    username_errors: BTreeSet<String>,
+    preview_requested: Option<String>,
+    previewing: Option<String>,
     pub(super) expires: Instant,
     decision: Option<String>,
 }
@@ -96,7 +109,14 @@ pub fn site_origin(input: &str) -> Result<String> {
 pub fn pending_access() -> String {
     vault().lock().ok().and_then(|state| {
         state.access.as_ref().filter(|access| access.expires > Instant::now() && access.decision.is_none())
-            .map(|access| json!({"token": access.token, "origin": access.origin, "candidates": access.candidates}).to_string())
+            .map(|access| {
+                let candidates: Vec<_> = access.candidates.iter().map(|candidate| {
+                    json!({"id": candidate.id, "name": candidate.name, "revision": candidate.revision,
+                        "username": access.usernames.get(&candidate.id).map(|username| username.as_str()).unwrap_or_default(),
+                        "usernameState": if access.usernames.contains_key(&candidate.id) { "ready" } else if access.username_errors.contains(&candidate.id) { "error" } else if access.previewing.as_deref() == Some(&candidate.id) || access.preview_requested.as_deref() == Some(&candidate.id) { "loading" } else { "unloaded" }})
+                }).collect();
+                json!({"token": access.token, "origin": access.origin, "previewReady": true, "candidates": candidates}).to_string()
+            })
     }).unwrap_or_default()
 }
 
@@ -110,12 +130,16 @@ pub fn decide_access(token: &str, entry_id: &str, approve: bool) {
             {
                 if !approve {
                     access.decision = Some(String::new());
-                } else if access
-                    .candidates
-                    .iter()
-                    .any(|candidate| candidate.id == entry_id)
+                } else if access.usernames.contains_key(entry_id)
+                    && access
+                        .candidates
+                        .iter()
+                        .any(|candidate| candidate.id == entry_id)
                 {
                     access.decision = Some(entry_id.to_owned());
+                }
+                if access.decision.is_some() {
+                    access.usernames.clear();
                 }
             }
         }
@@ -218,11 +242,16 @@ fn approved_login(data: &Value) -> Result<(Candidate, Login, String)> {
             token: token.clone(),
             origin: origin.clone(),
             candidates: candidates.clone(),
+            usernames: BTreeMap::new(),
+            username_errors: BTreeSet::new(),
+            preview_requested: None,
+            previewing: None,
             expires: Instant::now() + Duration::from_secs(60),
             decision: None,
         });
     }
     let selected = loop {
+        load_requested_username(epoch, &token, &provider);
         std::thread::sleep(Duration::from_millis(50));
         let mut state = vault()
             .lock()
@@ -244,6 +273,16 @@ fn approved_login(data: &Value) -> Result<(Candidate, Login, String)> {
         }
     };
     let result = (|| {
+        let allowed = vault().lock().is_ok_and(|state| {
+            state.access.as_ref().is_some_and(|access| {
+                access.token == token
+                    && access
+                        .candidates
+                        .iter()
+                        .any(|candidate| candidate.id == selected)
+            })
+        });
+        ensure!(allowed, "selected account is unavailable");
         let candidate = candidates
             .into_iter()
             .find(|candidate| candidate.id == selected)
@@ -266,6 +305,96 @@ fn approved_login(data: &Value) -> Result<(Candidate, Login, String)> {
         );
         Ok((candidate, login, hash))
     })();
+    clear_access(&token);
+    result
+}
+
+fn preview_current(epoch: u64, token: &str) -> bool {
+    vault().lock().is_ok_and(|state| {
+        state.unlocked
+            && state.epoch == epoch
+            && state.access.as_ref().is_some_and(|access| {
+                access.token == token
+                    && access.expires > Instant::now()
+                    && access.decision.is_none()
+            })
+    })
+}
+
+pub fn request_username(token: &str, entry_id: &str) {
+    if let Ok(mut state) = vault().lock() {
+        if !state.unlocked {
+            return;
+        }
+        if let Some(access) = state.access.as_mut().filter(|access| {
+            access.token == token && access.expires > Instant::now() && access.decision.is_none()
+        }) {
+            if access
+                .candidates
+                .iter()
+                .any(|candidate| candidate.id == entry_id)
+                && !access.usernames.contains_key(entry_id)
+                && !access.username_errors.contains(entry_id)
+                && access.previewing.as_deref() != Some(entry_id)
+            {
+                access.preview_requested = Some(entry_id.to_owned());
+            }
+        }
+    }
+}
+
+fn load_requested_username(epoch: u64, token: &str, provider: &Arc<dyn CredentialProvider>) {
+    let candidate = {
+        let Ok(mut state) = vault().lock() else {
+            return;
+        };
+        if !state.unlocked || state.epoch != epoch {
+            return;
+        }
+        let Some(access) = state.access.as_mut().filter(|access| {
+            access.token == token && access.expires > Instant::now() && access.decision.is_none()
+        }) else {
+            return;
+        };
+        let Some(id) = access.preview_requested.take() else {
+            return;
+        };
+        access.previewing = Some(id.clone());
+        access
+            .candidates
+            .iter()
+            .find(|candidate| candidate.id == id)
+            .cloned()
+    };
+    let Some(candidate) = candidate else {
+        return;
+    };
+    let username = provider.username(&candidate, &|| preview_current(epoch, token));
+    let Ok(mut state) = vault().lock() else {
+        return;
+    };
+    if !state.unlocked || state.epoch != epoch {
+        return;
+    }
+    let Some(access) = state.access.as_mut().filter(|access| {
+        access.token == token && access.expires > Instant::now() && access.decision.is_none()
+    }) else {
+        return;
+    };
+    access.previewing = None;
+    match username {
+        Ok(username) => {
+            access
+                .usernames
+                .insert(candidate.id, username.unwrap_or_default());
+        }
+        Err(_) => {
+            access.username_errors.insert(candidate.id);
+        }
+    }
+}
+
+fn clear_access(token: &str) {
     if let Ok(mut state) = vault().lock() {
         if state
             .access
@@ -275,5 +404,4 @@ fn approved_login(data: &Value) -> Result<(Candidate, Login, String)> {
             state.access = None;
         }
     }
-    result
 }

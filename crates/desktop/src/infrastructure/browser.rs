@@ -1,4 +1,4 @@
-//! Vault adapter for explicitly approved browser requests; never projects credentials into Qt.
+//! Vault adapter for temporary account previews and explicitly approved browser fills.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -37,6 +37,44 @@ impl CredentialProvider for VaultProvider {
     }
 
     fn login(&self, candidate: &Candidate, still_authorized: &dyn Fn() -> bool) -> Result<Login> {
+        let content = self.read_current(candidate, still_authorized)?;
+        let SecretContent::Login(login) = &content else {
+            anyhow::bail!("not a login");
+        };
+        let mut urls: Vec<_> = login
+            .urls
+            .iter()
+            .map(|url| Zeroizing::new(url.clone()))
+            .collect();
+        if urls.is_empty() && !login.url.is_empty() {
+            urls.push(Zeroizing::new(login.url.clone()));
+        }
+        Ok(Login {
+            username: Zeroizing::new(login.username.clone()),
+            password: Zeroizing::new(login.password.clone()),
+            urls,
+        })
+    }
+
+    fn username(
+        &self,
+        candidate: &Candidate,
+        still_current: &dyn Fn() -> bool,
+    ) -> Result<Option<Zeroizing<String>>> {
+        let content = self.read_current(candidate, still_current)?;
+        let SecretContent::Login(login) = &content else {
+            anyhow::bail!("not a login");
+        };
+        Ok(Some(Zeroizing::new(login.username.clone())))
+    }
+}
+
+impl VaultProvider {
+    fn read_current(
+        &self,
+        candidate: &Candidate,
+        still_authorized: &dyn Fn() -> bool,
+    ) -> Result<SecretContent> {
         ensure!(still_authorized(), "browser request cancelled");
         let id = SecretId(uuid::Uuid::parse_str(&candidate.id)?);
         let service = SecretsService::new(SqliteStorage::open_existing(&self.0)?, GnuPgOpenPgp);
@@ -57,21 +95,6 @@ impl CredentialProvider for VaultProvider {
         valid()?;
         let content = service.read_content(id)?;
         valid()?;
-        let SecretContent::Login(login) = &content else {
-            anyhow::bail!("not a login");
-        };
-        let mut urls: Vec<_> = login
-            .urls
-            .iter()
-            .map(|url| Zeroizing::new(url.clone()))
-            .collect();
-        if urls.is_empty() && !login.url.is_empty() {
-            urls.push(Zeroizing::new(login.url.clone()));
-        }
-        Ok(Login {
-            username: Zeroizing::new(login.username.clone()),
-            password: Zeroizing::new(login.password.clone()),
-            urls,
-        })
+        Ok(content)
     }
 }

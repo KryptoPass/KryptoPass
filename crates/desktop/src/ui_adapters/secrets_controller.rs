@@ -59,6 +59,9 @@ pub mod qobject {
         #[cxx_name = "refreshBrowserPairing"]
         fn refresh_browser_pairing(self: Pin<&mut Self>);
         #[qinvokable]
+        #[cxx_name = "requestBrowserUsername"]
+        fn request_browser_username(self: Pin<&mut Self>, token: &QString, entry_id: &QString);
+        #[qinvokable]
         #[cxx_name = "decideBrowserAccess"]
         fn decide_browser_access(
             self: Pin<&mut Self>,
@@ -371,6 +374,13 @@ enum MutationSignal {
 }
 
 impl qobject::SecretsController {
+    pub fn request_browser_username(mut self: Pin<&mut Self>, token: &QString, entry_id: &QString) {
+        if !*self.locked() {
+            kryptopass_browser::request_username(&token.to_string(), &entry_id.to_string());
+            self.as_mut().refresh_browser_pairing();
+        }
+    }
+
     pub fn decide_browser_access(
         mut self: Pin<&mut Self>,
         token: &QString,
@@ -2159,7 +2169,8 @@ impl qobject::SecretsController {
         if *self.locked() != value {
             kryptopass_browser::set_locked(value, false);
             self.as_mut().rust_mut().locked = value;
-            self.locked_changed();
+            self.as_mut().locked_changed();
+            self.as_mut().refresh_browser_pairing();
         }
     }
 }

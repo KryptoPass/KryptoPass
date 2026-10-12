@@ -15,7 +15,7 @@ El dominio no conoce Qt, SQLite ni GPGME. `SecretsService` coordina los puertos
 | Destinatarios | Huellas OpenPGP normalizadas y sin duplicados | Formulario y detalle |
 | Revisión | Entero que aumenta al modificar el registro | Control de edición concurrente |
 | Vínculo entre dos elementos | Dos UUID en `secret_links` | Lista, editor y navegación entre detalles |
-| Correo/usuario, contraseña, sitios web, TOTP, notas e historial | JSON dentro del ciphertext OpenPGP | Detalle o formulario abierto |
+| Correo/usuario, contraseña, sitios web, TOTP, notas e historial | JSON dentro del ciphertext OpenPGP | Detalle o formulario abierto; solo usuario/correo en la solicitud de relleno abierta |
 | Texto y notas de una nota segura | JSON dentro del ciphertext OpenPGP | Detalle o formulario abierto |
 
 Los nombres de elementos y carpetas y las huellas de destinatarios son
@@ -409,17 +409,30 @@ persistente identifica el navegador y la bóveda, pero cada `get-logins`
 requiere una aprobación nueva y caduca en 60 segundos.
 
 QML recibe el origen HTTP(S) normalizado en ASCII, un token temporal y los
-UUID, nombres y revisiones de credenciales activas. Buscar en el diálogo usa
-nombres, tipo y carpeta, mediante el mismo selector que los elementos vinculados. Elegir una entrada autoriza descifrar esa revisión, sin consultar
-contenido privado de las demás. El adaptador comprueba tipo, papelera,
-revisión y vigencia de la solicitud antes y después de la lectura.
+UUID, nombres y revisiones de inicios de sesión activos, excluyendo notas y
+papelera. La lista de metadatos aparece sin descifrar contenido. Al seleccionar
+una entrada, Rust lee solo ese inicio de sesión en el hilo del navegador y
+proyecta únicamente su usuario/correo en el diálogo abierto. La fila muestra el
+estado de carga o error; no se puede aprobar hasta conocer el usuario. No se
+descifra el resto de la bóveda para abrir la lista. Esta proyección pertenece
+solo a la solicitud: no se añade
+al modelo global, a metadatos SQLite ni al archivo de asociaciones. Buscar usa
+título y los usuarios ya consultados; el filtro de carpeta sigue usando metadatos.
+
+El adaptador comprueba tipo, papelera, revisión y vigencia antes y después de
+cada lectura. Bloquear, cambiar de bóveda, rechazar o caducar cancela la carga
+y descarta sus resultados. Rust limpia los buffers de usuarios al liberar la
+solicitud y Qt deja de proyectarlos al cerrarla; esto no garantiza borrar todas
+las copias que Qt/JS pueda haber hecho. Elegir y aprobar autoriza una nueva
+lectura de esa revisión para el envío; la vista previa no autoriza el relleno.
 
 Rust compara las URLs de la entrada aprobada con el esquema, host y puerto
 efectivo del origen solicitado. No admite credenciales embebidas en URLs ni
 envíos de formulario a otro origen. Solo una coincidencia permite enviar
 usuario y contraseña de esa entrada; no envía notas, historial ni semillas
-TOTP. Los valores permanecen en buffers Rust con limpieza al liberarse y no
-pasan por propiedades de Qt.
+TOTP. La contraseña permanece en buffers Rust con limpieza al liberarse y no
+pasa por propiedades de Qt; el usuario tiene la proyección temporal descrita
+arriba.
 
 Bloquear o cambiar de bóveda invalida solicitudes y resultados pendientes.
 La autorización se vuelve a comprobar al escribir la respuesta cifrada al

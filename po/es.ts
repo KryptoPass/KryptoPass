@@ -2620,12 +2620,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay coincidencias. Prueba con otro nombre o carpeta.</translation>
     </message>
     <message>
-      <source>Credencial · %1</source>
-      <translation>Credencial · %1</translation>
+      <source>Selecciona para ver el usuario</source>
+      <translation>Selecciona para ver el usuario</translation>
     </message>
     <message>
-      <source>Sin carpeta</source>
-      <translation>Sin carpeta</translation>
+      <source>Cargando usuario…</source>
+      <translation>Cargando usuario…</translation>
+    </message>
+    <message>
+      <source>No se pudo leer el usuario</source>
+      <translation>No se pudo leer el usuario</translation>
+    </message>
+    <message>
+      <source>Sin usuario</source>
+      <translation>Sin usuario</translation>
     </message>
     <message>
       <source>El navegador solicita usuario y contraseña para:</source>

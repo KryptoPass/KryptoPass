@@ -13,6 +13,9 @@ Controls.Dialog {
     property string selectedId: ""
     property string folderFilterId: ""
     property bool initialFocusReject: false
+    property bool preserveSelectionOnModelChange: false
+    property bool selectionAllowed: true
+    property string retainedSelectionId: ""
     property string listAccessibleName: qsTr("Elementos disponibles para vincular")
     property string emptyText: qsTr("No hay elementos disponibles. Los que ya tienen un vínculo no aparecen aquí.")
     property string noMatchesText: qsTr("No hay coincidencias. Prueba con otro nombre, tipo o carpeta.")
@@ -38,6 +41,7 @@ Controls.Dialog {
         ? filteredOptions[relatedEntryList.currentIndex].id : ""
 
     signal selectionRequested(string entryId)
+    signal candidateHighlighted(string entryId)
     signal modalVisibilityChanged(bool opened)
 
     function kindIcon(kind) {
@@ -46,6 +50,7 @@ Controls.Dialog {
     }
 
     function resetSelection() {
+        retainedSelectionId = "";
         folderFilterId = "";
         relatedEntrySearch.text = "";
         relatedEntryList.currentIndex = -1;
@@ -54,10 +59,21 @@ Controls.Dialog {
     }
 
     function confirmSelection() {
-        if (!pendingId)
+        if (!pendingId || !selectionAllowed)
             return;
         selectionRequested(pendingId);
         close();
+    }
+
+    function highlightSelection() {
+        retainedSelectionId = pendingId;
+        if (pendingId)
+            candidateHighlighted(pendingId);
+    }
+
+    onFolderFilterIdChanged: {
+        retainedSelectionId = "";
+        relatedEntryList.currentIndex = -1;
     }
 
     objectName: "entryPickerDialog"
@@ -109,7 +125,10 @@ Controls.Dialog {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     Accessible.name: qsTr("Buscar por nombre, tipo o carpeta")
-                    onTextChanged: relatedEntryList.currentIndex = -1
+                    onTextChanged: {
+                        root.retainedSelectionId = "";
+                        relatedEntryList.currentIndex = -1;
+                    }
                     Keys.onReturnPressed: function(event) {
                         root.confirmSelection();
                         event.accepted = true;
@@ -122,6 +141,7 @@ Controls.Dialog {
                         if (relatedEntryList.count > 0) {
                             relatedEntryList.currentIndex = Math.max(0, relatedEntryList.currentIndex);
                             relatedEntryList.forceActiveFocus();
+                            root.highlightSelection();
                         }
                         event.accepted = true;
                     }
@@ -140,7 +160,10 @@ Controls.Dialog {
                     selectedId: root.folderFilterId
                     emptyLabel: qsTr("Todas las carpetas")
                     accessibleLabel: qsTr("Filtrar por carpeta")
-                    onFolderSelected: function(folderId) { root.folderFilterId = folderId; }
+                    onFolderSelected: function(folderId) {
+                        root.retainedSelectionId = "";
+                        root.folderFilterId = folderId;
+                    }
                 }
             }
         }
@@ -161,7 +184,26 @@ Controls.Dialog {
                 keyNavigationWraps: false
                 Accessible.role: Accessible.List
                 Accessible.name: root.listAccessibleName
-                onModelChanged: currentIndex = -1
+                onModelChanged: currentIndex = root.preserveSelectionOnModelChange
+                    ? root.filteredOptions.findIndex(option => option.id === root.retainedSelectionId) : -1
+                Keys.onDownPressed: function(event) {
+                    if (root.preserveSelectionOnModelChange) {
+                        currentIndex = Math.min(count - 1, currentIndex + 1);
+                        root.highlightSelection();
+                        event.accepted = true;
+                    } else {
+                        event.accepted = false;
+                    }
+                }
+                Keys.onUpPressed: function(event) {
+                    if (root.preserveSelectionOnModelChange) {
+                        currentIndex = Math.max(0, currentIndex - 1);
+                        root.highlightSelection();
+                        event.accepted = true;
+                    } else {
+                        event.accepted = false;
+                    }
+                }
                 Keys.onReturnPressed: root.confirmSelection()
                 Keys.onEnterPressed: root.confirmSelection()
                 delegate: Controls.ItemDelegate {
@@ -176,6 +218,7 @@ Controls.Dialog {
                     onClicked: {
                         relatedEntryList.currentIndex = index;
                         relatedEntryList.forceActiveFocus();
+                        root.highlightSelection();
                     }
                     onDoubleClicked: root.confirmSelection()
                     contentItem: RowLayout {
@@ -232,7 +275,7 @@ Controls.Dialog {
         Controls.Button {
             objectName: root.confirmButtonObjectName
             text: root.confirmText
-            enabled: !!root.pendingId
+            enabled: !!root.pendingId && root.selectionAllowed
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
             onClicked: root.confirmSelection()
             Keys.onReturnPressed: function(event) {

@@ -19,8 +19,11 @@ el proxy de producto se construye dentro del workspace.
 - Identidad y vinculaciones persistidas por ruta canónica de bóveda. Reiniciar
   conserva la asociación; cambiar o mover la bóveda exige otra asociación.
 - Autorización independiente para cada solicitud de credenciales. Desktop
-  presenta el origen solicitado y nombres de credenciales; el usuario elige
-  una. Solo entonces se descifra esa entrada, fuera del hilo de Qt.
+  presenta el origen solicitado y los inicios de sesión activos con su título
+  y usuario/correo. La lista aparece inmediatamente; al seleccionar una entrada,
+  Rust carga su usuario fuera del hilo de Qt. Puede aparecer pinentry durante
+  esa lectura. Las notas y la papelera no aparecen.
+  El usuario elige una entrada y solo su aprobación permite enviar el relleno.
 - Coincidencia exacta de esquema HTTP(S), host y puerto efectivo con una URL
   guardada. Las rutas pueden diferir; los subdominios deben estar guardados
   explícitamente. Un formulario con envío a otro origen se rechaza.
@@ -95,7 +98,9 @@ Se limita cada frame a 1 MiB antes de reservar memoria, a ocho conexiones y a
 32 asociaciones por bóveda. Una conexión inactiva caduca a los 30 minutos.
 Las claves de sesión permanecen en Rust y los buffers descifrados se limpian
 con `zeroize`; QML recibe tokens, el origen solicitado y metadatos de entradas,
-nunca los valores enviados al navegador.
+nunca contraseñas. El usuario/correo se proyecta solo en el diálogo de la
+solicitud y se descarta al cerrarla, bloquear, cambiar de bóveda o caducar;
+no pertenece al modelo global ni se persiste sin cifrar.
 Se rechazan nonces repetidos; tras 4096 solicitudes se exige un nuevo
 intercambio de claves. Los nonces de respuesta se incrementan en little-endian,
 como hace la extensión.
@@ -115,11 +120,13 @@ ni URLs. Se exige directorio `0700` y archivo `0600`, propiedad del usuario,
 sin enlaces simbólicos; la escritura es atómica. Un archivo inválido o un
 fallo al persistir impide confirmar la asociación.
 
-Las URLs permanecen dentro del contenido OpenPGP. Por eso esta versión no
-busca coincidencias descifrando toda la bóveda: solicita elegir una entrada
-por nombre y comprueba su URL después de la aprobación. Se excluyen papelera
-y tipos distintos de credencial y se comprueba que la revisión no cambió
-antes y después de descifrar. Cada solicitud expira a los 60 segundos.
+Las URLs permanecen dentro del contenido OpenPGP. Esta versión carga el
+usuario del inicio de sesión seleccionado para distinguir cuentas, sin filtrar
+la lista por sitio ni descifrar otras entradas automáticamente. Los usuarios
+consultados se conservan solo durante la solicitud. La URL se comprueba después de
+la aprobación. Se excluyen papelera y tipos distintos de inicio de sesión y se
+comprueba que la revisión no cambió antes y después de cada lectura. Cada
+solicitud, incluida la carga de usuarios, expira a los 60 segundos.
 
 Una vez enviada, la credencial está en el navegador y en la página que la
 recibe. Los avisos de bloqueo permiten a la extensión invalidar su caché;

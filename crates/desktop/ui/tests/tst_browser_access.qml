@@ -68,6 +68,44 @@ TestCase {
         });
     }
 
+    function requestWithUsernames(token) {
+        return JSON.stringify({
+            token: token,
+            origin: "https://accounts.example.invalid",
+            previewReady: true,
+            candidates: [
+                { id: "work-entry", name: "Email account", username: "work.user@example.invalid", revision: 7 },
+                { id: "personal-entry", name: "Email account", username: "personal.user@example.invalid", revision: 12 }
+            ]
+        });
+    }
+
+    function requestWithUsernameState(token, state, username) {
+        const candidate = {
+            id: "work-entry",
+            name: "Email account",
+            usernameState: state,
+            revision: 7
+        };
+        if (username !== undefined)
+            candidate.username = username;
+
+        return JSON.stringify({
+            token: token,
+            origin: "https://accounts.example.invalid",
+            previewReady: true,
+            candidates: [
+                candidate,
+                {
+                    id: "personal-entry",
+                    name: "Email account",
+                    usernameState: "unloaded",
+                    revision: 12
+                }
+            ]
+        });
+    }
+
     function openFor(dialog, token) {
         dialog.requestJson = requestFor(token);
         tryCompare(dialog, "visible", true);
@@ -248,6 +286,150 @@ TestCase {
         tryCompare(dialog, "visible", false);
         compare(decision.count, 1);
         compare(Array.from(decision.signalArguments[0]), [token, "", false]);
+    }
+
+    function test_browser_candidates_show_and_search_by_username() {
+        const dialog = createDialog();
+        const decision = decisionSpy(dialog);
+        const token = "browser-access-usernames";
+
+        dialog.requestJson = requestWithUsernames(token);
+        tryCompare(dialog, "visible", true);
+        tryCompare(dialog, "opened", true);
+
+        const list = child("entryPickerList");
+        const search = child("entryPickerSearch");
+        const folderPicker = child("entryPickerFolderPicker");
+        const confirm = child("confirmEntryPickerButton");
+        tryCompare(list, "count", 2);
+        compare(dialog.options.map(option => [option.id, option.title, option.subtitle, option.folder]), [
+            ["work-entry", "Email account", "work.user@example.invalid", "work"],
+            ["personal-entry", "Email account", "personal.user@example.invalid", "personal"]
+        ]);
+
+        waitForRendering(list);
+        const workChoice = list.itemAtIndex(0);
+        const subtitle = findText(workChoice.contentItem, "work.user@example.invalid");
+        verify(subtitle !== null, "The candidate row should render its username as the subtitle");
+        compare(subtitle.textFormat, Text.PlainText);
+        compare(workChoice.Accessible.description, "work.user@example.invalid");
+
+        folderPicker.folderSelected("work");
+        tryCompare(dialog, "folderFilterId", "work");
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        compare(list.itemAtIndex(0).modelData.id, "work-entry");
+        compare(list.itemAtIndex(0).modelData.folder, "work",
+            "The browser candidate should retain its folder metadata for filtering");
+
+        folderPicker.folderSelected("");
+        tryCompare(dialog, "folderFilterId", "");
+        tryCompare(list, "count", 2);
+        search.text = "personal.user@example.invalid";
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        const selectedChoice = list.itemAtIndex(0);
+        compare(selectedChoice.modelData.title, "Email account");
+        compare(selectedChoice.modelData.subtitle, "personal.user@example.invalid");
+        mouseClick(selectedChoice);
+        tryCompare(dialog, "pendingId", "personal-entry");
+
+        verify(confirm.enabled);
+        waitForRendering(confirm);
+        mouseClick(confirm);
+        tryCompare(dialog, "visible", false);
+        compare(decision.count, 1);
+        compare(Array.from(decision.signalArguments[0]), [token, "personal-entry", true]);
+    }
+
+    function test_username_load_is_lazy_and_same_token_updates_preserve_picker_state() {
+        const dialog = createDialog();
+        const decision = decisionSpy(dialog);
+        const usernameRequest = createTemporaryObject(spyComponent, testCase, {
+            target: dialog,
+            signalName: "usernameRequested"
+        });
+        verify(usernameRequest !== null && usernameRequest.valid);
+        const token = "browser-access-lazy-username";
+
+        dialog.requestJson = requestWithUsernameState(token, "unloaded");
+        tryCompare(dialog, "visible", true);
+        tryCompare(dialog, "opened", true);
+        compare(dialog.displayedToken, token,
+            "The active browser token should be recorded before a username update arrives");
+
+        const list = child("entryPickerList");
+        const search = child("entryPickerSearch");
+        const folderPicker = child("entryPickerFolderPicker");
+        const confirm = child("confirmEntryPickerButton");
+        tryCompare(list, "count", 2);
+        compare(dialog.options.map(option => [option.id, option.title, option.folder]), [
+            ["work-entry", "Email account", "work"],
+            ["personal-entry", "Email account", "personal"]
+        ]);
+        compare(usernameRequest.count, 0,
+            "Opening the request must not fetch usernames for every candidate");
+        waitForRendering(list);
+        const workChoice = list.itemAtIndex(0);
+        compare(workChoice.modelData.subtitle, "Selecciona para ver el usuario");
+        verify(findText(workChoice.contentItem, "Selecciona para ver el usuario") !== null,
+            "The unloaded candidate should show its username prompt immediately");
+        verify(!confirm.enabled, "An unloaded username cannot be approved");
+
+        folderPicker.folderSelected("work");
+        tryCompare(dialog, "folderFilterId", "work");
+        search.text = "Email account";
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        mouseClick(list.itemAtIndex(0));
+        tryCompare(dialog, "pendingId", "work-entry");
+        compare(usernameRequest.count, 1);
+        compare(Array.from(usernameRequest.signalArguments[0]), [token, "work-entry"]);
+        verify(!confirm.enabled, "An unloaded username remains ineligible after selection");
+
+        dialog.requestJson = requestWithUsernameState(token, "loading");
+        tryCompare(dialog, "pendingId", "work-entry");
+        compare(dialog.folderFilterId, "work");
+        compare(search.text, "Email account");
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        const loadingChoice = list.itemAtIndex(0);
+        compare(loadingChoice.modelData.subtitle, "Cargando usuario…");
+        verify(findText(loadingChoice.contentItem, "Cargando usuario…") !== null,
+            "A loading update should render its progress subtitle");
+        compare(usernameRequest.count, 1, "A same-token loading update must not request the username again");
+        verify(!confirm.enabled, "A username still loading cannot be approved");
+
+        dialog.requestJson = requestWithUsernameState(token, "error");
+        tryCompare(dialog, "pendingId", "work-entry");
+        compare(dialog.folderFilterId, "work");
+        compare(search.text, "Email account");
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        const errorChoice = list.itemAtIndex(0);
+        compare(errorChoice.modelData.subtitle, "No se pudo leer el usuario");
+        verify(findText(errorChoice.contentItem, "No se pudo leer el usuario") !== null,
+            "An error update should render its recovery subtitle");
+        compare(usernameRequest.count, 1);
+        verify(!confirm.enabled, "A failed username cannot be approved");
+
+        dialog.requestJson = requestWithUsernameState(token, "ready", "work.user@example.invalid");
+        tryCompare(dialog, "pendingId", "work-entry");
+        compare(dialog.folderFilterId, "work");
+        compare(search.text, "Email account");
+        tryCompare(list, "count", 1);
+        waitForRendering(list);
+        const readyChoice = list.itemAtIndex(0);
+        compare(readyChoice.modelData.subtitle, "work.user@example.invalid");
+        verify(findText(readyChoice.contentItem, "work.user@example.invalid") !== null,
+            "The ready update should render the loaded username");
+        compare(usernameRequest.count, 1);
+        verify(confirm.enabled, "The candidate becomes approvable when its username is ready");
+
+        mouseClick(confirm);
+        tryCompare(dialog, "visible", false);
+        compare(decision.count, 1);
+        compare(Array.from(decision.signalArguments[0]), [token, "work-entry", true]);
     }
 
     function test_approval_emits_only_the_selected_candidate_id() {
