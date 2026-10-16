@@ -1,6 +1,7 @@
 [alias]
 lint = "clippy --all-targets -- --deny warnings"
 format = "fmt --all -- --check"
+xtask = "run --package kryptopass-xtask --"
 
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

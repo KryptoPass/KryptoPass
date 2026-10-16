@@ -70,10 +70,6 @@ Autores: %2
       <translation>-----END PGP PUBLIC KEY BLOCK-----</translation>
     </message>
     <message>
-      <source>&lt;a href="{}" style="</source>
-      <translation>&lt;a href="{}" style="</translation>
-    </message>
-    <message>
       <source>&lt;a style="color:{color}" href="</source>
       <translation>&lt;a style="color:{color}" href="</translation>
     </message>
@@ -344,10 +340,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El destino de la copia no es una ruta local válida.</source>
       <translation>El destino de la copia no es una ruta local válida.</translation>
-    </message>
-    <message>
-      <source>El documento supera el límite experimental de 128 KiB.</source>
-      <translation>El documento supera el límite experimental de 128 KiB.</translation>
     </message>
     <message>
       <source>El elemento seleccionado no es válido.</source>
@@ -1060,6 +1052,14 @@ No incluye contraseñas ni valores de credenciales.
       </translation>
     </message>
     <message>
+      <source>&lt;a href="{url}" style="color:{color}"&gt;Ocultar&lt;/a&gt;</source>
+      <translation>&lt;a href="{url}" style="color:{color}"&gt;Ocultar&lt;/a&gt;</translation>
+    </message>
+    <message>
+      <source>&lt;a href="{url}" style="color:{color}"&gt;{MASK}&lt;/a&gt;</source>
+      <translation>&lt;a href="{url}" style="color:{color}"&gt;{MASK}&lt;/a&gt;</translation>
+    </message>
+    <message>
       <source>Abierta</source>
       <translation>Abierta</translation>
     </message>
@@ -1158,6 +1158,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El archivo %1 ya existe; no se sobrescribió.</source>
       <translation>El archivo %1 ya existe; no se sobrescribió.</translation>
+    </message>
+    <message>
+      <source>El documento Markdown supera el límite de 256 KiB.</source>
+      <translation>El documento Markdown supera el límite de 256 KiB.</translation>
     </message>
     <message>
       <source>El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero.</source>
@@ -4701,10 +4705,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Claves</translation>
     </message>
     <message>
-      <source>Markdown experimental…</source>
-      <translation>Markdown experimental…</translation>
-    </message>
-    <message>
       <source>&amp;Preferencias</source>
       <translation>&amp;Preferencias</translation>
     </message>
@@ -4788,58 +4788,110 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
-    <name>MarkdownDemo</name>
-    <message>
-      <source>Markdown experimental</source>
-      <translation>Markdown experimental</translation>
-    </message>
-    <message>
-      <source>CommonMark + tablas, tareas, tachado, ||spoilers|| y ==resaltado==. Datos ficticios; sin cifrado ni persistencia.</source>
-      <translation>CommonMark + tablas, tareas, tachado, ||spoilers|| y ==resaltado==. Datos ficticios; sin cifrado ni persistencia.</translation>
-    </message>
+    <name>MarkdownEditor</name>
     <message>
       <source>Fuente Markdown</source>
       <translation>Fuente Markdown</translation>
     </message>
     <message>
-      <source>Fuente Markdown de demostración</source>
-      <translation>Fuente Markdown de demostración</translation>
+      <source>Escribe el texto que quieres guardar cifrado.</source>
+      <translation>Escribe el texto que quieres guardar cifrado.</translation>
     </message>
     <message>
-      <source>Vista previa</source>
-      <translation>Vista previa</translation>
+      <source>Deshacer</source>
+      <translation>Deshacer</translation>
     </message>
     <message>
-      <source>Actualizar vista</source>
-      <translation>Actualizar vista</translation>
+      <source>Rehacer</source>
+      <translation>Rehacer</translation>
     </message>
     <message>
-      <source>Ocultar spoilers</source>
-      <translation>Ocultar spoilers</translation>
+      <source>Negrita</source>
+      <translation>Negrita</translation>
     </message>
     <message>
-      <source>Copiar selección</source>
-      <translation>Copiar selección</translation>
+      <source>Negrita · Ctrl+B</source>
+      <translation>Negrita · Ctrl+B</translation>
     </message>
     <message>
-      <source>Segunda vista…</source>
-      <translation>Segunda vista…</translation>
+      <source>Cursiva</source>
+      <translation>Cursiva</translation>
     </message>
     <message>
-      <source>Limpiar documento</source>
-      <translation>Limpiar documento</translation>
+      <source>Cursiva · Ctrl+I</source>
+      <translation>Cursiva · Ctrl+I</translation>
     </message>
     <message>
-      <source>Enlace solicitado (no se abre): %1</source>
-      <translation>Enlace solicitado (no se abre): %1</translation>
+      <source>Tachado</source>
+      <translation>Tachado</translation>
     </message>
     <message>
-      <source>Los enlaces no se abren automáticamente. HTML e imágenes omitidos.</source>
-      <translation>Los enlaces no se abren automáticamente. HTML e imágenes omitidos.</translation>
+      <source>Encabezado</source>
+      <translation>Encabezado</translation>
     </message>
     <message>
-      <source>Segunda vista · estado independiente</source>
-      <translation>Segunda vista · estado independiente</translation>
+      <source>Encabezado de nivel 2</source>
+      <translation>Encabezado de nivel 2</translation>
+    </message>
+    <message>
+      <source>Lista con viñetas</source>
+      <translation>Lista con viñetas</translation>
+    </message>
+    <message>
+      <source>Lista numerada</source>
+      <translation>Lista numerada</translation>
+    </message>
+    <message>
+      <source>Lista de tareas</source>
+      <translation>Lista de tareas</translation>
+    </message>
+    <message>
+      <source>Cita</source>
+      <translation>Cita</translation>
+    </message>
+    <message>
+      <source>Código en línea</source>
+      <translation>Código en línea</translation>
+    </message>
+    <message>
+      <source>Bloque de código</source>
+      <translation>Bloque de código</translation>
+    </message>
+    <message>
+      <source>Insertar enlace</source>
+      <translation>Insertar enlace</translation>
+    </message>
+    <message>
+      <source>Insertar enlace · Ctrl+K</source>
+      <translation>Insertar enlace · Ctrl+K</translation>
+    </message>
+    <message>
+      <source>Insertar spoiler</source>
+      <translation>Insertar spoiler</translation>
+    </message>
+    <message>
+      <source>Resaltar</source>
+      <translation>Resaltar</translation>
+    </message>
+    <message>
+      <source>Editar</source>
+      <translation>Editar</translation>
+    </message>
+    <message>
+      <source>Editar Markdown</source>
+      <translation>Editar Markdown</translation>
+    </message>
+    <message>
+      <source>Previsualizar</source>
+      <translation>Previsualizar</translation>
+    </message>
+    <message>
+      <source>Previsualizar Markdown</source>
+      <translation>Previsualizar Markdown</translation>
+    </message>
+    <message>
+      <source>No hay contenido para previsualizar.</source>
+      <translation>No hay contenido para previsualizar.</translation>
     </message>
   </context>
   <context>
@@ -4847,6 +4899,18 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Documento Markdown</source>
       <translation>Documento Markdown</translation>
+    </message>
+    <message>
+      <source>Spoilers</source>
+      <translation>Spoilers</translation>
+    </message>
+    <message>
+      <source>Ocultar spoiler %1</source>
+      <translation>Ocultar spoiler %1</translation>
+    </message>
+    <message>
+      <source>Mostrar spoiler %1</source>
+      <translation>Mostrar spoiler %1</translation>
     </message>
   </context>
   <context>
@@ -4967,20 +5031,20 @@ https://cuenta.ejemplo.test</translation>
       <translation>Contenido</translation>
     </message>
     <message>
-      <source>Contenido de la nota segura</source>
-      <translation>Contenido de la nota segura</translation>
+      <source>Contenido Markdown de la nota segura</source>
+      <translation>Contenido Markdown de la nota segura</translation>
     </message>
     <message>
-      <source>Escribe la nota que quieres guardar cifrada.</source>
-      <translation>Escribe la nota que quieres guardar cifrada.</translation>
+      <source>Escribe el contenido que quieres guardar cifrado.</source>
+      <translation>Escribe el contenido que quieres guardar cifrado.</translation>
     </message>
     <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
+      <source>Notas adicionales</source>
+      <translation>Notas adicionales</translation>
     </message>
     <message>
-      <source>Notas de la nota segura</source>
-      <translation>Notas de la nota segura</translation>
+      <source>Markdown de las notas adicionales de la nota segura</source>
+      <translation>Markdown de las notas adicionales de la nota segura</translation>
     </message>
     <message>
       <source>Añade contexto opcional.</source>
@@ -5534,12 +5598,20 @@ https://cuenta.ejemplo.test</translation>
       <translation>Contenido</translation>
     </message>
     <message>
-      <source>Sin contenido</source>
-      <translation>Sin contenido</translation>
+      <source>Esta nota no tiene contenido.</source>
+      <translation>Esta nota no tiene contenido.</translation>
     </message>
     <message>
-      <source>Contenido de la nota segura</source>
-      <translation>Contenido de la nota segura</translation>
+      <source>Contenido Markdown de la nota segura</source>
+      <translation>Contenido Markdown de la nota segura</translation>
+    </message>
+    <message>
+      <source>Notas adicionales</source>
+      <translation>Notas adicionales</translation>
+    </message>
+    <message>
+      <source>Markdown de las notas adicionales de la nota segura</source>
+      <translation>Markdown de las notas adicionales de la nota segura</translation>
     </message>
     <message>
       <source>No se puede mostrar este tipo de elemento.</source>

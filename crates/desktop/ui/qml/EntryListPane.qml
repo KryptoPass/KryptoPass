@@ -57,7 +57,7 @@ Controls.Pane {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            ListView {
+            AppListView {
                 id: entryList
                 model: root.activeStore.visibleEntries
                 currentIndex: root.activeStore.visibleEntries.findIndex(e => e.id === root.activeStore.selectedId)

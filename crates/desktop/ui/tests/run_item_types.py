@@ -42,6 +42,12 @@ def prepare_module(destination: Path) -> None:
         ):
             continue
         lines.append(line)
+    shutil.copy2(
+        Path(__file__).resolve().parent / "fixtures" / "MarkdownDocument.qml",
+        destination / "MarkdownDocument.qml",
+    )
+    if not any(line.split()[:1] == ["MarkdownDocument"] for line in lines):
+        lines.append("MarkdownDocument 1.0 MarkdownDocument.qml\n")
     (destination / "qmldir").write_text("".join(lines), encoding="utf-8")
 
 

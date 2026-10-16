@@ -162,8 +162,6 @@ Controls.ApplicationWindow {
             deleteFolderDialog.close();
         if (aboutDialog.opened)
             aboutDialog.close();
-        if (markdownDemo.opened)
-            markdownDemo.close();
         if (keyErrorDialog.opened)
             keyErrorDialog.close();
         if (importDialog.opened)
@@ -597,11 +595,6 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
-                text: qsTr("Markdown experimental…")
-                onTriggered: markdownDemo.open()
-            }
-            Controls.MenuSeparator {}
-            Controls.MenuItem {
                 text: qsTr("Todos los elementos")
                 onTriggered: {
                     root.selectScope(false, "all");
@@ -983,10 +976,6 @@ Controls.ApplicationWindow {
             }
         }
     }
-    MarkdownDemo {
-        id: markdownDemo
-        anchors.centerIn: parent
-    }
     SecretEditor {
         id: editor
         parent: entryDetailPane.editorHost
@@ -997,7 +986,7 @@ Controls.ApplicationWindow {
         focusedItem: root.activeFocusItem
         externalModalOpen: browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened
                            || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
-                           || aboutDialog.opened || markdownDemo.opened || keyErrorDialog.opened || backupDialog.opened || importDialog.opened
+                           || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importDialog.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }

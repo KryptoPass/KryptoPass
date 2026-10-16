@@ -1,0 +1,11 @@
+[package]
+name = "kryptopass-xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "KryptoPass workspace build and packaging commands"
+publish = false
+
+[lints]
+workspace = true

@@ -9,6 +9,7 @@ Controls.Control {
     id: root
     required property MarkdownDocument document
     property bool selectable: true
+    property string accessibleLabel: qsTr("Documento Markdown")
     readonly property var spoilerActions: document?.spoilerActions || []
     readonly property var revealedActions: document?.revealedActions || []
     readonly property string selectedText: textView.selectedText
@@ -73,7 +74,7 @@ Controls.Control {
             selectionColor: Kirigami.Theme.highlightColor
             selectedTextColor: Kirigami.Theme.highlightedTextColor
             font: root.font
-            Accessible.name: qsTr("Documento Markdown")
+            Accessible.name: root.accessibleLabel
             onLinkActivated: link => root.document.activateLink(link)
             HoverHandler {
                 cursorShape: textView.hoveredLink
@@ -87,6 +88,43 @@ Controls.Control {
             text: root.document?.error || ""
             color: Kirigami.Theme.negativeTextColor
             wrapMode: Text.Wrap
+        }
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: root.spoilerActions.length > 0
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.Label {
+                Layout.fillWidth: true
+                text: qsTr("Spoilers")
+                color: Kirigami.Theme.disabledTextColor
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    model: root.spoilerActions
+                    delegate: Controls.ToolButton {
+                        id: spoilerButton
+                        required property int index
+                        required property string modelData
+                        readonly property bool revealed: root.revealedActions.indexOf(spoilerButton.modelData) >= 0
+                        objectName: "markdownSpoilerToggle" + spoilerButton.index
+                        display: Controls.AbstractButton.IconOnly
+                        icon.name: revealed ? "view-visible" : "view-hidden"
+                        activeFocusOnTab: true
+                        Accessible.name: revealed
+                            ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1)
+                            : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: revealed
+                            ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1)
+                            : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
+                        onClicked: root.document.activateLink(spoilerButton.modelData)
+                    }
+                }
+            }
         }
     }
 }

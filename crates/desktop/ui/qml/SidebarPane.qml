@@ -175,7 +175,7 @@ Controls.Pane {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            ListView {
+            AppListView {
                 id: folderList
                 model: root.keysMode ? [] : root.storeAdapter.folderRows
                 activeFocusOnTab: true

@@ -14,45 +14,54 @@ SecretFields {
     onNotesChanged: edited()
 
     function loadFields(fields) {
-        value = fields.value || "";
-        notes = fields.notes || "";
+        const loadedValue = fields.value || "";
+        const loadedNotes = fields.notes || "";
+        value = loadedValue;
+        notes = loadedNotes;
+        contentEditor.resetSource(loadedValue);
+        notesEditor.resetSource(loadedNotes);
     }
 
     function currentFields() { return { value: value, notes: notes }; }
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        value = "";
+        notes = "";
+        contentEditor.clearSensitiveState();
+        notesEditor.clearSensitiveState();
+    }
 
-    spacing: 8
+    spacing: Kirigami.Units.smallSpacing
 
     Controls.Label {
+        Layout.fillWidth: true
         text: qsTr("Contenido")
         font.weight: Font.DemiBold
     }
-    Controls.TextArea {
+    MarkdownEditor {
+        id: contentEditor
+        objectName: "markdownEditor"
+        objectNamePrefix: "markdown"
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 7)
-        text: root.value
-        Accessible.name: qsTr("Contenido de la nota segura")
-        placeholderText: qsTr("Escribe la nota que quieres guardar cifrada.")
-        wrapMode: TextEdit.Wrap
-        selectByMouse: true
-        textFormat: TextEdit.PlainText
-        onTextChanged: root.value = text
+        editorMinimumHeight: Kirigami.Units.gridUnit * 9
+        accessibleName: qsTr("Contenido Markdown de la nota segura")
+        placeholderText: qsTr("Escribe el contenido que quieres guardar cifrado.")
+        onSourceTextEdited: text => root.value = text
     }
 
     Controls.Label {
+        Layout.fillWidth: true
         Layout.topMargin: 16
-        text: qsTr("Notas")
+        text: qsTr("Notas adicionales")
         font.weight: Font.DemiBold
     }
-    Controls.TextArea {
+    MarkdownEditor {
+        id: notesEditor
+        objectName: "markdownNotesEditor"
+        objectNamePrefix: "markdownNotes"
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(implicitHeight, 80)
-        text: root.notes
-        Accessible.name: qsTr("Notas de la nota segura")
+        editorMinimumHeight: Kirigami.Units.gridUnit * 5
+        accessibleName: qsTr("Markdown de las notas adicionales de la nota segura")
         placeholderText: qsTr("Añade contexto opcional.")
-        wrapMode: TextEdit.Wrap
-        selectByMouse: true
-        textFormat: TextEdit.PlainText
-        onTextChanged: root.notes = text
+        onSourceTextEdited: text => root.notes = text
     }
 }

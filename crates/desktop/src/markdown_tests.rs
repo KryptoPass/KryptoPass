@@ -758,9 +758,11 @@ fn commonmark_structure_and_revealed_spoilers_stay_in_allowed_html_subset() -> T
 
 #[test]
 fn source_limit_accepts_exact_byte_boundary_including_multibyte_text() -> TestResult {
+    assert_eq!(MAX_SOURCE_BYTES, 256 * 1024);
     for source in [
         "x".repeat(MAX_SOURCE_BYTES),
         "é".repeat(MAX_SOURCE_BYTES / 2),
+        "🙂".repeat(MAX_SOURCE_BYTES / 4),
     ] {
         assert_eq!(source.len(), MAX_SOURCE_BYTES);
         let mut document = Document::default();
@@ -780,6 +782,7 @@ fn oversized_load_clears_previous_content_reveals_and_actions() -> TestResult {
     for oversized in [
         "x".repeat(MAX_SOURCE_BYTES + 1),
         "é".repeat(MAX_SOURCE_BYTES / 2 + 1),
+        format!("{}x", "é".repeat(MAX_SOURCE_BYTES / 2)),
     ] {
         assert!(oversized.len() > MAX_SOURCE_BYTES);
         let mut document = Document::default();

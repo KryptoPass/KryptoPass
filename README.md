@@ -81,52 +81,48 @@ fotos desde OpenPGP aún no está implementada.
 Los controles usan el estilo KDE y sus fuentes, colores y bordes. El editor
 desplaza el formulario cuando no cabe y mantiene visibles sus botones.
 
-### Markdown experimental
+### Markdown en notas seguras
 
-En **Ver → Markdown experimental…** hay una fuente editable y una vista
-nativa de Qt Quick. «Actualizar vista» interpreta la fuente con Comrak;
-«Segunda vista» utiliza el mismo componente con un documento independiente.
+Los campos «Contenido» y «Notas adicionales» de una nota segura se editan
+como fuente Markdown y se presentan con vista previa en el editor y el detalle.
+La fuente usa los dos campos cifrados existentes (`value` y `notes`); el HTML
+generado es una proyección temporal y no se guarda. La adopción de Markdown
+no cambia el payload ni requiere migrar la bóveda.
+
+Las notas existentes se interpretan como Markdown al abrirlas, sin conversión
+masiva ni reescritura automática: su fuente solo cambia si se edita y guarda.
+En cada campo, «Editar» y «Previsualizar» cambian entre la fuente y su
+presentación. La barra inserta formato para negrita, cursiva, tachado,
+encabezados, listas, citas, código, enlaces, spoilers y resaltado. `Ctrl+B`,
+`Ctrl+I` y `Ctrl+K` insertan negrita, cursiva y enlaces cuando el campo fuente
+tiene el foco.
 
 El perfil admite CommonMark, tachado, tablas, tareas de solo lectura,
 autolinks, `||spoilers||` y `==resaltado==`. `__texto__` sigue siendo negrita.
-El código se presenta monoespaciado, sin resaltado sintáctico por lenguaje.
-No hay callouts, fórmulas, wikilinks ni embeds en este perfil.
+El código se presenta monoespaciado, sin resaltado sintáctico. No hay callouts,
+fórmulas, wikilinks ni embeds. Cada campo admite hasta 256 KiB UTF-8, igual
+que los límites del core para `NoteContent.value` y `NoteContent.notes`.
 
-`src/markdown.rs` contiene el perfil y las reglas por nodo que adaptan el
-HTML a Qt. `MarkdownDocument` expone únicamente la representación temporal
-y las acciones; `MarkdownView.qml` presenta el documento y usa colores KDE.
-El consumidor gestiona el scroll y escucha `linkRequested`; nunca se abren
-enlaces automáticamente. Solo se emiten solicitudes http, https y mailto.
-El HTML incrustado y las imágenes se omiten: no se emiten recursos externos.
+`MarkdownDocument` adapta el AST de Comrak a texto enriquecido restringido de
+Qt; `MarkdownView.qml` lo presenta con colores KDE. HTML incrustado se omite y
+las imágenes se sustituyen por «[Imagen omitida]», sin cargar recursos. Los
+enlaces http, https y mailto solo se abren cuando el usuario los activa; no
+se procesan enlaces ni contenido remoto automáticamente.
 
-Uso mínimo dentro del módulo QML:
+Cada campo Markdown en el editor y el detalle tiene un documento temporal
+propio. Al entrar en «Previsualizar», el editor carga la fuente tras un
+debounce de 120 ms; «Editar» vuelve a mostrar la fuente y conserva el borrador.
+Limpiar o esconder el editor vacía la vista previa y cancela el temporizador
+pendiente. El detalle vuelve a cargar al cambiar de elemento o contenido y
+limpia sus documentos al ocultarse. Cada carga oculta los spoilers e invalida
+acciones anteriores, incluso si la fuente es idéntica. Un spoiler oculto no
+incluye su texto en el HTML renderizado, pero no cifra la fuente por separado.
 
-```qml
-MarkdownDocument { id: noteDocument }
-MarkdownView {
-    document: noteDocument
-    onLinkRequested: link => handleLinkRequest(link)
-}
-// El consumidor carga con noteDocument.load(markdown) y limpia con clear().
-```
-
-Para extender el perfil, activa la opción de Comrak en `profile()` y agrega
-una regla por `NodeValue` en `QtFormatter` si Qt necesita otra representación.
-El consumidor no necesita conocer el formatter ni los identificadores internos.
-
-Un spoiler oculto no incluye su contenido en el HTML del visor. Los botones
-al pie ofrecen la misma acción por teclado. Cargar otra fuente (incluso la
-misma), cerrar la demo o limpiar invalida las acciones de revisiones viejas.
-La selección se limpia al cambiar el HTML para no conservar selecciones de
-contenido ocultado. Cada documento admite hasta 128 KiB de fuente UTF-8 y se
-procesa sin tareas pendientes que puedan repoblarlo después de limpiar.
-
-Los spoilers **no cifran por separado**: la fuente completa permanece en
-memoria Rust mientras el documento está abierto. `clear()` limpia el estado
-y libera la fuente mediante `Zeroizing`, sin garantizar borrar las copias de
-Qt, del parser o del portapapeles. La demo solo usa contenido ficticio y no
-está conectada aún a notas persistidas: el futuro servicio debe conservar
-la fuente Markdown original cifrada y llamar a `clear()` al bloquear/cerrar.
+Al limpiar, Rust libera cada fuente del documento mediante `Zeroizing` y la
+vista vacía sus propiedades Qt. Esto no garantiza borrar copias que Qt, QML,
+el parser o el portapapeles puedan conservar. Las fuentes abiertas también
+forman parte temporal del borrador del editor; bloquear o descartar el editor
+activa su limpieza.
 
 ## La dirección del producto
 
@@ -155,6 +151,18 @@ normal. `just install-dev-desktop` prepara únicamente la entrada y
 En GNU Linux x86_64, la configuración del proyecto selecciona LLD para evitar
 que CXX-Qt elija Gold. El toolchain Rust actual utiliza su copia incluida de
 LLD; los toolchains anteriores que no la incluyen necesitan LLD en el sistema.
+
+La [demo Android y su pipeline](packaging/android-ui/README.md) comparten los
+QML con el escritorio y usan un backend Rust de demostración. `just android-run`
+la abre con Qt del host; `bacon android-run` recompila y reinicia al guardar.
+`just android-doctor` diagnostica el entorno Android y `just android` construye
+el APK ARM64 y comprueba la alineación de 16 KB de sus bibliotecas. CI construye
+ese APK en un job separado. La demo todavía no integra la bóveda real.
+
+`just lint` comprueba que todos los QML estén registrados y analiza cada archivo
+en una copia temporal con el qmldir y los tipos del build actual, incluidos los
+singletons. Falla ante avisos; solo se desactiva `renamed-type`, que Qt 6.12
+emite por importar el mismo módulo como `Backend` junto a sus componentes locales.
 
 ---
 

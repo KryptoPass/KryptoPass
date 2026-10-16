@@ -174,7 +174,7 @@ Controls.Dialog {
             Layout.minimumHeight: 0
             clip: true
             Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-            ListView {
+            AppListView {
                 id: relatedEntryList
                 objectName: root.listObjectName
                 model: root.filteredOptions

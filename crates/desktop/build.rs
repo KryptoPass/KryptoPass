@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/BrowserPairingDialog.qml")
         .qml_file("ui/qml/BrowserAccessDialog.qml")
         .qml_file("ui/qml/BrowserAccessWindow.qml")
+        .qml_file("ui/qml/AppListView.qml")
         .qml_file("ui/qml/PanelHeader.qml")
         .qml_file("ui/qml/PanelFooter.qml")
         .qml_file("ui/qml/SplitterHandle.qml")
@@ -99,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/SecretDetail.qml")
         .qml_file("ui/qml/DetailField.qml")
         .qml_file("ui/qml/MarkdownView.qml")
-        .qml_file("ui/qml/MarkdownDemo.qml")
+        .qml_file("ui/qml/MarkdownEditor.qml")
         .depends([
             "QtQuick",
             "QtQuick.Controls",

@@ -216,6 +216,51 @@ Nota segura (`note`):
 }
 ```
 
+### Markdown de las notas seguras
+
+Los campos existentes `NoteContent.value` y `NoteContent.notes` son la fuente
+Markdown de la nota segura. Se guardan como cadenas dentro del payload
+cifrado; el HTML y las acciones de spoiler son proyecciones temporales de
+`MarkdownDocument`, no se escriben en SQLite ni en el payload. Ambos campos
+conservan su límite de 256 KiB UTF-8. Activar Markdown no cambia el esquema
+del contenido, el formato de respaldo ni requiere una migración.
+
+Las cadenas ya guardadas se interpretan como Markdown al abrirlas; mostrar o
+previsualizar no modifica ni convierte el contenido persistido. No hay una
+conversión masiva. Los controles `Editar` y `Previsualizar` cambian de modo;
+la barra de formato inserta sintaxis en la fuente, y `Ctrl+B`, `Ctrl+I` y
+`Ctrl+K` insertan negrita, cursiva y enlaces cuando el campo fuente tiene foco.
+
+El editor conserva la fuente en su borrador QML y utiliza un documento
+independiente por campo. Al entrar en `Previsualizar`, carga la fuente tras un
+debounce de 120 ms; `Editar` vuelve a mostrar la fuente y conserva el borrador.
+Restablecer la fuente oculta spoilers y limpia la selección, el documento
+anterior y el historial nativo de deshacer. Ocultar la vista previa limpia su
+salida y cualquier temporizador pendiente. El detalle también mantiene un
+documento por campo, lo vuelve a cargar al cambiar el ID o los campos (aunque
+el texto sea igual) y lo limpia al ocultarse. Los documentos no viven en el
+modelo global de navegación. Al cambiar de tipo de elemento, `SecretFieldsHost`
+conserva los borradores como para los demás formularios, pero las vistas
+previas Markdown quedan limpias. Cerrar o descartar el editor limpia también
+esas fuentes QML.
+
+El perfil usa CommonMark con tachado, tablas, tareas, autolinks, `||spoilers||`
+y `==resaltado==`; `__texto__` continúa siendo negrita. Los bloques y marcas
+HTML se omiten, y las imágenes se sustituyen por un marcador sin descargar
+recursos. Solo enlaces http, https y mailto pueden solicitar apertura, y la
+vista los abre tras un clic explícito. El usuario no puede insertar atributos
+HTML ni contenido remoto en el documento renderizado.
+
+Un spoiler oculto no incluye su texto en el HTML; su máscara tiene longitud
+fija y sus acciones caducan al cargar otra fuente o limpiar el documento. En
+la vista, acciones `Mostrar` y `Ocultar` también están disponibles mediante
+botones accesibles por teclado. El spoiler no tiene cifrado propio: la fuente
+completa permanece en el borrador QML mientras se edita y en memoria Rust
+mientras cada documento está abierto.
+`clear()` libera la fuente Rust mediante `Zeroizing` y vacía las propiedades
+Qt. Esto no garantiza borrar todas las copias que Qt, QML, el parser o el
+portapapeles puedan conservar.
+
 Los campos de texto son cadenas obligatorias; una cadena vacía representa un
 campo sin valor. `urls` es la lista completa y ordenada de sitios (hasta 100,
 8 KiB cada uno); `url` conserva compatibilidad y debe ser igual al primer

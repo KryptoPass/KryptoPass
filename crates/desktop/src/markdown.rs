@@ -1,4 +1,4 @@
-//! Experimental presentation engine: Comrak AST -> Qt's restricted rich text.
+//! Renders note Markdown as Qt's restricted rich text.
 //! Original Markdown remains separate from the disposable rendered document.
 
 use comrak::{
@@ -11,7 +11,7 @@ use std::{
 };
 use zeroize::Zeroizing;
 
-pub const MAX_SOURCE_BYTES: usize = 128 * 1024;
+pub const MAX_SOURCE_BYTES: usize = 256 * 1024;
 const ACTION_SCHEME: &str = "kryptopass-spoiler:";
 static NEXT_REVISION: AtomicU64 = AtomicU64::new(1);
 
@@ -75,7 +75,7 @@ impl Document {
     pub fn load(&mut self, source: &str) -> Result<(), &'static str> {
         self.clear();
         if source.len() > MAX_SOURCE_BYTES {
-            return Err("El documento supera el límite experimental de 128 KiB.");
+            return Err("El documento Markdown supera el límite de 256 KiB.");
         }
         self.source.push_str(source);
         Ok(())
@@ -198,28 +198,20 @@ create_formatter!(QtFormatter<RenderState>, {
 
             if !context.user.revealed.contains(&index) {
                 let url = action(context.user.revision, index);
-                let background = context.user.theme.border.clone();
+                let color = context.user.theme.border.clone();
 
                 // Máscara fija: no revela la longitud del secreto.
                 const MASK: &str = "████████████";
 
-                write!(
-                    context,
-                    concat!(
-                        "<a href=\"{}\" style=\"",
-                        "background-color:{};",
-                        "color:{};",
-                        "text-decoration:none;",
-                        "\">{}</a>"
-                    ),
-                    url,
-                    background,
-                    background,
-                    MASK
-                )?;
+                write!(context, "<a href=\"{url}\" style=\"color:{color}\">{MASK}</a>")?;
 
                 return Ok(ChildRendering::Skip);
             }
+        } else if context.user.revealed.contains(&index) {
+            let url = action(context.user.revision, index);
+            let color = context.user.theme.link.clone();
+            context.write_str(" ")?;
+            write!(context, "<a href=\"{url}\" style=\"color:{color}\">Ocultar</a>")?;
         }
     },
     NodeValue::Highlight => |context, entering| {

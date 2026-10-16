@@ -38,11 +38,36 @@ define el contrato de carga, borrador y limpieza de cada formulario;
 limpia tanto el formulario activo como los borradores al cerrar.
 `SecretContentView` define los datos y señales de cada detalle. `SecretEditor`
 y `SecretDetail` cargan esos componentes sin conocer sus campos específicos.
-`SecretTextSection` comparte la presentación del texto de notas.
+`SecretTextSection` comparte la presentación del texto de notas. Los dos
+campos de una nota segura (`value` y `notes`) se editan con `MarkdownEditor`;
+el componente conserva el texto fuente del borrador y su documento de vista
+previa. `NoteDetail` presenta ambos campos con `MarkdownView`, cada uno con su
+propio `MarkdownDocument` temporal.
 El editor del elemento solicita una proyección temporal al controlador y
 conserva el borrador hasta la confirmación del guardado. Cerrar con cambios
 pendientes requiere confirmar su descarte. `PasswordGenerator` recoge las
 opciones y solicita la generación al core; QML no genera aleatoriedad.
+
+`MarkdownEditor` separa el texto fuente del HTML de la vista previa. Restablecer
+una fuente limpia selección, documento y deshacer nativo; ocultar la vista
+previa limpia también su documento y el temporizador pendiente, y mostrarla
+vuelve a cargar la fuente con los spoilers ocultos. `NoteDetail` vuelve a
+cargar cada documento al cambiar el ID o los campos, aunque el texto coincida,
+y los limpia al ocultarse. `MarkdownDocument` pertenece a la vista que lo usa;
+no es un modelo de lista ni un servicio de persistencia.
+
+La barra de `MarkdownEditor` inserta sintaxis de formato en la fuente y ofrece
+`Editar` y `Previsualizar`. `Ctrl+B`, `Ctrl+I` y `Ctrl+K` insertan negrita,
+cursiva y un enlace cuando el campo fuente tiene el foco. Al cambiar de tipo,
+`SecretFieldsHost` conserva el borrador como para los demás formularios,
+mientras el editor Markdown elimina su proyección de vista previa; cerrar o
+descartar limpia también el borrador.
+
+El renderizador adapta CommonMark más tachado, tablas, tareas, autolinks,
+spoilers y resaltado a texto enriquecido restringido de Qt. Los enlaces
+permitidos (http, https y mailto) se abren solo tras una activación explícita;
+el HTML de usuario se omite y las imágenes se sustituyen por un marcador, sin
+cargar recursos.
 
 `FolderEditor` edita título, icono y color como un único borrador.
 `FolderAppearancePicker` agrupa las cuadrículas de colores e iconos del tema.
@@ -59,8 +84,7 @@ eliminación solicitan confirmación y la ventana ejecuta la operación. Las
 mutaciones actualizan la lista después de la persistencia, no al solicitarse.
 
 `AboutDialog` contiene la información de la aplicación y `KeyErrorDialog` presenta
-el error observable del controlador. La demo Markdown y los componentes de
-detalle existentes mantienen sus contratos.
+el error observable del controlador.
 
 `SecretStore` adapta únicamente metadatos de `SecretsController` para la
 búsqueda, ordenación, selección y navegación. `MockStore` conserva fixtures

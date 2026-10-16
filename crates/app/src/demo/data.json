@@ -1,0 +1,125 @@
+{
+  "folders": [
+    {
+      "id": "personal",
+      "name": "Personal",
+      "parent": ""
+    },
+    {
+      "id": "finance",
+      "name": "Finanzas",
+      "parent": "personal"
+    },
+    {
+      "id": "work",
+      "name": "Trabajo",
+      "parent": ""
+    },
+    {
+      "id": "projects",
+      "name": "Proyectos",
+      "parent": "work"
+    }
+  ],
+  "entries": [
+    {
+      "id": "1",
+      "folder": "personal",
+      "title": "Correo personal",
+      "kind": "login",
+      "format": "Texto",
+      "value": "usuario: ana@example.test\ncontraseña: ejemplo-correo-123",
+      "details": {
+        "url": "https://correo.example.test",
+        "username": "ana@example.test",
+        "password": "ejemplo-correo-123"
+      },
+      "notes": "Cuenta de demostración",
+      "recipients": "Llave A",
+      "favorite": true,
+      "trashed": false
+    },
+    {
+      "id": "2",
+      "folder": "personal",
+      "title": "Nota privada",
+      "kind": "note",
+      "format": "Texto",
+      "value": "Esta nota es ficticia. Aquí puedes probar el editor de KryptoPass.",
+      "details": {},
+      "notes": "",
+      "recipients": "Llave A, Llave B",
+      "favorite": false,
+      "trashed": false
+    },
+    {
+      "id": "3",
+      "folder": "finance",
+      "title": "Código de recuperación",
+      "kind": "note",
+      "format": "Texto",
+      "value": "DEMO-0000-1111-2222",
+      "details": {},
+      "notes": "Ejemplo sin valor real",
+      "recipients": "Llave B",
+      "favorite": true,
+      "trashed": false
+    },
+    {
+      "id": "4",
+      "folder": "work",
+      "title": "VPN de pruebas",
+      "kind": "login",
+      "format": "Texto",
+      "value": "servidor: vpn.example.test\nusuario: demo\ncontraseña: solo-demostracion",
+      "details": {
+        "url": "https://vpn.example.test",
+        "username": "demo",
+        "password": "solo-demostracion"
+      },
+      "notes": "Entorno de pruebas",
+      "recipients": "Llave C",
+      "favorite": false,
+      "trashed": false
+    },
+    {
+      "id": "5",
+      "folder": "projects",
+      "title": "Token de desarrollo",
+      "kind": "note",
+      "format": "Texto",
+      "value": "demo_token_abcdef123456",
+      "details": {},
+      "notes": "API ficticia",
+      "recipients": "Llave A, Llave C",
+      "favorite": false,
+      "trashed": false
+    },
+    {
+      "id": "6",
+      "folder": "work",
+      "title": "Certificado de prueba",
+      "kind": "note",
+      "format": "Binario",
+      "value": "00 01 02 03 AB CD EF",
+      "details": {},
+      "notes": "Bytes ficticios en hexadecimal",
+      "recipients": "Llave C",
+      "favorite": false,
+      "trashed": false
+    },
+    {
+      "id": "7",
+      "folder": "personal",
+      "title": "Nota antigua",
+      "kind": "note",
+      "format": "Texto",
+      "value": "Ejemplo en la papelera",
+      "details": {},
+      "notes": "",
+      "recipients": "Llave A",
+      "favorite": false,
+      "trashed": true
+    }
+  ]
+}

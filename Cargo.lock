@@ -1246,6 +1246,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kryptopass-xtask"
+version = "0.1.0"
+
+[[package]]
+name = "kryptopass_app"
+version = "0.1.0"
+dependencies = [
+ "cxx",
+ "cxx-qt",
+ "cxx-qt-build",
+ "cxx-qt-lib",
+ "serde_json",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
