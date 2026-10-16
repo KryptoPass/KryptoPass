@@ -10,7 +10,7 @@ use std::{
 };
 
 use gpgme::{Context, InteractionStatus, Interactor, Key};
-use zeroize::Zeroizing;
+use kryptopass_secure_memory::SensitiveBytes;
 
 use super::files::{self, MAX_KEY_BLOB_BYTES};
 
@@ -91,9 +91,7 @@ fn wait_with_timeout(child: &mut Child, timeout: Duration) -> Result<ExitStatus,
     }
 }
 
-pub(super) fn generate_revocation_certificate(
-    fingerprint: &str,
-) -> Result<Zeroizing<Vec<u8>>, String> {
+pub(super) fn generate_revocation_certificate(fingerprint: &str) -> Result<SensitiveBytes, String> {
     let temporary =
         files::create_secure_temp_directory(std::env::temp_dir(), "kryptopass-revocation")?;
     let output_path = temporary.path().join("revocation.asc");
@@ -335,8 +333,8 @@ pub(super) fn revocation_file_path(context: &Context, fingerprint: &str) -> Opti
 }
 
 pub(super) fn normalize_revocation_certificate(
-    raw: Zeroizing<Vec<u8>>,
-) -> Result<Zeroizing<Vec<u8>>, String> {
+    raw: SensitiveBytes,
+) -> Result<SensitiveBytes, String> {
     const BEGIN: &[u8] = b"-----BEGIN PGP PUBLIC KEY BLOCK-----";
     const END: &[u8] = b"-----END PGP PUBLIC KEY BLOCK-----";
 
@@ -358,7 +356,7 @@ pub(super) fn normalize_revocation_certificate(
     let end = ends[0] + END.len();
     let block = &raw[start..end];
     validate_armored_public_key_block(block)?;
-    Ok(Zeroizing::new(block.to_vec()))
+    Ok(SensitiveBytes::from(block))
 }
 
 fn validate_armored_public_key_block(block: &[u8]) -> Result<(), String> {

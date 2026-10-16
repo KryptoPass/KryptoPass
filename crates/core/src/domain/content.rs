@@ -10,9 +10,10 @@ mod ssh_key;
 mod totp;
 mod wifi;
 
+use crate::SensitiveBytes;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::SecretKind;
 pub use crate::otp::TotpUriParameter;
@@ -187,67 +188,125 @@ enum EnvelopeRef<'a> {
     },
 }
 
-#[derive(Deserialize, Zeroize, ZeroizeOnDrop)]
-#[serde(tag = "kind", deny_unknown_fields)]
+#[derive(Zeroize, ZeroizeOnDrop)]
 enum StoredEnvelope {
-    #[serde(rename = "login")]
     Login {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Box<login::StoredFields>,
     },
-    #[serde(rename = "note")]
     Note {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: NoteContent,
     },
-    #[serde(rename = "custom")]
     Custom {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<CustomContent>,
     },
-    #[serde(rename = "card")]
     Card {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<CardContent>,
     },
-    #[serde(rename = "totp")]
     Totp {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<TotpContent>,
     },
-    #[serde(rename = "identity")]
     Identity {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<IdentityContent>,
     },
-    #[serde(rename = "wifi")]
     Wifi {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<WifiContent>,
     },
-    #[serde(rename = "license")]
     License {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<LicenseContent>,
     },
-    #[serde(rename = "ssh-key")]
     SshKey {
-        #[serde(rename = "schemaVersion")]
         schema_version: u32,
         fields: Option<SshKeyContent>,
     },
 }
 
+// Borrow the raw fields instead of serde's internally tagged content buffer,
+// which would retain private strings in ordinary heap allocations.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BorrowedEnvelope<'a> {
+    schema_version: u32,
+    kind: StoredKind,
+    #[serde(borrow)]
+    fields: &'a serde_json::value::RawValue,
+}
+
+#[derive(Deserialize)]
+enum StoredKind {
+    #[serde(rename = "login")]
+    Login,
+    #[serde(rename = "note")]
+    Note,
+    #[serde(rename = "custom")]
+    Custom,
+    #[serde(rename = "card")]
+    Card,
+    #[serde(rename = "totp")]
+    Totp,
+    #[serde(rename = "identity")]
+    Identity,
+    #[serde(rename = "wifi")]
+    Wifi,
+    #[serde(rename = "license")]
+    License,
+    #[serde(rename = "ssh-key")]
+    SshKey,
+}
+
+fn read_envelope(bytes: &[u8]) -> Result<StoredEnvelope> {
+    let envelope: BorrowedEnvelope<'_> = serde_json::from_slice(bytes)?;
+    let schema_version = envelope.schema_version;
+    let raw = envelope.fields.get();
+    Ok(match envelope.kind {
+        StoredKind::Login => StoredEnvelope::Login {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Note => StoredEnvelope::Note {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Custom => StoredEnvelope::Custom {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Card => StoredEnvelope::Card {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Totp => StoredEnvelope::Totp {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Identity => StoredEnvelope::Identity {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::Wifi => StoredEnvelope::Wifi {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::License => StoredEnvelope::License {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+        StoredKind::SshKey => StoredEnvelope::SshKey {
+            schema_version,
+            fields: serde_json::from_str(raw)?,
+        },
+    })
+}
+
 /// Encodes validated content. The plaintext buffer is zeroized on drop.
-pub fn encode_content(content: &SecretContent) -> Result<Zeroizing<Vec<u8>>> {
+pub fn encode_content(content: &SecretContent) -> Result<SensitiveBytes> {
     content.validate()?;
     let envelope = match content {
         SecretContent::Login(login) => EnvelopeRef::Login {
@@ -287,8 +346,9 @@ pub fn encode_content(content: &SecretContent) -> Result<Zeroizing<Vec<u8>>> {
             fields: content,
         },
     };
-    let mut bytes = Zeroizing::new(Vec::new());
-    serde_json::to_writer(&mut *bytes, &envelope).context("could not encode secret content")?;
+    let mut bytes = SensitiveBytes::new();
+    serde_json::to_writer(bytes.bounded_writer(MAX_CONTENT_BYTES), &envelope)
+        .context("could not encode secret content")?;
     ensure!(
         bytes.len() <= MAX_CONTENT_BYTES,
         "secret content exceeds the maximum size"
@@ -303,7 +363,7 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
         "secret content exceeds the maximum size"
     );
     let mut envelope: StoredEnvelope =
-        serde_json::from_slice(bytes).context("could not decode secret content envelope")?;
+        read_envelope(bytes).context("could not decode secret content envelope")?;
     let content = match &mut envelope {
         StoredEnvelope::Login {
             schema_version,

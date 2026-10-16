@@ -22,25 +22,25 @@ fn activity_export_preserves_all_events_and_exact_times_without_credentials() {
         );
     }
     let login = LoginContent {
-        username: "fake-history-user@example.invalid".to_owned(),
-        password: "fake-history-password-unique".to_owned(),
-        url: "https://fake-history-site.invalid".to_owned(),
-        urls: vec!["https://fake-history-site.invalid".to_owned()],
-        notes: "fake-history-private-notes".to_owned(),
+        username: "fake-history-user@example.invalid".into(),
+        password: "fake-history-password-unique".into(),
+        url: "https://fake-history-site.invalid".into(),
+        urls: vec!["https://fake-history-site.invalid".into()],
+        notes: "fake-history-private-notes".into(),
         totp: Some(TotpConfig {
-            secret: "JBSWY3DPEHPK3PXP".to_owned(),
+            secret: "JBSWY3DPEHPK3PXP".into(),
             algorithm: TotpAlgorithm::Sha1,
             digits: 6,
             period: 30,
-            issuer: Some("fake-history-issuer".to_owned()),
-            account: Some("fake-history-account".to_owned()),
+            issuer: Some("fake-history-issuer".into()),
+            account: Some("fake-history-account".into()),
             original_label: None,
             extensions: vec![],
         }),
         history: Box::default(),
     };
     history
-        .record_password("fake-legacy-password-unique".to_owned(), first_timestamp)
+        .record_password("fake-legacy-password-unique".into(), first_timestamp)
         .unwrap();
     history
         .record_version(&login, "fake-history-title", first_timestamp)

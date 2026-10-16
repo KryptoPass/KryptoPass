@@ -27,7 +27,7 @@ Controls.Pane {
     property bool dirty: false
     property bool externalModalOpen: false
     property bool preparingSecretMaterial: false
-    property string baselineJson: ""
+    DraftBaseline { id: draftBaseline }
     property string requestedId: ""
     property string pendingEntryId: ""
     property string discardAction: ""
@@ -78,7 +78,7 @@ Controls.Pane {
     }
 
     function updateDirty() {
-        dirty = loaded && baselineJson !== JSON.stringify(currentDraft());
+        dirty = loaded && !draftBaseline.matches(currentDraft());
     }
 
     function requestEntry(id) {
@@ -183,7 +183,7 @@ Controls.Pane {
 
         waitingForEditor = false;
         loaded = true;
-        baselineJson = JSON.stringify(currentDraft());
+        draftBaseline.capture(currentDraft());
         dirty = false;
         opened = true;
         const flickable = editorScroll.contentItem as Flickable;
@@ -266,7 +266,7 @@ Controls.Pane {
         waitingForEditor = false;
         loaded = false;
         dirty = false;
-        baselineJson = "";
+        draftBaseline.clear();
         requestedId = "";
         entryId = "";
         relatedEntryId = "";

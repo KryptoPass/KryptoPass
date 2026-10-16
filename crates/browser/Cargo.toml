@@ -7,6 +7,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+kryptopass-secure-memory = { path = "../secure-memory" }
 anyhow = "1"
 base64 = "0.22"
 crypto_box = { version = "0.9.1", features = ["std"] }

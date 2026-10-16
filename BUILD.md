@@ -2,7 +2,7 @@
 
 ## Prerrequisitos
 
-- Qt 6 + QML (verificado con 6.12): `qmake6`, headers, `qmllint`, plugin
+- Qt 6 + QML (verificado con 6.12): `qmake6` (o `QMAKE`), headers, `qmllint`, plugin
   offscreen. Kirigami KF6 y el estilo `org.kde.desktop`:
   `qml6-module-org-kde-kirigami` (o el paquete equivalente de tu distro).
 - Rust reciente (ver `rust-toolchain.toml`; `rustup` lo instala solo).
@@ -29,6 +29,23 @@ bacon         # check continuo en fondo (q = job qmllint)
 - Estilo QML fijado en código (`org.kde.desktop`); override con
   `QT_QUICK_CONTROLS_STYLE`.
 - Licencia: GPL-3.0-or-later (`COPYING`).
+
+## Rutas de compilación y herramientas Qt
+
+Las recetas y herramientas de escritorio consultan `cargo metadata` para
+localizar los binarios y módulos QML. Respetan `CARGO_TARGET_DIR` y el
+`build.target-dir` de Cargo, incluso fuera del checkout. Los binarios usados
+por smoke y capturas corresponden al perfil debug; instalación usa release.
+
+`QMAKE=/ruta/a/qmake6 just verify` selecciona las herramientas de esa instalación
+Qt para Cargo, traducciones y QML. Para las dependencias KDE fuera de las rutas
+del sistema, configura `CMAKE_PREFIX_PATH` (y `CMAKE_TOOLCHAIN_FILE` si procede).
+
+Configura el editor para lanzar `just qmlls`: primero regenera los tipos y pasa
+al servidor el directorio QML del build actual. Si el editor lanza `qmlls`
+directamente, proporciona ese directorio mediante `--build-dir` o
+`QMLLS_BUILD_DIRS`. La configuración `.qmlls.ini` desactiva los builds CMake
+automáticos; la compilación la controla Cargo.
 
 ## Integración de escritorio y distribución
 

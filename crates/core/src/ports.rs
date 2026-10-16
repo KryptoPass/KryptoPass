@@ -1,7 +1,7 @@
 //! Infrastructure capabilities required by the application service.
 
+use crate::SensitiveBytes;
 use anyhow::Result;
-use zeroize::Zeroizing;
 
 use crate::domain::{Folder, FolderId, RecipientSet, Secret, SecretId, SecretLink, SecretMetadata};
 
@@ -115,7 +115,7 @@ pub trait OpenPgp {
 
     fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>>;
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>>;
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes>;
 }
 
 /// Adds one encrypted batch atomically without replacing existing records.

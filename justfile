@@ -7,12 +7,11 @@
 
 set shell := ["bash", "-uc"]
 
-# Qt QML import path del sistema (Kirigami vive ahí).
-qml_system := `qmake6 -query QT_INSTALL_QML`
-# Tipos generados por CXX-Qt para nuestro módulo (ShellController, KeyringController, ...).
-qml_local := "target/cxxqt/qml_modules"
-qml_tools := `qmake6 -query QT_HOST_BINS`
-qml_uri := `python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["metadata"]["kryptopass"]["app-id"])'`
+# Rutas del build activo de Cargo y herramientas de la instalación Qt elegida.
+target_dir := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import cargo_target_directory; print(cargo_target_directory())'`
+qml_local := target_dir / "cxxqt/qml_modules"
+desktop_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import desktop_binary; print(desktop_binary())'`
+qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 
 _default:
     @just --list
@@ -53,10 +52,12 @@ lint: check
     import subprocess
     import sys
     import tempfile
+    sys.path.insert(0, "packaging")
+    from metadata import cargo_target_directory, load_metadata, qt_query, qt_tool
     root = Path("crates/desktop")
     sources = {str(path.relative_to(root)) for path in (root / "ui/qml").rglob("*.qml")}
-    module_path = Path(*"{{ qml_uri }}".split("."))
-    module = Path("{{ qml_local }}") / module_path
+    module_path = Path(*load_metadata()["app-id"].split("."))
+    module = cargo_target_directory() / "cxxqt/qml_modules" / module_path
     qmldir = module / "qmldir"
     registered = {line.split()[-1] for line in qmldir.read_text().splitlines() if line.endswith(".qml")}
     if sources != registered:
@@ -81,8 +82,8 @@ lint: check
             lines.append(line)
         (staged / "qmldir").write_text("\n".join(lines) + "\n")
         # The module is imported as Backend alongside its local QML types; Qt 6.12 calls these renamed types.
-        result = subprocess.run(["{{ qml_tools }}/qmllint", "--max-warnings", "0", "--renamed-type", "disable",
-                                 "-I", str(imports), "-I", "{{ qml_system }}", *map(str, sorted(staged.glob("*.qml")))],
+        result = subprocess.run([qt_tool("qmllint"), "--max-warnings", "0", "--renamed-type", "disable",
+                                 "-I", str(imports), "-I", qt_query("QT_INSTALL_QML"), *map(str, sorted(staged.glob("*.qml")))],
                                 capture_output=True, text=True)
         for stream, diagnostic in [(sys.stdout, result.stdout), (sys.stderr, result.stderr)]:
             for source in sources:
@@ -95,15 +96,21 @@ lint: check
 test:
     cargo test --workspace
 
+# Memoria sensible y restricciones del proceso en pruebas aisladas.
+test-security:
+    cargo test -p kryptopass-secure-memory
+    cargo test -p kryptopass-desktop process_security::tests
+    cargo test -p kryptopass-desktop infrastructure::openpgp::tests
+
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 test-items: check
     python3 crates/desktop/ui/tests/run_item_types.py
 
 # Ciclo de favicons con transporte simulado, sin acceso a internet.
 test-icons:
-    cmake -S crates/desktop/native-tests -B target/native-tests
-    cmake --build target/native-tests --parallel 2
-    ctest --test-dir target/native-tests --output-on-failure
+    cmake -S crates/desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
+    cmake --build {{ quote(target_dir / "native-tests") }} --parallel 2
+    ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure
 
 # Smoke offscreen: arranca y falla si el log trae errores QML.
 smoke: build
@@ -113,7 +120,7 @@ smoke: build
     trap 'rm -rf "$profile"' EXIT
     mkdir -m 700 "$profile/data" "$profile/config" "$profile/cache" "$profile/gnupg"
     export XDG_DATA_HOME="$profile/data" XDG_CONFIG_HOME="$profile/config" XDG_CACHE_HOME="$profile/cache" GNUPGHOME="$profile/gnupg"
-    out=$(timeout 10 bash -c 'QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 exec target/debug/kryptopass-desktop' 2>&1)
+    out=$(timeout 10 env QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 {{ quote(desktop_binary) }} 2>&1)
     status=$?
     echo "$out" | tail -n 8
     if echo "$out" | grep -Ei "not installed|Unable to assign|failed to load|Unknown style|QQmlApplicationEngine failed|Invalid property assignment|Cannot assign|ReferenceError|TypeError|Binding loop|Detected anchors on an item that is managed by a layout|undefined behavior" >/dev/null; then
@@ -138,7 +145,7 @@ uninstall-dev-desktop:
     python3 packaging/dev_desktop.py uninstall
 
 # Puerta completa rápida (sin lanzar la app).
-verify: fmt check clippy lint test-icons test-items test test-packaging metadata translations-check licenses android-check
+verify: fmt check clippy lint test-icons test-items test test-packaging metadata translations-check licenses
 
 # Gate pre-push: todo verde y árbol limpio.
 ready: verify clean
@@ -191,36 +198,8 @@ browser-fork extension_dir:
 
 # Registro de usuario: --browser firefox, chromium, brave o brave-origin.
 browser-install-dev *args: browser-build
-    python3 packaging/browser_integration.py install --proxy target/debug/kryptopass-browser-proxy {{ args }}
+    python3 packaging/browser_integration.py install --proxy {{ quote(target_dir / "debug/kryptopass-browser-proxy") }} {{ args }}
 
-# APK ARM64: Cargo compila Rust/CXX-Qt; Qt y Gradle empaquetan la demo.
-android *args:
-    cargo xtask android build {{ args }}
-
-alias android-ui := android
-
-# Diagnóstico Android sin descargar dependencias ni compilar la aplicación.
-android-doctor *args:
-    cargo xtask android doctor {{ args }}
-
-# Valida ZIP y todos los ELF del APK generado para páginas de memoria de 16 KB.
-android-apk-check *args:
-    cargo xtask android apk-check {{ args }}
-
-# Composición demo en una ventana del host; no requiere SDK/NDK Android.
-android-run:
-    cargo xtask android run
-
-# Versiones de referencia compartidas con CI y las instrucciones de instalación.
-android-versions:
-    cargo --quiet xtask android versions
-
-# Arranque y circuito de señales QML/Rust de la demo con el Qt del host.
-android-ui-smoke:
-    cargo xtask android smoke
-
-android-check:
-    cargo clippy -p kryptopass-xtask --all-targets -- -D warnings
-    cargo test -p kryptopass-xtask
-    cargo clippy -p kryptopass_app --features demo --all-targets -- -D warnings
-    cargo test -p kryptopass_app --features demo
+# Servidor QML con la ubicación del build que informa Cargo.
+qmlls: check
+    {{ quote(qml_tools / "qmlls") }} --no-cmake-calls --build-dir {{ quote(qml_local) }}

@@ -4,12 +4,12 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use anyhow::Result;
+use kryptopass_core::SensitiveBytes;
 use kryptopass_core::{
     Folder, FolderId, KeyFingerprint, LoginContent, LoginHistoryEventKind, NoteContent, OpenPgp,
     RecipientSelection, RecipientSet, Secret, SecretContent, SecretId, SecretKind, SecretMetadata,
     SecretsService, Storage, encode_content,
 };
-use zeroize::Zeroizing;
 
 #[derive(Default)]
 struct Calls {
@@ -111,8 +111,8 @@ impl OpenPgp for ReversibleTestCrypto {
         Ok(transform(plaintext))
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-        Ok(Zeroizing::new(transform(ciphertext)))
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
+        Ok(transform(ciphertext).into())
     }
 }
 
@@ -129,7 +129,7 @@ impl Fixture {
             icon: None,
             id: SecretId::new(),
             folder_id: None,
-            title: "Original title".to_owned(),
+            title: "Original title".into(),
             kind: content.kind(),
             recipients: RecipientSet::new(vec![
                 KeyFingerprint::parse("0123456789ABCDEF0123456789ABCDEF01234567").unwrap(),
@@ -159,7 +159,7 @@ impl Fixture {
         self.service.save_content(
             Some(original.id),
             original.folder_id,
-            "Edited title".to_owned(),
+            "Edited title".into(),
             RecipientSelection::Explicit(original.recipients),
             content,
             Some(original.revision),
@@ -184,22 +184,22 @@ impl Fixture {
 
 fn sample_login() -> LoginContent {
     let previous = LoginContent {
-        username: "user@example.org".to_owned(),
-        password: "previous password".to_owned(),
-        url: "https://example.org/login".to_owned(),
-        urls: vec!["https://example.org/login".to_owned()],
-        notes: "Recovery information".to_owned(),
+        username: "user@example.org".into(),
+        password: "previous password".into(),
+        url: "https://example.org/login".into(),
+        urls: vec!["https://example.org/login".into()],
+        notes: "Recovery information".into(),
         totp: None,
         history: Box::default(),
     };
     let mut current = previous.clone();
-    current.password = "current password".to_owned();
+    current.password = "current password".into();
     current
         .history
         .record_event(LoginHistoryEventKind::Create, 5);
     current
         .history
-        .record_password("legacy password".to_owned(), 10)
+        .record_password("legacy password".into(), 10)
         .unwrap();
     current
         .history
@@ -210,8 +210,8 @@ fn sample_login() -> LoginContent {
 
 fn sample_note() -> NoteContent {
     NoteContent {
-        value: "Private note content".to_owned(),
-        notes: "Additional private context".to_owned(),
+        value: "Private note content".into(),
+        notes: "Additional private context".into(),
     }
 }
 
@@ -255,8 +255,8 @@ fn login_edit_keeps_its_type_and_retains_previous_history() {
     let mut fixture = Fixture::new(SecretContent::Login(sample_login()));
     let original = fixture.stored();
     let mut updated = sample_login();
-    updated.username = "updated@example.org".to_owned();
-    updated.password = "updated password".to_owned();
+    updated.username = "updated@example.org".into();
+    updated.password = "updated password".into();
     updated.history = Box::default();
 
     assert_eq!(
@@ -306,8 +306,8 @@ fn note_edit_keeps_its_type_and_updates_its_content() {
     assert_eq!(
         fixture
             .save_edit(SecretContent::Note(NoteContent {
-                value: "Updated private note".to_owned(),
-                notes: "Updated context".to_owned(),
+                value: "Updated private note".into(),
+                notes: "Updated context".into(),
             }))
             .unwrap(),
         original.id

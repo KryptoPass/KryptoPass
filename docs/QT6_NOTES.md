@@ -181,8 +181,6 @@ viejo. Si se necesita configurar políticas sin elevar el mínimo, existe
 - **QTP0001:** el prefijo de recursos QML por defecto pasa a `:/qt/qml/`.
   Evita que cada aplicación invente una ruta y permite al engine encontrar el
   módulo por su import path normal.
-- **QTP0002:** permite expresiones generadoras en ciertas rutas específicas de
-  Android.
 - **QTP0003:** hace que las librerías Qt respeten `BUILD_SHARED_LIBS`.
 - **QTP0004:** crea `qmldir` adicionales para subdirectorios de QML. Es útil,
   pero obliga a que el layout y los imports sean coherentes.

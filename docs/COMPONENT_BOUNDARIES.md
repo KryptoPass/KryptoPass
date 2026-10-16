@@ -87,8 +87,7 @@ mutaciones actualizan la lista después de la persistencia, no al solicitarse.
 el error observable del controlador.
 
 `SecretStore` adapta únicamente metadatos de `SecretsController` para la
-búsqueda, ordenación, selección y navegación. `MockStore` conserva fixtures
-del prototipo y no participa en el flujo persistente.
+búsqueda, ordenación, selección y navegación.
 
 ## Contenido persistente
 

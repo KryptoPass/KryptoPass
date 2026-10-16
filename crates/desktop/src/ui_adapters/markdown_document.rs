@@ -1,8 +1,8 @@
 use crate::markdown::{Document, Theme, allowed_link};
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QStringList};
+use kryptopass_secure_memory::SensitiveText;
 use std::pin::Pin;
-use zeroize::Zeroizing;
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -103,7 +103,7 @@ impl qobject::MarkdownDocument {
 
     pub fn load(mut self: Pin<&mut Self>, source: &QString) {
         self.as_mut().reset_output();
-        let source = Zeroizing::new(source.to_string());
+        let source = SensitiveText::from(source.to_string());
         match self.as_mut().rust_mut().document.load(&source) {
             Ok(()) => self.publish(),
             Err(error) => self.set_error(QString::from(error)),

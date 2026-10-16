@@ -401,12 +401,34 @@ Copiar usuario y copiar contraseña son solicitudes independientes; copiar no
 cambia el estado de revelado. La proyección del editor contiene los campos
 necesarios durante la edición y se limpia al cerrar el formulario.
 
-El contenido tipado y los buffers de texto plano controlados por Rust utilizan
-`zeroize` al liberarse. Esta medida no garantiza el borrado de todas las copias
-que puedan mantener Qt, JavaScript, GPGME o el portapapeles del sistema. El
-buffer QML usado para copiar se vacía inmediatamente después de la acción;
-el portapapeles conserva lo copiado hasta que el usuario u otra aplicación lo
-sustituye.
+Los campos de texto privados del contenido tipado, incluidos historial y TOTP,
+y los buffers propios de texto plano utilizan `SensitiveText` y
+`SensitiveBytes`, definidos en `kryptopass-secure-memory`. Sus regiones tienen
+capacidad fija; crecer crea otra región, copia los bytes y borra la anterior
+antes de liberarla. Mover el propietario Rust no mueve los bytes. Los valores
+numéricos y enums del dominio siguen siendo valores ordinarios; no se afirma
+que toda la estructura o su pila estén protegidas por páginas.
+
+La abstracción aplica `memsec` sobre páginas dedicadas y comprueba bloqueo y
+exclusión de dumps por separado. Usa límites y presupuesto propios; si una
+protección no está disponible, continúa sin ella y mantiene el borrado. Cuando
+no puede obtener una región dedicada, usa almacenamiento owned de capacidad
+fija con limpieza, sin bloquear páginas compartidas del heap. La falta real
+de memoria sigue siendo un error de recursos. `memory_diagnostics()` y
+`protection_status()` describen las garantías efectivas, no solo las solicitadas.
+
+El proceso Linux restringe sus volcados antes de arrancar Qt y workers, sin
+modificar la configuración ni la caché de GnuPG Agent. La lectura de una
+entrada sigue descifrando su payload completo: ocultar la contraseña no
+equivale a mantenerla cifrada en RAM.
+
+Estas medidas no garantizan el borrado de copias internas de Qt, JavaScript,
+GPGME/GnuPG, parsers JSON/Markdown, librerías criptográficas, decodificadores
+de imágenes o el portapapeles del sistema. El buffer QML usado para copiar se
+vacía inmediatamente después de la acción; el portapapeles propio tiene un
+temporizador de limpieza de 30 segundos por defecto y se limpia al bloquear.
+Otros clientes pueden haber conservado una copia. Véase
+[implementación y límites de memoria](MEMORY_HARDENING_IMPLEMENTATION.md).
 
 La búsqueda inmediata utiliza nombre, carpeta y tipo presentes en metadatos;
 no descifra toda la colección para buscar en campos privados.

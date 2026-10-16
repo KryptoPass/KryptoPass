@@ -17,6 +17,12 @@ need_stdout = false
 command = ["cargo", "test", "--workspace"]
 need_stdout = true
 
+[jobs.test-security]
+command = ["just", "test-security"]
+need_stdout = true
+default_watch = false
+watch = ["crates/secure-memory", "crates/desktop/src/process_security.rs", "crates/desktop/src/process_security_tests.rs", "crates/desktop/src/infrastructure/openpgp.rs", "crates/desktop/src/infrastructure/openpgp_tests.rs"]
+
 [jobs.test-items]
 command = ["just", "test-items"]
 need_stdout = true
@@ -94,46 +100,9 @@ need_stdout = true
 default_watch = false
 watch = ["crates/browser", "Cargo.toml"]
 
-[jobs.android-ui]
-command = ["just", "android-ui"]
-need_stdout = true
-default_watch = false
-watch = ["packaging/android-ui", "crates/app", "crates/xtask", "crates/desktop/ui/qml", "Cargo.toml", "Cargo.lock", ".cargo"]
-
-[jobs.android-doctor]
-command = ["just", "android-doctor"]
-need_stdout = true
-default_watch = false
-watch = ["crates/xtask", "rust-toolchain.toml"]
-
-[jobs.android-apk-check]
-command = ["just", "android-apk-check"]
-need_stdout = true
-default_watch = false
-watch = ["packaging/android-ui/check_apk.py", "crates/xtask"]
-
-[jobs.android-run]
-command = ["just", "android-run"]
+[jobs.qmlls]
+command = ["just", "qmlls"]
 need_stdout = true
 background = false
-on_change_strategy = "kill_then_restart"
 default_watch = false
-watch = ["packaging/android-ui", "packaging/gen_identity.py", "packaging/metadata.py", "crates/app", "crates/xtask", "crates/desktop/ui/qml", "Cargo.toml", "Cargo.lock", ".cargo", "rust-toolchain.toml"]
-
-[jobs.android-versions]
-command = ["just", "android-versions"]
-need_stdout = true
-default_watch = false
-watch = ["crates/xtask"]
-
-[jobs.android-ui-smoke]
-command = ["just", "android-ui-smoke"]
-need_stdout = true
-default_watch = false
-watch = ["packaging/android-ui", "crates/app", "crates/xtask", "crates/desktop/ui/qml", "Cargo.toml", "Cargo.lock", ".cargo"]
-
-[jobs.android-check]
-command = ["just", "android-check"]
-need_stdout = true
-default_watch = false
-watch = ["crates/app", "crates/xtask", "Cargo.toml", "Cargo.lock", ".cargo"]
+watch = ["crates/desktop", ".qmlls.ini"]

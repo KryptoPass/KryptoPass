@@ -11,8 +11,8 @@ use kryptopass_core::{
     FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
     SecretsService, generate_password as generate_secure_password, generate_totp,
 };
+use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use uuid::Uuid;
-use zeroize::Zeroizing;
 
 use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage, app_paths};
 
@@ -270,7 +270,7 @@ pub struct SecretsControllerRust {
     detail_content: Option<SecretContent>,
     password_revealed: bool,
     revealed_fields: std::collections::BTreeSet<String>,
-    qr_source: Option<Zeroizing<String>>,
+    qr_source: Option<SensitiveText>,
     editor_ssh: Option<kryptopass_core::SshKeyContent>,
     staged_ssh: Option<(String, kryptopass_core::SshKeyContent)>,
     prepare_operation: u64,
@@ -396,7 +396,7 @@ impl qobject::SecretsController {
     }
 
     pub fn refresh_browser_pairing(mut self: Pin<&mut Self>) {
-        let value = QString::from(kryptopass_browser::pending_access());
+        let value = QString::from(kryptopass_browser::pending_access().as_str());
         if self.browser_access() != &value {
             self.as_mut().rust_mut().browser_access = value;
             self.as_mut().browser_access_changed();
@@ -763,7 +763,7 @@ impl qobject::SecretsController {
             return;
         }
 
-        let draft_json = Zeroizing::new(draft_json.to_string());
+        let draft_json = SensitiveText::from(draft_json.to_string());
         if draft_json.len() > kryptopass_core::MAX_CONTENT_BYTES {
             self.as_mut()
                 .fail("El borrador supera el tamaño permitido.");
@@ -918,7 +918,7 @@ impl qobject::SecretsController {
                         state.password_revealed,
                         unix_seconds(),
                         &state.revealed_fields,
-                        state.qr_source.as_deref().map(|value| value.as_str()),
+                        state.qr_source.as_ref().map(|value| value.as_str()),
                     )
                 })
         };
@@ -963,7 +963,7 @@ impl qobject::SecretsController {
             .as_ref()
             .and_then(|content| content_field(content, &field.to_string()))
             .filter(|(value, _)| !value.is_empty())
-            .map(|(value, _)| Zeroizing::new(value.into_owned()));
+            .map(|(value, _)| value.into_owned());
         if let Some(value) = value {
             self.as_mut().request_copy(CopyKind::Password, value);
         }
@@ -978,7 +978,7 @@ impl qobject::SecretsController {
             self.publish_detail();
             return;
         }
-        let result = (|| -> anyhow::Result<Zeroizing<String>> {
+        let result = (|| -> anyhow::Result<SensitiveText> {
             let object = self.as_ref();
             let state = object.rust();
             let payload = match state.detail_content.as_ref() {
@@ -1016,7 +1016,7 @@ impl qobject::SecretsController {
             return;
         };
         let path = std::path::PathBuf::from(path.to_string());
-        let passphrase = Zeroizing::new(passphrase.to_string());
+        let passphrase = SensitiveText::from(passphrase.to_string());
         let (editor_operation, prepare_operation) = {
             let mut state = self.as_mut().rust_mut();
             state.prepare_operation = state.prepare_operation.wrapping_add(1);
@@ -1030,13 +1030,11 @@ impl qobject::SecretsController {
                 use std::io::Read;
                 let file = std::fs::File::open(path)?;
                 anyhow::ensure!(file.metadata()?.is_file(), "select a regular key file");
-                let mut bytes = Zeroizing::new(String::new());
-                file.take(256 * 1024 + 1).read_to_string(&mut bytes)?;
+                let mut raw = SensitiveBytes::default();
+                std::io::copy(&mut file.take(256 * 1024 + 1), &mut raw)?;
+                let bytes = SensitiveText::from_utf8(raw)?;
                 anyhow::ensure!(bytes.len() <= 256 * 1024, "SSH key exceeds size limit");
-                kryptopass_core::SshKeyContent::import(
-                    std::mem::take(&mut *bytes),
-                    passphrase.as_str().to_owned(),
-                )
+                kryptopass_core::SshKeyContent::import(bytes, passphrase)
             },
             move |mut controller, result| {
                 let object = controller.as_ref();
@@ -1107,11 +1105,11 @@ impl qobject::SecretsController {
                         totp_input: &'a str,
                     }
                     let prepared = PreparedTotp { totp_input: uri.as_str() };
-                    let Ok(json) = serde_json::to_string(&prepared) else {
+                    let Ok(json) = super::secrets_projection::sensitive_json(&prepared) else {
                         controller.as_mut().fail("No se pudo preparar la configuración TOTP.");
                         return;
                     };
-                    let json = Zeroizing::new(json);
+
                     controller.as_mut().totp_qr_prepared(&QString::from(json.as_str()));
                 }
                 Err(_) => controller.as_mut().fail("No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido."),
@@ -1170,9 +1168,7 @@ impl qobject::SecretsController {
                 return;
             };
             match content {
-                SecretContent::Login(login) if !login.username.is_empty() => {
-                    Zeroizing::new(login.username.clone())
-                }
+                SecretContent::Login(login) if !login.username.is_empty() => login.username.clone(),
                 _ => return,
             }
         };
@@ -1190,9 +1186,7 @@ impl qobject::SecretsController {
                 return;
             };
             match content {
-                SecretContent::Login(login) if !login.password.is_empty() => {
-                    Zeroizing::new(login.password.clone())
-                }
+                SecretContent::Login(login) if !login.password.is_empty() => login.password.clone(),
                 _ => return,
             }
         };
@@ -1220,12 +1214,29 @@ impl qobject::SecretsController {
             else {
                 return;
             };
-            serde_json::to_string(&serde_json::json!({
-                "at": at, "passwordOnly": password_only, "title": login.history.version_title(index),
-                "username": version.username, "urls": version.urls,
-                "notes": version.notes, "hasPassword": !version.password.is_empty(),
-                "hasTotp": version.totp.is_some()
-            })).map(Zeroizing::new)
+            #[derive(serde::Serialize)]
+            #[serde(rename_all = "camelCase")]
+            struct VersionProjection<'a> {
+                at: u64,
+                password_only: bool,
+                title: Option<&'a str>,
+                username: &'a str,
+                urls: &'a [SensitiveText],
+                notes: &'a str,
+                has_password: bool,
+                has_totp: bool,
+            }
+            let projection = VersionProjection {
+                at,
+                password_only,
+                title: login.history.version_title(index),
+                username: &version.username,
+                urls: &version.urls,
+                notes: &version.notes,
+                has_password: !version.password.is_empty(),
+                has_totp: version.totp.is_some(),
+            };
+            super::secrets_projection::sensitive_json(&projection)
         };
         if let Ok(projection) = projection {
             self.as_mut().rust_mut().history_version_index = Some(index);
@@ -1255,17 +1266,26 @@ impl qobject::SecretsController {
                 return;
             };
             match field.to_string().as_str() {
-                "password" => Zeroizing::new(version.password.clone()),
-                "username" => Zeroizing::new(version.username.clone()),
-                "title" => Zeroizing::new(
+                "password" => version.password.clone(),
+                "username" => version.username.clone(),
+                "title" => SensitiveText::from(
                     login
                         .history
                         .version_title(index)
                         .unwrap_or_default()
                         .to_owned(),
                 ),
-                "urls" => Zeroizing::new(version.urls.join("\n")),
-                "notes" => Zeroizing::new(version.notes.clone()),
+                "urls" => {
+                    let mut text = SensitiveText::new();
+                    for (index, url) in version.urls.iter().enumerate() {
+                        if index != 0 {
+                            text.push('\n');
+                        }
+                        text.push_str(url);
+                    }
+                    text
+                }
+                "notes" => version.notes.clone(),
                 "totp" => {
                     let Some(config) = version.totp.as_ref() else {
                         return;
@@ -1327,7 +1347,7 @@ impl qobject::SecretsController {
                     state.password_revealed,
                     unix_seconds(),
                     &state.revealed_fields,
-                    state.qr_source.as_deref().map(|value| value.as_str()),
+                    state.qr_source.as_ref().map(|value| value.as_str()),
                 ),
             )
         };
@@ -1357,12 +1377,11 @@ impl qobject::SecretsController {
             let Ok(mut snapshot) = generate_totp(config, unix_seconds()) else {
                 return;
             };
-            let code = if next {
+            if next {
                 std::mem::take(&mut snapshot.next)
             } else {
                 std::mem::take(&mut snapshot.current)
-            };
-            Zeroizing::new(code)
+            }
         };
         self.as_mut().request_copy(
             if next {
@@ -1413,7 +1432,7 @@ impl qobject::SecretsController {
             && matches!(state.detail_content.as_ref(), Some(SecretContent::Login(_)))
     }
 
-    fn request_copy(mut self: Pin<&mut Self>, kind: CopyKind, value: Zeroizing<String>) {
+    fn request_copy(mut self: Pin<&mut Self>, kind: CopyKind, value: SensitiveText) {
         {
             let mut state = self.as_mut().rust_mut();
             let Some(id) = state.selected_entry else {
@@ -2083,6 +2102,7 @@ impl qobject::SecretsController {
         self.as_mut().set_detail_busy(false);
         self.as_mut().clear_editor_projection();
         self.as_mut().set_editor_busy(false);
+        tracing::debug!(state = ?kryptopass_secure_memory::memory_diagnostics(), "Sensitive memory state cleared");
     }
 
     fn invalidate_selection(mut self: Pin<&mut Self>) {

@@ -6,8 +6,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{Result, ensure};
+use kryptopass_secure_memory::SensitiveText;
 use serde_json::{Value, json};
-use zeroize::Zeroizing;
 
 use super::{Candidate, CredentialProvider, Login, access, set_locked, vault};
 
@@ -145,7 +145,7 @@ impl CredentialProvider for MockProvider {
         &self,
         candidate: &Candidate,
         still_authorized: &dyn Fn() -> bool,
-    ) -> Result<Option<Zeroizing<String>>> {
+    ) -> Result<Option<SensitiveText>> {
         self.username_calls
             .lock()
             .expect("username call list")
@@ -166,7 +166,10 @@ impl CredentialProvider for MockProvider {
         if self.username_absent {
             return Ok(None);
         }
-        Ok(Some(Zeroizing::new(format!("preview-{}", candidate.id))))
+        Ok(Some(SensitiveText::from(format!(
+            "preview-{}",
+            candidate.id
+        ))))
     }
 
     fn login(&self, candidate: &Candidate, still_authorized: &dyn Fn() -> bool) -> Result<Login> {
@@ -184,9 +187,9 @@ impl CredentialProvider for MockProvider {
             ensure!(authorized, "vault changed during credential read");
         }
         Ok(Login {
-            username: Zeroizing::new(format!("user-{}", candidate.id)),
-            password: Zeroizing::new(format!("password-{}", candidate.id)),
-            urls: self.urls.iter().cloned().map(Zeroizing::new).collect(),
+            username: SensitiveText::from(format!("user-{}", candidate.id)),
+            password: SensitiveText::from(format!("password-{}", candidate.id)),
+            urls: self.urls.iter().cloned().map(SensitiveText::from).collect(),
         })
     }
 }
@@ -219,8 +222,15 @@ fn data(url: &str) -> Value {
     })
 }
 
+fn get_logins_value(request: &Value, data: &Value) -> Value {
+    match access::get_logins(request, data) {
+        Ok(response) => serde_json::to_value(response).expect("login response JSON"),
+        Err(error) => error,
+    }
+}
+
 fn start_access(data: Value) -> thread::JoinHandle<Value> {
-    thread::spawn(move || access::get_logins(&request(), &data))
+    thread::spawn(move || get_logins_value(&request(), &data))
 }
 
 fn wait_for_access() -> Value {
@@ -309,7 +319,7 @@ fn get_logins_releases_only_an_approved_associated_login_for_the_exact_origin() 
         json!([{"id": "unknown-association", "key": ASSOCIATION_KEY}]),
         json!([{"id": ASSOCIATION_ID, "key": "wrong-key"}]),
     ] {
-        let response = access::get_logins(
+        let response = get_logins_value(
             &request(),
             &valid_data_with_keys("https://login.example.test/form", keys),
         );
@@ -320,7 +330,7 @@ fn get_logins_releases_only_an_approved_associated_login_for_the_exact_origin() 
     assert!(provider.login_calls().is_empty());
 
     // A cross-origin submit URL is rejected before presenting a choice.
-    let response = access::get_logins(
+    let response = get_logins_value(
         &request(),
         &json!({
             "keys": [{"id": ASSOCIATION_ID, "key": ASSOCIATION_KEY}],

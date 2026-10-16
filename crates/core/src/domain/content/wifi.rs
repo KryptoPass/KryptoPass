@@ -1,8 +1,10 @@
 //! Wi-Fi network payloads and the standard provisioning QR text format.
 
+use crate::SensitiveText;
+
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::ensure_field_size;
 
@@ -23,11 +25,11 @@ pub enum WifiSecurity {
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WifiContent {
-    pub ssid: String,
+    pub ssid: SensitiveText,
     pub security: WifiSecurity,
-    pub password: String,
+    pub password: SensitiveText,
     pub hidden: bool,
-    pub notes: String,
+    pub notes: SensitiveText,
 }
 
 impl WifiContent {
@@ -56,7 +58,7 @@ impl WifiContent {
 }
 
 /// Builds a ZXing-compatible Wi-Fi provisioning payload for a QR encoder.
-pub fn wifi_qr_payload(content: &WifiContent) -> Result<Zeroizing<String>> {
+pub fn wifi_qr_payload(content: &WifiContent) -> Result<SensitiveText> {
     content.validate()?;
     ensure!(
         content.security != WifiSecurity::Wpa3,
@@ -68,9 +70,8 @@ pub fn wifi_qr_payload(content: &WifiContent) -> Result<Zeroizing<String>> {
         WifiSecurity::Wpa => "WPA",
         WifiSecurity::Wpa3 => unreachable!("WPA3 is rejected above"),
     };
-    let mut payload = Zeroizing::new(String::with_capacity(
-        content.ssid.len() + content.password.len() + 32,
-    ));
+    let mut payload =
+        SensitiveText::with_capacity(content.ssid.len() + content.password.len() + 32);
     payload.push_str("WIFI:T:");
     payload.push_str(security);
     payload.push_str(";S:");
@@ -96,7 +97,7 @@ fn valid_wpa_password(value: &str) -> bool {
         || (value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
 }
 
-fn push_wifi_escaped(output: &mut String, value: &str) {
+fn push_wifi_escaped(output: &mut SensitiveText, value: &str) {
     for character in value.chars() {
         match character {
             '\\' | ';' | ',' | ':' | '"' => {

@@ -1,15 +1,54 @@
 //! Field-level projections keep concealed values in Rust until explicitly revealed.
 
-use kryptopass_core::SecretContent;
+use kryptopass_core::{SecretContent, SensitiveText};
 use serde::Serialize;
-use std::{borrow::Cow, collections::BTreeSet};
+use std::collections::BTreeSet;
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub(crate) enum SensitiveValue<'a> {
+    Borrowed(&'a str),
+    Owned(SensitiveText),
+}
+impl SensitiveValue<'_> {
+    pub(crate) fn into_owned(self) -> SensitiveText {
+        match self {
+            Self::Borrowed(value) => value.into(),
+            Self::Owned(value) => value,
+        }
+    }
+}
+impl std::ops::Deref for SensitiveValue<'_> {
+    type Target = str;
+    fn deref(&self) -> &str {
+        match self {
+            Self::Borrowed(value) => value,
+            Self::Owned(value) => value.as_str(),
+        }
+    }
+}
+impl<'a> From<&'a str> for SensitiveValue<'a> {
+    fn from(value: &'a str) -> Self {
+        Self::Borrowed(value)
+    }
+}
+impl From<String> for SensitiveValue<'_> {
+    fn from(value: String) -> Self {
+        Self::Owned(value.into())
+    }
+}
+impl From<SensitiveText> for SensitiveValue<'_> {
+    fn from(value: SensitiveText) -> Self {
+        Self::Owned(value)
+    }
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct DetailRow<'a> {
     id: String,
-    label: String,
-    value: Cow<'a, str>,
+    label: SensitiveText,
+    value: SensitiveValue<'a>,
     multiline: bool,
     concealed: bool,
     revealed: bool,
@@ -30,14 +69,14 @@ pub(super) struct ExpandedDetail<'a> {
 fn row<'a>(
     id: impl Into<String>,
     label: &str,
-    value: impl Into<Cow<'a, str>>,
+    value: impl Into<SensitiveValue<'a>>,
     multiline: bool,
     concealed: bool,
 ) -> DetailRow<'a> {
     let value = value.into();
     DetailRow {
         id: id.into(),
-        label: crate::i18n::text(label),
+        label: crate::i18n::text(label).into(),
         has_value: !value.is_empty(),
         value,
         multiline,
@@ -52,9 +91,9 @@ fn rows(content: &SecretContent) -> Vec<DetailRow<'_>> {
             .records
             .iter()
             .map(|record| DetailRow {
-                id: format!("record:{}", record.id),
+                id: format!("record:{}", record.id.as_str()),
                 label: record.key.clone(),
-                value: Cow::Borrowed(&record.value),
+                value: SensitiveValue::Borrowed(&record.value),
                 multiline: record.multiline,
                 concealed: record.concealed,
                 revealed: false,
@@ -124,28 +163,28 @@ fn rows(content: &SecretContent) -> Vec<DetailRow<'_>> {
             }
             for doc in &value.documents {
                 result.push(row(
-                    format!("document:{}:type", doc.id),
+                    format!("document:{}:type", doc.id.as_str()),
                     "Tipo de documento",
                     doc.document_type.as_str(),
                     false,
                     false,
                 ));
                 result.push(row(
-                    format!("document:{}:number", doc.id),
+                    format!("document:{}:number", doc.id.as_str()),
                     "Número de documento",
                     doc.number.as_str(),
                     false,
                     true,
                 ));
                 result.push(row(
-                    format!("document:{}:country", doc.id),
+                    format!("document:{}:country", doc.id.as_str()),
                     "País",
                     doc.country.as_str(),
                     false,
                     false,
                 ));
                 result.push(row(
-                    format!("document:{}:expires", doc.id),
+                    format!("document:{}:expires", doc.id.as_str()),
                     "Vencimiento",
                     doc.expires.as_str(),
                     false,
@@ -250,7 +289,10 @@ fn rows(content: &SecretContent) -> Vec<DetailRow<'_>> {
     }
 }
 
-pub(super) fn field<'a>(content: &'a SecretContent, id: &str) -> Option<(Cow<'a, str>, bool)> {
+pub(super) fn field<'a>(
+    content: &'a SecretContent,
+    id: &str,
+) -> Option<(SensitiveValue<'a>, bool)> {
     rows(content)
         .into_iter()
         .find(|row| row.id == id)
@@ -285,7 +327,7 @@ pub(super) fn detail<'a>(
     for row in &mut rows {
         row.revealed = row.concealed && revealed.contains(&row.id);
         if row.concealed && !row.revealed {
-            row.value = Cow::Borrowed("");
+            row.value = SensitiveValue::Borrowed("");
         }
     }
     let qr_unavailable_reason = matches!(content, SecretContent::Wifi(value) if value.security == kryptopass_core::WifiSecurity::Wpa3)

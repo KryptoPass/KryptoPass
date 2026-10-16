@@ -8,6 +8,7 @@ description = "Bounded password-manager imports into the KryptoPass domain"
 publish = false
 
 [dependencies]
+kryptopass-secure-memory = { path = "../secure-memory" }
 kryptopass-core = { path = "../core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }

@@ -14,17 +14,20 @@ from tempfile import TemporaryDirectory
 
 
 ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(ROOT / "packaging"))
+from metadata import cargo_target_directory, qt_tool
+
 MODULE_PATH = Path("org/kryptopass/desktop")
-GENERATED_MODULE = ROOT / "target/cxxqt/qml_modules" / MODULE_PATH
 
 
 def prepare_module(destination: Path) -> None:
-    qmldir = GENERATED_MODULE / "qmldir"
+    generated_module = cargo_target_directory() / "cxxqt/qml_modules" / MODULE_PATH
+    qmldir = generated_module / "qmldir"
     if not qmldir.is_file():
         raise FileNotFoundError(f"Missing {qmldir}; run `just check` first")
 
-    for source in sorted(GENERATED_MODULE.rglob("*.qml")):
-        target = destination / source.relative_to(GENERATED_MODULE)
+    for source in sorted(generated_module.rglob("*.qml")):
+        target = destination / source.relative_to(generated_module)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
 
@@ -53,13 +56,7 @@ def prepare_module(destination: Path) -> None:
 
 def main() -> int:
     try:
-        qt_bins = subprocess.run(
-            ["qmake6", "-query", "QT_HOST_BINS"],
-            check=True,
-            stdout=subprocess.PIPE,
-            text=True,
-        ).stdout.strip()
-        runner = Path(qt_bins) / "qmltestrunner"
+        runner = qt_tool("qmltestrunner")
         environment = os.environ.copy()
         environment.update(
             QT_QPA_PLATFORM="offscreen",

@@ -1,11 +1,13 @@
 //! Time-based one-time password configuration and generation.
 
+use crate::{SensitiveBytes, SensitiveText};
 use anyhow::{Context, Result, bail, ensure};
 use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::fmt::Write;
 use totp_rs::{Algorithm, Secret, TOTP};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Maximum encoded length of a TOTP shared secret.
 pub const MAX_TOTP_SECRET_BYTES: usize = 8 * 1024;
@@ -63,18 +65,18 @@ impl TotpAlgorithm {
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TotpConfig {
-    pub secret: String,
+    pub secret: SensitiveText,
     #[zeroize(skip)]
     pub algorithm: TotpAlgorithm,
     #[zeroize(skip)]
     pub digits: u8,
     #[zeroize(skip)]
     pub period: u64,
-    pub issuer: Option<String>,
-    pub account: Option<String>,
+    pub issuer: Option<SensitiveText>,
+    pub account: Option<SensitiveText>,
     /// Original percent-encoded label path segment from an `otpauth` URI.
     #[serde(default)]
-    pub original_label: Option<String>,
+    pub original_label: Option<SensitiveText>,
     /// Unknown URI parameters, retained in source order for lossless editing.
     #[serde(default)]
     pub extensions: Vec<TotpUriParameter>,
@@ -97,7 +99,7 @@ impl Eq for TotpConfig {}
 impl Default for TotpConfig {
     fn default() -> Self {
         Self {
-            secret: String::new(),
+            secret: SensitiveText::new(),
             algorithm: TotpAlgorithm::Sha1,
             digits: 6,
             period: 30,
@@ -113,15 +115,15 @@ impl Default for TotpConfig {
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TotpUriParameter {
-    pub key: String,
-    pub value: String,
+    pub key: SensitiveText,
+    pub value: SensitiveText,
 }
 
 /// The current and next TOTP code, plus their step timing.
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct TotpSnapshot {
-    pub current: String,
-    pub next: String,
+    pub current: SensitiveText,
+    pub next: SensitiveText,
     pub period: u64,
     pub remaining: u64,
 }
@@ -172,33 +174,33 @@ pub fn parse_totp_input(input: &str) -> Result<Option<TotpConfig>> {
 }
 
 /// Formats a config as a canonical otpauth URI held in a zeroizing buffer.
-pub fn format_totp_input(config: &TotpConfig) -> Result<Zeroizing<String>> {
+pub fn format_totp_input(config: &TotpConfig) -> Result<SensitiveText> {
     validate_totp_config(config)?;
 
     let secret = parse_base32_secret(&config.secret)?;
-    let canonical_secret = Zeroizing::new(encoded_secret(&secret));
+    let canonical_secret = encoded_secret(&secret);
     let label_capacity = config
         .issuer
         .as_ref()
-        .map_or(0, String::len)
-        .saturating_add(config.account.as_ref().map_or(0, String::len));
-    let mut uri = Zeroizing::new(String::with_capacity(
+        .map_or(0, SensitiveText::len)
+        .saturating_add(config.account.as_ref().map_or(0, SensitiveText::len));
+    let mut uri = SensitiveText::with_capacity(
         canonical_secret
             .len()
             .saturating_add(label_capacity.saturating_mul(3))
             .saturating_add(128),
-    ));
+    );
 
     uri.push_str("otpauth://totp/");
     if let Some(original_label) = config.original_label.as_deref() {
         uri.push_str(original_label);
     } else {
         if let Some(issuer) = config.issuer.as_deref() {
-            push_percent_encoded(&mut uri, issuer);
+            push_percent_encoded(&mut uri, issuer)?;
             uri.push_str("%3A");
         }
         if let Some(account) = config.account.as_deref() {
-            push_percent_encoded(&mut uri, account);
+            push_percent_encoded(&mut uri, account)?;
         }
     }
 
@@ -206,19 +208,19 @@ pub fn format_totp_input(config: &TotpConfig) -> Result<Zeroizing<String>> {
     uri.push_str(&canonical_secret);
     if let Some(issuer) = config.issuer.as_deref() {
         uri.push_str("&issuer=");
-        push_percent_encoded(&mut uri, issuer);
+        push_percent_encoded(&mut uri, issuer)?;
     }
     uri.push_str("&algorithm=");
     uri.push_str(config.algorithm.as_str());
     uri.push_str("&digits=");
-    uri.push_str(&config.digits.to_string());
+    write!(&mut uri, "{}", config.digits)?;
     uri.push_str("&period=");
-    uri.push_str(&config.period.to_string());
+    write!(&mut uri, "{}", config.period)?;
     for extension in &config.extensions {
         uri.push('&');
-        push_percent_encoded(&mut uri, &extension.key);
+        push_percent_encoded(&mut uri, &extension.key)?;
         uri.push('=');
-        push_percent_encoded(&mut uri, &extension.value);
+        push_percent_encoded(&mut uri, &extension.value)?;
     }
 
     Ok(uri)
@@ -233,12 +235,12 @@ pub fn generate_totp(config: &TotpConfig, unix_seconds: u64) -> Result<TotpSnaps
     let next_time = unix_seconds
         .checked_add(remaining)
         .context("next TOTP time step exceeds the supported Unix timestamp")?;
-    let mut current = Zeroizing::new(totp.generate(unix_seconds).to_string());
-    let mut next = Zeroizing::new(totp.generate(next_time).to_string());
+    let current = SensitiveText::from(totp.generate(unix_seconds));
+    let next = SensitiveText::from(totp.generate(next_time));
 
     Ok(TotpSnapshot {
-        current: std::mem::take(&mut *current),
-        next: std::mem::take(&mut *next),
+        current,
+        next,
         period: config.period,
         remaining,
     })
@@ -254,9 +256,9 @@ pub(crate) fn validate_totp_config(config: &TotpConfig) -> Result<()> {
     validate_label("issuer", config.issuer.as_deref())?;
     validate_label("account", config.account.as_deref())?;
     let secret = parse_base32_secret(&config.secret)?;
-    let canonical_secret = Zeroizing::new(encoded_secret(&secret));
+    let canonical_secret = encoded_secret(&secret);
     ensure!(
-        config.secret == *canonical_secret,
+        config.secret == canonical_secret,
         "TOTP secret must use canonical Base32"
     );
     validate_original_label(config)?;
@@ -276,9 +278,7 @@ fn validate_original_label(config: &TotpConfig) -> Result<()> {
         "TOTP original label exceeds the maximum size or contains an invalid character"
     );
     validate_percent_encoding(label)?;
-    let decoded = percent_decode_str(label)
-        .decode_utf8()
-        .context("TOTP URI label is not valid UTF-8")?;
+    let decoded = decode_uri_component(label, false)?;
     let (issuer, account) = parse_label(&decoded)?;
     ensure!(
         account == config.account,
@@ -364,26 +364,26 @@ fn build_totp(config: &TotpConfig) -> Result<TOTP> {
 }
 
 fn parse_base32_secret(value: &str) -> Result<Secret> {
-    let mut value = canonicalize_base32(value)?;
-    Secret::Encoded(std::mem::take(&mut *value))
+    let value = canonicalize_base32(value)?;
+    // totp-rs owns its encoded representation and zeroizes it on drop.
+    Secret::Encoded(value.as_str().to_owned())
         .to_raw()
         .context("invalid TOTP Base32 secret")
 }
 
-fn encoded_secret(secret: &Secret) -> String {
+fn encoded_secret(secret: &Secret) -> SensitiveText {
     match &mut secret.to_encoded() {
-        Secret::Encoded(encoded) => std::mem::take(encoded),
+        Secret::Encoded(encoded) => std::mem::take(encoded).into(),
         Secret::Raw(_) => unreachable!("to_encoded always returns an encoded secret"),
     }
 }
 
-fn canonical_base32_secret(value: &str) -> Result<String> {
+fn canonical_base32_secret(value: &str) -> Result<SensitiveText> {
     let secret = parse_base32_secret(value)?;
-    let mut canonical = Zeroizing::new(encoded_secret(&secret));
-    Ok(std::mem::take(&mut *canonical))
+    Ok(encoded_secret(&secret))
 }
 
-fn canonicalize_base32(value: &str) -> Result<Zeroizing<String>> {
+fn canonicalize_base32(value: &str) -> Result<SensitiveText> {
     ensure!(!value.is_empty(), "TOTP Base32 secret is empty");
     ensure!(
         value.len() <= MAX_TOTP_SECRET_BYTES,
@@ -421,7 +421,11 @@ fn canonicalize_base32(value: &str) -> Result<Zeroizing<String>> {
         "TOTP Base32 secret is empty"
     );
 
-    Ok(Zeroizing::new(encoded.to_ascii_uppercase()))
+    let mut canonical = SensitiveText::with_capacity(encoded.len());
+    for byte in encoded.bytes() {
+        canonical.push(char::from(byte.to_ascii_uppercase()));
+    }
+    Ok(canonical)
 }
 
 fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
@@ -442,28 +446,29 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
 
     let raw_label = &authority_path["totp/".len()..];
     validate_percent_encoding(raw_label)?;
-    let decoded_label = percent_decode_str(raw_label)
-        .decode_utf8()
-        .context("TOTP URI label is not valid UTF-8")?;
+    let decoded_label = decode_uri_component(raw_label, false)?;
     let (path_issuer, account) = parse_label(&decoded_label)?;
 
     ensure!(!raw_query.is_empty(), "TOTP URI query is empty");
     validate_query(raw_query)?;
 
-    let mut secret: Option<Zeroizing<String>> = None;
-    let mut algorithm: Option<Zeroizing<String>> = None;
-    let mut digits: Option<Zeroizing<String>> = None;
-    let mut period: Option<Zeroizing<String>> = None;
-    let mut issuer: Option<Zeroizing<String>> = None;
+    let mut secret: Option<SensitiveText> = None;
+    let mut algorithm: Option<SensitiveText> = None;
+    let mut digits: Option<SensitiveText> = None;
+    let mut period: Option<SensitiveText> = None;
+    let mut issuer: Option<SensitiveText> = None;
     let mut extensions = Vec::new();
     let mut seen_parameters = HashSet::new();
-    for (key, value) in form_urlencoded::parse(raw_query.as_bytes()) {
-        let key = key.into_owned();
+    for pair in raw_query.split('&') {
+        let (raw_key, raw_value) = pair
+            .split_once('=')
+            .context("TOTP URI parameter is missing a value")?;
+        let key = decode_uri_component(raw_key, true)?;
         ensure!(
             seen_parameters.insert(key.clone()),
             "duplicate TOTP URI parameter"
         );
-        let mut value = Zeroizing::new(value.into_owned());
+        let value = decode_uri_component(raw_value, true)?;
         match key.as_str() {
             "secret" => set_once(&mut secret, value, "secret")?,
             "issuer" => {
@@ -484,10 +489,7 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
                     value.len() <= MAX_TOTP_EXTENSION_BYTES,
                     "TOTP URI extension value exceeds the maximum size"
                 );
-                extensions.push(TotpUriParameter {
-                    key,
-                    value: std::mem::take(&mut *value),
-                });
+                extensions.push(TotpUriParameter { key, value });
                 ensure!(
                     extensions.len() <= MAX_TOTP_EXTENSIONS,
                     "too many TOTP URI extensions"
@@ -497,7 +499,7 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
     }
 
     let secret_value = secret.as_ref().context("TOTP URI is missing secret")?;
-    let mut secret = Zeroizing::new(canonical_base32_secret(secret_value)?);
+    let secret = canonical_base32_secret(secret_value)?;
     let algorithm = algorithm
         .as_ref()
         .map(|value| TotpAlgorithm::parse(value))
@@ -521,25 +523,25 @@ fn parse_otpauth_uri(uri: &str) -> Result<TotpConfig> {
         );
     }
     let issuer = match issuer {
-        Some(mut value) => Some(std::mem::take(&mut *value)),
+        Some(value) => Some(value),
         None => path_issuer,
     };
     Ok(TotpConfig {
-        secret: std::mem::take(&mut *secret),
+        secret,
         algorithm,
         digits,
         period,
         issuer,
         account,
-        original_label: Some(raw_label.to_owned()),
+        original_label: Some(raw_label.into()),
         extensions,
     })
 }
 
-fn parse_label(label: &str) -> Result<(Option<String>, Option<String>)> {
+fn parse_label(label: &str) -> Result<(Option<SensitiveText>, Option<SensitiveText>)> {
     if let Some((issuer, account)) = label.split_once(':') {
         ensure!(!issuer.is_empty(), "TOTP URI label issuer is empty");
-        Ok((Some(issuer.to_owned()), nonempty(account)))
+        Ok((Some(issuer.into()), nonempty(account)))
     } else {
         Ok((None, nonempty(label)))
     }
@@ -553,19 +555,14 @@ fn validate_query(raw_query: &str) -> Result<()> {
             .context("TOTP URI parameter is missing a value")?;
         ensure!(!key.is_empty(), "invalid TOTP URI parameter name");
         validate_percent_encoding(key)?;
-        let decoded_key = percent_decode_str(key)
-            .decode_utf8()
-            .context("TOTP URI parameter name is not valid UTF-8")?;
+        let decoded_key = decode_uri_component(key, true)?;
         ensure!(!decoded_key.is_empty(), "invalid TOTP URI parameter name");
         ensure!(
             !decoded_key.chars().any(char::is_control),
             "invalid TOTP URI parameter name"
         );
         validate_percent_encoding(value)?;
-        let decoded = percent_decode_str(value)
-            .decode_utf8()
-            .context("TOTP URI parameter is not valid UTF-8")?;
-        let _decoded = Zeroizing::new(decoded.into_owned());
+        let _decoded = decode_uri_component(value, true)?;
     }
     Ok(())
 }
@@ -589,8 +586,10 @@ fn validate_percent_encoding(value: &str) -> Result<()> {
     Ok(())
 }
 
-fn push_percent_encoded(output: &mut String, value: &str) {
-    output.push_str(&utf8_percent_encode(value, NON_ALPHANUMERIC).to_string());
+fn push_percent_encoded(output: &mut SensitiveText, value: &str) -> Result<()> {
+    // Write percent-encoded fragments directly without a plaintext String copy.
+    write!(output, "{}", utf8_percent_encode(value, NON_ALPHANUMERIC))?;
+    Ok(())
 }
 
 fn set_once<T>(target: &mut Option<T>, value: T, name: &str) -> Result<()> {
@@ -617,10 +616,30 @@ fn parse_period(value: &str) -> Result<u64> {
     Ok(period)
 }
 
-fn nonempty(value: &str) -> Option<String> {
+fn nonempty(value: &str) -> Option<SensitiveText> {
     if value.is_empty() {
         None
     } else {
-        Some(value.to_owned())
+        Some(value.into())
     }
+}
+
+// Decode directly into owned sensitive bytes, avoiding percent-decoder Cow<String>.
+fn decode_uri_component(value: &str, form_encoded: bool) -> Result<SensitiveText> {
+    let mut bytes = SensitiveBytes::with_capacity(value.len());
+    if form_encoded {
+        for (index, segment) in value.split('+').enumerate() {
+            if index > 0 {
+                bytes.push(b' ');
+            }
+            for byte in percent_decode_str(segment) {
+                bytes.push(byte);
+            }
+        }
+    } else {
+        for byte in percent_decode_str(value) {
+            bytes.push(byte);
+        }
+    }
+    SensitiveText::from_utf8(bytes).context("TOTP URI component is not valid UTF-8")
 }

@@ -1,5 +1,7 @@
 //! Software-license payload.
 
+use crate::SensitiveText;
+
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -13,14 +15,14 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LicenseContent {
-    pub product: String,
-    pub license_key: String,
-    pub holder: String,
-    pub email: String,
-    pub version: String,
-    pub purchased: String,
-    pub expires: String,
-    pub notes: String,
+    pub product: SensitiveText,
+    pub license_key: SensitiveText,
+    pub holder: SensitiveText,
+    pub email: SensitiveText,
+    pub version: SensitiveText,
+    pub purchased: SensitiveText,
+    pub expires: SensitiveText,
+    pub notes: SensitiveText,
 }
 
 impl LicenseContent {

@@ -483,7 +483,7 @@ fn proton_ssh_import_derives_metadata_and_never_copies_an_invalid_private_key_to
         panic!("valid OpenSSH private key should import natively");
     };
     let derived =
-        SshKeyContent::import(SYNTHETIC_SSH_PRIVATE_KEY.to_owned(), String::new()).unwrap();
+        SshKeyContent::import(SYNTHETIC_SSH_PRIVATE_KEY.into(), Default::default()).unwrap();
     assert_eq!(ssh.public_key, derived.public_key);
     assert_eq!(ssh.fingerprint, derived.fingerprint);
     assert_eq!(ssh.algorithm, derived.algorithm);

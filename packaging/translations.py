@@ -7,7 +7,7 @@ import re
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
-from metadata import ROOT, load_metadata
+from metadata import ROOT, load_metadata, qt_tool
 
 CATALOG = ROOT / "po/es.ts"
 SPANISH_PLURALS = {
@@ -17,11 +17,6 @@ SPANISH_PLURALS = {
     "Importación completada: %n elemento añadido a la bóveda actual.":
         "Importación completada: %n elementos añadidos a la bóveda actual.",
 }
-
-
-def qt_tool(name):
-    binaries = subprocess.check_output(["qmake6", "-query", "QT_HOST_BINS"], text=True).strip()
-    return str(Path(binaries) / name)
 
 
 def backend_messages():

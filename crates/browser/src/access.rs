@@ -6,11 +6,11 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail, ensure};
+use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
-use zeroize::Zeroizing;
 
 use super::{persistence, protocol_error, vault};
 
@@ -22,9 +22,9 @@ pub struct Candidate {
 }
 
 pub struct Login {
-    pub username: Zeroizing<String>,
-    pub password: Zeroizing<String>,
-    pub urls: Vec<Zeroizing<String>>,
+    pub username: SensitiveText,
+    pub password: SensitiveText,
+    pub urls: Vec<SensitiveText>,
 }
 
 pub trait CredentialProvider: Send + Sync {
@@ -35,7 +35,7 @@ pub trait CredentialProvider: Send + Sync {
         &self,
         _candidate: &Candidate,
         _still_current: &dyn Fn() -> bool,
-    ) -> Result<Option<Zeroizing<String>>> {
+    ) -> Result<Option<SensitiveText>> {
         Ok(None)
     }
     /// Reads only the approved revision, rejecting stale/trash/non-login entries.
@@ -46,7 +46,7 @@ pub(crate) struct Access {
     token: String,
     origin: String,
     candidates: Vec<Candidate>,
-    usernames: BTreeMap<String, Zeroizing<String>>,
+    usernames: BTreeMap<String, SensitiveText>,
     username_errors: BTreeSet<String>,
     preview_requested: Option<String>,
     previewing: Option<String>,
@@ -106,18 +106,71 @@ pub fn site_origin(input: &str) -> Result<String> {
     Ok(url.origin().ascii_serialization())
 }
 
-pub fn pending_access() -> String {
-    vault().lock().ok().and_then(|state| {
-        state.access.as_ref().filter(|access| access.expires > Instant::now() && access.decision.is_none())
-            .map(|access| {
-                let candidates: Vec<_> = access.candidates.iter().map(|candidate| {
-                    json!({"id": candidate.id, "name": candidate.name, "revision": candidate.revision,
-                        "username": access.usernames.get(&candidate.id).map(|username| username.as_str()).unwrap_or_default(),
-                        "usernameState": if access.usernames.contains_key(&candidate.id) { "ready" } else if access.username_errors.contains(&candidate.id) { "error" } else if access.previewing.as_deref() == Some(&candidate.id) || access.preview_requested.as_deref() == Some(&candidate.id) { "loading" } else { "unloaded" }})
-                }).collect();
-                json!({"token": access.token, "origin": access.origin, "previewReady": true, "candidates": candidates}).to_string()
-            })
-    }).unwrap_or_default()
+pub fn pending_access() -> SensitiveText {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Preview<'a> {
+        token: &'a str,
+        origin: &'a str,
+        preview_ready: bool,
+        candidates: Vec<PreviewCandidate<'a>>,
+    }
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct PreviewCandidate<'a> {
+        id: &'a str,
+        name: &'a str,
+        revision: u64,
+        username: &'a str,
+        username_state: &'static str,
+    }
+    vault()
+        .lock()
+        .ok()
+        .and_then(|state| {
+            let access = state
+                .access
+                .as_ref()
+                .filter(|access| access.expires > Instant::now() && access.decision.is_none())?;
+            let candidates = access
+                .candidates
+                .iter()
+                .map(|candidate| PreviewCandidate {
+                    id: &candidate.id,
+                    name: &candidate.name,
+                    revision: candidate.revision,
+                    username: access
+                        .usernames
+                        .get(&candidate.id)
+                        .map(|username| username.as_str())
+                        .unwrap_or_default(),
+                    username_state: if access.usernames.contains_key(&candidate.id) {
+                        "ready"
+                    } else if access.username_errors.contains(&candidate.id) {
+                        "error"
+                    } else if access.previewing.as_deref() == Some(&candidate.id)
+                        || access.preview_requested.as_deref() == Some(&candidate.id)
+                    {
+                        "loading"
+                    } else {
+                        "unloaded"
+                    },
+                })
+                .collect();
+            let mut bytes = SensitiveBytes::new();
+            serde_json::to_writer(
+                &mut bytes,
+                &Preview {
+                    token: &access.token,
+                    origin: &access.origin,
+                    preview_ready: true,
+                    candidates,
+                },
+            )
+            .ok()?;
+            SensitiveText::from_utf8(bytes).ok()
+        })
+        .unwrap_or_default()
 }
 
 pub fn decide_access(token: &str, entry_id: &str, approve: bool) {
@@ -158,19 +211,47 @@ fn authorized(epoch: u64, token: &str, selected: &str) -> bool {
     })
 }
 
-pub(crate) fn get_logins(request: &Value, data: &Value) -> Value {
+#[derive(Serialize)]
+pub(crate) struct LoginResponse {
+    success: &'static str,
+    hash: String,
+    count: &'static str,
+    entries: [LoginEntry; 1],
+}
+
+#[derive(Serialize)]
+struct LoginEntry {
+    uuid: String,
+    name: String,
+    login: SensitiveText,
+    password: SensitiveText,
+    expired: &'static str,
+    totp: &'static str,
+    #[serde(rename = "stringFields")]
+    string_fields: [(); 0],
+}
+
+pub(crate) fn get_logins(request: &Value, data: &Value) -> Result<LoginResponse, Value> {
     match approved_login(data) {
-        Ok((candidate, login, hash)) => {
-            json!({"success": "true", "hash": hash, "count": "1", "entries": [{
-                "uuid": candidate.id, "name": candidate.name, "login": &*login.username, "password": &*login.password,
-                "expired": "false", "totp": "", "stringFields": []
-            }]})
-        }
-        Err(_) => protocol_error(
+        Ok((candidate, mut login, hash)) => Ok(LoginResponse {
+            success: "true",
+            hash,
+            count: "1",
+            entries: [LoginEntry {
+                uuid: candidate.id,
+                name: candidate.name,
+                login: std::mem::take(&mut login.username),
+                password: std::mem::take(&mut login.password),
+                expired: "false",
+                totp: "",
+                string_fields: [],
+            }],
+        }),
+        Err(_) => Err(protocol_error(
             request,
             6,
             "Login access denied, expired, or selected entry does not match the site",
-        ),
+        )),
     }
 }
 

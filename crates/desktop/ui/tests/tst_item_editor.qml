@@ -21,6 +21,11 @@ TestCase {
         SignalSpy {}
     }
 
+    Component {
+        id: baselineComponent
+        DraftBaseline {}
+    }
+
     function init() {
         failOnWarning(/QML|TypeError|ReferenceError|Binding loop|Unable to assign/);
     }
@@ -199,5 +204,71 @@ TestCase {
 
         select(host, "login");
         compare(host.currentFields(), emptyFields("login"));
+    }
+
+    function test_baseline_detects_nested_changes_and_reversion() {
+        const baseline = createTemporaryObject(baselineComponent, testCase);
+        verify(baseline !== null);
+        const draft = {
+            title: "Original title",
+            content: { kind: "login", fields: fields("login", "baseline") },
+            recipients: ["first", "second"],
+            icon: null
+        };
+        baseline.capture(draft);
+        verify(baseline.matches(draft));
+        const password = draft.content.fields.password;
+        draft.content.fields.password = "modified secret";
+        verify(!baseline.matches(draft));
+        draft.content.fields.password = password;
+        verify(baseline.matches(draft));
+
+        draft.content.fields.urls.push("https://new.invalid");
+        verify(!baseline.matches(draft));
+        draft.content.fields.urls.pop();
+        verify(baseline.matches(draft));
+        draft.recipients.reverse();
+        verify(!baseline.matches(draft));
+        draft.recipients.reverse();
+        verify(baseline.matches(draft));
+        draft.icon = {};
+        verify(!baseline.matches(draft));
+        draft.icon = null;
+        verify(baseline.matches(draft));
+    }
+
+    function test_baseline_owns_nested_snapshot_without_aliasing_draft() {
+        const baseline = createTemporaryObject(baselineComponent, testCase);
+        verify(baseline !== null);
+        const draft = {
+            content: { fields: { password: "original", urls: ["https://original.invalid"] } },
+            recipients: ["original recipient"]
+        };
+        baseline.capture(draft);
+        draft.content.fields.password = "replacement";
+        draft.content.fields.urls[0] = "https://replacement.invalid";
+        draft.recipients.push("additional recipient");
+        compare(baseline.value.content.fields.password, "original");
+        compare(baseline.value.content.fields.urls, ["https://original.invalid"]);
+        compare(baseline.value.recipients, ["original recipient"]);
+        verify(!baseline.matches(draft));
+    }
+
+    function test_baseline_clear_drops_previous_session_snapshot() {
+        const baseline = createTemporaryObject(baselineComponent, testCase);
+        verify(baseline !== null);
+        const previous = { content: { fields: { password: "previous secret" } } };
+        baseline.capture(previous);
+        verify(baseline.matches(previous));
+        baseline.clear();
+        compare(baseline.value, null);
+        verify(!baseline.matches(previous));
+        verify(!baseline.matches(null));
+        const next = { content: { fields: { password: "next secret" } } };
+        baseline.capture(next);
+        verify(baseline.matches(next));
+        verify(!baseline.matches(previous));
+        baseline.clear();
+        compare(baseline.value, null);
     }
 }

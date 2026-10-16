@@ -4,12 +4,14 @@ import argparse
 from pathlib import Path
 import shutil
 import subprocess
-from metadata import ROOT, load_metadata
+from metadata import ROOT, desktop_binary, load_metadata
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--prefix", type=Path, required=True)
-parser.add_argument("--binary", type=Path, default=ROOT / "target/release/kryptopass-desktop")
+parser.add_argument("--binary", type=Path)
 args = parser.parse_args()
+if args.binary is None:
+    args.binary = desktop_binary("release")
 meta = load_metadata()
 subprocess.run(["python3", str(ROOT / "packaging/gen_install.py"), "--check"], check=True)
 if not args.binary.is_file():

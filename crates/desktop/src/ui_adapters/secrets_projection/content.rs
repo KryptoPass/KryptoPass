@@ -5,33 +5,67 @@ use kryptopass_core::{
     SecretContent, SshKeyContent, TotpContent, WifiContent, format_totp_input, parse_totp_input,
 };
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{
     HistoryProjection, SensitiveText, TotpProjection, history_projection, totp_projection,
 };
 
-#[derive(Deserialize, Zeroize, ZeroizeOnDrop)]
-#[serde(tag = "kind", content = "fields", deny_unknown_fields)]
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub(super) enum DraftContent {
-    #[serde(rename = "login")]
     Login(LoginDraft),
-    #[serde(rename = "note")]
     Note(NoteDraft),
-    #[serde(rename = "custom")]
     Custom(CustomContent),
-    #[serde(rename = "card")]
     Card(CardContent),
-    #[serde(rename = "totp")]
     Totp(TotpDraft),
-    #[serde(rename = "identity")]
     Identity(IdentityContent),
-    #[serde(rename = "wifi")]
     Wifi(WifiContent),
-    #[serde(rename = "license")]
     License(LicenseContent),
-    #[serde(rename = "ssh-key")]
-    SshKey(SshKeyDraft),
+    SshKey(Box<SshKeyDraft>),
+}
+
+impl<'de> Deserialize<'de> for DraftContent {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        enum Kind {
+            Login,
+            Note,
+            Custom,
+            Card,
+            Totp,
+            Identity,
+            Wifi,
+            License,
+            SshKey,
+        }
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Envelope<'a> {
+            kind: Kind,
+            #[serde(borrow)]
+            fields: &'a serde_json::value::RawValue,
+        }
+        let envelope = Envelope::deserialize(deserializer)?;
+        macro_rules! decode {
+            ($variant:ident) => {
+                serde_json::from_str(envelope.fields.get())
+                    .map(Self::$variant)
+                    .map_err(serde::de::Error::custom)
+            };
+        }
+        match envelope.kind {
+            Kind::Login => decode!(Login),
+            Kind::Note => decode!(Note),
+            Kind::Custom => decode!(Custom),
+            Kind::Card => decode!(Card),
+            Kind::Totp => decode!(Totp),
+            Kind::Identity => decode!(Identity),
+            Kind::Wifi => decode!(Wifi),
+            Kind::License => decode!(License),
+            Kind::SshKey => decode!(SshKey),
+        }
+    }
 }
 
 #[derive(Deserialize, Zeroize, ZeroizeOnDrop)]
@@ -49,7 +83,7 @@ pub(super) struct SshKeyDraft {
     #[serde(default)]
     passphrase: SensitiveText,
     user: SensitiveText,
-    hosts: Vec<String>,
+    hosts: Vec<SensitiveText>,
     notes: SensitiveText,
     #[serde(default)]
     public_key: String,
@@ -85,25 +119,25 @@ impl DraftContent {
     pub(super) fn prepare(&mut self) -> anyhow::Result<SecretContent> {
         match self {
             Self::Login(draft) => {
-                let totp = parse_totp_input(&draft.totp_input.0)?;
-                let urls = match draft.urls.take() {
-                    Some(urls) => urls.into_iter().map(|mut url| url.take()).collect(),
-                    None if draft.url.0.is_empty() => vec![],
-                    None => vec![draft.url.take()],
+                let totp = parse_totp_input(&draft.totp_input)?;
+                let urls = match std::mem::take(&mut draft.urls) {
+                    Some(urls) => urls,
+                    None if draft.url.is_empty() => vec![],
+                    None => vec![std::mem::take(&mut draft.url)],
                 };
                 Ok(SecretContent::Login(LoginContent {
-                    username: draft.username.take(),
-                    password: draft.password.take(),
+                    username: std::mem::take(&mut draft.username),
+                    password: std::mem::take(&mut draft.password),
                     url: urls.first().cloned().unwrap_or_default(),
                     urls,
                     totp,
-                    notes: draft.notes.take(),
+                    notes: std::mem::take(&mut draft.notes),
                     history: Box::default(),
                 }))
             }
             Self::Note(draft) => Ok(SecretContent::Note(NoteContent {
-                value: draft.value.take(),
-                notes: draft.notes.take(),
+                value: std::mem::take(&mut draft.value),
+                notes: std::mem::take(&mut draft.notes),
             })),
             Self::Custom(value) => Ok(SecretContent::Custom(std::mem::take(value))),
             Self::Card(value) => Ok(SecretContent::Card(std::mem::take(value))),
@@ -111,18 +145,18 @@ impl DraftContent {
             Self::Wifi(value) => Ok(SecretContent::Wifi(std::mem::take(value))),
             Self::License(value) => Ok(SecretContent::License(std::mem::take(value))),
             Self::Totp(draft) => Ok(SecretContent::Totp(TotpContent {
-                config: parse_totp_input(&draft.totp_input.0)?
+                config: parse_totp_input(&draft.totp_input)?
                     .ok_or_else(|| anyhow::anyhow!("authenticator configuration is required"))?,
-                notes: draft.notes.take(),
+                notes: std::mem::take(&mut draft.notes),
             })),
             Self::SshKey(draft) => {
                 let mut value = draft
                     .prepared
                     .take()
                     .ok_or_else(|| anyhow::anyhow!("import an SSH key before saving"))?;
-                value.user = draft.user.take();
+                value.user = std::mem::take(&mut draft.user);
                 value.hosts = std::mem::take(&mut draft.hosts);
-                value.notes = draft.notes.take();
+                value.notes = std::mem::take(&mut draft.notes);
                 Ok(SecretContent::SshKey(value))
             }
         }
@@ -156,7 +190,7 @@ pub(super) enum EditorContent<'a> {
 #[serde(rename_all = "camelCase")]
 pub(super) struct TotpEditor<'a> {
     #[serde(serialize_with = "serialize_sensitive_text")]
-    totp_input: Zeroizing<String>,
+    totp_input: SensitiveText,
     notes: &'a str,
 }
 
@@ -168,7 +202,7 @@ pub(super) struct SshKeyEditor<'a> {
     fingerprint: &'a str,
     algorithm: &'a str,
     user: &'a str,
-    hosts: &'a [String],
+    hosts: &'a [SensitiveText],
     notes: &'a str,
 }
 
@@ -178,9 +212,9 @@ pub(super) struct LoginEditor<'a> {
     username: &'a str,
     password: &'a str,
     url: &'a str,
-    urls: &'a [String],
+    urls: &'a [SensitiveText],
     #[serde(serialize_with = "serialize_sensitive_text")]
-    totp_input: Zeroizing<String>,
+    totp_input: SensitiveText,
     notes: &'a str,
 }
 
@@ -251,7 +285,7 @@ pub(super) enum DetailContent<'a> {
 pub(super) struct LoginDetail<'a> {
     username: &'a str,
     url: &'a str,
-    urls: &'a [String],
+    urls: &'a [SensitiveText],
     notes: &'a str,
     password: &'a str,
     password_revealed: bool,
@@ -330,7 +364,7 @@ impl<'a> DetailContent<'a> {
 }
 
 fn serialize_sensitive_text<S: serde::Serializer>(
-    value: &Zeroizing<String>,
+    value: &SensitiveText,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
     serializer.serialize_str(value.as_str())

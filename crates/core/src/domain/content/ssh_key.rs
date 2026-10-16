@@ -1,9 +1,12 @@
 //! OpenSSH private-key payload and derived public metadata.
 
+use crate::SensitiveText;
+use std::fmt::Write;
+
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use ssh_key::{HashAlg, PrivateKey};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::ensure_field_size;
 
@@ -17,44 +20,49 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SshKeyContent {
-    pub private_key: String,
-    pub passphrase: String,
-    pub public_key: String,
-    pub fingerprint: String,
-    pub algorithm: String,
-    pub user: String,
-    pub hosts: Vec<String>,
-    pub notes: String,
+    pub private_key: SensitiveText,
+    pub passphrase: SensitiveText,
+    pub public_key: SensitiveText,
+    pub fingerprint: SensitiveText,
+    pub algorithm: SensitiveText,
+    pub user: SensitiveText,
+    pub hosts: Vec<SensitiveText>,
+    pub notes: SensitiveText,
 }
 
 impl SshKeyContent {
     /// Imports an OpenSSH private key, decrypting it in Rust when a passphrase is supplied.
-    pub fn import(private_key: String, passphrase: String) -> Result<Self> {
-        let mut private_key = Zeroizing::new(private_key);
-        let mut passphrase = Zeroizing::new(passphrase);
+    pub fn import(private_key: SensitiveText, passphrase: SensitiveText) -> Result<Self> {
         ensure!(
             !private_key.is_empty() && private_key.len() <= MAX_PRIVATE_KEY_BYTES,
             "OpenSSH private key is empty or exceeds the maximum size"
         );
         ensure_field_size("SSH key passphrase", &passphrase, MAX_PASSPHRASE_BYTES)?;
         let parsed = parse_private_key(&private_key, &passphrase)?;
-        let public_key = parsed
+        let public_key: SensitiveText = parsed
             .public_key()
             .to_openssh()
-            .context("could not encode SSH public key")?;
-        let fingerprint = parsed.fingerprint(HashAlg::default()).to_string();
-        let algorithm = parsed.algorithm().to_string();
-        let user = parsed.comment().to_owned();
+            .context("could not encode SSH public key")?
+            .into();
+        let mut fingerprint = SensitiveText::new();
+        write!(
+            &mut fingerprint,
+            "{}",
+            parsed.fingerprint(HashAlg::default())
+        )?;
+        let mut algorithm = SensitiveText::new();
+        write!(&mut algorithm, "{}", parsed.algorithm())?;
+        let user = SensitiveText::from(parsed.comment());
 
         Ok(Self {
-            private_key: std::mem::take(&mut *private_key),
-            passphrase: std::mem::take(&mut *passphrase),
+            private_key,
+            passphrase,
             public_key,
             fingerprint,
             algorithm,
             user,
             hosts: Vec::new(),
-            notes: String::new(),
+            notes: SensitiveText::new(),
         })
     }
 
@@ -75,12 +83,19 @@ impl SshKeyContent {
         ensure_field_size("SSH key notes", &self.notes, MAX_NOTES_BYTES)?;
 
         let parsed = parse_private_key(&self.private_key, &self.passphrase)?;
-        let public_key = parsed
+        let public_key: SensitiveText = parsed
             .public_key()
             .to_openssh()
-            .context("could not derive SSH public key")?;
-        let fingerprint = parsed.fingerprint(HashAlg::default()).to_string();
-        let algorithm = parsed.algorithm().to_string();
+            .context("could not derive SSH public key")?
+            .into();
+        let mut fingerprint = SensitiveText::new();
+        write!(
+            &mut fingerprint,
+            "{}",
+            parsed.fingerprint(HashAlg::default())
+        )?;
+        let mut algorithm = SensitiveText::new();
+        write!(&mut algorithm, "{}", parsed.algorithm())?;
         ensure!(
             self.public_key == public_key,
             "SSH public key does not match private key"

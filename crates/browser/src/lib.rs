@@ -17,6 +17,7 @@ use crypto_box::{
     PublicKey, SalsaBox, SecretKey,
     aead::{Aead, OsRng},
 };
+use kryptopass_secure_memory::SensitiveBytes;
 use serde_json::{Value, json};
 use uuid::Uuid;
 use zeroize::Zeroizing;
@@ -186,7 +187,7 @@ impl Session {
                     .decrypt((&original_nonce).into(), payload.as_slice())
                     .ok()
             })
-            .map(Zeroizing::new);
+            .map(SensitiveBytes::from);
         let Some(plaintext) = plaintext else {
             return protocol_error(&request, 4, "Cannot decrypt message");
         };
@@ -199,20 +200,42 @@ impl Session {
         }
         self.used_nonces.insert(original_nonce);
         self.used_nonces.insert(nonce);
-        let mut response = self.dispatch(&request, &data);
-        wipe_json(&mut data);
-        // The extension handles credential denials in the outer error envelope;
-        // an encrypted failure would reset its association state instead.
-        if request["action"] == "get-logins" && response["errorCode"].is_number() {
-            return response;
-        }
-        response["nonce"] = json!(STANDARD.encode(nonce));
-        response["version"] = json!(self.version);
-        let encoded = serde_json::to_vec(&response).map(Zeroizing::new);
-        wipe_json(&mut response);
-        let Ok(encoded) = encoded else {
-            return protocol_error(&request, 4, "Cannot encode response");
+        let mut encoded = SensitiveBytes::new();
+        let encoding_result = if request["action"] == "get-logins" {
+            let response = access::get_logins(&request, &data);
+            wipe_json(&mut data);
+            let response = match response {
+                Ok(response) => response,
+                // Credential denials must stay in the outer error envelope.
+                Err(error) => return error,
+            };
+            #[derive(serde::Serialize)]
+            struct Envelope<'a> {
+                #[serde(flatten)]
+                response: &'a access::LoginResponse,
+                nonce: String,
+                version: &'a str,
+            }
+            serde_json::to_writer(
+                encoded.bounded_writer(MAX_MESSAGE),
+                &Envelope {
+                    response: &response,
+                    nonce: STANDARD.encode(nonce),
+                    version: &self.version,
+                },
+            )
+        } else {
+            let mut response = self.dispatch(&request, &data);
+            wipe_json(&mut data);
+            response["nonce"] = json!(STANDARD.encode(nonce));
+            response["version"] = json!(self.version);
+            let result = serde_json::to_writer(encoded.bounded_writer(MAX_MESSAGE), &response);
+            wipe_json(&mut response);
+            result
         };
+        if encoding_result.is_err() {
+            return protocol_error(&request, 4, "Cannot encode response");
+        }
         let Some(cipher) = self.cipher.as_ref() else {
             return protocol_error(&request, 3, "Key exchange required");
         };
@@ -245,10 +268,6 @@ impl Session {
                 } else {
                     protocol_error(request, 8, "Association failed")
                 }
-            }
-            "get-logins" => {
-                drop(state);
-                access::get_logins(request, data)
             }
             "associate" => {
                 if data["key"].as_str() != Some(&self.public_key)

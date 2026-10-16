@@ -11,10 +11,11 @@ use kryptopass_core::{
     EntryIcon, EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, OpenPgp,
     RecipientSet, Secret, SecretId, SecretKind, SecretLink,
 };
+use kryptopass_secure_memory::SensitiveBytes;
 use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 use super::GnuPgOpenPgp;
 use super::sqlite_storage::{EncryptedStoreSnapshot, SqliteStorage};
@@ -385,7 +386,7 @@ impl<'de> Deserialize<'de> for IconBytes {
 }
 
 #[cfg(test)]
-fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<Zeroizing<Vec<u8>>> {
+fn serialize_backup(folders: Vec<Folder>, secrets: Vec<Secret>) -> Result<SensitiveBytes> {
     serialize_backup_with_icons(folders, secrets, Vec::new())
 }
 
@@ -394,7 +395,7 @@ fn serialize_backup_with_icons(
     folders: Vec<Folder>,
     secrets: Vec<Secret>,
     assets: Vec<EntryIconAsset>,
-) -> Result<Zeroizing<Vec<u8>>> {
+) -> Result<SensitiveBytes> {
     serialize_backup_with_links(folders, secrets, assets, Vec::new())
 }
 
@@ -403,7 +404,7 @@ fn serialize_backup_with_links(
     secrets: Vec<Secret>,
     assets: Vec<EntryIconAsset>,
     links: Vec<SecretLink>,
-) -> Result<Zeroizing<Vec<u8>>> {
+) -> Result<SensitiveBytes> {
     validate_icon_resources(&secrets, &assets)?;
     validate_domain_records(&folders, &secrets)?;
     validate_links(&secrets, &links)?;
@@ -482,20 +483,20 @@ fn serialize_backup_with_links(
 }
 
 struct BoundedBackupWriter {
-    bytes: Zeroizing<Vec<u8>>,
+    bytes: SensitiveBytes,
     maximum: usize,
 }
 
 impl BoundedBackupWriter {
     fn new(maximum: usize) -> Self {
         Self {
-            bytes: Zeroizing::new(Vec::new()),
+            bytes: SensitiveBytes::default(),
             maximum,
         }
     }
 
-    fn into_bytes(mut self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(std::mem::take(&mut *self.bytes))
+    fn into_bytes(mut self) -> SensitiveBytes {
+        std::mem::take(&mut self.bytes)
     }
 }
 
@@ -509,7 +510,7 @@ impl Write for BoundedBackupWriter {
         if length > self.maximum {
             return Err(std::io::Error::other("backup exceeds maximum size"));
         }
-        self.bytes.extend_from_slice(bytes);
+        self.bytes.try_extend_from_slice(bytes)?;
         Ok(bytes.len())
     }
 

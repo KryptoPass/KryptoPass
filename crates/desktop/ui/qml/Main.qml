@@ -1057,6 +1057,7 @@ Controls.ApplicationWindow {
     }
     AboutDialog {
         id: aboutDialog
+        controller: shell
     }
     KeyErrorDialog {
         id: keyErrorDialog

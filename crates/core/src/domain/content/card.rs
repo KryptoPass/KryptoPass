@@ -1,8 +1,10 @@
 //! Payment-card payload and input validation.
 
+use crate::SensitiveText;
+
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::ensure_field_size;
 
@@ -15,13 +17,13 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CardContent {
-    pub holder: String,
-    pub number: String,
+    pub holder: SensitiveText,
+    pub number: SensitiveText,
     pub expiry_month: u8,
     pub expiry_year: u16,
-    pub cvv: String,
-    pub pin: String,
-    pub notes: String,
+    pub cvv: SensitiveText,
+    pub pin: SensitiveText,
+    pub notes: SensitiveText,
 }
 
 impl CardContent {
@@ -63,12 +65,10 @@ impl CardContent {
     }
 
     /// Returns the number with only spaces and hyphens removed.
-    pub fn normalized_number(&self) -> Zeroizing<String> {
-        Zeroizing::new(
-            self.number
-                .chars()
-                .filter(|character| !matches!(character, ' ' | '-'))
-                .collect(),
-        )
+    pub fn normalized_number(&self) -> SensitiveText {
+        self.number
+            .chars()
+            .filter(|character| !matches!(character, ' ' | '-'))
+            .collect()
     }
 }

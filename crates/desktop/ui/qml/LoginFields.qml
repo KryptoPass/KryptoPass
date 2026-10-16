@@ -80,6 +80,7 @@ SecretFields {
             spacing: 6
             Controls.Label { text: qsTr("Correo o usuario") }
             Controls.TextField {
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
                 text: root.username
                 Accessible.name: qsTr("Correo o usuario")
@@ -94,6 +95,7 @@ SecretFields {
                 Layout.fillWidth: true
                 spacing: 8
                 Controls.TextField {
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     id: passwordField
                     objectName: "entryPasswordField"
                     Layout.fillWidth: true
@@ -101,6 +103,7 @@ SecretFields {
                     rightPadding: revealButton.width + 8
                     text: root.password
                     echoMode: root.passwordVisible ? TextInput.Normal : TextInput.Password
+                    passwordMaskDelay: 0
                     Accessible.name: qsTr("Contraseña")
                     onTextEdited: root.password = text
                     Controls.ToolButton {
@@ -135,12 +138,14 @@ SecretFields {
                 Layout.fillWidth: true
                 spacing: 8
                 Controls.TextField {
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     id: totpField
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     rightPadding: totpRevealButton.width + Kirigami.Units.smallSpacing
                     text: root.totpInput
                     echoMode: root.totpVisible ? TextInput.Normal : TextInput.Password
+                    passwordMaskDelay: 0
                     placeholderText: qsTr("Base32 u otpauth:// (opcional)")
                     Accessible.name: qsTr("Semilla TOTP, inicialmente oculta")
                     onTextEdited: root.totpInput = text
@@ -173,6 +178,7 @@ SecretFields {
             spacing: 6
             Controls.Label { text: qsTr("Sitios web") }
             Controls.TextArea {
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
                 text: root.urlsText
@@ -200,6 +206,7 @@ SecretFields {
             font.weight: Font.DemiBold
         }
         Controls.TextArea {
+            inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(implicitHeight, 80)
             text: root.notes

@@ -46,7 +46,9 @@ Item {
         updating = true;
         if (form)
             cachedFields[kind] = form.currentFields();
-        activate(nextKind, cachedFields[nextKind] || {});
+        const nextFields = cachedFields[nextKind] || {};
+        delete cachedFields[nextKind];
+        activate(nextKind, nextFields);
         updating = false;
         edited();
     }

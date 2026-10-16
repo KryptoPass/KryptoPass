@@ -1,8 +1,8 @@
 //! Container handling shared by provider adapters; archive entries stay in memory.
 
 use crate::{ImportError, MAX_EXPORT_BYTES};
+use kryptopass_secure_memory::SensitiveBytes;
 use std::io::{Cursor, Read};
-use zeroize::Zeroizing;
 
 /// Hosts must enforce the limit while decrypting, not after allocating output.
 pub trait ExportDecryptor {
@@ -10,7 +10,7 @@ pub trait ExportDecryptor {
         &self,
         ciphertext: &[u8],
         maximum: usize,
-    ) -> Result<Zeroizing<Vec<u8>>, ImportError>;
+    ) -> Result<SensitiveBytes, ImportError>;
 }
 
 /// Accepts JSON, armored/binary OpenPGP, and Proton's ZIP containing data.json
@@ -18,7 +18,7 @@ pub trait ExportDecryptor {
 pub fn decode_export(
     input: &[u8],
     decryptor: &impl ExportDecryptor,
-) -> Result<Zeroizing<Vec<u8>>, ImportError> {
+) -> Result<SensitiveBytes, ImportError> {
     if input.len() > MAX_EXPORT_BYTES {
         return Err(ImportError::Limit);
     }
@@ -48,10 +48,9 @@ pub fn decode_export(
         if entry.size() > MAX_EXPORT_BYTES as u64 {
             return Err(ImportError::Limit);
         }
-        let mut bytes = Zeroizing::new(Vec::new());
-        entry
-            .take(MAX_EXPORT_BYTES as u64 + 1)
-            .read_to_end(&mut bytes)
+        let mut bytes = SensitiveBytes::try_with_capacity(entry.size() as usize + 1)
+            .map_err(|_| ImportError::Limit)?;
+        std::io::copy(&mut entry.take(MAX_EXPORT_BYTES as u64 + 1), &mut bytes)
             .map_err(|_| ImportError::InvalidExport)?;
         if bytes.len() > MAX_EXPORT_BYTES {
             return Err(ImportError::Limit);
@@ -64,13 +63,13 @@ pub fn decode_export(
 fn decode_payload(
     input: &[u8],
     decryptor: &impl ExportDecryptor,
-) -> Result<Zeroizing<Vec<u8>>, ImportError> {
+) -> Result<SensitiveBytes, ImportError> {
     let prefix = input
         .iter()
         .copied()
         .find(|byte| !byte.is_ascii_whitespace());
     if prefix == Some(b'{') {
-        return Ok(Zeroizing::new(input.to_vec()));
+        return Ok(SensitiveBytes::from(input));
     }
     if input.starts_with(b"-----BEGIN PGP MESSAGE-----")
         || input.first().is_some_and(|byte| byte & 0x80 != 0)

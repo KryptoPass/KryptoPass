@@ -3,12 +3,16 @@
 use anyhow::{Result, bail};
 use gpgme::{Context, Data, EncryptFlags, Key, PinentryMode, Protocol};
 use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, OpenPgp, RecipientSet};
+use kryptopass_secure_memory::SensitiveBytes;
 use std::io::{self, Write};
-use zeroize::Zeroizing;
 
 use super::MAX_CIPHERTEXT_BYTES;
 
 const MAX_BOUNDED_INITIAL_CAPACITY: usize = 64 * 1024;
+
+#[cfg(test)]
+#[path = "openpgp_tests.rs"]
+mod tests;
 
 /// GPGME adapter that creates an isolated context for each operation.
 #[derive(Debug, Default, Clone, Copy)]
@@ -37,7 +41,7 @@ impl OpenPgp for GnuPgOpenPgp {
         )
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
         self.decrypt_bounded(ciphertext, MAX_CIPHERTEXT_BYTES, MAX_CONTENT_BYTES)
     }
 }
@@ -86,7 +90,7 @@ impl GnuPgOpenPgp {
         ciphertext: &[u8],
         maximum_ciphertext: usize,
         maximum_plaintext: usize,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<SensitiveBytes> {
         if ciphertext.is_empty() {
             bail!("OpenPGP ciphertext is empty");
         }
@@ -94,10 +98,12 @@ impl GnuPgOpenPgp {
         ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
 
         let mut context = open_context()?;
-        let mut plaintext = BoundedWriter::with_capacity(
-            maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
-            maximum_plaintext,
-        );
+        let mut plaintext = SensitiveOutput {
+            bytes: SensitiveBytes::try_with_capacity(
+                maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
+            )?,
+            maximum: maximum_plaintext,
+        };
         let mut output = Data::from_writer(&mut plaintext)
             .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
         let result = context
@@ -112,7 +118,33 @@ impl GnuPgOpenPgp {
             bail!("OpenPGP ciphertext uses an unsupported algorithm");
         }
 
-        Ok(Zeroizing::new(plaintext.into_bytes()))
+        Ok(plaintext.bytes)
+    }
+}
+
+struct SensitiveOutput {
+    bytes: SensitiveBytes,
+    maximum: usize,
+}
+
+impl Write for SensitiveOutput {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        let length =
+            self.bytes.len().checked_add(buffer.len()).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "output size overflow")
+            })?;
+        if length > self.maximum {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "OpenPGP output exceeds the maximum size",
+            ));
+        }
+        self.bytes.try_extend_from_slice(buffer)?;
+        Ok(buffer.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 

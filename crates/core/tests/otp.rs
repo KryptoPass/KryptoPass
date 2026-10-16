@@ -32,24 +32,24 @@ fn standard_and_unknown_uri_parameters_survive_parse_format_and_encrypted_conten
         config.extensions
             == vec![
                 TotpUriParameter {
-                    key: "image".to_owned(),
-                    value: "https://cdn.example.invalid/icon?size=small".to_owned(),
+                    key: "image".into(),
+                    value: "https://cdn.example.invalid/icon?size=small".into(),
                 },
                 TotpUriParameter {
-                    key: "vendor".to_owned(),
-                    value: "alpha+beta gamma".to_owned(),
+                    key: "vendor".into(),
+                    value: "alpha+beta gamma".into(),
                 },
                 TotpUriParameter {
-                    key: "vendor key".to_owned(),
-                    value: "space preserved".to_owned(),
+                    key: "vendor key".into(),
+                    value: "space preserved".into(),
                 },
                 TotpUriParameter {
-                    key: "#fragment".to_owned(),
-                    value: "hash preserved".to_owned(),
+                    key: "#fragment".into(),
+                    value: "hash preserved".into(),
                 },
                 TotpUriParameter {
-                    key: "café".to_owned(),
-                    value: "crème".to_owned(),
+                    key: "café".into(),
+                    value: "crème".into(),
                 },
             ]
     );
@@ -61,7 +61,7 @@ fn standard_and_unknown_uri_parameters_survive_parse_format_and_encrypted_conten
 
     let encrypted_payload = encode_content(&SecretContent::Totp(TotpContent {
         config: reparsed,
-        notes: "Authenticator notes".to_owned(),
+        notes: "Authenticator notes".into(),
     }))
     .unwrap();
     let stored: Value = serde_json::from_slice(encrypted_payload.as_slice()).unwrap();
@@ -137,15 +137,15 @@ fn duplicate_parameters_invalid_extension_names_and_invalid_uri_characters_are_r
     }
 
     let mut duplicate_config = kryptopass_core::TotpConfig::default();
-    duplicate_config.secret = "JBSWY3DPEHPK3PXP".to_owned();
+    duplicate_config.secret = "JBSWY3DPEHPK3PXP".into();
     duplicate_config.extensions = vec![
         TotpUriParameter {
-            key: "vendor".to_owned(),
-            value: "first".to_owned(),
+            key: "vendor".into(),
+            value: "first".into(),
         },
         TotpUriParameter {
-            key: "vendor".to_owned(),
-            value: "second".to_owned(),
+            key: "vendor".into(),
+            value: "second".into(),
         },
     ];
     assert!(format_totp_input(&duplicate_config).is_err());

@@ -13,8 +13,8 @@ fn synthetic_ssh_key() -> SshKeyContent {
     let keypair = Ed25519Keypair::from_seed(&[7; 32]);
     let key = PrivateKey::new(keypair.into(), "synthetic test key").unwrap();
     SshKeyContent::import(
-        key.to_openssh(LineEnding::LF).unwrap().to_string(),
-        String::new(),
+        key.to_openssh(LineEnding::LF).unwrap().to_string().into(),
+        Default::default(),
     )
     .unwrap()
 }
@@ -28,58 +28,58 @@ fn sample_contents() -> Vec<SecretContent> {
     vec![
         SecretContent::Custom(CustomContent {
             records: vec![CustomRecord {
-                id: Uuid::from_u128(1).to_string(),
-                key: "Recovery code".to_owned(),
-                value: "custom-secret-marker".to_owned(),
+                id: Uuid::from_u128(1).to_string().into(),
+                key: "Recovery code".into(),
+                value: "custom-secret-marker".into(),
                 multiline: false,
                 concealed: true,
             }],
-            notes: "Custom notes".to_owned(),
+            notes: "Custom notes".into(),
         }),
         SecretContent::Card(CardContent {
-            holder: "Ada Example".to_owned(),
-            number: "4111111111111111".to_owned(),
+            holder: "Ada Example".into(),
+            number: "4111111111111111".into(),
             expiry_month: 12,
             expiry_year: 2032,
-            cvv: "cvv-secret-marker".to_owned(),
-            pin: "pin-secret-marker".to_owned(),
-            notes: "Card notes".to_owned(),
+            cvv: "cvv-secret-marker".into(),
+            pin: "pin-secret-marker".into(),
+            notes: "Card notes".into(),
         }),
         SecretContent::Totp(TotpContent {
             config: totp,
-            notes: "Authenticator notes".to_owned(),
+            notes: "Authenticator notes".into(),
         }),
         SecretContent::Identity(IdentityContent {
-            first_name: "Ada".to_owned(),
-            last_name: "Example".to_owned(),
+            first_name: "Ada".into(),
+            last_name: "Example".into(),
             documents: vec![kryptopass_core::IdentityDocument {
-                id: Uuid::from_u128(2).to_string(),
-                document_type: "Passport".to_owned(),
-                number: "document-secret-marker".to_owned(),
-                country: "GB".to_owned(),
-                expires: "2032-12-31".to_owned(),
+                id: Uuid::from_u128(2).to_string().into(),
+                document_type: "Passport".into(),
+                number: "document-secret-marker".into(),
+                country: "GB".into(),
+                expires: "2032-12-31".into(),
             }],
-            emails: vec!["email-secret-marker".to_owned()],
-            phones: vec!["phone-secret-marker".to_owned()],
-            address: "address-secret-marker".to_owned(),
-            notes: "Identity notes".to_owned(),
+            emails: vec!["email-secret-marker".into()],
+            phones: vec!["phone-secret-marker".into()],
+            address: "address-secret-marker".into(),
+            notes: "Identity notes".into(),
         }),
         SecretContent::Wifi(WifiContent {
-            ssid: "Example network".to_owned(),
+            ssid: "Example network".into(),
             security: WifiSecurity::Wpa,
-            password: "wifi-secret-marker".to_owned(),
+            password: "wifi-secret-marker".into(),
             hidden: false,
-            notes: "Wi-Fi notes".to_owned(),
+            notes: "Wi-Fi notes".into(),
         }),
         SecretContent::License(LicenseContent {
-            product: "Example Product".to_owned(),
-            license_key: "license-secret-marker".to_owned(),
-            holder: "Ada Example".to_owned(),
-            email: "license-email-marker".to_owned(),
-            version: "1.0".to_owned(),
-            purchased: "2025-01-01".to_owned(),
-            expires: "2030-01-01".to_owned(),
-            notes: "License notes".to_owned(),
+            product: "Example Product".into(),
+            license_key: "license-secret-marker".into(),
+            holder: "Ada Example".into(),
+            email: "license-email-marker".into(),
+            version: "1.0".into(),
+            purchased: "2025-01-01".into(),
+            expires: "2030-01-01".into(),
+            notes: "License notes".into(),
         }),
         SecretContent::SshKey(synthetic_ssh_key()),
     ]
@@ -89,9 +89,9 @@ fn entry(content: SecretContent) -> OpenedEntry {
     OpenedEntry {
         id: SecretId::new(),
         folder: None,
-        title: "Synthetic expanded item".to_owned(),
+        title: "Synthetic expanded item".into(),
         revision: 1,
-        recipients: vec!["0123456789ABCDEF0123456789ABCDEF01234567".to_owned()],
+        recipients: vec!["0123456789ABCDEF0123456789ABCDEF01234567".into()],
         icon: None,
         related_entry: None,
         content,
@@ -126,13 +126,13 @@ fn row<'a>(projection: &'a Value, id: &str) -> &'a Value {
 #[test]
 fn detail_projection_hides_concealed_values_until_the_matching_field_is_revealed() {
     let content = SecretContent::Card(CardContent {
-        holder: "Ada Example".to_owned(),
-        number: "4111111111111111".to_owned(),
+        holder: "Ada Example".into(),
+        number: "4111111111111111".into(),
         expiry_month: 12,
         expiry_year: 2032,
-        cvv: "cvv-secret-marker".to_owned(),
-        pin: "pin-secret-marker".to_owned(),
-        notes: "Card notes".to_owned(),
+        cvv: "cvv-secret-marker".into(),
+        pin: "pin-secret-marker".into(),
+        notes: "Card notes".into(),
     });
 
     let hidden = projection(&content, &[], None);
@@ -186,7 +186,7 @@ fn field_copy_sources_match_the_encrypted_values_and_keep_concealment_metadata()
     for (index, id, expected_value, concealed) in expected {
         let (value, actual_concealed) = content_field(&contents[index], id)
             .unwrap_or_else(|| panic!("missing copy source {id}"));
-        assert_eq!(value.as_ref(), expected_value, "copy source {id}");
+        assert_eq!(&*value, expected_value, "copy source {id}");
         assert_eq!(actual_concealed, concealed, "concealment for {id}");
     }
 
@@ -215,7 +215,7 @@ fn field_copy_sources_match_the_encrypted_values_and_keep_concealment_metadata()
 #[test]
 fn editor_and_detail_projections_never_serialize_the_ssh_private_key_or_passphrase() {
     let mut ssh = synthetic_ssh_key();
-    ssh.passphrase = String::new();
+    ssh.passphrase = Default::default();
     let private_marker = ssh.private_key.clone();
     let public_key = ssh.public_key.clone();
     let fingerprint = ssh.fingerprint.clone();
@@ -226,23 +226,23 @@ fn editor_and_detail_projections_never_serialize_the_ssh_private_key_or_passphra
     let detail = projection(&SecretContent::SshKey(ssh), &[], None);
 
     for serialized in [editor.to_string(), detail.to_string()] {
-        assert!(!serialized.contains(&private_marker));
+        assert!(!serialized.contains(private_marker.as_str()));
         assert!(!serialized.contains("privateKey"));
         assert!(!serialized.contains("passphrase"));
     }
-    assert!(editor.to_string().contains(&public_key));
-    assert!(editor.to_string().contains(&fingerprint));
-    assert!(detail.to_string().contains(&public_key));
+    assert!(editor.to_string().contains(public_key.as_str()));
+    assert!(editor.to_string().contains(fingerprint.as_str()));
+    assert!(detail.to_string().contains(public_key.as_str()));
 }
 
 #[test]
 fn qr_source_is_projected_only_when_rust_supplies_the_generated_image() {
     let wifi = SecretContent::Wifi(WifiContent {
-        ssid: "Example network".to_owned(),
+        ssid: "Example network".into(),
         security: WifiSecurity::Wpa,
-        password: "wifi-secret-marker".to_owned(),
+        password: "wifi-secret-marker".into(),
         hidden: false,
-        notes: String::new(),
+        notes: Default::default(),
     });
     let without_qr = projection(&wifi, &[], None);
     assert_eq!(without_qr["content"]["fields"]["hasQr"], true);

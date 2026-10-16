@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use crate::SensitiveText;
+
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,16 +21,16 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CustomContent {
     pub records: Vec<CustomRecord>,
-    pub notes: String,
+    pub notes: SensitiveText,
 }
 
 /// One independently editable key/value record.
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CustomRecord {
-    pub id: String,
-    pub key: String,
-    pub value: String,
+    pub id: SensitiveText,
+    pub key: SensitiveText,
+    pub value: SensitiveText,
     pub multiline: bool,
     pub concealed: bool,
 }
@@ -45,7 +47,7 @@ impl CustomContent {
             let id = Uuid::parse_str(&record.id).context("invalid custom record ID")?;
             ensure!(!id.is_nil(), "invalid custom record ID");
             ensure!(
-                id.to_string() == record.id,
+                record.id.as_bytes() == id.hyphenated().encode_lower(&mut [0; 36]).as_bytes(),
                 "custom record ID is not canonical"
             );
             ensure!(ids.insert(id), "duplicate custom record ID");

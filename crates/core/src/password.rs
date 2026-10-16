@@ -1,7 +1,7 @@
 //! Cryptographically secure password generation.
 
+use crate::{SensitiveBytes, SensitiveText};
 use anyhow::{Result, bail, ensure};
-use zeroize::{Zeroize, Zeroizing};
 
 /// Character classes and length for a generated password.
 pub struct PasswordOptions {
@@ -17,7 +17,7 @@ pub struct PasswordOptions {
 ///
 /// Each draw uses rejection sampling, so mapping random words onto the class
 /// alphabets does not introduce modulo bias. The result is zeroized on drop.
-pub fn generate_password(options: &PasswordOptions) -> Result<Zeroizing<String>> {
+pub fn generate_password(options: &PasswordOptions) -> Result<SensitiveText> {
     ensure!(
         (4..=1024).contains(&options.length),
         "password length must be between 4 and 1024"
@@ -52,26 +52,25 @@ pub fn generate_password(options: &PasswordOptions) -> Result<Zeroizing<String>>
 
     let alphabet: Vec<u8> = classes.iter().flatten().copied().collect();
     let mut random = RandomWords::new()?;
-    let mut output = Zeroizing::new(Vec::with_capacity(options.length));
+    let mut output = SensitiveBytes::with_capacity(options.length);
+    output.resize(options.length, 0);
+    let mut written = 0;
 
     for class in &classes {
-        output.push(class[random.index(class.len())?]);
+        output.as_mut_slice()[written] = class[random.index(class.len())?];
+        written += 1;
     }
-    while output.len() < options.length {
-        output.push(alphabet[random.index(alphabet.len())?]);
+    while written < options.length {
+        output.as_mut_slice()[written] = alphabet[random.index(alphabet.len())?];
+        written += 1;
     }
 
     for index in (1..output.len()).rev() {
         let swap_index = random.index(index + 1)?;
-        output.swap(index, swap_index);
+        output.as_mut_slice().swap(index, swap_index);
     }
 
-    let output = std::mem::take(&mut *output);
-    let password = String::from_utf8(output).map_err(|error| {
-        error.into_bytes().zeroize();
-        anyhow::anyhow!("password generation failed")
-    })?;
-    Ok(Zeroizing::new(password))
+    SensitiveText::from_utf8(output).map_err(|_| anyhow::anyhow!("password generation failed"))
 }
 
 fn filtered_class(source: &[u8], options: &PasswordOptions) -> Vec<u8> {
@@ -83,22 +82,21 @@ fn filtered_class(source: &[u8], options: &PasswordOptions) -> Vec<u8> {
 }
 
 struct RandomWords {
-    bytes: [u8; 256],
+    bytes: SensitiveBytes,
     offset: usize,
 }
 
 impl RandomWords {
     fn new() -> Result<Self> {
-        let mut result = Self {
-            bytes: [0; 256],
-            offset: 256,
-        };
+        let mut bytes = SensitiveBytes::with_capacity(256);
+        bytes.resize(256, 0);
+        let mut result = Self { bytes, offset: 256 };
         result.refill()?;
         Ok(result)
     }
 
     fn refill(&mut self) -> Result<()> {
-        getrandom::fill(&mut self.bytes)
+        getrandom::fill(self.bytes.as_mut_slice())
             .map_err(|_| anyhow::anyhow!("secure randomness unavailable"))?;
         self.offset = 0;
         Ok(())
@@ -132,12 +130,5 @@ impl RandomWords {
             }
         }
         bail!("password generation failed")
-    }
-}
-
-impl Drop for RandomWords {
-    fn drop(&mut self) {
-        use zeroize::Zeroize;
-        self.bytes.zeroize();
     }
 }

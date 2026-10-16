@@ -16,7 +16,8 @@ ColumnLayout {
     property int minimumRows: 3
     property bool secretVisible: false
     property alias validator: singleLineField.validator
-    property alias inputMethodHints: singleLineField.inputMethodHints
+    property int inputMethodHints: Qt.ImhNone
+    readonly property int sensitiveInputMethodHints: inputMethodHints | Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
     property alias maximumLength: singleLineField.maximumLength
 
     signal valueEdited(string value)
@@ -43,8 +44,10 @@ ColumnLayout {
             visible: !root.multiline
             Layout.fillWidth: true
             Layout.minimumWidth: 0
-            text: root.value
+            text: root.multiline ? "" : root.value
             placeholderText: root.placeholderText
+            inputMethodHints: root.sensitiveInputMethodHints
+            passwordMaskDelay: 0
             echoMode: root.concealed && !root.secretVisible ? TextInput.Password : TextInput.Normal
             Accessible.name: root.label
             onTextEdited: root.valueEdited(text)
@@ -56,8 +59,9 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.minimumWidth: 0
             Layout.preferredHeight: Math.max(implicitHeight, root.minimumRows * Kirigami.Units.gridUnit)
-            text: root.concealed && !root.secretVisible ? root.mask(root.value) : root.value
+            text: !root.multiline ? "" : root.concealed && !root.secretVisible ? root.mask(root.value) : root.value
             placeholderText: root.placeholderText
+            inputMethodHints: root.sensitiveInputMethodHints
             readOnly: root.concealed && !root.secretVisible
             wrapMode: TextEdit.Wrap
             selectByMouse: true

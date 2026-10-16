@@ -8,10 +8,11 @@ use kryptopass_core::{
     RecipientSelection, RecipientSet, SecretContent, SecretId, SecretLink, SecretMetadata,
     TotpConfig, generate_totp,
 };
+use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use content::{DetailContent, DraftContent, EditorContent};
 
@@ -62,9 +63,9 @@ pub(super) struct PreparedSave {
 #[derive(serde::Serialize, Zeroize, ZeroizeOnDrop)]
 struct TotpProjection {
     #[serde(rename = "currentCode")]
-    current_code: String,
+    current_code: SensitiveText,
     #[serde(rename = "nextCode")]
-    next_code: String,
+    next_code: SensitiveText,
     period: u64,
     #[serde(rename = "remainingSeconds")]
     remaining_seconds: u64,
@@ -72,8 +73,8 @@ struct TotpProjection {
     valid_until: u64,
     #[serde(rename = "nextValidFrom")]
     next_valid_from: u64,
-    issuer: Option<String>,
-    account: Option<String>,
+    issuer: Option<SensitiveText>,
+    account: Option<SensitiveText>,
     #[zeroize(skip)]
     algorithm: &'static str,
     digits: u8,
@@ -182,7 +183,7 @@ pub(super) struct EntryDraft {
     icon: DraftIcon,
     revision: Option<u64>,
     folder: String,
-    title: SensitiveText,
+    title: String,
     content: DraftContent,
     #[serde(rename = "iconSource", default)]
     _icon_source: String,
@@ -205,24 +206,6 @@ impl<'de> Deserialize<'de> for DraftIcon {
     }
 }
 
-#[derive(Default, Zeroize, ZeroizeOnDrop)]
-struct SensitiveText(String);
-
-impl<'de> Deserialize<'de> for SensitiveText {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(Self)
-    }
-}
-
-impl SensitiveText {
-    fn take(&mut self) -> String {
-        std::mem::take(&mut self.0)
-    }
-}
-
 impl EntryDraft {
     pub(super) fn ssh_import_token(&self) -> Option<&str> {
         match &self.content {
@@ -240,7 +223,7 @@ impl EntryDraft {
 pub(super) fn content_field<'a>(
     content: &'a SecretContent,
     id: &str,
-) -> Option<(std::borrow::Cow<'a, str>, bool)> {
+) -> Option<(expanded::SensitiveValue<'a>, bool)> {
     expanded::field(content, id)
 }
 
@@ -301,7 +284,7 @@ pub(super) fn prepare_save(
     Ok(PreparedSave {
         id: session_id,
         folder,
-        title: draft.title.take(),
+        title: std::mem::take(&mut draft.title),
         recipients,
         content,
         expected_revision: session_revision,
@@ -315,7 +298,7 @@ pub(super) fn content_projection(
     content: &SecretContent,
     reveal_password: bool,
     unix_seconds: u64,
-) -> anyhow::Result<Zeroizing<String>> {
+) -> anyhow::Result<SensitiveText> {
     content_projection_with_state(
         id,
         content,
@@ -333,8 +316,8 @@ pub(super) fn content_projection_with_state(
     unix_seconds: u64,
     revealed_fields: &std::collections::BTreeSet<String>,
     qr_source: Option<&str>,
-) -> anyhow::Result<Zeroizing<String>> {
-    serde_json::to_string(&ContentProjection {
+) -> anyhow::Result<SensitiveText> {
+    sensitive_json(&ContentProjection {
         id: id.0.to_string(),
         content: DetailContent::new(
             content,
@@ -344,12 +327,10 @@ pub(super) fn content_projection_with_state(
             qr_source,
         )?,
     })
-    .map(Zeroizing::new)
-    .map_err(Into::into)
 }
 
-pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing<String>> {
-    serde_json::to_string(&EditorProjection {
+pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<SensitiveText> {
+    sensitive_json(&EditorProjection {
         id: entry.id.0.to_string(),
         revision: Some(entry.revision),
         folder: entry.folder.map_or_else(String::new, |id| id.0.to_string()),
@@ -362,11 +343,9 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Zeroizing
             .related_entry
             .map_or_else(String::new, |id| id.0.to_string()),
     })
-    .map(Zeroizing::new)
-    .map_err(Into::into)
 }
 
-pub(super) fn new_editor_projection() -> anyhow::Result<Zeroizing<String>> {
+pub(super) fn new_editor_projection() -> anyhow::Result<SensitiveText> {
     let content = SecretContent::Login(kryptopass_core::LoginContent::default());
     let projection = EditorProjection {
         id: String::new(),
@@ -379,9 +358,7 @@ pub(super) fn new_editor_projection() -> anyhow::Result<Zeroizing<String>> {
         recipients: &[],
         related_entry_id: String::new(),
     };
-    serde_json::to_string(&projection)
-        .map(Zeroizing::new)
-        .map_err(Into::into)
+    sensitive_json(&projection)
 }
 
 #[derive(serde::Serialize)]
@@ -493,3 +470,9 @@ mod tests;
 #[cfg(test)]
 #[path = "expanded_projection_tests.rs"]
 mod expanded_tests;
+
+pub(super) fn sensitive_json(value: &impl serde::Serialize) -> anyhow::Result<SensitiveText> {
+    let mut bytes = SensitiveBytes::default();
+    serde_json::to_writer(&mut bytes, value)?;
+    Ok(SensitiveText::from_utf8(bytes)?)
+}

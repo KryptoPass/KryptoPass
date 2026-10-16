@@ -39,8 +39,7 @@ cifrado. La base se guarda en el directorio de datos propio de la aplicación.
 
 Para guardar se necesita al menos una clave de GnuPG válida para cifrado.
 El formulario utiliza el llavero existente y respeta la política de confianza
-de GnuPG; la aplicación no crea claves automáticamente. Los datos ficticios
-de `MockStore.qml` no se importan al almacenamiento real.
+de GnuPG; la aplicación no crea claves automáticamente.
 
 El generador permite elegir longitud, clases de caracteres y exclusiones;
 obtiene aleatoriedad del sistema operativo. Los guardados se confirman tras
@@ -151,13 +150,6 @@ normal. `just install-dev-desktop` prepara únicamente la entrada y
 En GNU Linux x86_64, la configuración del proyecto selecciona LLD para evitar
 que CXX-Qt elija Gold. El toolchain Rust actual utiliza su copia incluida de
 LLD; los toolchains anteriores que no la incluyen necesitan LLD en el sistema.
-
-La [demo Android y su pipeline](packaging/android-ui/README.md) comparten los
-QML con el escritorio y usan un backend Rust de demostración. `just android-run`
-la abre con Qt del host; `bacon android-run` recompila y reinicia al guardar.
-`just android-doctor` diagnostica el entorno Android y `just android` construye
-el APK ARM64 y comprueba la alineación de 16 KB de sus bibliotecas. CI construye
-ese APK en un job separado. La demo todavía no integra la bóveda real.
 
 `just lint` comprueba que todos los QML estén registrados y analiza cada archivo
 en una copia temporal con el qmldir y los tipos del build actual, incluidos los

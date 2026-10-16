@@ -2,6 +2,7 @@
 #include "app_identity.h"
 
 #include <KAboutData>
+#include <KAboutApplicationDialog>
 #include <KActionCollection>
 #include <KShortcutsDialog>
 #include <KStandardShortcut>
@@ -15,6 +16,7 @@
 #include <QLocale>
 #include <QTranslator>
 #include <QQuickWindow>
+#include <QPointer>
 #include <QTimer>
 
 namespace {
@@ -81,6 +83,19 @@ void initialize_desktop()
     about.addAuthor(QString::fromUtf8(authors));
     KAboutData::setApplicationData(about);
     QApplication::setWindowIcon(QIcon::fromTheme(QString::fromUtf8(desktop_file_id), QIcon(QStringLiteral(":/") + QString::fromUtf8(desktop_file_id).replace(QLatin1Char('.'), QLatin1Char('/')) + QStringLiteral("/icon.svg"))));
+}
+
+void show_about_dialog()
+{
+    static QPointer<KAboutApplicationDialog> dialog;
+    if (!dialog) {
+        dialog = new KAboutApplicationDialog(KAboutData::applicationData());
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+    }
+
+    dialog->raise();
+    dialog->activateWindow();
 }
 
 QString translate_ui(const QString &source)

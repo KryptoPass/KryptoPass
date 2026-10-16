@@ -1,9 +1,11 @@
 //! Login payload, compatibility and encrypted history rules.
 
+use crate::SensitiveText;
+
 use anyhow::{Context, Result, ensure};
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{
     CONTENT_SCHEMA_VERSION, LEGACY_CONTENT_SCHEMA_VERSION, LOGIN_HISTORY_SCHEMA_VERSION,
@@ -22,20 +24,20 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 /// Login fields stored only in the encrypted payload.
 #[derive(Clone, Default, Zeroize, ZeroizeOnDrop)]
 pub struct LoginContent {
-    pub username: String,
-    pub password: String,
+    pub username: SensitiveText,
+    pub password: SensitiveText,
     /// Legacy primary URL, synchronized to `urls.first()`.
-    pub url: String,
-    pub notes: String,
+    pub url: SensitiveText,
+    pub notes: SensitiveText,
     /// Complete ordered site list; `url` mirrors its first item.
-    pub urls: Vec<String>,
+    pub urls: Vec<SensitiveText>,
     pub totp: Option<TotpConfig>,
     pub history: Box<LoginHistory>,
 }
 
 impl LoginContent {
     /// Replaces the complete ordered site list and synchronizes the legacy URL.
-    pub fn set_urls(&mut self, urls: Vec<String>) {
+    pub fn set_urls(&mut self, urls: Vec<SensitiveText>) {
         self.urls = urls;
         self.sync_primary_url();
     }
@@ -74,7 +76,7 @@ pub struct LoginHistoryEvent {
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HistoricalPassword {
-    password: String,
+    password: SensitiveText,
     #[zeroize(skip)]
     changed_at: u64,
 }
@@ -85,11 +87,11 @@ pub struct HistoricalPassword {
 struct LoginVersion {
     #[zeroize(skip)]
     changed_at: u64,
-    title: String,
-    username: String,
-    password: String,
-    urls: Vec<String>,
-    notes: String,
+    title: SensitiveText,
+    username: SensitiveText,
+    password: SensitiveText,
+    urls: Vec<SensitiveText>,
+    notes: SensitiveText,
     totp: Option<TotpConfig>,
 }
 
@@ -118,7 +120,7 @@ impl LoginHistory {
         );
         let version = LoginVersion {
             changed_at,
-            title: title.to_owned(),
+            title: title.into(),
             username: content.username.clone(),
             password: content.password.clone(),
             urls: content.urls.clone(),
@@ -139,9 +141,23 @@ impl LoginHistory {
     }
 
     fn retained_version_bytes(&self) -> Result<usize> {
-        let versions = Zeroizing::new(serde_json::to_vec(&self.versions)?);
-        let passwords = Zeroizing::new(serde_json::to_vec(&self.previous_passwords)?);
-        Ok(versions.len() + passwords.len())
+        // Count bytes without materializing another plaintext history buffer.
+        struct SizeWriter(usize);
+        impl std::io::Write for SizeWriter {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0 = self.0.checked_add(bytes.len()).ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidInput, "history size overflow")
+                })?;
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let mut size = SizeWriter(0);
+        serde_json::to_writer(&mut size, &self.versions)?;
+        serde_json::to_writer(&mut size, &self.previous_passwords)?;
+        Ok(size.0)
     }
 
     /// Metadata for snapshots and legacy password-only entries, newest first.
@@ -192,11 +208,11 @@ impl LoginHistory {
                         .count(),
                 )?;
             return Some(LoginContent {
-                username: String::new(),
+                username: SensitiveText::new(),
                 password: entry.password.clone(),
-                url: String::new(),
+                url: SensitiveText::new(),
                 urls: vec![],
-                notes: String::new(),
+                notes: SensitiveText::new(),
                 totp: None,
                 history: Box::default(),
             });
@@ -244,8 +260,7 @@ impl LoginHistory {
 
     /// Saves a prior password, retaining at most 20 entries and 512 KiB total.
     /// Oldest entries are removed when either retention limit is exceeded.
-    pub fn record_password(&mut self, password: String, changed_at: u64) -> Result<()> {
-        let mut password = Zeroizing::new(password);
+    pub fn record_password(&mut self, password: SensitiveText, changed_at: u64) -> Result<()> {
         ensure!(
             password.len() <= MAX_PASSWORD_BYTES,
             "historical password exceeds the maximum size"
@@ -256,7 +271,7 @@ impl LoginHistory {
         self.previous_passwords.insert(
             index,
             HistoricalPassword {
-                password: std::mem::take(&mut *password),
+                password,
                 changed_at,
             },
         );
@@ -295,7 +310,12 @@ pub(super) fn validate_login(content: &LoginContent) -> Result<()> {
         ensure_field_size("URL", url, MAX_URL_BYTES)?;
     }
     ensure!(
-        content.url == content.urls.first().map(String::as_str).unwrap_or_default(),
+        content.url
+            == content
+                .urls
+                .first()
+                .map(SensitiveText::as_str)
+                .unwrap_or_default(),
         "login content URL does not match the primary URL in its URL list"
     );
     if let Some(totp) = &content.totp {
@@ -421,7 +441,7 @@ pub(super) struct FieldsRef<'a> {
     password: &'a str,
     url: &'a str,
     notes: &'a str,
-    urls: &'a [String],
+    urls: &'a [SensitiveText],
     totp: Option<&'a TotpConfig>,
     history: &'a LoginHistory,
 }
@@ -431,7 +451,11 @@ impl<'a> From<&'a LoginContent> for FieldsRef<'a> {
         Self {
             username: &content.username,
             password: &content.password,
-            url: content.urls.first().map(String::as_str).unwrap_or_default(),
+            url: content
+                .urls
+                .first()
+                .map(SensitiveText::as_str)
+                .unwrap_or_default(),
             notes: &content.notes,
             urls: &content.urls,
             totp: content.totp.as_ref(),
@@ -443,12 +467,12 @@ impl<'a> From<&'a LoginContent> for FieldsRef<'a> {
 #[derive(Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct StoredFields {
-    username: String,
-    password: String,
-    url: String,
-    notes: String,
+    username: SensitiveText,
+    password: SensitiveText,
+    url: SensitiveText,
+    notes: SensitiveText,
     #[serde(default)]
-    urls: Present<Vec<String>>,
+    urls: Present<Vec<SensitiveText>>,
     #[serde(default)]
     totp: Present<TotpConfig>,
     #[serde(default)]

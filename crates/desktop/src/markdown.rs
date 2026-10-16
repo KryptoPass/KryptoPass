@@ -4,12 +4,12 @@
 use comrak::{
     Arena, Options, create_formatter, html::ChildRendering, nodes::NodeValue, parse_document,
 };
+use kryptopass_secure_memory::SensitiveText;
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::{self, Write},
     sync::atomic::{AtomicU64, Ordering},
 };
-use zeroize::Zeroizing;
 
 pub const MAX_SOURCE_BYTES: usize = 256 * 1024;
 const ACTION_SCHEME: &str = "kryptopass-spoiler:";
@@ -57,7 +57,7 @@ impl Theme {
 
 #[derive(Default)]
 pub struct Document {
-    source: Zeroizing<String>,
+    source: SensitiveText,
     revision: u64,
     revealed: BTreeSet<usize>,
     available: BTreeSet<usize>,
@@ -65,7 +65,7 @@ pub struct Document {
 }
 
 pub struct RenderedDocument {
-    pub html: Zeroizing<String>,
+    pub html: SensitiveText,
     pub actions: Vec<String>,
     pub revealed_actions: Vec<String>,
 }
@@ -82,7 +82,7 @@ impl Document {
     }
 
     pub fn clear(&mut self) {
-        self.source = Zeroizing::new(String::new());
+        self.source = SensitiveText::default();
         self.revision = NEXT_REVISION.fetch_add(1, Ordering::Relaxed);
         self.revealed.clear();
         self.available.clear();
@@ -132,8 +132,8 @@ impl Document {
             visible: Vec::new(),
             theme: self.theme.clone(),
         };
-        let mut html = Zeroizing::new(String::new());
-        let state = QtFormatter::format_document(root, &options, &mut *html, state)?;
+        let mut html = SensitiveText::default();
+        let state = QtFormatter::format_document(root, &options, &mut html, state)?;
         self.available = state.visible.iter().copied().collect();
         // A hidden ancestor also resets any revealed descendants.
         self.revealed.retain(|index| self.available.contains(index));

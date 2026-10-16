@@ -8,8 +8,8 @@ use std::{
 };
 
 use gpgme::Context;
+use kryptopass_secure_memory::SensitiveBytes;
 use uuid::Uuid;
-use zeroize::Zeroizing;
 
 pub(super) const MAX_INPUT_FILE_BYTES: u64 = 32 * 1024 * 1024;
 pub(super) const MAX_KEY_BLOB_BYTES: usize = 16 * 1024 * 1024;
@@ -120,7 +120,7 @@ pub(super) fn read_bounded_file(
     path: &Path,
     limit: u64,
     description: &str,
-) -> Result<Zeroizing<Vec<u8>>, String> {
+) -> Result<SensitiveBytes, String> {
     let mut options = OpenOptions::new();
     options.read(true);
     #[cfg(unix)]
@@ -153,16 +153,17 @@ pub(super) fn read_bounded_file(
         ));
     }
     let capacity = usize::try_from(metadata.len()).unwrap_or(0);
-    let mut bytes = Zeroizing::new(Vec::with_capacity(capacity));
-    Read::by_ref(&mut file)
-        .take(limit.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .map_err(|error| {
-            crate::i18n::format(
-                "No se pudo leer %1: %2",
-                &[format!("{}", path.display()), error.to_string()],
-            )
-        })?;
+    let mut bytes = SensitiveBytes::with_capacity(capacity);
+    std::io::copy(
+        &mut Read::by_ref(&mut file).take(limit.saturating_add(1)),
+        &mut bytes,
+    )
+    .map_err(|error| {
+        crate::i18n::format(
+            "No se pudo leer %1: %2",
+            &[format!("{}", path.display()), error.to_string()],
+        )
+    })?;
     if bytes.len() as u64 > limit {
         return Err(crate::i18n::format(
             "%1 supera el tamaño permitido.",
@@ -273,12 +274,12 @@ fn reject_protected_destination(
 }
 
 pub(super) struct BoundedBufferWriter {
-    storage: Arc<Mutex<Zeroizing<Vec<u8>>>>,
+    storage: Arc<Mutex<SensitiveBytes>>,
     limit: usize,
 }
 
 impl BoundedBufferWriter {
-    pub fn new(storage: Arc<Mutex<Zeroizing<Vec<u8>>>>, limit: usize) -> Self {
+    pub fn new(storage: Arc<Mutex<SensitiveBytes>>, limit: usize) -> Self {
         Self { storage, limit }
     }
 }
@@ -294,7 +295,7 @@ impl Write for BoundedBufferWriter {
                 "la exportación supera el tamaño permitido",
             ));
         }
-        buffer.extend_from_slice(bytes);
+        buffer.try_extend_from_slice(bytes)?;
         Ok(bytes.len())
     }
 

@@ -162,7 +162,7 @@ pub fn automatic_entry_icon(content: &SecretContent) -> Option<EntryIcon> {
             let url = login
                 .urls
                 .first()
-                .map_or(login.url.as_str(), String::as_str);
+                .map_or(login.url.as_str(), crate::SensitiveText::as_str);
             favicon_for_url(url).or_else(|| server_theme_for_url(url))
         }
         SecretContent::Note(_)

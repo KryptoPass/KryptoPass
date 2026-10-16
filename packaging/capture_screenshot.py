@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
-from metadata import ROOT
+from metadata import ROOT, desktop_binary
 
 output = ROOT / "packaging/screenshots/vault.png"
 output.parent.mkdir(parents=True, exist_ok=True)
@@ -15,4 +15,4 @@ with TemporaryDirectory(prefix="kryptopass-screenshot-") as temporary:
         path = profile / name
         path.mkdir(mode=0o700)
         environment[variable] = str(path)
-    subprocess.run([str(ROOT / "target/debug/kryptopass-desktop"), "--screenshot", str(output)], env=environment, check=True, timeout=20)
+    subprocess.run([str(desktop_binary()), "--screenshot", str(output)], env=environment, check=True, timeout=20)

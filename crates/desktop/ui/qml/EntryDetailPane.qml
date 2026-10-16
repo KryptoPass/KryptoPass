@@ -185,13 +185,12 @@ Controls.Pane {
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentWidth: availableWidth
-            contentHeight: detailSurface.height
             clip: true
 
             Item {
                 id: detailSurface
                 width: detailScroll.availableWidth
-                height: Math.max(detailScroll.availableHeight, detailContent.implicitHeight)
+                height: detailContent.implicitHeight
 
                 MouseArea {
                     anchors.fill: parent

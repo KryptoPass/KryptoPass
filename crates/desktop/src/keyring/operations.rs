@@ -12,7 +12,7 @@ use gpgme::{
     Context, CreateKeyFlags, Data, DeleteKeyFlags, ExportMode, Key, KeyListMode, KeySigningFlags,
     PinentryMode, Protocol,
 };
-use zeroize::Zeroizing;
+use kryptopass_secure_memory::SensitiveBytes;
 
 use super::{
     edit,
@@ -380,8 +380,8 @@ fn export_bytes(
     context: &mut Context,
     fingerprint: &str,
     mode: ExportMode,
-) -> Result<Zeroizing<Vec<u8>>, String> {
-    let storage = Arc::new(Mutex::new(Zeroizing::new(Vec::new())));
+) -> Result<SensitiveBytes, String> {
+    let storage = Arc::new(Mutex::new(SensitiveBytes::default()));
     let writer = BoundedBufferWriter::new(Arc::clone(&storage), MAX_KEY_BLOB_BYTES);
     let mut destination = Data::from_writer(writer).map_err(|error| {
         crate::i18n::format(
@@ -1042,10 +1042,7 @@ fn subkey_fingerprints(key: &Key) -> HashSet<String> {
         .collect()
 }
 
-fn revocation_certificate(
-    context: &Context,
-    fingerprint: &str,
-) -> Result<Zeroizing<Vec<u8>>, String> {
+fn revocation_certificate(context: &Context, fingerprint: &str) -> Result<SensitiveBytes, String> {
     if let Some(path) = edit::revocation_file_path(context, fingerprint) {
         let directory = path
             .parent()

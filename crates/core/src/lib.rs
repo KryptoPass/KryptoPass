@@ -38,3 +38,5 @@ pub use otp::{
 pub use password::{PasswordOptions, generate_password};
 pub use ports::{ImportStorage, OpenPgp, Storage};
 pub use service::{CreateSecret, RecipientSelection, SaveContentRequest, SecretsService};
+
+pub use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};

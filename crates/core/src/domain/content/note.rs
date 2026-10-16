@@ -1,5 +1,7 @@
 //! Secure-note payload and validation.
 
+use crate::SensitiveText;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -13,8 +15,8 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(deny_unknown_fields)]
 pub struct NoteContent {
-    pub value: String,
-    pub notes: String,
+    pub value: SensitiveText,
+    pub notes: SensitiveText,
 }
 
 impl NoteContent {

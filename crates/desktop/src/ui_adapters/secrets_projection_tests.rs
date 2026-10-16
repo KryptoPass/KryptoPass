@@ -12,21 +12,21 @@ const TOTP_SECRET: &str = "JBSWY3DPEHPK3PXP";
 
 fn login() -> LoginContent {
     LoginContent {
-        username: "alice@example.invalid".to_owned(),
-        password: "current-password-marker".to_owned(),
-        url: "https://example.invalid/login".to_owned(),
+        username: "alice@example.invalid".into(),
+        password: "current-password-marker".into(),
+        url: "https://example.invalid/login".into(),
         urls: vec![
-            "https://example.invalid/login".to_owned(),
-            "https://alternate.invalid/login".to_owned(),
+            "https://example.invalid/login".into(),
+            "https://alternate.invalid/login".into(),
         ],
-        notes: "Login notes with ñ".to_owned(),
+        notes: "Login notes with ñ".into(),
         totp: Some(TotpConfig {
-            secret: TOTP_SECRET.to_owned(),
+            secret: TOTP_SECRET.into(),
             algorithm: TotpAlgorithm::Sha256,
             digits: 8,
             period: 60,
-            issuer: Some("Example".to_owned()),
-            account: Some("alice@example.invalid".to_owned()),
+            issuer: Some("Example".into()),
+            account: Some("alice@example.invalid".into()),
             original_label: None,
             extensions: vec![],
         }),
@@ -38,7 +38,7 @@ fn opened(content: SecretContent) -> OpenedEntry {
     OpenedEntry {
         id: SecretId::new(),
         folder: Some(FolderId(Uuid::new_v4())),
-        title: "Mi elemento".to_owned(),
+        title: "Mi elemento".into(),
         revision: 7,
         recipients: vec![RECIPIENT.to_owned()],
         icon: None,
@@ -112,8 +112,8 @@ fn login_editor_round_trip_preserves_metadata_and_typed_fields() {
 #[test]
 fn note_editor_round_trip_uses_only_note_fields() {
     let entry = opened(SecretContent::Note(NoteContent {
-        value: "# Nota segura\nTexto privado".to_owned(),
-        notes: "Notas adicionales".to_owned(),
+        value: "# Nota segura\nTexto privado".into(),
+        notes: "Notas adicionales".into(),
     }));
     let projection = editor_projection(&entry).unwrap();
     let json: Value = serde_json::from_str(&projection).unwrap();
@@ -138,8 +138,8 @@ fn note_editor_round_trip_uses_only_note_fields() {
 fn editor_round_trip_preserves_related_entry_id() {
     let related_entry = SecretId::new();
     let mut entry = opened(SecretContent::Note(NoteContent {
-        value: "Private note".to_owned(),
-        notes: "Additional notes".to_owned(),
+        value: "Private note".into(),
+        notes: "Additional notes".into(),
     }));
     entry.related_entry = Some(related_entry);
 
@@ -217,8 +217,8 @@ fn new_editor_is_a_deserializable_empty_login() {
 fn draft_rejects_unknown_kinds_and_fields_from_another_variant() {
     let login = editor_json(SecretContent::Login(login()));
     let note = editor_json(SecretContent::Note(NoteContent {
-        value: String::new(),
-        notes: String::new(),
+        value: Default::default(),
+        notes: Default::default(),
     }));
 
     let mut unknown = login.clone();
@@ -238,8 +238,8 @@ fn draft_rejects_unknown_kinds_and_fields_from_another_variant() {
 fn draft_rejects_missing_content_and_required_variant_fields() {
     let login = editor_json(SecretContent::Login(login()));
     let note = editor_json(SecretContent::Note(NoteContent {
-        value: "note".to_owned(),
-        notes: String::new(),
+        value: "note".into(),
+        notes: Default::default(),
     }));
     let mut no_content = login.clone();
     no_content.as_object_mut().unwrap().remove("content");
@@ -267,15 +267,15 @@ fn draft_rejects_missing_content_and_required_variant_fields() {
 fn login_detail_reveals_only_the_current_password_when_requested() {
     let mut current = login();
     let mut previous = login();
-    previous.password = "historical-version-password-marker".to_owned();
-    previous.totp.as_mut().unwrap().secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ".to_owned();
+    previous.password = "historical-version-password-marker".into();
+    previous.totp.as_mut().unwrap().secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ".into();
     current
         .history
         .record_version(&previous, "Historical title", 40)
         .unwrap();
     current
         .history
-        .record_password("historical-password-marker".to_owned(), 20)
+        .record_password("historical-password-marker".into(), 20)
         .unwrap();
     current
         .history
@@ -326,8 +326,8 @@ fn login_detail_reveals_only_the_current_password_when_requested() {
 fn note_detail_does_not_inherit_login_fields() {
     let id = SecretId::new();
     let content = SecretContent::Note(NoteContent {
-        value: "Private note".to_owned(),
-        notes: "Additional notes".to_owned(),
+        value: "Private note".into(),
+        notes: "Additional notes".into(),
     });
     for reveal in [false, true] {
         let projection = content_projection(id, &content, reveal, 1_792_000_001).unwrap();

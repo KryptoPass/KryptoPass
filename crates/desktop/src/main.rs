@@ -3,6 +3,7 @@ mod i18n;
 mod infrastructure;
 mod keyring;
 mod markdown;
+mod process_security;
 mod qt;
 mod ui_adapters;
 
@@ -16,6 +17,7 @@ const DEFAULT_STYLE: &str = "org.kde.desktop";
 
 fn main() {
     init_tracing();
+    process_security::initialize();
 
     let _browser_server = if std::env::args().any(|arg| arg == "--browser-integration") {
         match kryptopass_browser::start(APP.desktop_file_id, APP.version) {

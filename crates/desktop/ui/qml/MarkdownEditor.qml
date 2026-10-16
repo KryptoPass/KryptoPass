@@ -337,6 +337,7 @@ ColumnLayout {
             contentWidth: availableWidth
 
             Controls.TextArea {
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 id: sourceEditor
                 objectName: root.objectNamePrefix + "SourceEditor"
                 width: sourceScroll.availableWidth

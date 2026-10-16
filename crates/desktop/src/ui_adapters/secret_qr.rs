@@ -2,32 +2,35 @@
 
 use anyhow::{Context, Result, ensure};
 use base64::{Engine, engine::general_purpose::STANDARD};
+use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use std::{
     io::{Cursor, Read},
     path::Path,
 };
-use zeroize::Zeroizing;
 
-pub(super) fn source(payload: &str) -> Result<Zeroizing<String>> {
+pub(super) fn source(payload: &str) -> Result<SensitiveText> {
     let code = qrcode::QrCode::new(payload.as_bytes()).context("QR content exceeds capacity")?;
-    let svg = Zeroizing::new(
+    let svg = SensitiveText::from(
         code.render::<qrcode::render::svg::Color>()
             .min_dimensions(320, 320)
             .build(),
     );
-    let encoded = Zeroizing::new(STANDARD.encode(svg.as_bytes()));
-    Ok(Zeroizing::new(format!(
-        "data:image/svg+xml;base64,{}",
-        encoded.as_str()
-    )))
+    let mut encoded = SensitiveBytes::with_capacity(svg.len().div_ceil(3) * 4);
+    encoded.resize(svg.len().div_ceil(3) * 4, 0);
+    let length = STANDARD.encode_slice(svg.as_bytes(), encoded.as_mut_slice())?;
+    encoded.truncate(length);
+    let encoded = SensitiveText::from_utf8(encoded)?;
+    let mut source = SensitiveText::from("data:image/svg+xml;base64,");
+    source.push_str(encoded.as_str());
+    Ok(source)
 }
 
-pub(super) fn read_totp(path: &Path) -> Result<Zeroizing<String>> {
+pub(super) fn read_totp(path: &Path) -> Result<SensitiveText> {
     const MAX_BYTES: u64 = 8 * 1024 * 1024;
     let file = std::fs::File::open(path)?;
     ensure!(file.metadata()?.is_file(), "select a regular image file");
-    let mut bytes = Zeroizing::new(Vec::new());
-    file.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
+    let mut bytes = SensitiveBytes::default();
+    std::io::copy(&mut file.take(MAX_BYTES + 1), &mut bytes)?;
     ensure!(
         bytes.len() as u64 <= MAX_BYTES,
         "QR image exceeds size limit"
@@ -44,7 +47,7 @@ pub(super) fn read_totp(path: &Path) -> Result<Zeroizing<String>> {
     let mut result = None;
     for grid in grids {
         if let Ok((_metadata, decoded)) = grid.decode() {
-            let decoded = Zeroizing::new(decoded);
+            let decoded = SensitiveText::from(decoded);
             if decoded
                 .get(.."otpauth://".len())
                 .is_some_and(|prefix| prefix.eq_ignore_ascii_case("otpauth://"))

@@ -9,10 +9,11 @@ use kryptopass_core::{
     ImportFolder, ImportItem, ImportValidationError, LoginContent, NoteContent, SecretContent,
     SshKeyContent, WifiContent, WifiSecurity, parse_totp_input,
 };
+use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use serde::{Deserialize, Deserializer};
 use serde_json::value::RawValue;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Default)]
 pub struct ProtonPassImporter;
@@ -99,7 +100,7 @@ impl ExportImporter for ProtonPassImporter {
                     Some(id) => *folder_indices.get(id).ok_or(ImportError::Hierarchy)?,
                     None => root,
                 };
-                let mut notes = Zeroizing::new(item.data.metadata.note.clone());
+                let mut notes = item.data.metadata.note.clone();
                 let mut native_other = false;
                 if item.create_time != 0 || item.modify_time != 0 {
                     issue(
@@ -171,7 +172,7 @@ impl ExportImporter for ProtonPassImporter {
                             password: login.password.clone(),
                             url: login.urls.first().cloned().unwrap_or_default(),
                             urls: login.urls.clone(),
-                            notes: std::mem::take(&mut *notes),
+                            notes: std::mem::take(&mut notes),
                             totp,
                             history: Box::default(),
                         })
@@ -179,8 +180,8 @@ impl ExportImporter for ProtonPassImporter {
                     "note" => {
                         plan.summary.notes += 1;
                         SecretContent::Note(NoteContent {
-                            value: std::mem::take(&mut *notes),
-                            notes: String::new(),
+                            value: std::mem::take(&mut notes),
+                            notes: SensitiveText::new(),
                         })
                     }
                     "alias" => {
@@ -194,8 +195,8 @@ impl ExportImporter for ProtonPassImporter {
                         notes.push_str(item.alias_email.as_deref().unwrap_or_default());
                         plan.summary.notes += 1;
                         SecretContent::Note(NoteContent {
-                            value: std::mem::take(&mut *notes),
-                            notes: String::new(),
+                            value: std::mem::take(&mut notes),
+                            notes: SensitiveText::new(),
                         })
                     }
                     "creditCard" => {
@@ -240,7 +241,7 @@ impl ExportImporter for ProtonPassImporter {
                                         expiry_year,
                                         cvv: card.verification_number.clone(),
                                         pin: card.pin.clone(),
-                                        notes: std::mem::take(&mut *notes),
+                                        notes: std::mem::take(&mut notes),
                                     })
                                 }
                                 None => match source_reference_content(
@@ -298,7 +299,7 @@ impl ExportImporter for ProtonPassImporter {
                             Ok(identity) => {
                                 native_other = true;
                                 SecretContent::Identity(
-                                    identity.into_content(std::mem::take(&mut *notes)),
+                                    identity.into_content(std::mem::take(&mut notes)),
                                 )
                             }
                             Err(_) => match source_reference_content(
@@ -320,7 +321,7 @@ impl ExportImporter for ProtonPassImporter {
                     "custom" => match serde_json::from_str::<ProtonCustom>(&item.data.content.0) {
                         Ok(custom) => {
                             native_other = true;
-                            SecretContent::Custom(custom.into_content(std::mem::take(&mut *notes)))
+                            SecretContent::Custom(custom.into_content(std::mem::take(&mut notes)))
                         }
                         Err(_) => match source_reference_content(
                             &item.data.metadata.note,
@@ -364,7 +365,7 @@ impl ExportImporter for ProtonPassImporter {
                                     security,
                                     password: wifi.password.clone(),
                                     hidden: false,
-                                    notes: std::mem::take(&mut *notes),
+                                    notes: std::mem::take(&mut notes),
                                 })
                             }
                             None => match source_reference_content(
@@ -411,7 +412,7 @@ impl ExportImporter for ProtonPassImporter {
                             }
                             let source_public_key = std::mem::take(&mut ssh.public_key);
                             let private_key = std::mem::take(&mut ssh.private_key);
-                            match SshKeyContent::import(private_key, String::new()) {
+                            match SshKeyContent::import(private_key, SensitiveText::new()) {
                                 Ok(mut key) => {
                                     if !source_public_key.is_empty()
                                         && source_public_key != key.public_key
@@ -434,7 +435,7 @@ impl ExportImporter for ProtonPassImporter {
                                             item_index,
                                         );
                                     }
-                                    key.notes = std::mem::take(&mut *notes);
+                                    key.notes = std::mem::take(&mut notes);
                                     native_other = true;
                                     SecretContent::SshKey(key)
                                 }
@@ -557,7 +558,7 @@ fn issue_once(plan: &mut ImportPlan, vault: usize, item: Option<usize>, kind: Is
 }
 
 fn preserve(
-    notes: &mut String,
+    notes: &mut SensitiveText,
     raw: &SecretJson,
     label: &str,
     plan: &mut ImportPlan,
@@ -586,12 +587,12 @@ fn source_reference_content(
     let content = SecretContent::Custom(CustomContent {
         records: vec![CustomRecord {
             id: record_id(1),
-            key: format!("{source_kind} source"),
+            key: sensitive_format(format_args!("{source_kind} source")),
             multiline: value.contains(['\n', '\r']),
             value,
             concealed: true,
         }],
-        notes: notes.to_owned(),
+        notes: notes.into(),
     });
     if content.validate().is_err() {
         issue(plan, vault, Some(item), IssueKind::UnsupportedItem);
@@ -603,7 +604,7 @@ fn source_reference_content(
 }
 
 fn preserve_card_type(
-    notes: &mut Zeroizing<String>,
+    notes: &mut SensitiveText,
     card_type: &SecretJson,
     plan: &mut ImportPlan,
     vault: usize,
@@ -615,9 +616,8 @@ fn preserve_card_type(
 }
 
 fn is_scalar_json(raw: &SecretJson) -> bool {
-    serde_json::from_str::<serde_json::Value>(&raw.0)
-        .map(|value| value.is_string() || value.is_number() || value.is_boolean())
-        .unwrap_or(false)
+    let value = raw.0.trim();
+    !value.is_empty() && !matches!(value.as_bytes()[0], b'{' | b'[') && value != "null"
 }
 
 fn is_private_key_material(value: &str) -> bool {
@@ -625,7 +625,7 @@ fn is_private_key_material(value: &str) -> bool {
 }
 
 fn preserve_ssh_public_reference(
-    notes: &mut Zeroizing<String>,
+    notes: &mut SensitiveText,
     public_key: &str,
     plan: &mut ImportPlan,
     vault: usize,
@@ -648,23 +648,23 @@ fn parse_expiration(value: &str) -> Option<(u8, u16)> {
     ((1..=12).contains(&month) && (1900..=9999).contains(&year)).then_some((month, year))
 }
 
-fn record_id(index: usize) -> String {
-    format!("00000000-0000-4000-8000-{index:012x}")
+fn record_id(index: usize) -> SensitiveText {
+    format!("00000000-0000-4000-8000-{index:012x}").into()
 }
 
-fn key_for_field(section: &str, field: &str) -> String {
+fn key_for_field(section: &str, field: &str) -> SensitiveText {
     match (section.is_empty(), field.is_empty()) {
-        (false, false) => format!("{section} / {field}"),
-        (false, true) => section.to_owned(),
-        (true, false) => field.to_owned(),
-        (true, true) => String::new(),
+        (false, false) => sensitive_format(format_args!("{section} / {field}")),
+        (false, true) => section.into(),
+        (true, false) => field.into(),
+        (true, true) => SensitiveText::new(),
     }
 }
 
 fn push_custom_record(
     records: &mut Vec<CustomRecord>,
-    key: String,
-    value: String,
+    key: SensitiveText,
+    value: SensitiveText,
     concealed: bool,
 ) {
     let multiline = value.contains(['\n', '\r']);
@@ -684,7 +684,12 @@ fn append_custom_extra_records(
 ) -> bool {
     let start = records.len();
     for (name, raw) in fields.iter() {
-        push_custom_record(records, format!("{prefix} / {name}"), raw.0.clone(), true);
+        push_custom_record(
+            records,
+            sensitive_format(format_args!("{prefix} / {}", name.as_str())),
+            raw.0.clone(),
+            true,
+        );
     }
     records.len() > start
 }
@@ -702,16 +707,23 @@ fn append_custom_source_records(
             return true;
         }
     }
-    push_custom_record(records, format!("{prefix} source"), raw.0.clone(), true);
+    push_custom_record(
+        records,
+        sensitive_format(format_args!("{prefix} source")),
+        raw.0.clone(),
+        true,
+    );
     true
 }
 
 #[derive(Default, Zeroize, ZeroizeOnDrop)]
-struct SecretJson(String);
+struct SecretJson(SensitiveText);
 impl<'de> Deserialize<'de> for SecretJson {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = Box::<RawValue>::deserialize(deserializer)?;
-        Ok(Self(Box::<str>::from(raw).into()))
+        Ok(Self(SensitiveText::from(String::from(Box::<str>::from(
+            raw,
+        )))))
     }
 }
 
@@ -724,7 +736,7 @@ struct Export {
 struct Vault {
     name: String,
     #[serde(default)]
-    description: String,
+    description: SensitiveText,
     #[serde(default)]
     folders: Vec<SourceFolder>,
     items: Vec<Item>,
@@ -748,11 +760,11 @@ struct Item {
     data: ItemData,
     state: u32,
     #[serde(default)]
-    alias_email: Option<String>,
+    alias_email: Option<SensitiveText>,
     #[serde(default)]
     pinned: bool,
     #[serde(default)]
-    files: Vec<String>,
+    files: Vec<SensitiveText>,
     #[serde(default)]
     create_time: u64,
     #[serde(default)]
@@ -772,22 +784,22 @@ struct ItemData {
 struct Metadata {
     name: String,
     #[serde(default)]
-    note: String,
+    note: SensitiveText,
 }
 #[derive(Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase")]
 struct Login {
     #[serde(default)]
-    item_username: String,
+    item_username: SensitiveText,
     #[serde(default)]
-    item_email: String,
+    item_email: SensitiveText,
     #[serde(default)]
-    username: String,
-    password: String,
+    username: SensitiveText,
+    password: SensitiveText,
     #[serde(default)]
-    urls: Vec<String>,
+    urls: Vec<SensitiveText>,
     #[serde(default)]
-    totp_uri: String,
+    totp_uri: SensitiveText,
     #[serde(default)]
     passkeys: SecretJson,
     #[serde(default)]
@@ -800,15 +812,15 @@ struct Login {
 #[serde(rename_all = "camelCase")]
 struct ProtonCard {
     #[serde(default)]
-    cardholder_name: String,
+    cardholder_name: SensitiveText,
     #[serde(default)]
-    number: String,
+    number: SensitiveText,
     #[serde(default)]
-    verification_number: String,
+    verification_number: SensitiveText,
     #[serde(default)]
-    expiration_date: String,
+    expiration_date: SensitiveText,
     #[serde(default)]
-    pin: String,
+    pin: SensitiveText,
     #[serde(default)]
     card_type: SecretJson,
     #[serde(default, flatten)]
@@ -819,36 +831,36 @@ struct ProtonCard {
 #[serde(rename_all = "camelCase")]
 struct ProtonIdentity {
     #[serde(default)]
-    first_name: String,
+    first_name: SensitiveText,
     #[serde(default)]
-    last_name: String,
+    last_name: SensitiveText,
     #[serde(default)]
-    email: String,
+    email: SensitiveText,
     #[serde(default)]
-    phone_number: String,
+    phone_number: SensitiveText,
     #[serde(default)]
-    street_address: String,
+    street_address: SensitiveText,
     #[serde(default)]
-    zip_or_postal_code: String,
+    zip_or_postal_code: SensitiveText,
     #[serde(default)]
-    city: String,
+    city: SensitiveText,
     #[serde(default)]
-    state_or_province: String,
+    state_or_province: SensitiveText,
     #[serde(default)]
-    country_or_region: String,
+    country_or_region: SensitiveText,
     #[serde(default)]
-    social_security_number: String,
+    social_security_number: SensitiveText,
     #[serde(default)]
-    passport_number: String,
+    passport_number: SensitiveText,
     #[serde(default)]
-    license_number: String,
+    license_number: SensitiveText,
     #[serde(default, flatten)]
     extra_fields: SecretFields,
 }
 
 impl ProtonIdentity {
-    fn into_content(mut self, notes: String) -> IdentityContent {
-        let mut address = Zeroizing::new(String::new());
+    fn into_content(mut self, notes: SensitiveText) -> IdentityContent {
+        let mut address = SensitiveText::new();
         for (label, value) in [
             ("streetAddress", self.street_address.as_str()),
             ("city", self.city.as_str()),
@@ -878,10 +890,10 @@ impl ProtonIdentity {
             if !number.is_empty() {
                 documents.push(IdentityDocument {
                     id: record_id(documents.len() + 1),
-                    document_type: document_type.to_owned(),
+                    document_type: document_type.into(),
                     number,
                     country: country.clone(),
-                    expires: String::new(),
+                    expires: SensitiveText::new(),
                 });
             }
         }
@@ -898,7 +910,7 @@ impl ProtonIdentity {
             documents,
             emails,
             phones,
-            address: std::mem::take(&mut *address),
+            address: std::mem::take(&mut address),
             notes,
         }
     }
@@ -914,13 +926,13 @@ struct ProtonCustom {
 }
 
 impl ProtonCustom {
-    fn into_content(mut self, notes: String) -> CustomContent {
+    fn into_content(mut self, notes: SensitiveText) -> CustomContent {
         let mut records = Vec::new();
         append_custom_extra_records(&mut records, "Custom", &self.extra_fields);
         for mut section in std::mem::take(&mut self.sections) {
             let section_name = std::mem::take(&mut section.section_name);
             let section_key = if section_name.is_empty() {
-                "Section".to_owned()
+                SensitiveText::from("Section")
             } else {
                 section_name.clone()
             };
@@ -930,9 +942,9 @@ impl ProtonCustom {
                 let kind = std::mem::take(&mut field.kind);
                 let mut field_key = key_for_field(&section_name, &field.field_name);
                 if field_key.is_empty() {
-                    field_key = format!("Field {}", records.len() + 1);
+                    field_key = sensitive_format(format_args!("Field {}", records.len() + 1));
                 }
-                let mut key = Zeroizing::new(field_key.clone());
+                let mut key = field_key.clone();
                 let preserve_data_extras = field_data.is_ok()
                     && matches!(kind.as_str(), "text" | "hidden" | "totp" | "timestamp");
                 let (value, concealed) = match &mut field_data {
@@ -946,11 +958,11 @@ impl ProtonCustom {
                     }
                     _ => (std::mem::take(&mut field.data.0), true),
                 };
-                push_custom_record(&mut records, std::mem::take(&mut *key), value, concealed);
+                push_custom_record(&mut records, std::mem::take(&mut key), value, concealed);
                 if preserve_data_extras && let Ok(data) = field_data {
                     append_custom_extra_records(
                         &mut records,
-                        &format!("{field_key} / data"),
+                        &sensitive_format(format_args!("{} / data", field_key.as_str())),
                         &data.extra_fields,
                     );
                 }
@@ -965,7 +977,7 @@ impl ProtonCustom {
 #[serde(rename_all = "camelCase")]
 struct ProtonCustomSection {
     #[serde(default)]
-    section_name: String,
+    section_name: SensitiveText,
     #[serde(default)]
     section_fields: Vec<ProtonCustomField>,
     #[serde(default, flatten)]
@@ -976,9 +988,9 @@ struct ProtonCustomSection {
 #[serde(rename_all = "camelCase")]
 struct ProtonCustomField {
     #[serde(default)]
-    field_name: String,
+    field_name: SensitiveText,
     #[serde(default, rename = "type")]
-    kind: String,
+    kind: SensitiveText,
     #[serde(default)]
     data: SecretJson,
     #[serde(default, flatten)]
@@ -989,9 +1001,9 @@ struct ProtonCustomField {
 #[serde(rename_all = "camelCase")]
 struct ProtonCustomFieldData {
     #[serde(default)]
-    content: String,
+    content: SensitiveText,
     #[serde(default)]
-    totp_uri: String,
+    totp_uri: SensitiveText,
     #[serde(default)]
     timestamp: SecretJson,
     #[serde(default, flatten)]
@@ -1002,9 +1014,9 @@ struct ProtonCustomFieldData {
 #[serde(rename_all = "camelCase")]
 struct ProtonWifi {
     #[serde(default)]
-    ssid: String,
+    ssid: SensitiveText,
     #[serde(default)]
-    password: String,
+    password: SensitiveText,
     #[serde(default)]
     security: SecretJson,
     #[serde(default)]
@@ -1035,9 +1047,9 @@ impl ProtonWifi {
 #[serde(rename_all = "camelCase")]
 struct ProtonSshKey {
     #[serde(default)]
-    private_key: String,
+    private_key: SensitiveText,
     #[serde(default)]
-    public_key: String,
+    public_key: SensitiveText,
     #[serde(default)]
     sections: SecretJson,
     #[serde(default, flatten)]
@@ -1051,42 +1063,54 @@ impl ProtonSshKey {
 }
 
 #[derive(Default)]
-struct SecretFields(BTreeMap<String, SecretJson>);
+struct SecretFields(BTreeMap<SensitiveText, SecretJson>);
 
 impl<'de> Deserialize<'de> for SecretFields {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let mut values = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let values = BTreeMap::<SensitiveText, SecretValue>::deserialize(deserializer)?;
         let mut fields = BTreeMap::new();
-        for (key, mut value) in std::mem::take(&mut values) {
-            let raw = serde_json::to_string(&value).map_err(serde::de::Error::custom)?;
-            zeroize_json_value(&mut value);
+        for (key, value) in values {
+            let mut bytes = SensitiveBytes::new();
+            serde_json::to_writer(&mut bytes, &value).map_err(serde::de::Error::custom)?;
+            let raw = SensitiveText::from_utf8(bytes).map_err(serde::de::Error::custom)?;
             fields.insert(key, SecretJson(raw));
         }
         Ok(Self(fields))
     }
 }
 
-fn zeroize_json_value(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::String(string) => string.zeroize(),
-        serde_json::Value::Array(values) => {
-            for value in values.iter_mut() {
-                zeroize_json_value(value);
-            }
-            values.clear();
-        }
-        serde_json::Value::Object(values) => {
-            let values = std::mem::take(values);
-            for (mut key, mut value) in values {
+// Flattened serde fields cannot use RawValue's JSON-specific token. Keep the
+// fallback tree's string leaves in owned sensitive memory instead of Value.
+#[derive(serde::Serialize, Deserialize)]
+#[serde(untagged)]
+enum SecretValue {
+    Null(()),
+    Bool(bool),
+    Number(serde_json::Number),
+    Text(SensitiveText),
+    Array(Vec<SecretValue>),
+    Object(BTreeMap<SensitiveText, SecretValue>),
+}
+
+impl Drop for SecretValue {
+    fn drop(&mut self) {
+        if let Self::Object(values) = self {
+            while let Some((mut key, value)) = values.pop_first() {
                 key.zeroize();
-                zeroize_json_value(&mut value);
+                drop(value);
             }
         }
-        serde_json::Value::Number(_) | serde_json::Value::Bool(_) => {
-            *value = serde_json::Value::Null;
-        }
-        serde_json::Value::Null => {}
     }
+}
+
+fn sensitive_format(arguments: std::fmt::Arguments<'_>) -> SensitiveText {
+    use std::fmt::Write;
+    let mut value = SensitiveText::new();
+    // These arguments contain strings and numbers; only allocation can fail.
+    if value.write_fmt(arguments).is_err() {
+        std::alloc::handle_alloc_error(std::alloc::Layout::new::<u8>());
+    }
+    value
 }
 
 impl Zeroize for SecretFields {
@@ -1105,7 +1129,7 @@ impl Drop for SecretFields {
 }
 
 impl std::ops::Deref for SecretFields {
-    type Target = BTreeMap<String, SecretJson>;
+    type Target = BTreeMap<SensitiveText, SecretJson>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

@@ -1,8 +1,9 @@
 //! Application facade for folder and secret use cases.
 
+use crate::SensitiveBytes;
 use anyhow::{Context, Result, ensure};
 use std::time::{SystemTime, UNIX_EPOCH};
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 use crate::domain::content::LoginHistoryEventKind;
 use crate::domain::{
@@ -27,7 +28,7 @@ pub struct CreateSecret {
     pub title: String,
     pub kind: SecretKind,
     pub recipients: RecipientSelection,
-    pub plaintext: Zeroizing<Vec<u8>>,
+    pub plaintext: SensitiveBytes,
 }
 
 pub struct SaveContentRequest {
@@ -146,7 +147,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         Ok(id)
     }
 
-    pub fn read_secret(&self, id: SecretId) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn read_secret(&self, id: SecretId) -> Result<SensitiveBytes> {
         let secret = self
             .storage
             .find_secret(id)?

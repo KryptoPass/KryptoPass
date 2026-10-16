@@ -45,8 +45,8 @@ fn assert_rejected(envelope: &Value, context: &str) {
 #[test]
 fn current_note_roundtrip_preserves_text_and_emits_the_current_envelope() {
     let content = SecretContent::Note(NoteContent {
-        value: "Private note\nSegunda línea 🔐".to_owned(),
-        notes: "Context".to_owned(),
+        value: "Private note\nSegunda línea 🔐".into(),
+        notes: "Context".into(),
     });
     let bytes = encode_content(&content).unwrap();
     let encoded: Value = serde_json::from_slice(bytes.as_slice()).unwrap();
@@ -67,24 +67,24 @@ fn current_login_roundtrip_preserves_credentials_sites_totp_and_history() {
     let mut history = LoginHistory::default();
     history.record_event(LoginHistoryEventKind::Create, 10);
     history
-        .record_password("previous password".to_owned(), 20)
+        .record_password("previous password".into(), 20)
         .unwrap();
     let content = SecretContent::Login(LoginContent {
-        username: "alice@example.org".to_owned(),
-        password: "sample password".to_owned(),
-        url: "https://example.org/login".to_owned(),
+        username: "alice@example.org".into(),
+        password: "sample password".into(),
+        url: "https://example.org/login".into(),
         urls: vec![
-            "https://example.org/login".to_owned(),
-            "https://example.org/account".to_owned(),
+            "https://example.org/login".into(),
+            "https://example.org/account".into(),
         ],
-        notes: "Recovery instructions".to_owned(),
+        notes: "Recovery instructions".into(),
         totp: Some(TotpConfig {
-            secret: "JBSWY3DPEHPK3PXP".to_owned(),
+            secret: "JBSWY3DPEHPK3PXP".into(),
             algorithm: TotpAlgorithm::Sha256,
             digits: 8,
             period: 60,
-            issuer: Some("Example".to_owned()),
-            account: Some("alice@example.org".to_owned()),
+            issuer: Some("Example".into()),
+            account: Some("alice@example.org".into()),
             original_label: None,
             extensions: vec![],
         }),

@@ -1,37 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="es" sourcelanguage="es">
   <context>
-    <name>AboutDialog</name>
-    <message>
-      <source>Acerca de %1</source>
-      <translation>Acerca de %1</translation>
-    </message>
-    <message>
-      <source>Versión %1</source>
-      <translation>Versión %1</translation>
-    </message>
-    <message>
-      <source>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de las claves de acceso se guardan sin cifrar.</source>
-      <translation>El contenido sensible se cifra antes de guardarse. Los nombres, las carpetas y las huellas de las claves de acceso se guardan sin cifrar.</translation>
-    </message>
-    <message>
-      <source>Licencia: %1
-Autores: %2
-© %3</source>
-      <translation>Licencia: %1
-Autores: %2
-© %3</translation>
-    </message>
-    <message>
-      <source>Abrir sitio del proyecto</source>
-      <translation>Abrir sitio del proyecto</translation>
-    </message>
-    <message>
-      <source>Informar de un problema…</source>
-      <translation>Informar de un problema…</translation>
-    </message>
-  </context>
-  <context>
     <name>Backend</name>
     <message>
       <source> El archivo ya fue publicado, pero no se pudo sincronizar su carpeta; podría no persistir ante un corte de energía.</source>
@@ -124,10 +93,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Archivo guardado correctamente.</source>
       <translation>Archivo guardado correctamente.</translation>
-    </message>
-    <message>
-      <source>Backend Rust conectado</source>
-      <translation>Backend Rust conectado</translation>
     </message>
     <message>
       <source>Bóveda bloqueada</source>
@@ -1132,6 +1097,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Correo</translation>
     </message>
     <message>
+      <source>Could not disable process core dumps</source>
+      <translation>Could not disable process core dumps</translation>
+    </message>
+    <message>
+      <source>Could not read core dump limit</source>
+      <translation>Could not read core dump limit</translation>
+    </message>
+    <message>
       <source>Could not start browser integration</source>
       <translation>Could not start browser integration</translation>
     </message>
@@ -1274,10 +1247,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La subclave %1 no pertenece a la clave primaria %2.</source>
       <translation>La subclave %1 no pertenece a la clave primaria %2.</translation>
-    </message>
-    <message>
-      <source>Navegación gestionada por Rust · %1</source>
-      <translation>Navegación gestionada por Rust · %1</translation>
     </message>
     <message>
       <source>No</source>
@@ -1508,12 +1477,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>País</translation>
     </message>
     <message>
-      <source>Producto</source>
-      <translation>Producto</translation>
+      <source>Process dump restriction unavailable</source>
+      <translation>Process dump restriction unavailable</translation>
     </message>
     <message>
-      <source>Puente Rust/QML verificado · prueba #%1</source>
-      <translation>Puente Rust/QML verificado · prueba #%1</translation>
+      <source>Process dump restrictions are not implemented on this platform</source>
+      <translation>Process dump restrictions are not implemented on this platform</translation>
+    </message>
+    <message>
+      <source>Producto</source>
+      <translation>Producto</translation>
     </message>
     <message>
       <source>QR content exceeds capacity</source>
@@ -1566,6 +1539,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Selecciona una imagen local con el QR del autenticador.</source>
       <translation>Selecciona una imagen local con el QR del autenticador.</translation>
+    </message>
+    <message>
+      <source>Sensitive memory state cleared</source>
+      <translation>Sensitive memory state cleared</translation>
     </message>
     <message>
       <source>Subclave %1 revocada.</source>
@@ -4918,29 +4895,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Organize credentials and secure notes with OpenPGP encryption</source>
       <translation>Organiza credenciales y notas seguras con cifrado OpenPGP</translation>
-    </message>
-  </context>
-  <context>
-    <name>MockStore</name>
-    <message>
-      <source>Tarjeta</source>
-      <translation>Tarjeta</translation>
-    </message>
-    <message>
-      <source>Identidad</source>
-      <translation>Identidad</translation>
-    </message>
-    <message>
-      <source>Inicio de sesión</source>
-      <translation>Inicio de sesión</translation>
-    </message>
-    <message>
-      <source>Nota</source>
-      <translation>Nota</translation>
-    </message>
-    <message>
-      <source>Sin carpeta</source>
-      <translation>Sin carpeta</translation>
     </message>
   </context>
   <context>

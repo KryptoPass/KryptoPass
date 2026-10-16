@@ -15,8 +15,8 @@ use crypto_box::{
     PublicKey, SalsaBox, SecretKey,
     aead::{Aead, OsRng},
 };
+use kryptopass_secure_memory::SensitiveText;
 use serde_json::{Value, json};
-use zeroize::Zeroizing;
 
 use super::{
     Candidate, CredentialProvider, Login, access, decide_access, serve_connection, set_locked,
@@ -109,9 +109,9 @@ impl CredentialProvider for TestProvider {
             "transport test login lost authorization"
         );
         Ok(Login {
-            username: Zeroizing::new("transport-user".to_owned()),
-            password: Zeroizing::new("transport-password".to_owned()),
-            urls: vec![Zeroizing::new(
+            username: SensitiveText::from("transport-user".to_owned()),
+            password: SensitiveText::from("transport-password".to_owned()),
+            urls: vec![SensitiveText::from(
                 "https://login.transport.example.test/saved".to_owned(),
             )],
         })

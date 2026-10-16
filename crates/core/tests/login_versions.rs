@@ -8,21 +8,21 @@ use kryptopass_core::{
 
 fn sample_login() -> LoginContent {
     LoginContent {
-        username: "old@example.org".to_owned(),
-        password: "old password".to_owned(),
-        url: "https://example.org/login".to_owned(),
-        notes: "Recovery information before the edit".to_owned(),
+        username: "old@example.org".into(),
+        password: "old password".into(),
+        url: "https://example.org/login".into(),
+        notes: "Recovery information before the edit".into(),
         urls: vec![
-            "https://example.org/login".to_owned(),
-            "https://example.org/account".to_owned(),
+            "https://example.org/login".into(),
+            "https://example.org/account".into(),
         ],
         totp: Some(TotpConfig {
-            secret: "JBSWY3DPEHPK3PXP".to_owned(),
+            secret: "JBSWY3DPEHPK3PXP".into(),
             algorithm: TotpAlgorithm::Sha256,
             digits: 8,
             period: 60,
-            issuer: Some("Example".to_owned()),
-            account: Some("old@example.org".to_owned()),
+            issuer: Some("Example".into()),
+            account: Some("old@example.org".into()),
             original_label: None,
             extensions: vec![],
         }),
@@ -65,16 +65,16 @@ fn current_schema_roundtrip_preserves_complete_login_without_nested_history() {
         .record_event(LoginHistoryEventKind::Create, 1);
     previous
         .history
-        .record_password("earlier password".to_owned(), 2)
+        .record_password("earlier password".into(), 2)
         .unwrap();
     let mut history = LoginHistory::default();
     history
         .record_version(&previous, "Previous title", 42)
         .unwrap();
-    previous.username = "changed@example.org".to_owned();
-    previous.password = "changed password".to_owned();
+    previous.username = "changed@example.org".into();
+    previous.password = "changed password".into();
     previous.notes.clear();
-    previous.set_urls(vec!["https://new.example.org".to_owned()]);
+    previous.set_urls(vec!["https://new.example.org".into()]);
     previous.totp = None;
     previous.history = Box::new(history);
 
@@ -95,18 +95,16 @@ fn current_schema_roundtrip_preserves_complete_login_without_nested_history() {
 fn metadata_orders_complete_and_legacy_versions_together_by_timestamp() {
     let mut login = sample_login();
     let mut history = LoginHistory::default();
-    login.password = "snapshot 10".to_owned();
+    login.password = "snapshot 10".into();
     history.record_version(&login, "Older", 10).unwrap();
-    login.password = "snapshot 30".to_owned();
+    login.password = "snapshot 30".into();
     history.record_version(&login, "Newest", 30).unwrap();
-    login.password = "snapshot 20".to_owned();
+    login.password = "snapshot 20".into();
     history.record_version(&login, "Middle", 20).unwrap();
     history
-        .record_password("legacy newest".to_owned(), 100)
+        .record_password("legacy newest".into(), 100)
         .unwrap();
-    history
-        .record_password("legacy older".to_owned(), 25)
-        .unwrap();
+    history.record_password("legacy older".into(), 25).unwrap();
 
     assert_eq!(
         history.version_metadata(),
@@ -136,7 +134,7 @@ fn version_retention_keeps_twenty_newest_complete_snapshots() {
     let mut login = sample_login();
     let mut history = LoginHistory::default();
     for timestamp in 1..=25 {
-        login.username = format!("user-{timestamp}");
+        login.username = format!("user-{timestamp}").into();
         history.record_version(&login, "Login", timestamp).unwrap();
     }
 
@@ -155,9 +153,11 @@ fn version_retention_keeps_twenty_newest_complete_snapshots() {
 #[test]
 fn retained_complete_versions_and_legacy_passwords_share_the_size_budget() {
     let mut login = sample_login();
-    login.notes = "n".repeat(150 * 1024);
+    login.notes = "n".repeat(150 * 1024).into();
     let mut history = LoginHistory::default();
-    history.record_password("p".repeat(64 * 1024), 1).unwrap();
+    history
+        .record_password("p".repeat(64 * 1024).into(), 1)
+        .unwrap();
     for timestamp in 2..=4 {
         history.record_version(&login, "Login", timestamp).unwrap();
     }
@@ -171,7 +171,7 @@ fn retained_complete_versions_and_legacy_passwords_share_the_size_budget() {
         retained_bytes += version.username.len()
             + version.password.len()
             + version.notes.len()
-            + version.urls.iter().map(String::len).sum::<usize>();
+            + version.urls.iter().map(|value| value.len()).sum::<usize>();
     }
     assert!(retained_bytes <= MAX_HISTORY_PASSWORD_BYTES);
     login.history = Box::new(history);
@@ -289,16 +289,12 @@ fn schema_three_rejects_history_exceeding_the_combined_size_budget() {
 fn equal_timestamps_preserve_each_complete_and_legacy_version_mapping() {
     let mut history = LoginHistory::default();
     let mut login = sample_login();
-    login.password = "snapshot first".to_owned();
+    login.password = "snapshot first".into();
     history.record_version(&login, "First", 42).unwrap();
-    login.password = "snapshot second".to_owned();
+    login.password = "snapshot second".into();
     history.record_version(&login, "Second", 42).unwrap();
-    history
-        .record_password("legacy first".to_owned(), 42)
-        .unwrap();
-    history
-        .record_password("legacy second".to_owned(), 42)
-        .unwrap();
+    history.record_password("legacy first".into(), 42).unwrap();
+    history.record_password("legacy second".into(), 42).unwrap();
 
     assert_eq!(
         history.version_metadata(),
@@ -415,10 +411,12 @@ impl kryptopass_core::OpenPgp for ReversibleTestCrypto {
     ) -> anyhow::Result<Vec<u8>> {
         Ok(plaintext.iter().map(|byte| byte ^ 0xa5).collect())
     }
-    fn decrypt(&self, ciphertext: &[u8]) -> anyhow::Result<zeroize::Zeroizing<Vec<u8>>> {
-        Ok(zeroize::Zeroizing::new(
-            ciphertext.iter().map(|byte| byte ^ 0xa5).collect(),
-        ))
+    fn decrypt(&self, ciphertext: &[u8]) -> anyhow::Result<kryptopass_core::SensitiveBytes> {
+        Ok(ciphertext
+            .iter()
+            .map(|byte| byte ^ 0xa5)
+            .collect::<Vec<_>>()
+            .into())
     }
 }
 
@@ -436,24 +434,24 @@ fn service_edits_snapshot_previous_login_and_copy_events_keep_versions_unchanged
         .save_content(
             None,
             None,
-            "Previous title".to_owned(),
+            "Previous title".into(),
             RecipientSelection::Explicit(recipients.clone()),
             SecretContent::Login(previous.clone()),
             None,
         )
         .unwrap();
     let mut updated = sample_login();
-    updated.username = "updated@example.org".to_owned();
-    updated.password = "new password".to_owned();
-    updated.notes = "Updated recovery information".to_owned();
-    updated.set_urls(vec!["https://updated.example.org".to_owned()]);
+    updated.username = "updated@example.org".into();
+    updated.password = "new password".into();
+    updated.notes = "Updated recovery information".into();
+    updated.set_urls(vec!["https://updated.example.org".into()]);
     updated.totp.as_mut().unwrap().period = 30;
     let expected = updated.clone();
     service
         .save_content(
             Some(id),
             None,
-            "Updated title".to_owned(),
+            "Updated title".into(),
             RecipientSelection::Explicit(recipients),
             SecretContent::Login(updated),
             Some(0),
@@ -516,7 +514,7 @@ fn equivalent_totp_uri_with_retained_canonical_label_does_not_create_a_content_v
         .save_content(
             None,
             None,
-            "Authenticator".to_owned(),
+            "Authenticator".into(),
             RecipientSelection::Explicit(recipients.clone()),
             SecretContent::Login(existing.clone()),
             None,
@@ -532,7 +530,7 @@ fn equivalent_totp_uri_with_retained_canonical_label_does_not_create_a_content_v
         .save_content(
             Some(id),
             None,
-            "Authenticator".to_owned(),
+            "Authenticator".into(),
             RecipientSelection::Explicit(recipients),
             SecretContent::Login(updated),
             Some(0),

@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use crate::SensitiveText;
+
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,24 +21,24 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct IdentityContent {
-    pub first_name: String,
-    pub last_name: String,
+    pub first_name: SensitiveText,
+    pub last_name: SensitiveText,
     pub documents: Vec<IdentityDocument>,
-    pub emails: Vec<String>,
-    pub phones: Vec<String>,
-    pub address: String,
-    pub notes: String,
+    pub emails: Vec<SensitiveText>,
+    pub phones: Vec<SensitiveText>,
+    pub address: SensitiveText,
+    pub notes: SensitiveText,
 }
 
 /// A document number and its optional issuer and expiration details.
 #[derive(Clone, Default, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct IdentityDocument {
-    pub id: String,
-    pub document_type: String,
-    pub number: String,
-    pub country: String,
-    pub expires: String,
+    pub id: SensitiveText,
+    pub document_type: SensitiveText,
+    pub number: SensitiveText,
+    pub country: SensitiveText,
+    pub expires: SensitiveText,
 }
 
 impl IdentityContent {
@@ -52,7 +54,7 @@ impl IdentityContent {
             let id = Uuid::parse_str(&document.id).context("invalid identity document ID")?;
             ensure!(!id.is_nil(), "invalid identity document ID");
             ensure!(
-                id.to_string() == document.id,
+                document.id.as_bytes() == id.hyphenated().encode_lower(&mut [0; 36]).as_bytes(),
                 "identity document ID is not canonical"
             );
             ensure!(document_ids.insert(id), "duplicate identity document ID");
@@ -72,7 +74,7 @@ impl IdentityContent {
     }
 }
 
-fn validate_contacts(name: &str, contacts: &[String]) -> Result<()> {
+fn validate_contacts(name: &str, contacts: &[SensitiveText]) -> Result<()> {
     ensure!(contacts.len() <= MAX_CONTACTS, "too many identity contacts");
     for contact in contacts {
         ensure_field_size(name, contact, MAX_CONTACT_BYTES)?;

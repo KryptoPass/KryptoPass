@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::{Result, ensure};
 use kryptopass_browser::{Candidate, CredentialProvider, Login};
 use kryptopass_core::{SecretContent, SecretId, SecretKind, SecretsService};
-use zeroize::Zeroizing;
+use kryptopass_secure_memory::SensitiveText;
 
 use super::{GnuPgOpenPgp, SqliteStorage, app_paths};
 
@@ -37,21 +37,17 @@ impl CredentialProvider for VaultProvider {
     }
 
     fn login(&self, candidate: &Candidate, still_authorized: &dyn Fn() -> bool) -> Result<Login> {
-        let content = self.read_current(candidate, still_authorized)?;
-        let SecretContent::Login(login) = &content else {
+        let mut content = self.read_current(candidate, still_authorized)?;
+        let SecretContent::Login(login) = &mut content else {
             anyhow::bail!("not a login");
         };
-        let mut urls: Vec<_> = login
-            .urls
-            .iter()
-            .map(|url| Zeroizing::new(url.clone()))
-            .collect();
+        let mut urls = std::mem::take(&mut login.urls);
         if urls.is_empty() && !login.url.is_empty() {
-            urls.push(Zeroizing::new(login.url.clone()));
+            urls.push(std::mem::take(&mut login.url));
         }
         Ok(Login {
-            username: Zeroizing::new(login.username.clone()),
-            password: Zeroizing::new(login.password.clone()),
+            username: std::mem::take(&mut login.username),
+            password: std::mem::take(&mut login.password),
             urls,
         })
     }
@@ -60,12 +56,12 @@ impl CredentialProvider for VaultProvider {
         &self,
         candidate: &Candidate,
         still_current: &dyn Fn() -> bool,
-    ) -> Result<Option<Zeroizing<String>>> {
-        let content = self.read_current(candidate, still_current)?;
-        let SecretContent::Login(login) = &content else {
+    ) -> Result<Option<SensitiveText>> {
+        let mut content = self.read_current(candidate, still_current)?;
+        let SecretContent::Login(login) = &mut content else {
             anyhow::bail!("not a login");
         };
-        Ok(Some(Zeroizing::new(login.username.clone())))
+        Ok(Some(std::mem::take(&mut login.username)))
     }
 }
 

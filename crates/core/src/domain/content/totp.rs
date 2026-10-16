@@ -1,5 +1,7 @@
 //! Standalone authenticator payload.
 
+use crate::SensitiveText;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -15,7 +17,7 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TotpContent {
     pub config: TotpConfig,
-    pub notes: String,
+    pub notes: SensitiveText,
 }
 
 impl TotpContent {

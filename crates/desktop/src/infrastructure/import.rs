@@ -8,15 +8,15 @@ use kryptopass_import::{
     container::{ExportDecryptor, decode_export},
     proton::ProtonPassImporter,
 };
+use kryptopass_secure_memory::SensitiveBytes;
 use std::{fs::File, io::Read, path::Path};
-use zeroize::Zeroizing;
 
 impl ExportDecryptor for GnuPgOpenPgp {
     fn decrypt_export(
         &self,
         ciphertext: &[u8],
         maximum: usize,
-    ) -> std::result::Result<Zeroizing<Vec<u8>>, ImportError> {
+    ) -> std::result::Result<SensitiveBytes, ImportError> {
         self.decrypt_bounded(ciphertext, MAX_EXPORT_BYTES, maximum)
             .map_err(|_| ImportError::Decryption)
     }
@@ -24,12 +24,15 @@ impl ExportDecryptor for GnuPgOpenPgp {
 
 pub fn review_proton_export(path: &Path) -> Result<ImportPlan> {
     let file = File::open(path).context("could not open import source")?;
-    if !file.metadata()?.is_file() {
+    let metadata = file.metadata()?;
+    if !metadata.is_file() {
         return Err(ImportError::InvalidExport.into());
     }
-    let mut input = Zeroizing::new(Vec::new());
-    file.take(MAX_EXPORT_BYTES as u64 + 1)
-        .read_to_end(&mut input)
+    if metadata.len() > MAX_EXPORT_BYTES as u64 {
+        return Err(ImportError::Limit.into());
+    }
+    let mut input = SensitiveBytes::try_with_capacity(metadata.len() as usize + 1)?;
+    std::io::copy(&mut file.take(MAX_EXPORT_BYTES as u64 + 1), &mut input)
         .context("could not read import source")?;
     let json = decode_export(&input, &GnuPgOpenPgp)?;
     Ok(ProtonPassImporter.parse(&json)?)

@@ -69,10 +69,12 @@ SecretFields {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
                 Controls.TextField {
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     text: root.totpInput
                     echoMode: root.inputVisible ? TextInput.Normal : TextInput.Password
+                    passwordMaskDelay: 0
                     placeholderText: qsTr("Base32 u otpauth://")
                     Accessible.name: qsTr("Semilla o URI TOTP, inicialmente oculta")
                     onTextEdited: root.totpInput = text

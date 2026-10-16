@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/desktop", "crates/core", "crates/import", "crates/browser", "crates/app", "crates/xtask"]
+members = ["crates/desktop", "crates/core", "crates/import", "crates/browser", "crates/secure-memory"]
 # Por defecto solo la app; el resto con --workspace / -p.
 default-members = ["crates/desktop"]
 
