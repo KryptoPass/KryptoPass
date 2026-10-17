@@ -87,10 +87,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Actualizando elemento…</translation>
     </message>
     <message>
-      <source>Alias conservados como notas; no administran correo</source>
-      <translation>Alias conservados como notas; no administran correo</translation>
-    </message>
-    <message>
       <source>Archivo guardado correctamente.</source>
       <translation>Archivo guardado correctamente.</translation>
     </message>
@@ -133,10 +129,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Cambios guardados</source>
       <translation>Cambios guardados</translation>
-    </message>
-    <message>
-      <source>Campos personalizados conservados como texto en las notas</source>
-      <translation>Campos personalizados conservados como texto en las notas</translation>
     </message>
     <message>
       <source>Cargando bóveda…</source>
@@ -207,10 +199,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Descifrando y comprobando la copia…</translation>
     </message>
     <message>
-      <source>Descripciones de bóvedas que no se importan</source>
-      <translation>Descripciones de bóvedas que no se importan</translation>
-    </message>
-    <message>
       <source>Ejecutando operación OpenPGP…</source>
       <translation>Ejecutando operación OpenPGP…</translation>
     </message>
@@ -229,10 +217,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El archivo no contiene claves ni revocaciones OpenPGP que GnuPG pueda importar.</source>
       <translation>El archivo no contiene claves ni revocaciones OpenPGP que GnuPG pueda importar.</translation>
-    </message>
-    <message>
-      <source>El archivo no es una exportación compatible de Proton Pass. Exporta de nuevo en formato ZIP o PGP y vuelve a intentarlo.</source>
-      <translation>El archivo no es una exportación compatible de Proton Pass. Exporta de nuevo en formato ZIP o PGP y vuelve a intentarlo.</translation>
     </message>
     <message>
       <source>El archivo se guardó, pero no se pudo confirmar que todos los cambios llegaron al disco. Conserva la copia original.</source>
@@ -325,14 +309,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Elementos con adjuntos que no se importan</source>
       <translation>Elementos con adjuntos que no se importan</translation>
-    </message>
-    <message>
-      <source>Elementos cuyas fechas originales no se importan</source>
-      <translation>Elementos cuyas fechas originales no se importan</translation>
-    </message>
-    <message>
-      <source>Elementos de tipos no compatibles omitidos</source>
-      <translation>Elementos de tipos no compatibles omitidos</translation>
     </message>
     <message>
       <source>Elige una imagen local.</source>
@@ -542,10 +518,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La clave ya está revocada.</translation>
     </message>
     <message>
-      <source>La exportación supera el límite de 64 MiB o 10 000 registros. Exporta menos elementos.</source>
-      <translation>La exportación supera el límite de 64 MiB o 10 000 registros. Exporta menos elementos.</translation>
-    </message>
-    <message>
       <source>La exportación supera el tamaño máximo permitido.</source>
       <translation>La exportación supera el tamaño máximo permitido.</translation>
     </message>
@@ -632,10 +604,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Las consultas online están desactivadas.</source>
       <translation>Las consultas online están desactivadas.</translation>
-    </message>
-    <message>
-      <source>Leyendo la exportación… Si está cifrada, introduce su contraseña en la ventana de GnuPG.</source>
-      <translation>Leyendo la exportación… Si está cifrada, introduce su contraseña en la ventana de GnuPG.</translation>
     </message>
     <message>
       <source>Los servicios online están desactivados.</source>
@@ -736,10 +704,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración.</source>
       <translation>No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración.</translation>
-    </message>
-    <message>
-      <source>No se pudo descifrar la exportación. Revisa la contraseña en GnuPG y vuelve a intentarlo.</source>
-      <translation>No se pudo descifrar la exportación. Revisa la contraseña en GnuPG y vuelve a intentarlo.</translation>
     </message>
     <message>
       <source>No se pudo determinar la fecha actual para validar la caducidad.</source>
@@ -902,10 +866,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Parte pública eliminada para {fingerprint}.</translation>
     </message>
     <message>
-      <source>Passkeys conservadas como referencia en las notas; no permiten autenticar</source>
-      <translation>Passkeys conservadas como referencia en las notas; no permiten autenticar</translation>
-    </message>
-    <message>
       <source>Prueba del agente GPG falló: {error}</source>
       <translation>Prueba del agente GPG falló: {error}</translation>
     </message>
@@ -920,10 +880,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>QML requested application shutdown</source>
       <translation>QML requested application shutdown</translation>
-    </message>
-    <message>
-      <source>Reglas de autocompletado conservadas como referencia; solo se importan las URL predeterminadas</source>
-      <translation>Reglas de autocompletado conservadas como referencia; solo se importan las URL predeterminadas</translation>
     </message>
     <message>
       <source>Revisa el resultado y elige las claves para los elementos que se añadirán.</source>
@@ -952,10 +908,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Selecciona entre 1 y 64 identidades para certificar.</source>
       <translation>Selecciona entre 1 y 64 identidades para certificar.</translation>
-    </message>
-    <message>
-      <source>Selecciona un archivo local de Proton Pass.</source>
-      <translation>Selecciona un archivo local de Proton Pass.</translation>
     </message>
     <message>
       <source>Selecciona un archivo local de bóveda existente.</source>
@@ -1029,12 +981,32 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Abierta</translation>
     </message>
     <message>
+      <source>Adjuntos</source>
+      <translation>Adjuntos</translation>
+    </message>
+    <message>
       <source>Algoritmo</source>
       <translation>Algoritmo</translation>
     </message>
     <message>
+      <source>Alias</source>
+      <translation>Alias</translation>
+    </message>
+    <message>
+      <source>Alias que se guardarán como notas</source>
+      <translation>Alias que se guardarán como notas</translation>
+    </message>
+    <message>
       <source>Apellidos</source>
       <translation>Apellidos</translation>
+    </message>
+    <message>
+      <source>Archivos cifrados</source>
+      <translation>Archivos cifrados</translation>
+    </message>
+    <message>
+      <source>Autenticadores TOTP</source>
+      <translation>Autenticadores TOTP</translation>
     </message>
     <message>
       <source>Autenticar</source>
@@ -1043,10 +1015,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Caducada</source>
       <translation>Caducada</translation>
-    </message>
-    <message>
-      <source>Campos de origen conservados en registros ocultos</source>
-      <translation>Campos de origen conservados en registros ocultos</translation>
     </message>
     <message>
       <source>Certificar</source>
@@ -1573,8 +1541,172 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Titular</translation>
     </message>
     <message>
-      <source>Un elemento supera los límites actuales de KryptoPass o contiene un TOTP incompatible. Conserva el original y revisa la documentación de importación.</source>
-      <translation>Un elemento supera los límites actuales de KryptoPass o contiene un TOTP incompatible. Conserva el original y revisa la documentación de importación.</translation>
+      <source>Campos adicionales</source>
+      <translation>Campos adicionales</translation>
+    </message>
+    <message>
+      <source>Carpetas</source>
+      <translation>Carpetas</translation>
+    </message>
+    <message>
+      <source>Claves SSH</source>
+      <translation>Claves SSH</translation>
+    </message>
+    <message>
+      <source>Claves SSH no compatibles omitidas</source>
+      <translation>Claves SSH no compatibles omitidas</translation>
+    </message>
+    <message>
+      <source>Claves públicas de origen conservadas como referencia por diferir de la privada</source>
+      <translation>Claves públicas de origen conservadas como referencia por diferir de la privada</translation>
+    </message>
+    <message>
+      <source>Correo electrónico</source>
+      <translation>Correo electrónico</translation>
+    </message>
+    <message>
+      <source>Could not initialize importer catalog</source>
+      <translation>Could not initialize importer catalog</translation>
+    </message>
+    <message>
+      <source>Datos de origen conservados como referencias</source>
+      <translation>Datos de origen conservados como referencias</translation>
+    </message>
+    <message>
+      <source>Descripciones de carpetas</source>
+      <translation>Descripciones de carpetas</translation>
+    </message>
+    <message>
+      <source>Descripciones de carpetas que se guardarán como notas</source>
+      <translation>Descripciones de carpetas que se guardarán como notas</translation>
+    </message>
+    <message>
+      <source>Descripción: {name}</source>
+      <translation>Descripción: {name}</translation>
+    </message>
+    <message>
+      <source>El archivo no es compatible con la integración seleccionada. Comprueba el gestor y el formato de exportación.</source>
+      <translation>El archivo no es compatible con la integración seleccionada. Comprueba el gestor y el formato de exportación.</translation>
+    </message>
+    <message>
+      <source>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</source>
+      <translation>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>Elementos con fechas originales conservadas como campos de referencia</source>
+      <translation>Elementos con fechas originales conservadas como campos de referencia</translation>
+    </message>
+    <message>
+      <source>Elementos personalizados</source>
+      <translation>Elementos personalizados</translation>
+    </message>
+    <message>
+      <source>Elementos personalizados adicionales para conservar campos y su ocultación</source>
+      <translation>Elementos personalizados adicionales para conservar campos y su ocultación</translation>
+    </message>
+    <message>
+      <source>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</source>
+      <translation>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</translation>
+    </message>
+    <message>
+      <source>Favoritos</source>
+      <translation>Favoritos</translation>
+    </message>
+    <message>
+      <source>Fecha de creación (Unix)</source>
+      <translation>Fecha de creación (Unix)</translation>
+    </message>
+    <message>
+      <source>Fecha de modificación (Unix)</source>
+      <translation>Fecha de modificación (Unix)</translation>
+    </message>
+    <message>
+      <source>Fechas originales</source>
+      <translation>Fechas originales</translation>
+    </message>
+    <message>
+      <source>Identidades</source>
+      <translation>Identidades</translation>
+    </message>
+    <message>
+      <source>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</source>
+      <translation>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</translation>
+    </message>
+    <message>
+      <source>Leyendo y revisando la exportación…</source>
+      <translation>Leyendo y revisando la exportación…</translation>
+    </message>
+    <message>
+      <source>Licencias</source>
+      <translation>Licencias</translation>
+    </message>
+    <message>
+      <source>Logins</source>
+      <translation>Logins</translation>
+    </message>
+    <message>
+      <source>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</source>
+      <translation>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+    <message>
+      <source>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</source>
+      <translation>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</translation>
+    </message>
+    <message>
+      <source>Papelera</source>
+      <translation>Papelera</translation>
+    </message>
+    <message>
+      <source>Passkeys</source>
+      <translation>Passkeys</translation>
+    </message>
+    <message>
+      <source>Passkeys conservadas como referencia; no permiten autenticar</source>
+      <translation>Passkeys conservadas como referencia; no permiten autenticar</translation>
+    </message>
+    <message>
+      <source>Redes Wi-Fi</source>
+      <translation>Redes Wi-Fi</translation>
+    </message>
+    <message>
+      <source>Reglas de autocompletado</source>
+      <translation>Reglas de autocompletado</translation>
+    </message>
+    <message>
+      <source>Reglas de autocompletado conservadas como referencia</source>
+      <translation>Reglas de autocompletado conservadas como referencia</translation>
+    </message>
+    <message>
+      <source>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</source>
+      <translation>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</translation>
+    </message>
+    <message>
+      <source>Selecciona un archivo local del gestor elegido.</source>
+      <translation>Selecciona un archivo local del gestor elegido.</translation>
+    </message>
+    <message>
+      <source>Selecciona una integración de importación.</source>
+      <translation>Selecciona una integración de importación.</translation>
+    </message>
+    <message>
+      <source>Sin carpeta</source>
+      <translation>Sin carpeta</translation>
+    </message>
+    <message>
+      <source>Tarjetas</source>
+      <translation>Tarjetas</translation>
+    </message>
+    <message>
+      <source>Tipos de entrada no compatibles omitidos</source>
+      <translation>Tipos de entrada no compatibles omitidos</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
     </message>
     <message>
       <source>Unix {}</source>
@@ -2415,12 +2547,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>{label} exceeds the maximum size</translation>
     </message>
     <message>
-      <source>{label}: {count}.</source>
-      <translation>{label}: {count}.</translation>
+      <source>{} ({patterns})</source>
+      <translation>{} ({patterns})</translation>
     </message>
     <message>
-      <source>{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera</source>
-      <translation>{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera</translation>
+      <source>{}: {count}.</source>
+      <translation>{}: {count}.</translation>
     </message>
     <message>
       <source>{}identidad(es) certificada(s) en {fingerprint}.</source>
@@ -3518,22 +3650,18 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
-    <name>ImportDialog</name>
+    <name>ImportWindow</name>
     <message>
-      <source>Importar desde Proton Pass</source>
-      <translation>Importar desde Proton Pass</translation>
+      <source>Importar desde otro gestor</source>
+      <translation>Importar desde otro gestor</translation>
     </message>
     <message>
-      <source>Importa una exportación JSON, ZIP o PGP. Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Si el archivo está cifrado, GnuPG pedirá su contraseña.</source>
-      <translation>Importa una exportación JSON, ZIP o PGP. Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Si el archivo está cifrado, GnuPG pedirá su contraseña.</translation>
+      <source>Seleccionar exportación de %1</source>
+      <translation>Seleccionar exportación de %1</translation>
     </message>
     <message>
-      <source>Seleccionar exportación…</source>
-      <translation>Seleccionar exportación…</translation>
-    </message>
-    <message>
-      <source>Revisar archivo</source>
-      <translation>Revisar archivo</translation>
+      <source>Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Primero se revisará el archivo.</source>
+      <translation>Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Primero se revisará el archivo.</translation>
     </message>
     <message>
       <source>Claves que protegerán los elementos importados</source>
@@ -3563,17 +3691,64 @@ Huella(s) detectadas:
       <source>Importar</source>
       <translation>Importar</translation>
     </message>
+  </context>
+  <context>
+    <name>ImporterPanel</name>
     <message>
-      <source>Seleccionar exportación de Proton Pass</source>
-      <translation>Seleccionar exportación de Proton Pass</translation>
+      <source>Integraciones</source>
+      <translation>Integraciones</translation>
     </message>
     <message>
-      <source>Exportación de Proton Pass (*.json *.zip *.pgp *.gpg)</source>
-      <translation>Exportación de Proton Pass (*.json *.zip *.pgp *.gpg)</translation>
+      <source>Buscar gestor o formato…</source>
+      <translation>Buscar gestor o formato…</translation>
     </message>
     <message>
-      <source>Todos los archivos (*)</source>
-      <translation>Todos los archivos (*)</translation>
+      <source>Buscar integraciones de importación</source>
+      <translation>Buscar integraciones de importación</translation>
+    </message>
+    <message>
+      <source>%1 de %2 integraciones</source>
+      <translation>%1 de %2 integraciones</translation>
+    </message>
+    <message>
+      <source>No hay integraciones disponibles.</source>
+      <translation>No hay integraciones disponibles.</translation>
+    </message>
+    <message>
+      <source>No hay coincidencias.</source>
+      <translation>No hay coincidencias.</translation>
+    </message>
+    <message>
+      <source>Elige una integración</source>
+      <translation>Elige una integración</translation>
+    </message>
+    <message>
+      <source>Selecciona el gestor del que exportaste tus datos para consultar sus formatos y capacidades.</source>
+      <translation>Selecciona el gestor del que exportaste tus datos para consultar sus formatos y capacidades.</translation>
+    </message>
+    <message>
+      <source>Formatos: %1</source>
+      <translation>Formatos: %1</translation>
+    </message>
+    <message>
+      <source>Completo</source>
+      <translation>Completo</translation>
+    </message>
+    <message>
+      <source>Solo referencia</source>
+      <translation>Solo referencia</translation>
+    </message>
+    <message>
+      <source>No disponible</source>
+      <translation>No disponible</translation>
+    </message>
+    <message>
+      <source>Si el archivo está cifrado, la integración solicitará el acceso mediante su servicio de descifrado.</source>
+      <translation>Si el archivo está cifrado, la integración solicitará el acceso mediante su servicio de descifrado.</translation>
+    </message>
+    <message>
+      <source>Elegir archivo…</source>
+      <translation>Elegir archivo…</translation>
     </message>
   </context>
   <context>
@@ -4626,8 +4801,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>&amp;Archivo</translation>
     </message>
     <message>
-      <source>Importar desde Proton Pass…</source>
-      <translation>Importar desde Proton Pass…</translation>
+      <source>Importar desde otro gestor…</source>
+      <translation>Importar desde otro gestor…</translation>
     </message>
     <message>
       <source>Crear copia de seguridad…</source>

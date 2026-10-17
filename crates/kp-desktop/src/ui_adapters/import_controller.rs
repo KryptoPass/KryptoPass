@@ -1,13 +1,14 @@
 use crate::infrastructure::{
     app_paths,
     backup::parse_selected_recipients,
-    import::{receive_import, review_proton_export},
+    import::{PreparedImport, catalog, receive_import, review_export},
 };
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use kryptopass_core::{ImportFolderPolicy, ImportOptions};
-use kryptopass_import::{ImportError, ImportPlan, IssueKind};
 use std::{path::PathBuf, pin::Pin};
+
+mod presentation;
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -22,6 +23,7 @@ pub mod qobject {
         #[qml_element]
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, reviewed, READ, NOTIFY)]
+        #[qproperty(QString, importers_json, cxx_name = "importersJson", READ, NOTIFY)]
         #[qproperty(QString, summary, READ, NOTIFY)]
         #[qproperty(QString, warnings, READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
@@ -31,7 +33,7 @@ pub mod qobject {
         #[qinvokable]
         fn reset(self: Pin<&mut Self>);
         #[qinvokable]
-        fn review(self: Pin<&mut Self>, input: &QUrl);
+        fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString);
         #[qinvokable]
         #[cxx_name = "importReviewed"]
         fn import_reviewed(self: Pin<&mut Self>, recipients_json: &QString);
@@ -42,16 +44,36 @@ pub mod qobject {
     impl cxx_qt::Threading for ImportController {}
 }
 
-#[derive(Default)]
 pub struct ImportControllerRust {
     busy: bool,
     reviewed: bool,
+    importers_json: QString,
     summary: QString,
     warnings: QString,
     status: QString,
     error_message: QString,
-    plan: Option<ImportPlan>,
+    plan: Option<PreparedImport>,
     destination: Option<PathBuf>,
+}
+
+impl Default for ImportControllerRust {
+    fn default() -> Self {
+        let importers_json = catalog::json().unwrap_or_else(|_| {
+            tracing::error!("Could not initialize importer catalog");
+            "[]".into()
+        });
+        Self {
+            busy: false,
+            reviewed: false,
+            importers_json: QString::from(importers_json),
+            summary: QString::default(),
+            warnings: QString::default(),
+            status: QString::default(),
+            error_message: QString::default(),
+            plan: None,
+            destination: None,
+        }
+    }
 }
 
 impl qobject::ImportController {
@@ -68,15 +90,20 @@ impl qobject::ImportController {
         self.set_error_message(QString::default());
     }
 
-    pub fn review(mut self: Pin<&mut Self>, input: &QUrl) {
+    pub fn review(mut self: Pin<&mut Self>, input: &QUrl, importer_id: &QString) {
         if *self.busy() {
             return;
         }
         self.as_mut().reset();
         let Some(input) = local_path(input) else {
-            self.fail("Selecciona un archivo local de Proton Pass.");
+            self.fail("Selecciona un archivo local del gestor elegido.");
             return;
         };
+        let importer_id = importer_id.to_string();
+        if importer_id.is_empty() {
+            self.fail("Selecciona una integración de importación.");
+            return;
+        }
         let destination = match app_paths::database_path(crate::app_info::APP.desktop_file_id) {
             Ok(path) => path,
             Err(_) => {
@@ -86,19 +113,21 @@ impl qobject::ImportController {
         };
         self.as_mut().rust_mut().destination = Some(destination);
         self.as_mut().set_busy(true);
-        self.as_mut().set_status(QString::from("Leyendo la exportación… Si está cifrada, introduce su contraseña en la ventana de GnuPG."));
+        self.as_mut()
+            .set_status(QString::from("Leyendo y revisando la exportación…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || review_proton_export(&input),
+            move || review_export(&input, &importer_id),
             |mut controller, result| {
                 controller.as_mut().set_busy(false);
                 match result {
                     Ok(plan) => {
-                        let s = plan.summary;
-                        controller.as_mut().set_summary(QString::from(format!("{} bóvedas · {} carpetas · {} logins · {} notas · {} otros tipos · {} omitidos · {} en la papelera", s.vaults, s.folders, s.logins, s.notes, s.other_items, s.skipped, s.trashed)));
                         controller
                             .as_mut()
-                            .set_warnings(QString::from(warning_text(&plan)));
+                            .set_summary(QString::from(presentation::summary_text(&plan)));
+                        controller
+                            .as_mut()
+                            .set_warnings(QString::from(presentation::warning_text(&plan)));
                         let has_items = !plan.batch.items.is_empty();
                         controller.as_mut().rust_mut().plan = Some(plan);
                         controller.as_mut().set_reviewed(has_items);
@@ -108,7 +137,7 @@ impl qobject::ImportController {
                             "No hay elementos compatibles para importar."
                         }));
                     }
-                    Err(error) => controller.fail(review_error(&error)),
+                    Err(error) => controller.fail(presentation::review_error(&error)),
                 }
             },
         );
@@ -227,77 +256,4 @@ fn local_path(url: &QUrl) -> Option<PathBuf> {
     }
     let path = url.to_local_file()?.to_string();
     (!path.is_empty()).then(|| PathBuf::from(path))
-}
-
-fn review_error(error: &anyhow::Error) -> &'static str {
-    match error.downcast_ref::<ImportError>() {
-        Some(ImportError::Decryption) => {
-            "No se pudo descifrar la exportación. Revisa la contraseña en GnuPG y vuelve a intentarlo."
-        }
-        Some(ImportError::Limit) => {
-            "La exportación supera el límite de 64 MiB o 10 000 registros. Exporta menos elementos."
-        }
-        Some(ImportError::Content) => {
-            "Un elemento supera los límites actuales de KryptoPass o contiene un TOTP incompatible. Conserva el original y revisa la documentación de importación."
-        }
-        Some(_) => {
-            "El archivo no es una exportación compatible de Proton Pass. Exporta de nuevo en formato ZIP o PGP y vuelve a intentarlo."
-        }
-        None => {
-            "No se pudo leer el archivo. Comprueba su ubicación y los permisos y vuelve a intentarlo."
-        }
-    }
-}
-
-fn warning_text(plan: &ImportPlan) -> String {
-    let categories = [
-        (
-            IssueKind::UnsupportedItem,
-            "Elementos de tipos no compatibles omitidos",
-        ),
-        (
-            IssueKind::AliasAsNote,
-            "Alias conservados como notas; no administran correo",
-        ),
-        (
-            IssueKind::ExtraFieldsInNotes,
-            "Campos personalizados conservados como texto en las notas",
-        ),
-        (
-            IssueKind::SourceFieldsPreserved,
-            "Campos de origen conservados en registros ocultos",
-        ),
-        (
-            IssueKind::PasskeysInNotes,
-            "Passkeys conservadas como referencia en las notas; no permiten autenticar",
-        ),
-        (
-            IssueKind::AutofillRulesInNotes,
-            "Reglas de autocompletado conservadas como referencia; solo se importan las URL predeterminadas",
-        ),
-        (
-            IssueKind::AttachmentsNotImported,
-            "Elementos con adjuntos que no se importan",
-        ),
-        (
-            IssueKind::TimestampsNotImported,
-            "Elementos cuyas fechas originales no se importan",
-        ),
-        (
-            IssueKind::VaultDescriptionNotImported,
-            "Descripciones de bóvedas que no se importan",
-        ),
-    ];
-    categories
-        .iter()
-        .filter_map(|(kind, label)| {
-            let count = plan
-                .issues
-                .iter()
-                .filter(|issue| issue.kind == *kind)
-                .count();
-            (count > 0).then(|| format!("{label}: {count}."))
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
