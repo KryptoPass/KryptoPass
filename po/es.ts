@@ -1573,6 +1573,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Datos de origen conservados como referencias</translation>
     </message>
     <message>
+      <source>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</source>
+      <translation>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</translation>
+    </message>
+    <message>
       <source>Descripciones de carpetas</source>
       <translation>Descripciones de carpetas</translation>
     </message>
@@ -5053,6 +5057,26 @@ https://cuenta.ejemplo.test</translation>
       <translation>&amp;Preferencias</translation>
     </message>
     <message>
+      <source>Bloqueo por inactividad</source>
+      <translation>Bloqueo por inactividad</translation>
+    </message>
+    <message>
+      <source>Desactivado</source>
+      <translation>Desactivado</translation>
+    </message>
+    <message>
+      <source>1 minuto</source>
+      <translation>1 minuto</translation>
+    </message>
+    <message>
+      <source>5 minutos</source>
+      <translation>5 minutos</translation>
+    </message>
+    <message>
+      <source>15 minutos</source>
+      <translation>15 minutos</translation>
+    </message>
+    <message>
       <source>Configurar atajos de teclado…</source>
       <translation>Configurar atajos de teclado…</translation>
     </message>
@@ -6201,6 +6225,13 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Tipo desconocido</source>
       <translation>Tipo desconocido</translation>
+    </message>
+  </context>
+  <context>
+    <name>SessionLock</name>
+    <message>
+      <source>Bloquear la bóveda antes de suspender</source>
+      <translation>Bloquear la bóveda antes de suspender</translation>
     </message>
   </context>
   <context>

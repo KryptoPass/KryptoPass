@@ -35,6 +35,12 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/native-tests"]
 
+[jobs.test-session-lock]
+command = ["just", "test-session-lock"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-desktop/src/native/session_lock.h", "crates/kp-desktop/src/native/session_lock.cpp", "crates/kp-desktop/native-tests"]
+
 [jobs.run]
 command = ["just", "run"]
 need_stdout = true

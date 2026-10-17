@@ -115,6 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qt_module("Network")
         .qt_module("Quick")
         .qt_module("Widgets")
+        .qt_module("DBus")
         .files([
             "src/ui_adapters/app_shell.rs",
             "src/ui_adapters/keyring_controller.rs",
@@ -131,6 +132,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qrc(generated.join("app_resources.qrc"))
         .cpp_file("src/native/application.cpp")
         .cpp_file("src/native/desktop_integration.cpp")
+        .cpp_file("src/native/session_lock.h")
+        .cpp_file("src/native/session_lock.cpp")
         .cpp_file("src/native/entry_icons.cpp")
         .cpp_file("src/native/entry_icon_image.cpp")
         .cpp_file("src/native/favicon_service.cpp")
@@ -175,7 +178,7 @@ fn kde_dependencies() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     }
     let status = configure.status()?;
     if !status.success() {
-        return Err("KDE contacts development libraries are required".into());
+        return Err("KDE development libraries are required; see BUILD.md".into());
     }
     let libraries = fs::read_to_string(output.join("libraries.txt"))?;
     for library in libraries.lines().filter(|line| !line.is_empty()) {

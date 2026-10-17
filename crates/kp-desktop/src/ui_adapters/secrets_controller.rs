@@ -5,8 +5,8 @@ use std::sync::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use cxx_qt::{CxxQtType, Threading};
-use cxx_qt_lib::{QDateTime, QString, QStringList, QTimeZone, QUrl};
+use cxx_qt::{CxxQtType, Threading, casting::Upcast};
+use cxx_qt_lib::{QDateTime, QObjectMutPtr, QString, QStringList, QTimeZone, QUrl};
 use kryptopass_core::{
     FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
     SecretsService, generate_password as generate_secure_password, generate_totp,
@@ -83,6 +83,12 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "lockVault"]
         fn lock_vault(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "lockForSession"]
+        fn lock_for_session(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "setSessionBlocked"]
+        fn set_session_blocked(self: Pin<&mut Self>, blocked: bool);
         #[qinvokable]
         #[cxx_name = "unlockVault"]
         fn unlock_vault(self: Pin<&mut Self>);
@@ -243,6 +249,7 @@ pub mod qobject {
     }
 
     impl cxx_qt::Threading for SecretsController {}
+    impl cxx_qt::Initialize for SecretsController {}
 }
 
 /// State owned by the QObject; decrypted values have zeroizing domain types.
@@ -266,6 +273,7 @@ pub struct SecretsControllerRust {
     staged_icon: Option<kryptopass_core::EntryIconAsset>,
     saving: bool,
     locked: bool,
+    session_blocked: bool,
     selected_entry: Option<SecretId>,
     selected_revision: Option<u64>,
     detail_content: Option<SecretContent>,
@@ -309,6 +317,7 @@ impl Default for SecretsControllerRust {
             staged_icon: None,
             saving: false,
             locked: true,
+            session_blocked: false,
             selected_entry: None,
             selected_revision: None,
             detail_content: None,
@@ -372,6 +381,18 @@ enum MutationSignal {
     FolderSaved(String),
     EntryRemoved(SecretId),
     MetadataChanged(SecretId, u64),
+}
+
+impl cxx_qt::Initialize for qobject::SecretsController {
+    fn initialize(self: Pin<&mut Self>) {
+        let base: Pin<&mut cxx_qt::QObject> = self.upcast_pin();
+        // The monitor is a QObject child and cannot outlive this receiver.
+        unsafe {
+            let receiver =
+                QObjectMutPtr::from_raw(std::ptr::from_mut(Pin::get_unchecked_mut(base)));
+            super::native_ffi::ffi::install_session_lock_monitor(receiver);
+        }
+    }
 }
 
 impl qobject::SecretsController {
@@ -521,6 +542,11 @@ impl qobject::SecretsController {
     }
 
     pub fn unlock_vault(mut self: Pin<&mut Self>) {
+        if self.as_ref().rust().session_blocked {
+            self.as_mut()
+                .fail("Desbloquea la sesión del escritorio antes de acceder a la bóveda.");
+            return;
+        }
         if *self.busy() || *self.saving() {
             self.as_mut()
                 .fail("Espera a que termine la operación antes de acceder a la bóveda.");
@@ -531,6 +557,20 @@ impl qobject::SecretsController {
         self.as_mut().set_status(QString::from(
             "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
         ));
+    }
+
+    pub fn set_session_blocked(mut self: Pin<&mut Self>, blocked: bool) {
+        self.as_mut().rust_mut().session_blocked = blocked;
+    }
+
+    pub fn lock_for_session(mut self: Pin<&mut Self>) {
+        // In-flight writes may finish, but access and read projections expire now.
+        self.as_mut().set_locked(true);
+        self.as_mut().clear_sensitive_state_contents();
+        unsafe { super::native_ffi::ffi::clear_owned() };
+        self.as_mut().clear_error();
+        self.as_mut().set_status(QString::from("Bóveda bloqueada"));
+        self.as_mut().vault_locked();
     }
 
     pub fn clear_sensitive_state(mut self: Pin<&mut Self>) {

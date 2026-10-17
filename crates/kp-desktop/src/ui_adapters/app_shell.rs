@@ -24,6 +24,7 @@ pub mod qobject {
         #[qproperty(QString, app_homepage, cxx_name = "appHomepage", READ, CONSTANT)]
         #[qproperty(QString, app_repository, cxx_name = "appRepository", READ, CONSTANT)]
         #[qproperty(QString, shortcuts_json, cxx_name = "shortcutsJson", READ, NOTIFY)]
+        #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
         type ShellController = super::ShellControllerRust;
 
         #[qinvokable]
@@ -33,6 +34,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "showAboutDialog"]
         fn show_about_dialog(self: Pin<&mut Self>);
+
+        #[qinvokable]
+        #[cxx_name = "setIdleLockSeconds"]
+        fn set_idle_lock_seconds(self: Pin<&mut Self>, seconds: i32);
     }
 }
 
@@ -46,6 +51,7 @@ pub struct ShellControllerRust {
     app_homepage: QString,
     app_repository: QString,
     shortcuts_json: QString,
+    idle_lock_seconds: i32,
 }
 
 impl Default for ShellControllerRust {
@@ -60,11 +66,21 @@ impl Default for ShellControllerRust {
             app_homepage: QString::from(crate::app_info::APP.homepage),
             app_repository: QString::from(crate::app_info::APP.repository),
             shortcuts_json: crate::ui_adapters::native_ffi::ffi::configured_shortcuts(),
+            idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
         }
     }
 }
 
 impl qobject::ShellController {
+    pub fn set_idle_lock_seconds(mut self: Pin<&mut Self>, seconds: i32) {
+        let seconds = seconds.clamp(0, 24 * 60 * 60);
+        crate::ui_adapters::native_ffi::ffi::set_idle_lock_seconds(seconds);
+        if *self.idle_lock_seconds() != seconds {
+            self.as_mut().rust_mut().idle_lock_seconds = seconds;
+            self.idle_lock_seconds_changed();
+        }
+    }
+
     pub fn show_about_dialog(self: Pin<&mut Self>) {
         crate::ui_adapters::native_ffi::ffi::show_about_dialog();
     }

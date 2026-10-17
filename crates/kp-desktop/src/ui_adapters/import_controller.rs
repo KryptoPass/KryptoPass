@@ -28,6 +28,9 @@ pub mod qobject {
         #[qinvokable]
         fn reset(self: Pin<&mut Self>);
         #[qinvokable]
+        #[cxx_name = "clearSensitiveState"]
+        fn clear_sensitive_state(self: Pin<&mut Self>);
+        #[qinvokable]
         fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString);
         #[qinvokable]
         #[cxx_name = "importReviewed"]
@@ -49,6 +52,7 @@ pub struct ImportControllerRust {
     error_message: QString,
     plan: Option<PreparedImport>,
     destination: Option<PathBuf>,
+    review_operation: u64,
 }
 
 impl Default for ImportControllerRust {
@@ -67,17 +71,26 @@ impl Default for ImportControllerRust {
             error_message: QString::default(),
             plan: None,
             destination: None,
+            review_operation: 0,
         }
     }
 }
 
 impl qobject::ImportController {
-    pub fn reset(mut self: Pin<&mut Self>) {
+    pub fn reset(self: Pin<&mut Self>) {
         if *self.busy() {
             return;
         }
-        self.as_mut().rust_mut().plan = None;
-        self.as_mut().rust_mut().destination = None;
+        self.clear_sensitive_state();
+    }
+
+    pub fn clear_sensitive_state(mut self: Pin<&mut Self>) {
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.review_operation = state.review_operation.wrapping_add(1);
+            state.plan = None;
+            state.destination = None;
+        }
         self.as_mut().set_reviewed(false);
         self.as_mut().set_summary(QString::default());
         self.as_mut().set_warnings(QString::default());
@@ -107,14 +120,18 @@ impl qobject::ImportController {
             }
         };
         self.as_mut().rust_mut().destination = Some(destination);
+        let operation = self.as_ref().rust().review_operation;
         self.as_mut().set_busy(true);
         self.as_mut()
             .set_status(QString::from("Leyendo y revisando la exportación…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || review_export(&input, &importer_id),
-            |mut controller, result| {
+            move |mut controller, result| {
                 controller.as_mut().set_busy(false);
+                if controller.as_ref().rust().review_operation != operation {
+                    return;
+                }
                 match result {
                     Ok(plan) => {
                         controller

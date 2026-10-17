@@ -17,6 +17,7 @@ pub(crate) mod ffi {
         include!("native/online_services.h");
         include!("native/entry_icons.h");
         include!("native/desktop_integration.h");
+        include!("native/session_lock.h");
         include!("cxx-qt-lib/qqmlengine.h");
         type QQmlEngine = cxx_qt_lib::QQmlEngine;
 
@@ -46,6 +47,13 @@ pub(crate) mod ffi {
         fn configure_shortcuts() -> QString;
         type QStringList = cxx_qt_lib::QStringList;
         type QObjectMutPtr = cxx_qt_lib::QObjectMutPtr;
+
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn install_session_lock_monitor(receiver: QObjectMutPtr);
+        #[namespace = "kryptopass::desktop::native"]
+        fn idle_lock_seconds() -> i32;
+        #[namespace = "kryptopass::desktop::native"]
+        fn set_idle_lock_seconds(seconds: i32);
 
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn copy_sensitive(text: &QString, auto_clear_seconds: i32) -> bool;

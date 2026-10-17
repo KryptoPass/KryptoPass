@@ -64,7 +64,13 @@ test-items: check
 test-icons:
     cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
     cmake --build {{ quote(target_dir / "native-tests") }} --parallel 2
-    ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure
+    ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^favicon_service_tests$'
+
+# Bloqueo de sesión, suspensión e inactividad con eventos simulados.
+test-session-lock:
+    cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
+    cmake --build {{ quote(target_dir / "native-tests") }} --target session_lock_tests --parallel 2
+    ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^session_lock_tests$'
 
 # Smoke offscreen: arranca y falla si el log trae errores QML.
 smoke: build
@@ -99,7 +105,7 @@ uninstall-dev-desktop:
     python3 tools/dev_desktop.py uninstall
 
 # Puerta completa rápida (sin lanzar la app).
-verify: fmt check clippy lint test-icons test-items test test-packaging metadata translations-check licenses
+verify: fmt check clippy lint test-icons test-session-lock test-items test test-packaging metadata translations-check licenses
 
 # Gate pre-push: todo verde y árbol limpio.
 ready: verify clean

@@ -1,0 +1,3 @@
+#pragma once
+
+#include "idle_time_fake.h"

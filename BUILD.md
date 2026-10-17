@@ -30,6 +30,21 @@ bacon         # check continuo en fondo (q = job qmllint)
   `QT_QUICK_CONTROLS_STYLE`.
 - Licencia: GPL-3.0-or-later (`COPYING`).
 
+CI ejecuta las recetas de `just verify` como pasos separados y después
+`just smoke`, en pushes a `main`, pull requests o por ejecución manual de
+`Verify` en GitHub Actions. Tras compilar el workspace, los chequeos
+independientes siguen ejecutándose aunque otro falle; cada fallo mantiene
+el workflow en rojo. Así, un fallo de QML no oculta los resultados de Rust,
+traducciones o distribución.
+
+El contenedor Arch instala Qt/KDE y `ttf-dejavu`, y usa renderizado offscreen
+por software. Sin fuentes instaladas, los glifos de sustitución de Qt alteran
+las métricas y recortan el diálogo de vinculación con letra grande.
+La caché conserva dependencias de Cargo incluso si falla un test; cambia al
+actualizar el entorno nativo para no reutilizar
+artefactos compilados contra otras versiones de Qt/KDE/C++.
+`just smoke` ya crea y elimina su propio perfil temporal aislado.
+
 ## Rutas de compilación y herramientas Qt
 
 Las recetas y herramientas de escritorio consultan `cargo metadata` para
@@ -56,7 +71,8 @@ usan el mismo manifiesto. La fecha de lanzamiento es explícita, por lo que
 regenerar los archivos no cambia su contenido cada día.
 
 Se necesitan también los headers de KDE Contacts, Akonadi Contact Widgets,
-KCoreAddons, KXmlGui y KConfig. Para las puertas de distribución se utilizan
+KCoreAddons, KXmlGui, KConfig y KIdleTime, además del módulo Qt DBus.
+Para las puertas de distribución se utilizan
 Qt Linguist (`lupdate`, `lrelease`), Python 3.11+, `reuse`, `appstreamcli`
 y `desktop-file-validate`. CI declara los paquetes equivalentes de Arch Linux.
 
@@ -89,6 +105,14 @@ los recuentos usan `i18n::plural`/`qsTr(..., "", count)` con `%n`. Los valores
 privados y los campos de protocolo no se traducen.
 
 ## Teclado y preferencias
+
+La bóveda se bloquea al bloquear la sesión de Plasma, antes de suspender y
+tras cinco minutos de inactividad del sistema. Preferencias → Bloqueo por
+inactividad permite desactivar ese temporizador o elegir 1, 5 o 15 minutos;
+los eventos de sesión y suspensión siguen activos. Volver a la sesión no
+desbloquea la bóveda automáticamente. El acceso del navegador y las lecturas
+pendientes se invalidan al bloquear; un guardado ya iniciado puede terminar.
+Los cambios del editor que aún no se hayan enviado a guardar se descartan.
 
 Preferencias → Configurar atajos de teclado abre el diálogo nativo KDE.
 Las secuencias se guardan con KActionCollection y KConfig y se aplican al

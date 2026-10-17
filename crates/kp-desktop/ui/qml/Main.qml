@@ -357,7 +357,11 @@ Controls.ApplicationWindow {
             root.failPendingOperation();
         }
         function onVaultLocked() {
+            root.cancelSensitiveTransition();
+            root.pendingOperation = "";
+            root.pendingOperationId = "";
             secureClipboard.clearOwned();
+            importWindow.clearSensitiveState();
             editor.closeAndClear();
             if (folderEditor.opened)
                 folderEditor.clearAndClose();
@@ -550,34 +554,6 @@ Controls.ApplicationWindow {
             Controls.MenuItem { action: folderUp }
             Controls.MenuItem { action: folderDown }
             Controls.MenuItem { action: moveFolderAction }
-            Controls.MenuSeparator {}
-            Controls.Menu {
-                title: qsTr("Autolimpieza del portapapeles")
-                Controls.MenuItem {
-                    text: qsTr("Desactivada")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 0
-                    onTriggered: secureClipboard.autoClearSeconds = 0
-                }
-                Controls.MenuItem {
-                    text: qsTr("15 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 15
-                    onTriggered: secureClipboard.autoClearSeconds = 15
-                }
-                Controls.MenuItem {
-                    text: qsTr("30 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 30
-                    onTriggered: secureClipboard.autoClearSeconds = 30
-                }
-                Controls.MenuItem {
-                    text: qsTr("60 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 60
-                    onTriggered: secureClipboard.autoClearSeconds = 60
-                }
-            }
         }
         Controls.Menu {
             title: qsTr("&Ver")
@@ -619,6 +595,64 @@ Controls.ApplicationWindow {
         }
         Controls.Menu {
             title: qsTr("&Preferencias")
+            Controls.Menu {
+                title: qsTr("Bloqueo por inactividad")
+                Controls.MenuItem {
+                    text: qsTr("Desactivado")
+                    checkable: true
+                    autoExclusive: true
+                    checked: shell.idleLockSeconds === 0
+                    onTriggered: shell.setIdleLockSeconds(0)
+                }
+                Controls.MenuItem {
+                    text: qsTr("1 minuto")
+                    checkable: true
+                    autoExclusive: true
+                    checked: shell.idleLockSeconds === 60
+                    onTriggered: shell.setIdleLockSeconds(60)
+                }
+                Controls.MenuItem {
+                    text: qsTr("5 minutos")
+                    checkable: true
+                    autoExclusive: true
+                    checked: shell.idleLockSeconds === 300
+                    onTriggered: shell.setIdleLockSeconds(300)
+                }
+                Controls.MenuItem {
+                    text: qsTr("15 minutos")
+                    checkable: true
+                    autoExclusive: true
+                    checked: shell.idleLockSeconds === 900
+                    onTriggered: shell.setIdleLockSeconds(900)
+                }
+            }
+            Controls.Menu {
+                title: qsTr("Autolimpieza del portapapeles")
+                Controls.MenuItem {
+                    text: qsTr("Desactivada")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 0
+                    onTriggered: secureClipboard.autoClearSeconds = 0
+                }
+                Controls.MenuItem {
+                    text: qsTr("15 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 15
+                    onTriggered: secureClipboard.autoClearSeconds = 15
+                }
+                Controls.MenuItem {
+                    text: qsTr("30 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 30
+                    onTriggered: secureClipboard.autoClearSeconds = 30
+                }
+                Controls.MenuItem {
+                    text: qsTr("60 segundos")
+                    checkable: true
+                    checked: secureClipboard.autoClearSeconds === 60
+                    onTriggered: secureClipboard.autoClearSeconds = 60
+                }
+            }
             Controls.MenuItem {
                 text: qsTr("Configurar atajos de teclado…")
                 icon.name: "configure-shortcuts"

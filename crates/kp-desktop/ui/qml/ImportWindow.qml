@@ -53,6 +53,15 @@ Controls.ApplicationWindow {
         completed = false;
     }
 
+    function clearSensitiveState() {
+        dialog.controller.clearSensitiveState();
+        inputPath = "";
+        completed = false;
+        selectedFingerprints = [];
+        sourceDialog.close();
+        hide();
+    }
+
     onClosing: function(event) {
         if (busy)
             event.accepted = false;
