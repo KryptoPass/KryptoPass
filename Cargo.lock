@@ -1239,10 +1239,10 @@ dependencies = [
 name = "kp-import"
 version = "0.1.0"
 dependencies = [
- "kp-core",
  "kp-memsec",
  "serde",
  "serde_json",
+ "ssh-key",
  "thiserror 2.0.21",
  "zeroize",
  "zip",

@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Bounded password-manager imports into the KryptoPass domain"
+description = "Extensible password-manager importers with a shared entry model"
 publish = false
 
 [lib]
@@ -12,10 +12,10 @@ name = "kryptopass_import"
 
 [dependencies]
 kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
-kryptopass-core = { package = "kp-core", path = "../kp-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 thiserror = "2"
+ssh-key = { version = "0.6.7", features = ["crypto", "encryption"] }
 zeroize = { version = "1", features = ["derive"] }
 zip = { version = "2.4", default-features = false, features = ["deflate"] }
 
