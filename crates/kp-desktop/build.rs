@@ -102,6 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/DetailField.qml")
         .qml_file("ui/qml/MarkdownView.qml")
         .qml_file("ui/qml/MarkdownEditor.qml")
+        .qml_file("ui/qml/NotesEditor.qml")
         .depends([
             "QtQuick",
             "QtQuick.Controls",

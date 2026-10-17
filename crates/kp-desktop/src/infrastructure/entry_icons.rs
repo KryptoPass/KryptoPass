@@ -6,8 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use anyhow::{Result, ensure};
-use kryptopass_core::{EntryIcon, EntryIconAsset, MAX_ENTRY_ICON_BYTES};
-use rusqlite::{Connection, OpenFlags, OptionalExtension};
+use kryptopass_core::{EntryIcon, EntryIconAsset};
 use uuid::Uuid;
 
 #[derive(Default)]
@@ -109,30 +108,5 @@ fn read_resource(source: &str) -> Result<Vec<u8>> {
             .clone()
             .ok_or_else(|| anyhow::anyhow!("no icon store"))?
     };
-    let connection = Connection::open_with_flags(
-        path,
-        OpenFlags::SQLITE_OPEN_READ_ONLY
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX
-            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
-    )?;
-    connection.pragma_update(None, "trusted_schema", false)?;
-    let length: Option<i64> = connection
-        .query_row(
-            "SELECT length(png) FROM entry_icon_assets WHERE id = ?1",
-            [id.to_string()],
-            |row| row.get(0),
-        )
-        .optional()?;
-    ensure!(
-        length.is_some_and(|length| length >= 45 && length <= MAX_ENTRY_ICON_BYTES as i64),
-        "icon missing or too large"
-    );
-    let png: Vec<u8> = connection.query_row(
-        "SELECT png FROM entry_icon_assets WHERE id = ?1",
-        [id.to_string()],
-        |row| row.get(0),
-    )?;
-    let asset = EntryIconAsset { id, png };
-    asset.validate()?;
-    Ok(asset.png)
+    crate::storage::read_icon_asset(&path, id)
 }

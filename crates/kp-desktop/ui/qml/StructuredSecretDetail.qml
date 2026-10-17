@@ -167,10 +167,12 @@ SecretContentView {
         }
 
         SecretTextSection {
+            objectName: "markdownNotesSection"
             Layout.fillWidth: true
             visible: !!root.fields?.notes
             heading: qsTr("Notas")
             value: root.fields?.notes || ""
+            documentKey: root.entryId
             accessibleLabel: qsTr("Notas del elemento")
         }
     }

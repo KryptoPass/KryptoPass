@@ -1,5 +1,5 @@
 use crate::import::{PreparedImport, catalog, presentation, receive_import, review_export};
-use crate::{backup::parse_selected_recipients, infrastructure::app_paths};
+use crate::{backup::parse_selected_recipients, storage::paths as app_paths};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use kryptopass_core::{ImportFolderPolicy, ImportOptions};

@@ -189,8 +189,8 @@ QtObject {
         controller.saveFolder(id, name, parentId, icon, color);
     }
 
-    function removeFolder(id) {
-        controller.removeFolder(id);
+    function removeFolder(id, deleteContents) {
+        controller.removeFolder(id, deleteContents === true);
     }
 
     function removeEntry(id) {

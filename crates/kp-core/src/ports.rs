@@ -96,6 +96,13 @@ pub trait Storage {
     /// secrets must receive a new revision so open edits become stale.
     fn remove_folder(&mut self, id: FolderId) -> Result<()>;
 
+    /// Permanently removes the entire folder subtree and its secrets atomically.
+    /// Linked secrets outside the subtree must receive a new revision. Any
+    /// failure, including revision exhaustion, must leave the store unchanged.
+    fn remove_folder_tree(&mut self, _id: FolderId) -> Result<()> {
+        anyhow::bail!("storage does not support recursive folder deletion")
+    }
+
     fn move_secret(&mut self, id: SecretId, destination: Option<FolderId>) -> Result<()>;
 
     /// Must atomically replace ciphertext and recipient metadata only when the

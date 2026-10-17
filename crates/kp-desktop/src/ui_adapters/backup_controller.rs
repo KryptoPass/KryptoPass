@@ -7,7 +7,8 @@ use cxx_qt_lib::{QString, QUrl};
 use crate::backup::{
     BackupPublishOutcome, RestoreFailure, export_backup, parse_selected_recipients, restore_backup,
 };
-use crate::infrastructure::{GnuPgOpenPgp, app_paths};
+use crate::infrastructure::GnuPgOpenPgp;
+use crate::storage::paths as app_paths;
 
 #[cxx_qt::bridge]
 pub mod qobject {

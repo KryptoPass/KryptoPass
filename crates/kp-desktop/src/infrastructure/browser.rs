@@ -8,7 +8,8 @@ use kryptopass_browser::{Candidate, CredentialProvider, Login};
 use kryptopass_core::{SecretContent, SecretId, SecretKind, SecretsService};
 use kryptopass_secure_memory::SensitiveText;
 
-use super::{GnuPgOpenPgp, SqliteStorage, app_paths};
+use super::GnuPgOpenPgp;
+use crate::storage::{SqliteStorage, paths as app_paths};
 
 struct VaultProvider(PathBuf);
 

@@ -6,7 +6,8 @@ pub(crate) mod presentation;
 
 pub use mapping::PreparedImport;
 
-use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage};
+use crate::infrastructure::GnuPgOpenPgp;
+use crate::storage::SqliteStorage;
 use anyhow::{Context, Result};
 use kryptopass_core::{ImportBatch, ImportOptions, ImportReceipt, ImportReceiver, SecretsService};
 use kryptopass_import::importers::proton::{OpenPgpDecryptor, ProtonPassImporter};

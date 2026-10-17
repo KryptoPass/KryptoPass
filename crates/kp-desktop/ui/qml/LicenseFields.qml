@@ -35,6 +35,7 @@ SecretFields {
         purchased = String(fields.purchased || "");
         expires = String(fields.expires || "");
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
     }
 
     function currentFields() {
@@ -105,12 +106,10 @@ SecretFields {
                 onValueEdited: function(value) { root.expires = value; }
             }
         }
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

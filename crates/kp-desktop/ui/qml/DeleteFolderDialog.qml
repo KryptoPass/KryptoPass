@@ -12,7 +12,7 @@ Controls.Dialog {
     property bool pending: false
     property string operationError: ""
 
-    signal deleteRequested(string folderId)
+    signal deleteRequested(string folderId, bool deleteContents)
 
     anchors.centerIn: parent
     width: Math.min(440, parent.width - Kirigami.Units.gridUnit * 4)
@@ -25,6 +25,7 @@ Controls.Dialog {
             return;
         folderId = storeAdapter.scope;
         operationError = "";
+        deleteContentsCheck.checked = false;
         open();
     }
 
@@ -33,7 +34,7 @@ Controls.Dialog {
             return;
         pending = true;
         operationError = "";
-        deleteRequested(folderId);
+        deleteRequested(folderId, deleteContentsCheck.checked);
     }
 
     function finishSuccess() {
@@ -72,8 +73,16 @@ Controls.Dialog {
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Sus elementos y subcarpetas pasarán a la carpeta superior.")
+            text: deleteContentsCheck.checked
+                ? qsTr("La carpeta, sus subcarpetas y todos sus elementos, incluidos los de la papelera, se eliminarán definitivamente. Esta acción no se puede deshacer.")
+                : qsTr("Sus elementos y subcarpetas pasarán a la carpeta superior.")
             wrapMode: Text.Wrap
+        }
+        Controls.CheckBox {
+            id: deleteContentsCheck
+            Layout.fillWidth: true
+            text: qsTr("Eliminar también los elementos y subcarpetas")
+            enabled: !deleteFolderDialog.pending && !deleteFolderDialog.storeAdapter.controller.busy
         }
     }
 
@@ -91,7 +100,8 @@ Controls.Dialog {
             onClicked: deleteFolderDialog.close()
         }
         Controls.Button {
-            text: deleteFolderDialog.pending ? qsTr("Eliminando…") : qsTr("Eliminar carpeta")
+            text: deleteFolderDialog.pending ? qsTr("Eliminando…")
+                : deleteContentsCheck.checked ? qsTr("Eliminar definitivamente") : qsTr("Eliminar carpeta")
             icon.name: "edit-delete"
             enabled: !deleteFolderDialog.pending && !deleteFolderDialog.storeAdapter.controller.busy && !!deleteFolderDialog.folderId
             onClicked: deleteFolderDialog.submit()

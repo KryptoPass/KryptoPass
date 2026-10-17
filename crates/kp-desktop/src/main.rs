@@ -7,6 +7,7 @@ mod keyring;
 mod markdown;
 mod process_security;
 mod qt;
+mod storage;
 mod ui_adapters;
 
 use app_info::APP;

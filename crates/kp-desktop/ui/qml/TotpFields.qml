@@ -20,6 +20,7 @@ SecretFields {
     function loadFields(fields) {
         totpInput = String(fields.totpInput || "");
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
         inputVisible = false;
     }
 
@@ -104,12 +105,10 @@ SecretFields {
             }
         }
 
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

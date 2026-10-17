@@ -525,6 +525,12 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
         self.storage.remove_folder(id)
     }
 
+    /// Permanently removes the folder, all descendants and their secrets in
+    /// one storage transaction, including secrets already in the trash.
+    pub fn remove_folder_tree(&mut self, id: FolderId) -> Result<()> {
+        self.storage.remove_folder_tree(id)
+    }
+
     /// Moves a whole subtree; storage validates hierarchy and ordering atomically.
     pub fn move_folder(
         &mut self,

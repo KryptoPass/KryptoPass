@@ -115,6 +115,7 @@ SecretFields {
         phones = (Array.isArray(fields.phones) ? fields.phones : []).map(value => String(value || ""));
         address = String(fields.address || "");
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
     }
 
     function currentFields() {
@@ -308,12 +309,10 @@ SecretFields {
             multiline: true
             onValueEdited: function(value) { root.address = value; }
         }
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

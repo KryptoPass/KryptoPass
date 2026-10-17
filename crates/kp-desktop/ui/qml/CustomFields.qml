@@ -101,6 +101,7 @@ SecretFields {
         }
         records = normalized;
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
     }
 
     function currentFields() {
@@ -111,6 +112,7 @@ SecretFields {
         recordModel.clear();
         records = [];
         notes = "";
+        notesEditor.clearSensitiveState();
     }
 
     ColumnLayout {
@@ -235,12 +237,9 @@ SecretFields {
         }
     }
 
-    SecretInput {
+    NotesEditor {
+        id: notesEditor
         Layout.fillWidth: true
-        label: qsTr("Notas")
-        value: root.notes
-        multiline: true
-        minimumRows: 3
-        onValueEdited: function(value) { root.notes = value; }
+        onSourceTextEdited: value => root.notes = value
     }
 }

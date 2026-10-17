@@ -14,7 +14,8 @@ use kryptopass_core::{
 use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use uuid::Uuid;
 
-use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage, app_paths};
+use crate::infrastructure::GnuPgOpenPgp;
+use crate::storage::{SqliteStorage, paths as app_paths};
 
 use super::secrets_projection::{
     EntryDraft, OpenedEntry, StoreSnapshot, content_field, content_projection,
@@ -184,7 +185,7 @@ pub mod qobject {
         fn remove_entry(self: Pin<&mut Self>, id: &QString);
         #[qinvokable]
         #[cxx_name = "removeFolder"]
-        fn remove_folder(self: Pin<&mut Self>, id: &QString);
+        fn remove_folder(self: Pin<&mut Self>, id: &QString, delete_contents: bool);
         #[qinvokable]
         #[cxx_name = "generatePassword"]
         fn generate_password(
@@ -1776,7 +1777,7 @@ impl qobject::SecretsController {
         );
     }
 
-    pub fn remove_folder(mut self: Pin<&mut Self>, id: &QString) {
+    pub fn remove_folder(mut self: Pin<&mut Self>, id: &QString, delete_contents: bool) {
         if *self.busy() {
             return;
         }
@@ -1786,19 +1787,30 @@ impl qobject::SecretsController {
         };
 
         let selected_id = self.as_ref().rust().selected_entry;
+        if delete_contents {
+            // Cancel outstanding reads before their source entries can disappear.
+            self.as_mut().invalidate_selection();
+        }
         self.as_mut().start_mutation(
             "Eliminando carpeta…",
             false,
             "No se pudo eliminar la carpeta.",
             move || {
                 let mut service = open_service()?;
-                let affected_selection = selected_id.and_then(|selected| {
-                    find_entry_metadata(selected)
-                        .ok()
-                        .filter(|entry| entry.folder == Some(id))
-                        .map(|entry| (selected, entry.revision))
-                });
-                service.remove_folder(id)?;
+                let affected_selection =
+                    selected_id
+                        .filter(|_| !delete_contents)
+                        .and_then(|selected| {
+                            find_entry_metadata(selected)
+                                .ok()
+                                .filter(|entry| entry.folder == Some(id))
+                                .map(|entry| (selected, entry.revision))
+                        });
+                if delete_contents {
+                    service.remove_folder_tree(id)?;
+                } else {
+                    service.remove_folder(id)?;
+                }
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: affected_selection

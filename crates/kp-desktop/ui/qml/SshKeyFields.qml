@@ -31,6 +31,7 @@ SecretFields {
         user = String(fields.user || "");
         hosts = (Array.isArray(fields.hosts) ? fields.hosts : []).map(host => String(host || ""));
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
         publicKey = String(fields.publicKey || "");
         fingerprint = String(fields.fingerprint || "");
         algorithm = String(fields.algorithm || "");
@@ -170,12 +171,10 @@ SecretFields {
             values: root.hosts
             onValuesEdited: function(values) { root.hosts = values; }
         }
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

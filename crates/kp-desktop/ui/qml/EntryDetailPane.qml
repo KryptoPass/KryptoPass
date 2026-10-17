@@ -190,7 +190,7 @@ Controls.Pane {
             Item {
                 id: detailSurface
                 width: detailScroll.availableWidth
-                height: detailContent.implicitHeight
+                implicitHeight: detailContent.implicitHeight
 
                 MouseArea {
                     anchors.fill: parent

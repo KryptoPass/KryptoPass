@@ -27,6 +27,7 @@ SecretFields {
         password = String(fields.password || "");
         hidden = !!fields.hidden;
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
     }
 
     function currentFields() {
@@ -86,12 +87,10 @@ SecretFields {
             onToggled: root.hidden = checked
         }
 
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

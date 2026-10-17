@@ -48,18 +48,11 @@ SecretFields {
         onSourceTextEdited: text => root.value = text
     }
 
-    Controls.Label {
+    NotesEditor {
+        id: notesEditor
         Layout.fillWidth: true
         Layout.topMargin: 16
-        text: qsTr("Notas adicionales")
-        font.weight: Font.DemiBold
-    }
-    MarkdownEditor {
-        id: notesEditor
-        objectName: "markdownNotesEditor"
-        objectNamePrefix: "markdownNotes"
-        Layout.fillWidth: true
-        editorMinimumHeight: Kirigami.Units.gridUnit * 5
+        label: qsTr("Notas adicionales")
         accessibleName: qsTr("Markdown de las notas adicionales de la nota segura")
         placeholderText: qsTr("Añade contexto opcional.")
         onSourceTextEdited: text => root.notes = text

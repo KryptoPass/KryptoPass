@@ -258,10 +258,12 @@ SecretContentView {
             }
 
             SecretTextSection {
+                objectName: "markdownNotesSection"
                 Layout.fillWidth: true
                 visible: !!value
                 heading: qsTranslate("SecretDetail", "Notas")
                 value: root.detail?.notes || ""
+                documentKey: root.entryId
                 accessibleLabel: qsTranslate("SecretDetail", "Notas del elemento")
             }
         }
@@ -513,17 +515,15 @@ SecretContentView {
                             textFormat: Text.PlainText
                             wrapMode: Text.WrapAnywhere
                         }
-                        Controls.TextArea {
-                            Kirigami.FormData.label: qsTranslate("SecretDetail", "Notas:")
-                            Layout.fillWidth: true
-                            visible: !root.versionDetail?.passwordOnly && !!root.versionDetail?.notes
-                            text: root.versionDetail?.notes || ""
-                            textFormat: TextEdit.PlainText
-                            wrapMode: TextEdit.Wrap
-                            readOnly: true
-                            selectByMouse: true
-                            Accessible.name: qsTranslate("SecretDetail", "Notas de la versión anterior")
-                        }
+                    }
+                    SecretTextSection {
+                        objectName: "markdownVersionNotesSection"
+                        heading: qsTranslate("SecretDetail", "Notas")
+                        Layout.fillWidth: true
+                        visible: root.visible && versionDialog.visible && !root.versionDetail?.passwordOnly && !!root.versionDetail?.notes
+                        value: root.versionDetail?.notes || ""
+                        documentKey: root.entryId + ":" + (root.versionDetail?.index ?? "")
+                        accessibleLabel: qsTranslate("SecretDetail", "Notas de la versión anterior")
                     }
                     Controls.Button {
                         text: qsTranslate("SecretDetail", "Copiar contraseña anterior")

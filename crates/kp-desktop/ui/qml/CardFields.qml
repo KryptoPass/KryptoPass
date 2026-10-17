@@ -32,6 +32,7 @@ SecretFields {
         cvv = String(fields.cvv || "");
         pin = String(fields.pin || "");
         notes = String(fields.notes || "");
+        notesEditor.resetSource(notes);
     }
 
     function currentFields() {
@@ -119,12 +120,10 @@ SecretFields {
                 onValueEdited: function(value) { root.pin = value; }
             }
         }
-        SecretInput {
+        NotesEditor {
+            id: notesEditor
             Layout.fillWidth: true
-            label: qsTr("Notas")
-            value: root.notes
-            multiline: true
-            onValueEdited: function(value) { root.notes = value; }
+            onSourceTextEdited: value => root.notes = value
         }
     }
 }

@@ -1773,6 +1773,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>a bounded base64 icon string</translation>
     </message>
     <message>
+      <source>a folder cannot be its own parent</source>
+      <translation>a folder cannot be its own parent</translation>
+    </message>
+    <message>
+      <source>a new secret must start at revision zero</source>
+      <translation>a new secret must start at revision zero</translation>
+    </message>
+    <message>
       <source>a secret cannot link to itself</source>
       <translation>a secret cannot link to itself</translation>
     </message>
@@ -1841,6 +1849,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>at least one explicit recipient is required</translation>
     </message>
     <message>
+      <source>at least one recipient is required</source>
+      <translation>at least one recipient is required</translation>
+    </message>
+    <message>
       <source>autenticación</source>
       <translation>autenticación</translation>
     </message>
@@ -1897,6 +1909,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup exceeds the maximum data size</translation>
     </message>
     <message>
+      <source>backup exceeds the maximum payload size</source>
+      <translation>backup exceeds the maximum payload size</translation>
+    </message>
+    <message>
       <source>backup exceeds the maximum size</source>
       <translation>backup exceeds the maximum size</translation>
     </message>
@@ -1937,6 +1953,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup folder id is not canonical</translation>
     </message>
     <message>
+      <source>backup folder name exceeds the maximum size</source>
+      <translation>backup folder name exceeds the maximum size</translation>
+    </message>
+    <message>
       <source>backup folder name is invalid</source>
       <translation>backup folder name is invalid</translation>
     </message>
@@ -1947,6 +1967,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>backup folder parent is missing</source>
       <translation>backup folder parent is missing</translation>
+    </message>
+    <message>
+      <source>backup folder recipients are invalid</source>
+      <translation>backup folder recipients are invalid</translation>
     </message>
     <message>
       <source>backup format or version is unsupported</source>
@@ -2065,6 +2089,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup secret revision is invalid</translation>
     </message>
     <message>
+      <source>backup secret title exceeds the maximum size</source>
+      <translation>backup secret title exceeds the maximum size</translation>
+    </message>
+    <message>
       <source>backup secret title is invalid</source>
       <translation>backup secret title is invalid</translation>
     </message>
@@ -2097,6 +2125,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not begin backup restore</translation>
     </message>
     <message>
+      <source>could not begin secret update</source>
+      <translation>could not begin secret update</translation>
+    </message>
+    <message>
+      <source>could not collect unused icons</source>
+      <translation>could not collect unused icons</translation>
+    </message>
+    <message>
       <source>could not configure OpenPGP pinentry</source>
       <translation>could not configure OpenPGP pinentry</translation>
     </message>
@@ -2123,6 +2159,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not create the application data directory</source>
       <translation>could not create the application data directory</translation>
+    </message>
+    <message>
+      <source>could not create the store directory</source>
+      <translation>could not create the store directory</translation>
     </message>
     <message>
       <source>could not enable durable store journaling</source>
@@ -2153,6 +2193,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not initialize OpenPGP</translation>
     </message>
     <message>
+      <source>could not initialize the encrypted store</source>
+      <translation>could not initialize the encrypted store</translation>
+    </message>
+    <message>
       <source>could not inspect backup destination</source>
       <translation>could not inspect backup destination</translation>
     </message>
@@ -2167,6 +2211,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not inspect restore destination</source>
       <translation>could not inspect restore destination</translation>
+    </message>
+    <message>
+      <source>could not inspect store directory</source>
+      <translation>could not inspect store directory</translation>
     </message>
     <message>
       <source>could not inspect the active store setting</source>
@@ -2189,8 +2237,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not inspect the application data root</translation>
     </message>
     <message>
+      <source>could not inspect the existing store parent</source>
+      <translation>could not inspect the existing store parent</translation>
+    </message>
+    <message>
       <source>could not inspect the opened directory</source>
       <translation>could not inspect the opened directory</translation>
+    </message>
+    <message>
+      <source>could not inspect the store directory</source>
+      <translation>could not inspect the store directory</translation>
+    </message>
+    <message>
+      <source>could not inspect the store file</source>
+      <translation>could not inspect the store file</translation>
+    </message>
+    <message>
+      <source>could not measure backup size</source>
+      <translation>could not measure backup size</translation>
     </message>
     <message>
       <source>could not open backup file</source>
@@ -2207,6 +2271,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not open import source</source>
       <translation>could not open import source</translation>
+    </message>
+    <message>
+      <source>could not open store directory</source>
+      <translation>could not open store directory</translation>
+    </message>
+    <message>
+      <source>could not open store directory without following links</source>
+      <translation>could not open store directory without following links</translation>
     </message>
     <message>
       <source>could not open the active store setting safely</source>
@@ -2245,6 +2317,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not read backup file</translation>
     </message>
     <message>
+      <source>could not read folder</source>
+      <translation>could not read folder</translation>
+    </message>
+    <message>
       <source>could not read import source</source>
       <translation>could not read import source</translation>
     </message>
@@ -2265,12 +2341,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not reserve a private restore staging directory</translation>
     </message>
     <message>
+      <source>could not save entry icon</source>
+      <translation>could not save entry icon</translation>
+    </message>
+    <message>
+      <source>could not save icon resource</source>
+      <translation>could not save icon resource</translation>
+    </message>
+    <message>
       <source>could not secure backup file permissions</source>
       <translation>could not secure backup file permissions</translation>
     </message>
     <message>
       <source>could not secure the application data directory</source>
       <translation>could not secure the application data directory</translation>
+    </message>
+    <message>
+      <source>could not secure the store directory</source>
+      <translation>could not secure the store directory</translation>
+    </message>
+    <message>
+      <source>could not secure the store file</source>
+      <translation>could not secure the store file</translation>
     </message>
     <message>
       <source>could not sync backup directory</source>
@@ -2281,12 +2373,32 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not sync the restored vault</translation>
     </message>
     <message>
+      <source>could not update folder recipients</source>
+      <translation>could not update folder recipients</translation>
+    </message>
+    <message>
+      <source>could not update secret recipients</source>
+      <translation>could not update secret recipients</translation>
+    </message>
+    <message>
+      <source>could not validate folder hierarchy</source>
+      <translation>could not validate folder hierarchy</translation>
+    </message>
+    <message>
       <source>could not write encrypted backup</source>
       <translation>could not write encrypted backup</translation>
     </message>
     <message>
       <source>could not write the active store setting</source>
       <translation>could not write the active store setting</translation>
+    </message>
+    <message>
+      <source>database file belongs to another application</source>
+      <translation>database file belongs to another application</translation>
+    </message>
+    <message>
+      <source>destination folder does not exist</source>
+      <translation>destination folder does not exist</translation>
     </message>
     <message>
       <source>duplicate icon resource</source>
@@ -2301,12 +2413,40 @@ No incluye contraseñas ni valores de credenciales.
       <translation>encrypted payload</translation>
     </message>
     <message>
+      <source>encrypted payload cannot be empty</source>
+      <translation>encrypted payload cannot be empty</translation>
+    </message>
+    <message>
+      <source>encrypted payload exceeds the maximum size</source>
+      <translation>encrypted payload exceeds the maximum size</translation>
+    </message>
+    <message>
+      <source>entry contains conflicting icon sources</source>
+      <translation>entry contains conflicting icon sources</translation>
+    </message>
+    <message>
+      <source>existing store parent must be a real private directory</source>
+      <translation>existing store parent must be a real private directory</translation>
+    </message>
+    <message>
       <source>folder identifier is invalid</source>
       <translation>folder identifier is invalid</translation>
     </message>
     <message>
+      <source>folder move would create a cycle</source>
+      <translation>folder move would create a cycle</translation>
+    </message>
+    <message>
+      <source>folder name cannot be empty</source>
+      <translation>folder name cannot be empty</translation>
+    </message>
+    <message>
       <source>folder not found</source>
       <translation>folder not found</translation>
+    </message>
+    <message>
+      <source>folder order is invalid</source>
+      <translation>folder order is invalid</translation>
     </message>
     <message>
       <source>icon belongs to another vault</source>
@@ -2319,6 +2459,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>icon missing or too large</source>
       <translation>icon missing or too large</translation>
+    </message>
+    <message>
+      <source>icon resource does not match secret</source>
+      <translation>icon resource does not match secret</translation>
     </message>
     <message>
       <source>icon resources exceed backup budget</source>
@@ -2371,6 +2515,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>invalid icon image</source>
       <translation>invalid icon image</translation>
+    </message>
+    <message>
+      <source>invalid icon resource size</source>
+      <translation>invalid icon resource size</translation>
     </message>
     <message>
       <source>invalid icon source</source>
@@ -2481,6 +2629,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>secret revision is exhausted</translation>
     </message>
     <message>
+      <source>secret title cannot be empty</source>
+      <translation>secret title cannot be empty</translation>
+    </message>
+    <message>
       <source>select a regular image file</source>
       <translation>select a regular image file</translation>
     </message>
@@ -2511,6 +2663,54 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>selected store path is not a regular file</source>
       <translation>selected store path is not a regular file</translation>
+    </message>
+    <message>
+      <source>store contains too many recipient records for a backup</source>
+      <translation>store contains too many recipient records for a backup</translation>
+    </message>
+    <message>
+      <source>store contains too many records for a backup</source>
+      <translation>store contains too many records for a backup</translation>
+    </message>
+    <message>
+      <source>store directory must be a real directory</source>
+      <translation>store directory must be a real directory</translation>
+    </message>
+    <message>
+      <source>store directory must have private 0700 permissions</source>
+      <translation>store directory must have private 0700 permissions</translation>
+    </message>
+    <message>
+      <source>store exceeds the maximum backup payload size</source>
+      <translation>store exceeds the maximum backup payload size</translation>
+    </message>
+    <message>
+      <source>store file must not have hard links</source>
+      <translation>store file must not have hard links</translation>
+    </message>
+    <message>
+      <source>store path is not owned by the current user</source>
+      <translation>store path is not owned by the current user</translation>
+    </message>
+    <message>
+      <source>store path must be a regular file</source>
+      <translation>store path must be a regular file</translation>
+    </message>
+    <message>
+      <source>stored folder recipient metadata is invalid</source>
+      <translation>stored folder recipient metadata is invalid</translation>
+    </message>
+    <message>
+      <source>stored recipient fingerprint is invalid</source>
+      <translation>stored recipient fingerprint is invalid</translation>
+    </message>
+    <message>
+      <source>stored recipient metadata is invalid</source>
+      <translation>stored recipient metadata is invalid</translation>
+    </message>
+    <message>
+      <source>stored secret recipient metadata is invalid</source>
+      <translation>stored secret recipient metadata is invalid</translation>
     </message>
     <message>
       <source>too many backup recipients were selected</source>
@@ -2834,10 +3034,6 @@ La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de rellen
       <source>PIN</source>
       <translation>PIN</translation>
     </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
-    </message>
   </context>
   <context>
     <name>Contacts</name>
@@ -2984,10 +3180,6 @@ Huella(s) detectadas:
       <source>Agregar campo</source>
       <translation>Agregar campo</translation>
     </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
-    </message>
   </context>
   <context>
     <name>DeleteEntryDialog</name>
@@ -3027,8 +3219,16 @@ Huella(s) detectadas:
       <translation>¿Eliminar la carpeta «%1»?</translation>
     </message>
     <message>
+      <source>La carpeta, sus subcarpetas y todos sus elementos, incluidos los de la papelera, se eliminarán definitivamente. Esta acción no se puede deshacer.</source>
+      <translation>La carpeta, sus subcarpetas y todos sus elementos, incluidos los de la papelera, se eliminarán definitivamente. Esta acción no se puede deshacer.</translation>
+    </message>
+    <message>
       <source>Sus elementos y subcarpetas pasarán a la carpeta superior.</source>
       <translation>Sus elementos y subcarpetas pasarán a la carpeta superior.</translation>
+    </message>
+    <message>
+      <source>Eliminar también los elementos y subcarpetas</source>
+      <translation>Eliminar también los elementos y subcarpetas</translation>
     </message>
     <message>
       <source>Cancelar</source>
@@ -3037,6 +3237,10 @@ Huella(s) detectadas:
     <message>
       <source>Eliminando…</source>
       <translation>Eliminando…</translation>
+    </message>
+    <message>
+      <source>Eliminar definitivamente</source>
+      <translation>Eliminar definitivamente</translation>
     </message>
   </context>
   <context>
@@ -3596,10 +3800,6 @@ Huella(s) detectadas:
     <message>
       <source>Dirección</source>
       <translation>Dirección</translation>
-    </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
     </message>
   </context>
   <context>
@@ -4528,10 +4728,6 @@ Huella(s) detectadas:
       <source>Fecha de vencimiento</source>
       <translation>Fecha de vencimiento</translation>
     </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
-    </message>
   </context>
   <context>
     <name>LoginFields</name>
@@ -4604,10 +4800,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>La primera dirección se conserva como sitio principal.</source>
       <translation>La primera dirección se conserva como sitio principal.</translation>
-    </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
     </message>
     <message>
       <source>Añade contexto opcional para reconocer este elemento.</source>
@@ -5181,6 +5373,13 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>NotesEditor</name>
+    <message>
+      <source>Notas</source>
+      <translation>Notas</translation>
+    </message>
+  </context>
+  <context>
     <name>OnlineServicesDialog</name>
     <message>
       <source>Servicios online de OpenPGP</source>
@@ -5687,10 +5886,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Sin sitios web</translation>
     </message>
     <message>
-      <source>Notas:</source>
-      <translation>Notas:</translation>
-    </message>
-    <message>
       <source>Notas de la versión anterior</source>
       <translation>Notas de la versión anterior</translation>
     </message>
@@ -6144,10 +6339,6 @@ https://cuenta.ejemplo.test</translation>
       <source>Agregar equipo</source>
       <translation>Agregar equipo</translation>
     </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
-    </message>
   </context>
   <context>
     <name>StringListEditor</name>
@@ -6288,10 +6479,6 @@ https://cuenta.ejemplo.test</translation>
       <source>Leer código QR de una imagen…</source>
       <translation>Leer código QR de una imagen…</translation>
     </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
-    </message>
   </context>
   <context>
     <name>WifiFields</name>
@@ -6342,10 +6529,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>La red Wi-Fi está oculta</source>
       <translation>La red Wi-Fi está oculta</translation>
-    </message>
-    <message>
-      <source>Notas</source>
-      <translation>Notas</translation>
     </message>
   </context>
 </TS>

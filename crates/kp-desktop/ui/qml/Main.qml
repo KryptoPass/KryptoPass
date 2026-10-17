@@ -1018,9 +1018,9 @@ Controls.ApplicationWindow {
     DeleteFolderDialog {
         id: deleteFolderDialog
         storeAdapter: store
-        onDeleteRequested: function (folderId) {
+        onDeleteRequested: function (folderId, deleteContents) {
             root.beginOperation("removeFolder", folderId);
-            store.removeFolder(folderId);
+            store.removeFolder(folderId, deleteContents);
         }
     }
     DeleteEntryDialog {

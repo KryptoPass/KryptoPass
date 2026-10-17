@@ -31,6 +31,7 @@ SecretFields {
         setUrls(Array.isArray(fields.urls) ? fields.urls : [], fields.url || "");
         totpInput = fields.totpInput || "";
         notes = fields.notes || "";
+        notesEditor.resetSource(notes);
         passwordVisible = false;
         totpVisible = false;
     }
@@ -198,24 +199,11 @@ SecretFields {
         }
     }
 
-    ColumnLayout {
+    NotesEditor {
+        id: notesEditor
         Layout.fillWidth: true
-        spacing: 8
-        Controls.Label {
-            text: qsTr("Notas")
-            font.weight: Font.DemiBold
-        }
-        Controls.TextArea {
-            inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.max(implicitHeight, 80)
-            text: root.notes
-            placeholderText: qsTr("Añade contexto opcional para reconocer este elemento.")
-            Accessible.name: qsTr("Notas de la credencial")
-            wrapMode: TextEdit.Wrap
-            selectByMouse: true
-            textFormat: TextEdit.PlainText
-            onTextChanged: root.notes = text
-        }
+        placeholderText: qsTr("Añade contexto opcional para reconocer este elemento.")
+        accessibleName: qsTr("Notas de la credencial")
+        onSourceTextEdited: value => root.notes = value
     }
 }
