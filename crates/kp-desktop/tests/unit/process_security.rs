@@ -2,7 +2,7 @@
 // A failed child launch or test executable lookup must fail this test.
 #![allow(clippy::unwrap_used)]
 
-use super::initialize;
+use super::{initialize, prepare};
 
 fn core_limit() -> libc::rlimit {
     let mut limit = libc::rlimit {
@@ -61,6 +61,13 @@ fn process_security_child() {
     };
     // SAFETY: baseline is initialized and its lifetime covers this call.
     assert_eq!(unsafe { libc::setrlimit(libc::RLIMIT_CORE, &baseline) }, 0);
+    for _ in 0..2 {
+        prepare();
+        let prepared = core_limit();
+        assert_eq!(prepared.rlim_cur, 0);
+        assert_eq!(prepared.rlim_max, inherited.rlim_max);
+        assert_eq!(dumpable(), 1);
+    }
     for _ in 0..2 {
         initialize();
         let hardened = core_limit();

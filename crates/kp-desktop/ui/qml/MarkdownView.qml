@@ -31,21 +31,47 @@ Controls.Control {
 
     function updateSpoilerPositions() {
         const positions = {};
-        // Only the renderer's action anchors reserve space for inline controls.
-        // Source text with the same spaces must remain ordinary selectable text.
-        const marker = "\u2007\u2007\u2007";
+        const actions = {};
+        for (const action of root.spoilerActions)
+            actions[action] = true;
+        // Only the renderer's action anchors become inline controls. Matching
+        // source text without an action remains ordinary selectable text.
+        const markers = /████████████|\u2007\u2007\u2007/g;
         const plainText = textView.getText(0, textView.length);
-        for (let position = plainText.indexOf(marker); position >= 0; position = plainText.indexOf(marker, position + marker.length)) {
-            const fragment = textView.getFormattedText(position, position + marker.length);
+        let marker;
+        while ((marker = markers.exec(plainText)) !== null) {
+            const position = marker.index;
+            const length = marker[0].length;
+            const fragment = textView.getFormattedText(position, position + length);
             const match = fragment.match(/href="(kryptopass-spoiler:[0-9]+:[0-9]+)"/);
-            if (match && root.spoilerActions.indexOf(match[1]) >= 0)
-                positions[match[1]] = position;
+            if (match && actions[match[1]])
+                positions[match[1]] = {
+                    position,
+                    length
+                };
         }
         root._spoilerPositions = positions;
         ++root._layoutRevision;
     }
 
     onSpoilerActionsChanged: Qt.callLater(root.updateSpoilerPositions)
+
+    function markerRectangle(marker, layoutRevision) {
+        // Layout changes invalidate positions without replacing the controls.
+        if (!marker || marker.position < 0 || marker.position + marker.length > textView.length)
+            return Qt.rect(0, 0, 0, 0);
+        const start = textView.positionToRectangle(marker.position);
+        let end = start;
+        for (let offset = 1; offset <= marker.length; ++offset) {
+            const next = textView.positionToRectangle(marker.position + offset);
+            if (next.y !== start.y)
+                break;
+            end = next;
+        }
+        // The focusable control covers the first visual run. Qt's anchor still
+        // handles clicks on a mask that continues on subsequent lines.
+        return Qt.rect(Math.min(start.x, end.x), start.y, Math.max(1, Math.abs(end.x - start.x)), start.height);
+    }
 
     function updateTheme() {
         if (document)
@@ -110,31 +136,38 @@ Controls.Control {
                     required property int index
                     required property string modelData
                     readonly property bool revealed: root.revealedActions.indexOf(spoilerButton.modelData) >= 0
-                    readonly property int markerPosition: root._spoilerPositions[modelData] ?? -1
-                    readonly property rect markerStart: {
-                        const revision = root._layoutRevision;
-                        return textView.positionToRectangle(markerPosition);
-                    }
-                    readonly property rect markerEnd: {
-                        const revision = root._layoutRevision;
-                        return textView.positionToRectangle(markerPosition + 3);
-                    }
+                    readonly property var marker: root._spoilerPositions[modelData]
+                    readonly property int markerPosition: marker ? marker.position : -1
+                    readonly property rect markerBounds: root.markerRectangle(marker, root._layoutRevision)
                     objectName: "markdownSpoilerToggle" + spoilerButton.index
                     visible: markerPosition >= 0
-                    x: Math.min(markerStart.x, markerEnd.x)
-                    y: markerStart.y
-                    width: Math.abs(markerEnd.x - markerStart.x)
-                    height: markerStart.height
+                    x: markerBounds.x
+                    y: markerBounds.y
+                    width: markerBounds.width
+                    height: markerBounds.height
                     padding: 0
                     display: Controls.AbstractButton.IconOnly
-                    icon.name: revealed ? "view-hidden" : "view-visible"
-                    icon.width: Kirigami.Units.iconSizes.small
-                    icon.height: Kirigami.Units.iconSizes.small
+                    icon.name: revealed ? "view-hidden" : ""
+                    icon.width: Math.min(Kirigami.Units.iconSizes.small, markerBounds.height)
+                    icon.height: Math.min(Kirigami.Units.iconSizes.small, markerBounds.height)
                     activeFocusOnTab: true
+                    contentItem: Kirigami.Icon {
+                        source: spoilerButton.icon.name
+                        color: Kirigami.Theme.textColor
+                    }
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: spoilerButton.visualFocus ? 1 : 0
+                        border.color: Kirigami.Theme.focusColor
+                        radius: Kirigami.Units.cornerRadius
+                    }
                     Accessible.name: revealed ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1) : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
                     Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: Accessible.name
+                    Controls.ToolTip.text: spoilerButton.Accessible.name
                     onClicked: root.document.activateLink(spoilerButton.modelData)
+                    HoverHandler {
+                        cursorShape: Qt.PointingHandCursor
+                    }
                 }
             }
         }

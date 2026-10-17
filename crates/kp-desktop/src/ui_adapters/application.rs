@@ -12,7 +12,13 @@ mod ffi {
         include!("native/application.h");
         #[rust_name = "new_application"]
         fn newApplication(args: &QVector_QByteArray) -> UniquePtr<QGuiApplication>;
+        #[rust_name = "finish_desktop_registration"]
+        fn finishDesktopRegistration();
     }
+}
+
+pub fn finish_desktop_registration() {
+    ffi::finish_desktop_registration();
 }
 
 pub fn new() -> cxx::UniquePtr<QGuiApplication> {

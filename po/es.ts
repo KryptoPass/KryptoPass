@@ -70,6 +70,10 @@
       <translation>-----END PGP PUBLIC KEY BLOCK-----</translation>
     </message>
     <message>
+      <source>&lt;a href="{url}" style="text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;&amp;#x2007;&amp;#x2007;&amp;#x2007;&lt;/span&gt;&lt;/a&gt;</source>
+      <translation>&lt;a href="{url}" style="text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;&amp;#x2007;&amp;#x2007;&amp;#x2007;&lt;/span&gt;&lt;/a&gt;</translation>
+    </message>
+    <message>
       <source>&lt;a style="color:{color}" href="</source>
       <translation>&lt;a style="color:{color}" href="</translation>
     </message>
@@ -1000,14 +1004,6 @@ No incluye contraseñas ni valores de credenciales.
       </translation>
     </message>
     <message>
-      <source>&lt;a href="{url}" style="color:{color}"&gt;Ocultar&lt;/a&gt;</source>
-      <translation>&lt;a href="{url}" style="color:{color}"&gt;Ocultar&lt;/a&gt;</translation>
-    </message>
-    <message>
-      <source>&lt;a href="{url}" style="color:{color}"&gt;{MASK}&lt;/a&gt;</source>
-      <translation>&lt;a href="{url}" style="color:{color}"&gt;{MASK}&lt;/a&gt;</translation>
-    </message>
-    <message>
       <source>Abierta</source>
       <translation>Abierta</translation>
     </message>
@@ -1574,6 +1570,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Campos adicionales</source>
       <translation>Campos adicionales</translation>
+    </message>
+    <message>
+      <source>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</source>
+      <translation>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
       <source>Carpetas</source>
@@ -5313,10 +5313,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Documento Markdown</source>
       <translation>Documento Markdown</translation>
-    </message>
-    <message>
-      <source>Spoilers</source>
-      <translation>Spoilers</translation>
     </message>
     <message>
       <source>Ocultar spoiler %1</source>

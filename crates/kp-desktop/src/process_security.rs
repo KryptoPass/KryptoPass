@@ -1,7 +1,8 @@
-//! Process-local restrictions applied before Qt and application workers start.
+//! Core limits precede Qt; process inspection is blocked before sensitive services start.
 
 #[cfg(target_os = "linux")]
 pub fn initialize() {
+    prepare();
     // This changes only this process. It does not touch GnuPG Agent or system
     // policy, and denial must not prevent opening the application.
     // SAFETY: PR_SET_DUMPABLE takes a scalar boolean and no pointer arguments.
@@ -9,7 +10,11 @@ pub fn initialize() {
     if dumpable_result != 0 {
         tracing::warn!(error = %std::io::Error::last_os_error(), "Process dump restriction unavailable");
     }
+}
 
+/// Disable core files during public desktop-identity registration as well.
+#[cfg(target_os = "linux")]
+pub fn prepare() {
     let mut limit = libc::rlimit {
         rlim_cur: 0,
         rlim_max: 0,
@@ -26,6 +31,9 @@ pub fn initialize() {
         tracing::warn!(error = %std::io::Error::last_os_error(), "Could not disable process core dumps");
     }
 }
+
+#[cfg(not(target_os = "linux"))]
+pub fn prepare() {}
 
 #[cfg(not(target_os = "linux"))]
 pub fn initialize() {

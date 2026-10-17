@@ -8,4 +8,5 @@
 namespace kryptopass
 {
 std::unique_ptr<QGuiApplication> newApplication(const QVector<QByteArray> &args);
+void finishDesktopRegistration();
 }

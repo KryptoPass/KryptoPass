@@ -9,6 +9,7 @@ Item {
     property string fallbackIcon: "document-encrypted"
     property bool selected: false
     property int iconSize: Kirigami.Units.iconSizes.smallMedium
+    readonly property bool favicon: entryIcon?.kind === "favicon"
 
     implicitWidth: iconSize
     implicitHeight: iconSize
@@ -19,7 +20,7 @@ Item {
         anchors.centerIn: parent
         width: Math.min(root.width, root.iconSize)
         height: Math.min(root.height, root.iconSize)
-        source: root.entryIcon?.kind === "theme" ? "" : root.imageSource
+        source: root.entryIcon?.kind === "theme" || root.favicon ? "" : root.imageSource
         sourceSize: Qt.size(Math.ceil(root.iconSize * Screen.devicePixelRatio), Math.ceil(root.iconSize * Screen.devicePixelRatio))
         asynchronous: true
         fillMode: Image.PreserveAspectFit
@@ -28,8 +29,9 @@ Item {
     }
     Kirigami.Icon {
         anchors.fill: parent
-        source: root.entryIcon?.kind === "theme" ? root.entryIcon.name : root.fallbackIcon
+        source: root.entryIcon?.kind === "theme" ? root.entryIcon.name : root.favicon && root.imageSource.toString().length > 0 ? root.imageSource : root.fallbackIcon
         fallback: root.fallbackIcon
+        placeholder: root.fallbackIcon
         selected: root.selected
         visible: image.status !== Image.Ready
         Accessible.ignored: true

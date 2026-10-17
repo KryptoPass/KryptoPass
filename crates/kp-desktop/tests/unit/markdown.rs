@@ -130,8 +130,8 @@ fn assert_allowed_html(rendered: &RenderedDocument) -> TestResult {
                             .split_once(':')
                             .ok_or("CSS declaration without a value")?;
                         let properties: &[&str] = match name {
-                            "a" => &["color"],
-                            "span" => &["background-color", "color"],
+                            "a" => &["color", "text-decoration"],
+                            "span" => &["background-color", "color", "white-space"],
                             "pre" => &["background-color"],
                             "table" => &["border-color", "border-collapse"],
                             _ => &[],
@@ -142,6 +142,10 @@ fn assert_allowed_html(rendered: &RenderedDocument) -> TestResult {
                         );
                         if property == "border-collapse" {
                             assert_eq!(value, "collapse");
+                        } else if property == "white-space" {
+                            assert_eq!(value, "pre");
+                        } else if property == "text-decoration" {
+                            assert_eq!(value, "none");
                         } else {
                             assert!(
                                 value.len() == 7
@@ -224,7 +228,7 @@ fn hidden_spoiler_omits_text_url_code_and_action_metadata() -> TestResult {
 }
 
 #[test]
-fn spoiler_eye_control_reserves_identical_space_and_keeps_mask_outside_link() -> TestResult {
+fn spoiler_mask_reveals_content_and_eye_control_only_appears_while_revealed() -> TestResult {
     for secret in [
         "SHORT_SECRET",
         "MUCH_LONGER_PRIVATE_CONTENT_WITH_DIFFERENT_LENGTH",
@@ -234,22 +238,36 @@ fn spoiler_eye_control_reserves_identical_space_and_keeps_mask_outside_link() ->
         let hidden = document.render()?;
         let action = action_at(&hidden, 0)?;
         let hidden_control = action_link_content(&hidden, &action)?;
-        let decoded_control = hidden_control
-            .replace("&#x2007;", "\u{2007}")
-            .replace("&#8199;", "\u{2007}");
-        assert_eq!(decoded_control, "\u{2007}\u{2007}\u{2007}");
+        assert_eq!(
+            hidden_control,
+            "<span style=\"white-space:pre\">████████████</span>"
+        );
         assert_eq!(hidden.html.matches("<a ").count(), 1);
         assert_eq!(hidden.html.matches('█').count(), 12);
-        assert!(hidden.html.contains("<span style=\"color:"));
-        assert!(hidden.html.contains("████████████</span>"));
+        assert!(hidden.html.contains(";text-decoration:none\"><span"));
         assert!(hidden.html.contains("PUBLIC_BEFORE"));
         assert!(hidden.html.contains("PUBLIC_AFTER"));
-        assert_absent(&hidden, &[secret, "Ocultar"]);
+        assert_absent(
+            &hidden,
+            &[secret, "Ocultar", "&#x2007;", "&#8199;", "\u{2007}"],
+        );
         assert_allowed_html(&hidden)?;
 
         assert!(document.toggle(&action));
         let revealed = document.render()?;
-        assert_eq!(action_link_content(&revealed, &action)?, hidden_control);
+        let revealed_control = action_link_content(&revealed, &action)?;
+        let decoded_control = revealed_control
+            .replace("&#x2007;", "\u{2007}")
+            .replace("&#8199;", "\u{2007}");
+        assert_eq!(
+            decoded_control,
+            "<span style=\"white-space:pre\">\u{2007}\u{2007}\u{2007}</span>"
+        );
+        assert!(
+            revealed
+                .html
+                .contains("style=\"text-decoration:none\"><span")
+        );
         assert_eq!(revealed.html.matches("<a ").count(), 1);
         assert!(revealed.html.contains(secret));
         assert_eq!(revealed.revealed_actions, vec![action.clone()]);

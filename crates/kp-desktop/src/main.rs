@@ -20,19 +20,7 @@ const DEFAULT_STYLE: &str = "org.kde.desktop";
 
 fn main() {
     init_tracing();
-    process_security::initialize();
-
-    let _browser_server = if std::env::args().any(|arg| arg == "--browser-integration") {
-        match kryptopass_browser::start(APP.desktop_file_id, APP.version) {
-            Ok(server) => Some(server),
-            Err(error) => {
-                tracing::error!(%error, "Could not start browser integration");
-                std::process::exit(1);
-            }
-        }
-    } else {
-        None
-    };
+    process_security::prepare();
 
     let mut application = ui_adapters::application::new();
     let Some(mut app) = application.as_mut() else {
@@ -53,6 +41,21 @@ fn main() {
     QGuiApplication::set_desktop_file_name(&QString::from(APP.desktop_file_id));
 
     ui_adapters::native_ffi::ffi::initialize_desktop();
+    ui_adapters::application::finish_desktop_registration();
+    process_security::initialize();
+
+    let _browser_server = if std::env::args().any(|arg| arg == "--browser-integration") {
+        match kryptopass_browser::start(APP.desktop_file_id, APP.version) {
+            Ok(server) => Some(server),
+            Err(error) => {
+                tracing::error!(%error, "Could not start browser integration");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
     configure_quick_style();
 
     let mut qml_engine = QQmlApplicationEngine::new();

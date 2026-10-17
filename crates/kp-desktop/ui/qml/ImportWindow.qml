@@ -73,7 +73,7 @@ Controls.ApplicationWindow {
     }
 
     Shortcut {
-        sequence: StandardKey.Cancel
+        sequences: [StandardKey.Cancel]
         enabled: dialog.visible && !dialog.busy && !sourceDialog.visible
         onActivated: dialog.close()
     }
