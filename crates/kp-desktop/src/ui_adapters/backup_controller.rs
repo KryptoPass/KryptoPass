@@ -4,7 +4,7 @@ use std::pin::Pin;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 
-use crate::infrastructure::backup::{
+use crate::backup::{
     BackupPublishOutcome, RestoreFailure, export_backup, parse_selected_recipients, restore_backup,
 };
 use crate::infrastructure::{GnuPgOpenPgp, app_paths};

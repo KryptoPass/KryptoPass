@@ -1,5 +1,7 @@
 mod app_info;
+mod backup;
 mod i18n;
+mod import;
 mod infrastructure;
 mod keyring;
 mod markdown;

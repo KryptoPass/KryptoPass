@@ -1,14 +1,9 @@
-use crate::infrastructure::{
-    app_paths,
-    backup::parse_selected_recipients,
-    import::{PreparedImport, catalog, receive_import, review_export},
-};
+use crate::import::{PreparedImport, catalog, presentation, receive_import, review_export};
+use crate::{backup::parse_selected_recipients, infrastructure::app_paths};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use kryptopass_core::{ImportFolderPolicy, ImportOptions};
 use std::{path::PathBuf, pin::Pin};
-
-mod presentation;
 
 #[cxx_qt::bridge]
 pub mod qobject {

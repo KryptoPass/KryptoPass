@@ -2,10 +2,11 @@
 
 pub mod catalog;
 mod mapping;
+pub(crate) mod presentation;
 
 pub use mapping::PreparedImport;
 
-use super::{GnuPgOpenPgp, SqliteStorage};
+use crate::infrastructure::{GnuPgOpenPgp, SqliteStorage};
 use anyhow::{Context, Result};
 use kryptopass_core::{ImportBatch, ImportOptions, ImportReceipt, ImportReceiver, SecretsService};
 use kryptopass_import::importers::proton::{OpenPgpDecryptor, ProtonPassImporter};
@@ -84,5 +85,5 @@ pub fn receive_import(
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/infrastructure/import_review.rs"]
+#[path = "../../tests/unit/infrastructure/import_review.rs"]
 mod tests;

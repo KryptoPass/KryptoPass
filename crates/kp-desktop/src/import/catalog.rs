@@ -120,5 +120,5 @@ pub fn entry_type_label(kind: EntryType) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/infrastructure/import_catalog.rs"]
+#[path = "../../tests/unit/infrastructure/import_catalog.rs"]
 mod tests;

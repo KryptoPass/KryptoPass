@@ -203,11 +203,11 @@ fn preparing_transparent_png_keeps_dimensions_and_alpha_channel() {
     let path = directory.0.join("transparent.png");
     fs::write(&path, image_asset().png).unwrap();
 
-    let prepared = super::super::entry_icons::prepare_image(&path).unwrap();
+    let prepared = crate::infrastructure::entry_icons::prepare_image(&path).unwrap();
 
     assert_ne!(prepared.id, Uuid::nil());
     assert!(prepared.validate().is_ok());
-    assert!(super::super::entry_icons::valid_normalized_image(
+    assert!(crate::infrastructure::entry_icons::valid_normalized_image(
         &prepared.png
     ));
     assert_eq!(png_dimensions(&prepared.png), (1, 1));
@@ -233,10 +233,10 @@ fn preparing_rectangular_image_limits_size_without_stretching() {
     let path = directory.0.join("rectangular.png");
     fs::write(&path, source).unwrap();
 
-    let prepared = super::super::entry_icons::prepare_image(&path).unwrap();
+    let prepared = crate::infrastructure::entry_icons::prepare_image(&path).unwrap();
 
     assert!(prepared.validate().is_ok());
-    assert!(super::super::entry_icons::valid_normalized_image(
+    assert!(crate::infrastructure::entry_icons::valid_normalized_image(
         &prepared.png
     ));
     assert_eq!(png_dimensions(&prepared.png), (256, 64));
@@ -248,5 +248,5 @@ fn preparing_non_image_file_rejects_content_despite_image_extension() {
     let path = directory.0.join("not-an-image.png");
     fs::write(&path, b"not PNG, JPEG, or WebP image data").unwrap();
 
-    assert!(super::super::entry_icons::prepare_image(&path).is_err());
+    assert!(crate::infrastructure::entry_icons::prepare_image(&path).is_err());
 }

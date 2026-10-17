@@ -18,10 +18,10 @@ Actualmente se incluye Proton Pass; la interfaz no depende de ese nombre.
    `EntryContent`, errores y límites propios. No depende de core ni decide
    destinatarios, IDs de destino, persistencia o presentación. Cada proveedor
    contiene sus tipos privados, detección y decodificación.
-2. Desktop registra instancias en `infrastructure/import/mod.rs`. Su catálogo
+2. Desktop registra instancias en `import/mod.rs`. Su catálogo
    proyecta únicamente metadatos a QML, incluidas las capacidades y la
    disponibilidad real de descifrado de la instancia.
-3. `infrastructure/import/mapping.rs` convierte las entradas neutrales al
+3. `import/mapping.rs` convierte las entradas neutrales al
    `ImportBatch` del core. Es el único punto que aplica las restricciones de
    representación del destino y genera los UUID necesarios para sus campos.
 4. `core::ImportReceiver`, implementado por `SecretsService`, valida, cifra

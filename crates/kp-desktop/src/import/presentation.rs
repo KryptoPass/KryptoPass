@@ -1,7 +1,7 @@
-use crate::infrastructure::import::{PreparedImport, catalog::entry_type_label};
+use super::{PreparedImport, catalog::entry_type_label};
 use kryptopass_import::{EntryWarningKind, ImportError};
 
-pub(super) fn summary_text(plan: &PreparedImport) -> String {
+pub(crate) fn summary_text(plan: &PreparedImport) -> String {
     let source = &plan.source;
     let mut lines = vec![crate::i18n::format(
         "Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.",
@@ -30,7 +30,7 @@ pub(super) fn summary_text(plan: &PreparedImport) -> String {
     lines.join("\n")
 }
 
-pub(super) fn warning_text(plan: &PreparedImport) -> String {
+pub(crate) fn warning_text(plan: &PreparedImport) -> String {
     let mut lines = Vec::new();
     for (kind, label) in [
         (
@@ -97,7 +97,7 @@ pub(super) fn warning_text(plan: &PreparedImport) -> String {
     lines.join("\n")
 }
 
-pub(super) fn review_error(error: &anyhow::Error) -> &'static str {
+pub(crate) fn review_error(error: &anyhow::Error) -> &'static str {
     match error.downcast_ref::<ImportError>() {
         Some(ImportError::Decryption) => {
             "No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo."

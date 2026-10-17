@@ -278,5 +278,5 @@ fn records(fields: Vec<EntryField>) -> Vec<core::CustomRecord> {
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/infrastructure/import_mapping.rs"]
+#[path = "../../tests/unit/infrastructure/import_mapping.rs"]
 mod tests;

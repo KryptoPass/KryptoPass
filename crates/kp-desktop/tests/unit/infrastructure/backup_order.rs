@@ -107,16 +107,19 @@ impl Drop for RestoreTestDirectory {
 }
 
 fn active_store_path() -> Option<PathBuf> {
-    super::super::app_paths::active_vault_path(crate::app_info::APP.desktop_file_id).unwrap()
+    crate::infrastructure::app_paths::active_vault_path(crate::app_info::APP.desktop_file_id)
+        .unwrap()
 }
 
 #[test]
 fn automatic_restore_destinations_are_unique_private_and_do_not_activate_store() {
     let active_before = active_store_path();
     let first =
-        super::super::app_paths::restored_vault_path(crate::app_info::APP.desktop_file_id).unwrap();
+        crate::infrastructure::app_paths::restored_vault_path(crate::app_info::APP.desktop_file_id)
+            .unwrap();
     let second =
-        super::super::app_paths::restored_vault_path(crate::app_info::APP.desktop_file_id).unwrap();
+        crate::infrastructure::app_paths::restored_vault_path(crate::app_info::APP.desktop_file_id)
+            .unwrap();
 
     assert_ne!(first, second);
     assert!(!first.exists());

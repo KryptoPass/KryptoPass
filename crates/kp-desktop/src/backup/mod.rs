@@ -17,8 +17,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 use zeroize::Zeroize;
 
-use super::GnuPgOpenPgp;
-use super::sqlite_storage::{EncryptedStoreSnapshot, SqliteStorage};
+use crate::infrastructure::GnuPgOpenPgp;
+use crate::infrastructure::sqlite_storage::{EncryptedStoreSnapshot, SqliteStorage};
 
 const BACKUP_FORMAT: &str = "org.kryptopass.backup";
 const BACKUP_VERSION: u32 = 4;
@@ -67,7 +67,8 @@ pub fn export_backup(
     );
     crypto.validate_recipients(&recipients)?;
 
-    let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
+    let database_path =
+        crate::infrastructure::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let destination = prepare_destination(path, true)?;
     protect_store_target(&database_path, &destination)?;
 
@@ -93,7 +94,8 @@ pub fn restore_backup(
     output: &Path,
     crypto: &GnuPgOpenPgp,
 ) -> Result<BackupPublishOutcome> {
-    let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
+    let database_path =
+        crate::infrastructure::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let input = prepare_existing_file(input).context(RestoreFailure::Input)?;
     let destination = prepare_destination(output, false).context(RestoreFailure::Destination)?;
     protect_store_target(&database_path, &destination).context(RestoreFailure::Destination)?;
@@ -129,7 +131,8 @@ fn publish_restore_snapshot(
     assets: &[EntryIconAsset],
     links: &[SecretLink],
 ) -> Result<BackupPublishOutcome> {
-    let database_path = super::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
+    let database_path =
+        crate::infrastructure::app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let destination = prepare_destination(output, false)?;
     protect_store_target(&database_path, &destination)?;
     ensure!(!destination.exists(), "import destination already exists");
@@ -629,7 +632,7 @@ fn deserialize_backup_with_links(bytes: &[u8]) -> Result<EncryptedStoreSnapshot>
             .ok_or_else(|| anyhow::anyhow!("backup secret recipients are missing"))?;
         ensure!(
             !secret.ciphertext.0.is_empty()
-                && secret.ciphertext.0.len() <= super::MAX_CIPHERTEXT_BYTES,
+                && secret.ciphertext.0.len() <= crate::infrastructure::MAX_CIPHERTEXT_BYTES,
             "backup secret ciphertext is invalid"
         );
         ensure!(
@@ -739,7 +742,8 @@ fn validate_domain_records(folders: &[Folder], secrets: &[Secret]) -> Result<()>
             "backup secret title is invalid"
         );
         ensure!(
-            !secret.ciphertext.is_empty() && secret.ciphertext.len() <= super::MAX_CIPHERTEXT_BYTES,
+            !secret.ciphertext.is_empty()
+                && secret.ciphertext.len() <= crate::infrastructure::MAX_CIPHERTEXT_BYTES,
             "backup secret ciphertext is invalid"
         );
         ensure!(
@@ -877,7 +881,7 @@ fn base64_decode(value: &str) -> std::result::Result<Vec<u8>, &'static str> {
         return Err("backup ciphertext encoding is invalid");
     }
     let decoded_len = value.len() / 4 * 3 - padding;
-    if decoded_len == 0 || decoded_len > super::MAX_CIPHERTEXT_BYTES {
+    if decoded_len == 0 || decoded_len > crate::infrastructure::MAX_CIPHERTEXT_BYTES {
         return Err("backup ciphertext size is invalid");
     }
     let chunks = value.as_bytes().chunks_exact(4);
@@ -911,7 +915,7 @@ fn base64_decode(value: &str) -> std::result::Result<Vec<u8>, &'static str> {
 }
 
 fn ensure_base64_limit(value: &str) -> std::result::Result<(), &'static str> {
-    if value.len() > super::MAX_CIPHERTEXT_BYTES.div_ceil(3) * 4 {
+    if value.len() > crate::infrastructure::MAX_CIPHERTEXT_BYTES.div_ceil(3) * 4 {
         Err("backup ciphertext size is invalid")
     } else {
         Ok(())
@@ -1296,7 +1300,7 @@ fn validate_icon_resources(secrets: &[Secret], assets: &[EntryIconAsset]) -> Res
             "icon resources exceed backup budget"
         );
         ensure!(
-            super::entry_icons::valid_normalized_image(&asset.png),
+            crate::infrastructure::entry_icons::valid_normalized_image(&asset.png),
             "invalid icon image"
         );
     }
