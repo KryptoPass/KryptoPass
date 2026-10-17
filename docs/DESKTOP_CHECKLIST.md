@@ -148,7 +148,7 @@ sitio: la URL se valida después de aprobar la entrada.
 - [Operaciones de claves](KEY_MANAGEMENT.md).
 - [Importación Proton Pass](PASSWORD_MANAGER_IMPORT.md).
 - [Integración de navegador](BROWSER_INTEGRATION.md).
-- [Main.qml: acciones y menús](../crates/desktop/ui/qml/Main.qml).
-- [SecretEditor.qml: formularios e iconos](../crates/desktop/ui/qml/SecretEditor.qml).
-- [Servicio de favicons](../crates/desktop/src/native/favicon_service.cpp).
+- [Main.qml: acciones y menús](../crates/kp-desktop/ui/qml/Main.qml).
+- [SecretEditor.qml: formularios e iconos](../crates/kp-desktop/ui/qml/SecretEditor.qml).
+- [Servicio de favicons](../crates/kp-desktop/src/native/favicon_service.cpp).
 - [Puertas locales](../justfile) y [CI](../.github/workflows/verify.yml).

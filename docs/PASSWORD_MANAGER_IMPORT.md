@@ -8,7 +8,8 @@ no hay deduplicación ni sincronización con el gestor de origen.
 
 ## Arquitectura y contrato
 
-`crates/import` (`kryptopass-import`) contiene tres límites:
+`crates/kp-import` (`kp-import`, librería Rust `kryptopass_import`) contiene tres
+límites:
 
 - `container`: JSON, OpenPGP ASCII/binario y ZIP; recibe un `ExportDecryptor`
   implementado por la infraestructura anfitriona.

@@ -1169,14 +1169,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "kryptopass-browser"
+name = "kp-browser"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
  "crypto_box",
  "curve25519-dalek",
- "kryptopass-secure-memory",
+ "kp-memsec",
  "libc",
  "serde",
  "serde_json",
@@ -1187,13 +1187,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "kryptopass-core"
+name = "kp-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "getrandom 0.4.3",
  "gpgme",
- "kryptopass-secure-memory",
+ "kp-memsec",
  "percent-encoding",
  "serde",
  "serde_json",
@@ -1206,7 +1206,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kryptopass-desktop"
+name = "kp-desktop"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1218,10 +1218,10 @@ dependencies = [
  "cxx-qt-lib",
  "gpgme",
  "image",
- "kryptopass-browser",
- "kryptopass-core",
- "kryptopass-import",
- "kryptopass-secure-memory",
+ "kp-browser",
+ "kp-core",
+ "kp-import",
+ "kp-memsec",
  "libc",
  "qrcode",
  "rqrr",
@@ -1236,11 +1236,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "kryptopass-import"
+name = "kp-import"
 version = "0.1.0"
 dependencies = [
- "kryptopass-core",
- "kryptopass-secure-memory",
+ "kp-core",
+ "kp-memsec",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -1249,7 +1249,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kryptopass-secure-memory"
+name = "kp-memsec"
 version = "0.1.0"
 dependencies = [
  "libc",

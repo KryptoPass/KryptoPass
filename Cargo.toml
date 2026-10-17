@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
-members = ["crates/desktop", "crates/core", "crates/import", "crates/browser", "crates/secure-memory"]
+members = ["crates/kp-desktop", "crates/kp-core", "crates/kp-import", "crates/kp-browser", "crates/kp-memsec"]
 # Por defecto solo la app; el resto con --workspace / -p.
-default-members = ["crates/desktop"]
+default-members = ["crates/kp-desktop"]
 
 [workspace.package]
 version = "0.1.0"

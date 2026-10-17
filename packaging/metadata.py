@@ -35,5 +35,10 @@ def load_metadata():
     workspace = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]
     package = workspace["package"]
     identity = workspace["metadata"]["kryptopass"]
-    desktop = tomllib.loads((ROOT / "crates/desktop/Cargo.toml").read_text())["package"]
-    return {**package, **identity, "binary": desktop["name"]}
+    desktop_manifest = tomllib.loads((ROOT / "crates/kp-desktop/Cargo.toml").read_text())
+    desktop = desktop_manifest["package"]
+    binary = next(
+        (bin_target["name"] for bin_target in desktop_manifest.get("bin", [])),
+        desktop["name"],
+    )
+    return {**package, **identity, "binary": binary}

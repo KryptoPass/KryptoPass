@@ -31,7 +31,7 @@ y el historial, fuera del guardado habitual.
 
 ## Pasos para implementar un tipo
 
-1. Definir su contenido en `crates/core/src/domain/content/<tipo>.rs`, con
+1. Definir su contenido en `crates/kp-core/src/domain/content/<tipo>.rs`, con
    `Zeroize`/`ZeroizeOnDrop`, límites y validación. Añadir la variante de
    `SecretContent`, su correspondencia con `SecretKind` y las ramas de los
    envelopes. Los identificadores reservados de `SecretKind` no bastan para
@@ -42,7 +42,7 @@ y el historial, fuera del guardado habitual.
    `needs_previous_content` y `record_save`; el tipo decide si necesita recuperar
    contenido previo y cómo conservar su estado interno.
 3. Añadir la variante de entrada y sus proyecciones en
-   `crates/desktop/src/ui_adapters/secrets_projection/content.rs`.
+   `crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs`.
    `DraftContent` valida entrada; `EditorContent` publica lo necesario para
    editar; `DetailContent` publica solo lo permitido en lectura. Historiales,
    semillas y valores ocultos no se copian automáticamente entre proyecciones.
@@ -57,7 +57,7 @@ y el historial, fuera del guardado habitual.
    `SecretTextSection` comparte secciones de texto. El contenedor presenta
    destinatarios y conecta las señales con el controlador.
 6. Registrar nombre traducible, icono y componentes en `EntryTypes.qml` y cada
-   archivo QML nuevo en `crates/desktop/build.rs`. El editor y el detalle comunes
+   archivo QML nuevo en `crates/kp-desktop/build.rs`. El editor y el detalle comunes
    seleccionan componentes desde ese catálogo; no agregan ramas por tipo.
 7. Revisar los matches exhaustivos de importación e iconos automáticos. El
    almacenamiento común guarda tipo, metadatos y ciphertext; no añade columnas

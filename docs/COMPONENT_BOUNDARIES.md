@@ -1,8 +1,8 @@
 # Componentes del escritorio
 
 La aplicación conserva un único módulo, `org.kryptopass.desktop`. Todos los
-archivos QML de `crates/desktop/ui/qml/` se registran en
-`crates/desktop/build.rs`; añadir un archivo también requiere registrarlo.
+archivos QML de `crates/kp-desktop/ui/qml/` se registran en
+`crates/kp-desktop/build.rs`; añadir un archivo también requiere registrarlo.
 
 ## Ventana y coordinación
 

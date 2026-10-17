@@ -21,8 +21,8 @@ class PackagingMetadataTests(unittest.TestCase):
             workspace = tomllib.load(manifest)["workspace"]
         cls.identity = workspace["metadata"]["kryptopass"]
         cls.package = workspace["package"]
-        with (ROOT / "crates" / "desktop" / "Cargo.toml").open("rb") as manifest:
-            cls.binary = tomllib.load(manifest)["package"]["name"]
+        with (ROOT / "crates" / "kp-desktop" / "Cargo.toml").open("rb") as manifest:
+            cls.binary = tomllib.load(manifest)["bin"][0]["name"]
 
     def generate(self, output, *arguments):
         return subprocess.run(

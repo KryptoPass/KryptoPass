@@ -12,8 +12,8 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGING = ROOT / "packaging"
-sys.path.insert(0, str(PACKAGING))
+TOOLS = ROOT / "tools"
+sys.path.insert(0, str(TOOLS))
 
 import browser_integration  # noqa: E402
 

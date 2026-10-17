@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-CHECKER = Path(__file__).resolve().parents[1] / "packaging" / "check_clean.py"
+CHECKER = Path(__file__).resolve().parents[1] / "tools" / "check_clean.py"
 
 
 class CleanTreeTests(unittest.TestCase):

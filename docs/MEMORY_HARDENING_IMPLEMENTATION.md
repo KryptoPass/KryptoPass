@@ -4,7 +4,8 @@ Fecha: 2026-10-16. Estado: cambios locales verificados en Linux; sin commit.
 
 ## Qué cambia
 
-`kryptopass-secure-memory` encapsula `memsec` 0.7.0 con solo `use_os`.
+El paquete `kp-memsec` (librería Rust `kryptopass_secure_memory`) encapsula
+`memsec` 0.7.0 con solo `use_os`.
 No utiliza el asignador de memsec, `NoAccess`, `mlockall` ni `memfd_secret`.
 El backend de páginas es propio: `mmap` en Unix y `VirtualAlloc` en Windows;
 las liberaciones utilizan el backend correspondiente.

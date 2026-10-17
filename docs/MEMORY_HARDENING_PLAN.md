@@ -30,7 +30,7 @@ una estructura en memoria protegida.
 
 **Objetivo:** construir y comprobar la base antes de migrar producto.
 
-**Archivos previstos:** nuevo crate `crates/secure-memory/` (nombre provisional),
+**Archivos previstos:** paquete `kp-memsec` en `crates/kp-memsec/`,
 su manifiesto, `Cargo.toml` y `Cargo.lock`. Las pruebas las escribe un agente
 de tests con un comportamiento y un archivo por asignación. Los nuevos
 chequeos específicos tendrán receta en `justfile` y job en `bacon.toml`.

@@ -1,7 +1,8 @@
 # Integración con navegador
 
-El crate `kryptopass-browser` contiene el servidor de socket Unix, el protocolo
-cifrado compatible con TweetNaCl y el binario `kryptopass-browser-proxy`. No
+El paquete `kp-browser` (librería Rust `kryptopass_browser`) contiene el
+servidor de socket Unix, el protocolo cifrado compatible con TweetNaCl y el
+binario `kryptopass-browser-proxy`. No
 depende de Qt, GPGME ni del dominio de secretos. Desktop suministra identidad,
 versión, estado de bloqueo, decisiones explícitas y un adaptador de lectura de
 credenciales. Los checkouts vecinos

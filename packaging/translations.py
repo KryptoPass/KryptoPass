@@ -21,7 +21,7 @@ SPANISH_PLURALS = {
 
 def backend_messages():
     messages = set()
-    for path in sorted((ROOT / "crates/desktop/src").rglob("*.rs")):
+    for path in sorted((ROOT / "crates/kp-desktop/src").rglob("*.rs")):
         if "test" in path.name:
             continue
         for match in re.finditer(r'"((?:[^"\\]|\\.)*)"', path.read_text()):
@@ -45,7 +45,7 @@ def extracted_catalog(directory, catalog=CATALOG):
     output = directory / catalog.name
     if catalog.exists():
         output.write_bytes(catalog.read_bytes())
-    inputs = sorted((ROOT / "crates/desktop/ui/qml").glob("*.qml")) + sorted((ROOT / "crates/desktop/src/native").glob("*.cpp"))
+    inputs = sorted((ROOT / "crates/kp-desktop/ui/qml").glob("*.qml")) + sorted((ROOT / "crates/kp-desktop/src/native").glob("*.cpp"))
     subprocess.run([qt_tool("lupdate"), *map(str, inputs), str(stub), "-locations", "none", "-no-obsolete", "-source-language", "es", "-target-language", catalog.stem, "-ts", str(output)], check=True, stdout=subprocess.DEVNULL)
     tree = ET.parse(output)
     for message in tree.findall(".//message") if catalog.stem == "es" else []:

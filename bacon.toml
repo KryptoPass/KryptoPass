@@ -21,19 +21,19 @@ need_stdout = true
 command = ["just", "test-security"]
 need_stdout = true
 default_watch = false
-watch = ["crates/secure-memory", "crates/desktop/src/process_security.rs", "crates/desktop/src/process_security_tests.rs", "crates/desktop/src/infrastructure/openpgp.rs", "crates/desktop/src/infrastructure/openpgp_tests.rs"]
+watch = ["crates/kp-memsec", "crates/kp-desktop/src/process_security.rs", "crates/kp-desktop/tests/unit/process_security.rs", "crates/kp-desktop/src/infrastructure/openpgp.rs", "crates/kp-desktop/tests/unit/infrastructure/openpgp.rs"]
 
 [jobs.test-items]
 command = ["just", "test-items"]
 need_stdout = true
 default_watch = false
-watch = ["crates/desktop/ui/qml", "crates/desktop/ui/tests", "crates/desktop/build.rs"]
+watch = ["crates/kp-desktop/ui/qml", "crates/kp-desktop/ui/tests", "crates/kp-desktop/build.rs"]
 
 [jobs.test-icons]
 command = ["just", "test-icons"]
 need_stdout = true
 default_watch = false
-watch = ["crates/desktop/src/native", "crates/desktop/native-tests"]
+watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/native-tests"]
 
 [jobs.run]
 command = ["just", "run"]
@@ -41,13 +41,13 @@ need_stdout = true
 default_watch = true
 background = false
 on_change_strategy = "kill_then_restart"
-watch = ["crates", ".cargo", "packaging", "justfile"]
+watch = ["crates", ".cargo", "packaging", "tools", "justfile"]
 
 [jobs.qmllint]
 command = ["just", "lint"]
 need_stdout = true
 default_watch = false
-watch = ["crates"]
+watch = ["crates", "tools/qml_lint.py", "packaging/metadata.py"]
 
 [jobs.smoke]
 command = ["just", "smoke"]
@@ -68,41 +68,41 @@ watch = ["Cargo.toml", "packaging"]
 command = ["just", "translations-check"]
 need_stdout = true
 default_watch = false
-watch = ["crates/desktop", "po", "packaging/translations.py"]
+watch = ["crates/kp-desktop", "po", "packaging/translations.py"]
 
 [jobs.licenses]
 command = ["just", "licenses"]
 need_stdout = true
 default_watch = false
-watch = ["REUSE.toml", "LICENSES", "crates", "docs", "packaging"]
+watch = ["REUSE.toml", "LICENSES", "crates", "docs", "packaging", "tools"]
 
 [jobs.test-packaging]
 command = ["just", "test-packaging"]
 need_stdout = true
 default_watch = false
-watch = ["tests", "packaging", "Cargo.toml"]
+watch = ["tests", "packaging", "tools", "Cargo.toml"]
 
 [jobs.clean]
 command = ["just", "clean"]
 need_stdout = true
 default_watch = false
-watch = ["crates", "docs", "packaging", "tests"]
+watch = ["crates", "docs", "packaging", "tools", "tests"]
 
 [jobs.screenshot]
 command = ["just", "screenshot"]
 need_stdout = true
 default_watch = false
-watch = ["crates/desktop", "packaging/capture_screenshot.py"]
+watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
 
 [jobs.browser]
 command = ["just", "browser-build"]
 need_stdout = true
 default_watch = false
-watch = ["crates/browser", "Cargo.toml"]
+watch = ["crates/kp-browser", "tools/browser_integration.py", "packaging/metadata.py", "Cargo.toml"]
 
 [jobs.qmlls]
 command = ["just", "qmlls"]
 need_stdout = true
 background = false
 default_watch = false
-watch = ["crates/desktop", ".qmlls.ini"]
+watch = ["crates/kp-desktop", ".qmlls.ini"]

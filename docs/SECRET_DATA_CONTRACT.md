@@ -117,7 +117,7 @@ recursos al cambiar de bóveda. El proveedor lee los bytes bajo demanda y carga
 asíncronamente con una caché propia de hasta 16 MiB. `iconSource` no se persiste
 ni pertenece al respaldo. No se buscan favicons ni se hacen solicitudes de red.
 
-[`EntryIcon.qml`](../crates/desktop/ui/qml/EntryIcon.qml) se comparte entre lista,
+[`EntryIcon.qml`](../crates/kp-desktop/ui/qml/EntryIcon.qml) se comparte entre lista,
 detalle, editor y arrastre. El contenedor asigna un espacio cuadrado estable;
 la imagen se centra con `PreserveAspectFit`, sin estirar, recortar, añadir un
 fondo ni teñir colores de marca. Imágenes pequeñas no se amplían por encima de
@@ -403,8 +403,9 @@ necesarios durante la edición y se limpia al cerrar el formulario.
 
 Los campos de texto privados del contenido tipado, incluidos historial y TOTP,
 y los buffers propios de texto plano utilizan `SensitiveText` y
-`SensitiveBytes`, definidos en `kryptopass-secure-memory`. Sus regiones tienen
-capacidad fija; crecer crea otra región, copia los bytes y borra la anterior
+`SensitiveBytes`, definidos en el paquete `kp-memsec`
+(`kryptopass_secure_memory`). Sus regiones tienen capacidad fija; crecer crea
+otra región, copia los bytes y borra la anterior
 antes de liberarla. Mover el propietario Rust no mueve los bytes. Los valores
 numéricos y enums del dominio siguen siendo valores ordinarios; no se afirma
 que toda la estructura o su pila estén protegidas por páginas.
@@ -470,8 +471,8 @@ no modifica la versión actual. No se ofrece restaurar versiones.
 
 ## Lectura autorizada desde navegador
 
-`kryptopass-browser` implementa el transporte cifrado y la autorización; el
-adaptador Desktop abre la bóveda y usa `SecretsService`. La vinculación
+`kp-browser` (`kryptopass_browser`) implementa el transporte cifrado y la
+autorización; el adaptador Desktop abre la bóveda y usa `SecretsService`. La vinculación
 persistente identifica el navegador y la bóveda, pero cada `get-logins`
 requiere una aprobación nueva y caduca en 60 segundos.
 
