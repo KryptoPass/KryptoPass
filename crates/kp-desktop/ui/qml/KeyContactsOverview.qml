@@ -19,7 +19,11 @@ ColumnLayout {
             }
             for (const fingerprint of fingerprints) {
                 const key = keyStore.entries.find(entry => entry.id.toUpperCase() === fingerprint) || null;
-                rows.push({ contact: contact, fingerprint: fingerprint, key: key });
+                rows.push({
+                    contact: contact,
+                    fingerprint: fingerprint,
+                    key: key
+                });
             }
         }
         return rows;
@@ -116,10 +120,7 @@ ColumnLayout {
                         spacing: Kirigami.Units.smallSpacing
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: contactEntry.modelData.contact.name
-                                || contactEntry.modelData.contact.email
-                                || contactEntry.modelData.contact.uid
-                                || qsTr("Contacto sin nombre")
+                            text: contactEntry.modelData.contact.name || contactEntry.modelData.contact.email || contactEntry.modelData.contact.uid || qsTr("Contacto sin nombre")
                             textFormat: Text.PlainText
                             font.weight: Font.DemiBold
                             wrapMode: Text.Wrap
@@ -134,8 +135,7 @@ ColumnLayout {
                         }
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: contactEntry.modelData.fingerprint
-                                || qsTr("Sin huella OpenPGP completa vinculada")
+                            text: contactEntry.modelData.fingerprint || qsTr("Sin huella OpenPGP completa vinculada")
                             textFormat: Text.PlainText
                             font: Kirigami.Theme.fixedWidthFont
                             color: Kirigami.Theme.disabledTextColor
@@ -143,9 +143,7 @@ ColumnLayout {
                         }
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: contactEntry.modelData.key
-                                ? qsTr("Clave disponible en el llavero local: %1").arg(contactEntry.modelData.key.title || contactEntry.modelData.key.id)
-                                : qsTr("Clave pendiente de importar")
+                            text: contactEntry.modelData.key ? qsTr("Clave disponible en el llavero local: %1").arg(contactEntry.modelData.key.title || contactEntry.modelData.key.id) : qsTr("Clave pendiente de importar")
                             textFormat: Text.PlainText
                             wrapMode: Text.Wrap
                         }

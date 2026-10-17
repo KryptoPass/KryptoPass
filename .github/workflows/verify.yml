@@ -53,7 +53,7 @@ jobs:
           prefix-key: arch-v1-${{ steps.native.outputs.packages }}
           cache-on-failure: true
       # Keep these recipes in sync with the dependencies of `just verify`.
-      - name: Rust formatting
+      - name: Rust, KDE C++ and QML formatting
         run: just fmt
       - name: Check workspace and generate QML types
         id: check

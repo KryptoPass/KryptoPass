@@ -30,18 +30,48 @@ TestCase {
             requestJson: "",
             vaultLocked: false,
             entryMetadata: [
-                { id: "work-entry", folder: "work" },
-                { id: "personal-entry", folder: "personal" }
+                {
+                    id: "work-entry",
+                    folder: "work"
+                },
+                {
+                    id: "personal-entry",
+                    folder: "personal"
+                }
             ],
             folders: [
-                { id: "root", name: "Accounts", parent: "" },
-                { id: "work", name: "Work", parent: "root" },
-                { id: "personal", name: "Personal", parent: "root" }
+                {
+                    id: "root",
+                    name: "Accounts",
+                    parent: ""
+                },
+                {
+                    id: "work",
+                    name: "Work",
+                    parent: "root"
+                },
+                {
+                    id: "personal",
+                    name: "Personal",
+                    parent: "root"
+                }
             ],
             folderRows: [
-                { id: "root", name: "Accounts", depth: 0 },
-                { id: "work", name: "Work", depth: 1 },
-                { id: "personal", name: "Personal", depth: 1 }
+                {
+                    id: "root",
+                    name: "Accounts",
+                    depth: 0
+                },
+                {
+                    id: "work",
+                    name: "Work",
+                    depth: 1
+                },
+                {
+                    id: "personal",
+                    name: "Personal",
+                    depth: 1
+                }
             ]
         });
         verify(dialog !== null);
@@ -62,8 +92,16 @@ TestCase {
             token: token,
             origin: "https://accounts.example.invalid",
             candidates: [
-                { id: "work-entry", name: "Work account", revision: 7 },
-                { id: "personal-entry", name: "Personal account", revision: 12 }
+                {
+                    id: "work-entry",
+                    name: "Work account",
+                    revision: 7
+                },
+                {
+                    id: "personal-entry",
+                    name: "Personal account",
+                    revision: 12
+                }
             ]
         });
     }
@@ -74,8 +112,18 @@ TestCase {
             origin: "https://accounts.example.invalid",
             previewReady: true,
             candidates: [
-                { id: "work-entry", name: "Email account", username: "work.user@example.invalid", revision: 7 },
-                { id: "personal-entry", name: "Email account", username: "personal.user@example.invalid", revision: 12 }
+                {
+                    id: "work-entry",
+                    name: "Email account",
+                    username: "work.user@example.invalid",
+                    revision: 7
+                },
+                {
+                    id: "personal-entry",
+                    name: "Email account",
+                    username: "personal.user@example.invalid",
+                    revision: 12
+                }
             ]
         });
     }
@@ -94,8 +142,7 @@ TestCase {
             token: token,
             origin: "https://accounts.example.invalid",
             previewReady: true,
-            candidates: [
-                candidate,
+            candidates: [candidate,
                 {
                     id: "personal-entry",
                     name: "Email account",
@@ -179,8 +226,7 @@ TestCase {
         verify(item.height > 0, label + " should have a positive height");
         const topLeft = item.mapToItem(container, 0, 0);
         const bottomRight = item.mapToItem(container, item.width, item.height);
-        verify(topLeft.x >= -1 && bottomRight.x <= container.width + 1,
-            label + " should fit within the dialog content width");
+        verify(topLeft.x >= -1 && bottomRight.x <= container.width + 1, label + " should fit within the dialog content width");
     }
 
     function test_origin_and_browser_choices_default_to_deny() {
@@ -194,8 +240,7 @@ TestCase {
         verify(dialog.introduction !== null);
         const originLabel = findText(dialog, "https://accounts.example.invalid");
         verify(originLabel !== null, "The introduction loader should show the requested origin");
-        const instructionLabel = findText(dialog,
-            "Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.");
+        const instructionLabel = findText(dialog, "Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.");
         verify(instructionLabel !== null, "The introduction should contain its explanatory text");
         const introductionLoader = findLoaderForItem(dialog, originLabel.parent);
         verify(introductionLoader !== null, "The introduction should be loaded into the shared picker");
@@ -207,10 +252,7 @@ TestCase {
         tryCompare(list, "count", 2);
         verify(!confirm.enabled, "Approval must stay disabled until a candidate is selected");
         compare(dialog.pendingId, "");
-        compare(dialog.options.map(option => [option.id, option.title, option.folder]), [
-            ["work-entry", "Work account", "work"],
-            ["personal-entry", "Personal account", "personal"]
-        ]);
+        compare(dialog.options.map(option => [option.id, option.title, option.folder]), [["work-entry", "Work account", "work"], ["personal-entry", "Personal account", "personal"]]);
 
         waitForRendering(list);
         const workChoice = list.itemAtIndex(0);
@@ -302,10 +344,7 @@ TestCase {
         const folderPicker = child("entryPickerFolderPicker");
         const confirm = child("confirmEntryPickerButton");
         tryCompare(list, "count", 2);
-        compare(dialog.options.map(option => [option.id, option.title, option.subtitle, option.folder]), [
-            ["work-entry", "Email account", "work.user@example.invalid", "work"],
-            ["personal-entry", "Email account", "personal.user@example.invalid", "personal"]
-        ]);
+        compare(dialog.options.map(option => [option.id, option.title, option.subtitle, option.folder]), [["work-entry", "Email account", "work.user@example.invalid", "work"], ["personal-entry", "Email account", "personal.user@example.invalid", "personal"]]);
 
         waitForRendering(list);
         const workChoice = list.itemAtIndex(0);
@@ -319,8 +358,7 @@ TestCase {
         tryCompare(list, "count", 1);
         waitForRendering(list);
         compare(list.itemAtIndex(0).modelData.id, "work-entry");
-        compare(list.itemAtIndex(0).modelData.folder, "work",
-            "The browser candidate should retain its folder metadata for filtering");
+        compare(list.itemAtIndex(0).modelData.folder, "work", "The browser candidate should retain its folder metadata for filtering");
 
         folderPicker.folderSelected("");
         tryCompare(dialog, "folderFilterId", "");
@@ -355,25 +393,19 @@ TestCase {
         dialog.requestJson = requestWithUsernameState(token, "unloaded");
         tryCompare(dialog, "visible", true);
         tryCompare(dialog, "opened", true);
-        compare(dialog.displayedToken, token,
-            "The active browser token should be recorded before a username update arrives");
+        compare(dialog.displayedToken, token, "The active browser token should be recorded before a username update arrives");
 
         const list = child("entryPickerList");
         const search = child("entryPickerSearch");
         const folderPicker = child("entryPickerFolderPicker");
         const confirm = child("confirmEntryPickerButton");
         tryCompare(list, "count", 2);
-        compare(dialog.options.map(option => [option.id, option.title, option.folder]), [
-            ["work-entry", "Email account", "work"],
-            ["personal-entry", "Email account", "personal"]
-        ]);
-        compare(usernameRequest.count, 0,
-            "Opening the request must not fetch usernames for every candidate");
+        compare(dialog.options.map(option => [option.id, option.title, option.folder]), [["work-entry", "Email account", "work"], ["personal-entry", "Email account", "personal"]]);
+        compare(usernameRequest.count, 0, "Opening the request must not fetch usernames for every candidate");
         waitForRendering(list);
         const workChoice = list.itemAtIndex(0);
         compare(workChoice.modelData.subtitle, "Selecciona para ver el usuario");
-        verify(findText(workChoice.contentItem, "Selecciona para ver el usuario") !== null,
-            "The unloaded candidate should show its username prompt immediately");
+        verify(findText(workChoice.contentItem, "Selecciona para ver el usuario") !== null, "The unloaded candidate should show its username prompt immediately");
         verify(!confirm.enabled, "An unloaded username cannot be approved");
 
         folderPicker.folderSelected("work");
@@ -395,8 +427,7 @@ TestCase {
         waitForRendering(list);
         const loadingChoice = list.itemAtIndex(0);
         compare(loadingChoice.modelData.subtitle, "Cargando usuario…");
-        verify(findText(loadingChoice.contentItem, "Cargando usuario…") !== null,
-            "A loading update should render its progress subtitle");
+        verify(findText(loadingChoice.contentItem, "Cargando usuario…") !== null, "A loading update should render its progress subtitle");
         compare(usernameRequest.count, 1, "A same-token loading update must not request the username again");
         verify(!confirm.enabled, "A username still loading cannot be approved");
 
@@ -408,8 +439,7 @@ TestCase {
         waitForRendering(list);
         const errorChoice = list.itemAtIndex(0);
         compare(errorChoice.modelData.subtitle, "No se pudo leer el usuario");
-        verify(findText(errorChoice.contentItem, "No se pudo leer el usuario") !== null,
-            "An error update should render its recovery subtitle");
+        verify(findText(errorChoice.contentItem, "No se pudo leer el usuario") !== null, "An error update should render its recovery subtitle");
         compare(usernameRequest.count, 1);
         verify(!confirm.enabled, "A failed username cannot be approved");
 
@@ -421,8 +451,7 @@ TestCase {
         waitForRendering(list);
         const readyChoice = list.itemAtIndex(0);
         compare(readyChoice.modelData.subtitle, "work.user@example.invalid");
-        verify(findText(readyChoice.contentItem, "work.user@example.invalid") !== null,
-            "The ready update should render the loaded username");
+        verify(findText(readyChoice.contentItem, "work.user@example.invalid") !== null, "The ready update should render the loaded username");
         compare(usernameRequest.count, 1);
         verify(confirm.enabled, "The candidate becomes approvable when its username is ready");
 

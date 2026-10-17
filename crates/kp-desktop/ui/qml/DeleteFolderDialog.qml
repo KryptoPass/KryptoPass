@@ -73,9 +73,7 @@ Controls.Dialog {
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: deleteContentsCheck.checked
-                ? qsTr("La carpeta, sus subcarpetas y todos sus elementos, incluidos los de la papelera, se eliminarán definitivamente. Esta acción no se puede deshacer.")
-                : qsTr("Sus elementos y subcarpetas pasarán a la carpeta superior.")
+            text: deleteContentsCheck.checked ? qsTr("La carpeta, sus subcarpetas y todos sus elementos, incluidos los de la papelera, se eliminarán definitivamente. Esta acción no se puede deshacer.") : qsTr("Sus elementos y subcarpetas pasarán a la carpeta superior.")
             wrapMode: Text.Wrap
         }
         Controls.CheckBox {
@@ -93,15 +91,16 @@ Controls.Dialog {
             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
             Layout.preferredHeight: width
         }
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
         Controls.Button {
             text: qsTr("Cancelar")
             enabled: !deleteFolderDialog.pending && !deleteFolderDialog.storeAdapter.controller.busy
             onClicked: deleteFolderDialog.close()
         }
         Controls.Button {
-            text: deleteFolderDialog.pending ? qsTr("Eliminando…")
-                : deleteContentsCheck.checked ? qsTr("Eliminar definitivamente") : qsTr("Eliminar carpeta")
+            text: deleteFolderDialog.pending ? qsTr("Eliminando…") : deleteContentsCheck.checked ? qsTr("Eliminar definitivamente") : qsTr("Eliminar carpeta")
             icon.name: "edit-delete"
             enabled: !deleteFolderDialog.pending && !deleteFolderDialog.storeAdapter.controller.busy && !!deleteFolderDialog.folderId
             onClicked: deleteFolderDialog.submit()

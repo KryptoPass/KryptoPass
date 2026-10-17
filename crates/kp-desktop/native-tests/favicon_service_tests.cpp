@@ -19,7 +19,8 @@
 
 using kryptopass::desktop::native::FaviconService;
 
-namespace {
+namespace
+{
 struct Exchange {
     QUrl url;
     QPointer<QNetworkReply> reply;
@@ -27,11 +28,13 @@ struct Exchange {
     bool finished = false;
 };
 
-class FakeReply final : public QNetworkReply {
+class FakeReply final : public QNetworkReply
+{
 public:
-    FakeReply(const QNetworkRequest &request, QNetworkAccessManager::Operation operation,
-              std::shared_ptr<Exchange> exchange, QObject *parent)
-        : QNetworkReply(parent), exchange_(std::move(exchange)) {
+    FakeReply(const QNetworkRequest &request, QNetworkAccessManager::Operation operation, std::shared_ptr<Exchange> exchange, QObject *parent)
+        : QNetworkReply(parent)
+        , exchange_(std::move(exchange))
+    {
         setRequest(request);
         setUrl(request.url());
         setOperation(operation);
@@ -39,31 +42,40 @@ public:
         open(QIODevice::ReadOnly | QIODevice::Unbuffered);
     }
 
-    void abort() override {
-        if (isFinished()) return;
+    void abort() override
+    {
+        if (isFinished())
+            return;
         exchange_->aborted = true;
         fail(QNetworkReply::OperationCanceledError);
     }
 
-    void append(const QByteArray &bytes, qint64 reportedProgress = -1) {
-        if (isFinished()) return;
+    void append(const QByteArray &bytes, qint64 reportedProgress = -1)
+    {
+        if (isFinished())
+            return;
         bytes_.append(bytes);
         emit readyRead();
         if (!isFinished())
             emit downloadProgress(reportedProgress < 0 ? bytes_.size() : reportedProgress, -1);
     }
 
-    void succeed(const QByteArray &bytes, const QByteArray &contentType = "image/png") {
-        if (isFinished()) return;
+    void succeed(const QByteArray &bytes, const QByteArray &contentType = "image/png")
+    {
+        if (isFinished())
+            return;
         setHeader(QNetworkRequest::ContentTypeHeader, contentType);
         append(bytes);
-        if (isFinished()) return;
+        if (isFinished())
+            return;
         setFinished(true);
         emit finished();
     }
 
-    void fail(QNetworkReply::NetworkError error = QNetworkReply::ContentNotFoundError) {
-        if (isFinished()) return;
+    void fail(QNetworkReply::NetworkError error = QNetworkReply::ContentNotFoundError)
+    {
+        if (isFinished())
+            return;
         setAttribute(QNetworkRequest::HttpStatusCodeAttribute, 404);
         setError(error, QStringLiteral("Simulated network failure"));
         setFinished(true);
@@ -71,16 +83,22 @@ public:
         emit finished();
     }
 
-    qint64 bytesAvailable() const override {
+    qint64 bytesAvailable() const override
+    {
         return bytes_.size() - offset_ + QIODevice::bytesAvailable();
     }
 
-    bool isSequential() const override { return true; }
+    bool isSequential() const override
+    {
+        return true;
+    }
 
 protected:
-    qint64 readData(char *destination, qint64 maximum) override {
+    qint64 readData(char *destination, qint64 maximum) override
+    {
         const qint64 count = qMin(maximum, bytes_.size() - offset_);
-        if (count <= 0) return isFinished() ? -1 : 0;
+        if (count <= 0)
+            return isFinished() ? -1 : 0;
         std::memcpy(destination, bytes_.constData() + offset_, static_cast<size_t>(count));
         offset_ += count;
         return count;
@@ -92,24 +110,25 @@ private:
     qint64 offset_ = 0;
 };
 
-class FakeManager final : public QNetworkAccessManager {
+class FakeManager final : public QNetworkAccessManager
+{
 public:
     QList<std::shared_ptr<Exchange>> exchanges;
     int active = 0;
     int peakActive = 0;
 
-    FakeReply *pending(const QString &host, const QString &path) const {
+    FakeReply *pending(const QString &host, const QString &path) const
+    {
         for (const auto &exchange : exchanges) {
-            if (exchange->url.host() == host && exchange->url.path() == path
-                && exchange->reply && !exchange->finished)
+            if (exchange->url.host() == host && exchange->url.path() == path && exchange->reply && !exchange->finished)
                 return static_cast<FakeReply *>(exchange->reply.data());
         }
         return nullptr;
     }
 
 protected:
-    QNetworkReply *createRequest(Operation operation, const QNetworkRequest &request,
-                                QIODevice *) override {
+    QNetworkReply *createRequest(Operation operation, const QNetworkRequest &request, QIODevice *) override
+    {
         auto exchange = std::make_shared<Exchange>();
         exchange->url = request.url();
         auto *reply = new FakeReply(request, operation, exchange, this);
@@ -117,7 +136,8 @@ protected:
         exchanges.append(exchange);
         peakActive = qMax(peakActive, ++active);
         connect(reply, &QNetworkReply::finished, this, [this, exchange] {
-            if (exchange->finished) return;
+            if (exchange->finished)
+                return;
             exchange->finished = true;
             --active;
         });
@@ -125,23 +145,27 @@ protected:
     }
 };
 
-QByteArray png(const QSize &size = QSize(32, 32)) {
+QByteArray png(const QSize &size = QSize(32, 32))
+{
     QImage image(size, QImage::Format_RGBA8888);
     image.fill(QColor(34, 104, 190, 180));
     image.setText(QStringLiteral("Description"), QStringLiteral("Metadata to remove"));
     QByteArray bytes;
     QBuffer buffer(&bytes);
     buffer.open(QIODevice::WriteOnly);
-    if (!image.save(&buffer, "PNG")) return {};
+    if (!image.save(&buffer, "PNG"))
+        return {};
     return bytes;
 }
 }
 
-class FaviconServiceTests final : public QObject {
+class FaviconServiceTests final : public QObject
+{
     Q_OBJECT
 
 private slots:
-    void consumersJoinPrefetchAndReceiveItsResult() {
+    void consumersJoinPrefetchAndReceiveItsResult()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
@@ -171,18 +195,24 @@ private slots:
         QVERIFY(callbacksOnOwnerThread);
     }
 
-    void queuedHostsRespectConcurrencyLimit() {
+    void queuedHostsRespectConcurrencyLimit()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QList<QImage> results;
         FaviconService service(cache.path(), manager);
-        const QStringList hosts = {QStringLiteral("alpha.org"), QStringLiteral("beta.org"),
-                                   QStringLiteral("gamma.org"), QStringLiteral("delta.org"),
-                                   QStringLiteral("epsilon.org"), QStringLiteral("zeta.org"),
+        const QStringList hosts = {QStringLiteral("alpha.org"),
+                                   QStringLiteral("beta.org"),
+                                   QStringLiteral("gamma.org"),
+                                   QStringLiteral("delta.org"),
+                                   QStringLiteral("epsilon.org"),
+                                   QStringLiteral("zeta.org"),
                                    QStringLiteral("eta.org")};
         for (const auto &host : hosts)
-            service.request(host, [&](QImage image) { results.append(image); });
+            service.request(host, [&](QImage image) {
+                results.append(image);
+            });
 
         QTRY_COMPARE(manager->exchanges.size(), FaviconService::MaxConcurrent);
         QCOMPARE(manager->active, FaviconService::MaxConcurrent);
@@ -201,19 +231,23 @@ private slots:
         }
 
         QTRY_COMPARE(results.size(), hosts.size());
-        for (const auto &image : results) QVERIFY(!image.isNull());
+        for (const auto &image : results)
+            QVERIFY(!image.isNull());
         QCOMPARE(manager->peakActive, FaviconService::MaxConcurrent);
         QCOMPARE(manager->active, 0);
     }
 
-    void failedHostCanRetryAfterNegativeCacheExpires() {
+    void failedHostCanRetryAfterNegativeCacheExpires()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QList<QImage> results;
         constexpr int retryDelay = 100;
         FaviconService service(cache.path(), manager, retryDelay);
-        const auto collect = [&](QImage image) { results.append(image); };
+        const auto collect = [&](QImage image) {
+            results.append(image);
+        };
 
         service.request(QStringLiteral("alpha.org"), collect);
         QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico")));
@@ -240,22 +274,23 @@ private slots:
         QVERIFY(!results.last().isNull());
     }
 
-    void invalidDirectImageDiscoversDeclaredIcon() {
+    void invalidDirectImageDiscoversDeclaredIcon()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QList<QImage> results;
         FaviconService service(cache.path(), manager);
-        service.request(QStringLiteral("alpha.org"), [&](QImage image) { results.append(image); });
+        service.request(QStringLiteral("alpha.org"), [&](QImage image) {
+            results.append(image);
+        });
 
         QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico")));
-        manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))
-            ->succeed("<html>Not an image</html>", "text/html");
+        manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))->succeed("<html>Not an image</html>", "text/html");
         QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/")));
         QVERIFY(results.isEmpty());
         manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/"))
-            ->succeed("<html><head><link href='/assets/site.png' rel='shortcut icon'></head></html>",
-                      "text/html");
+            ->succeed("<html><head><link href='/assets/site.png' rel='shortcut icon'></head></html>", "text/html");
         QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/assets/site.png")));
         manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/assets/site.png"))->succeed(png());
 
@@ -266,18 +301,24 @@ private slots:
             QCOMPARE(exchange->url.scheme(), QStringLiteral("https"));
     }
 
-    void timeoutAbortsPartialRepliesAndReleasesCapacity() {
+    void timeoutAbortsPartialRepliesAndReleasesCapacity()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QHash<QString, QImage> results;
         FaviconService service(cache.path(), manager, 60000, 150);
-        const QStringList hosts = {QStringLiteral("alpha.org"), QStringLiteral("beta.org"),
-                                   QStringLiteral("gamma.org"), QStringLiteral("delta.org"),
-                                   QStringLiteral("epsilon.org"), QStringLiteral("zeta.org"),
+        const QStringList hosts = {QStringLiteral("alpha.org"),
+                                   QStringLiteral("beta.org"),
+                                   QStringLiteral("gamma.org"),
+                                   QStringLiteral("delta.org"),
+                                   QStringLiteral("epsilon.org"),
+                                   QStringLiteral("zeta.org"),
                                    QStringLiteral("eta.org")};
         for (const auto &host : hosts)
-            service.request(host, [&, host](QImage image) { results.insert(host, image); });
+            service.request(host, [&, host](QImage image) {
+                results.insert(host, image);
+            });
 
         QTRY_COMPARE(manager->exchanges.size(), FaviconService::MaxConcurrent);
         auto *partial = manager->pending(hosts.first(), QStringLiteral("/favicon.ico"));
@@ -298,19 +339,25 @@ private slots:
         QCOMPARE(manager->active, 0);
     }
 
-    void closedAbortedRepliesCompleteFallbackAndReleaseCapacity() {
+    void closedAbortedRepliesCompleteFallbackAndReleaseCapacity()
+    {
         QTest::failOnWarning(QRegularExpression(QStringLiteral("QIODevice::read.*device not open")));
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QHash<QString, QImage> results;
         FaviconService service(cache.path(), manager);
-        const QStringList hosts = {QStringLiteral("alpha.org"), QStringLiteral("beta.org"),
-                                   QStringLiteral("gamma.org"), QStringLiteral("delta.org"),
-                                   QStringLiteral("epsilon.org"), QStringLiteral("zeta.org"),
+        const QStringList hosts = {QStringLiteral("alpha.org"),
+                                   QStringLiteral("beta.org"),
+                                   QStringLiteral("gamma.org"),
+                                   QStringLiteral("delta.org"),
+                                   QStringLiteral("epsilon.org"),
+                                   QStringLiteral("zeta.org"),
                                    QStringLiteral("eta.org")};
         for (const auto &host : hosts)
-            service.request(host, [&, host](QImage image) { results.insert(host, image); });
+            service.request(host, [&, host](QImage image) {
+                results.insert(host, image);
+            });
 
         QTRY_COMPARE(manager->exchanges.size(), FaviconService::MaxConcurrent);
         auto *direct = manager->pending(hosts.first(), QStringLiteral("/favicon.ico"));
@@ -337,19 +384,23 @@ private slots:
         }
 
         QTRY_COMPARE(results.size(), hosts.size());
-        for (const auto &host : hosts.mid(1)) QVERIFY(!results.value(host).isNull());
+        for (const auto &host : hosts.mid(1))
+            QVERIFY(!results.value(host).isNull());
         QCOMPARE(manager->exchanges.size(), hosts.size() + 1);
         QCOMPARE(manager->peakActive, FaviconService::MaxConcurrent);
         QCOMPARE(manager->active, 0);
     }
 
-    void shutdownCompletesWaitersAndRejectsNewWork() {
+    void shutdownCompletesWaitersAndRejectsNewWork()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
         QList<QImage> results;
         FaviconService service(cache.path(), manager);
-        const auto collect = [&](QImage image) { results.append(image); };
+        const auto collect = [&](QImage image) {
+            results.append(image);
+        };
         for (int i = 0; i < FaviconService::MaxConcurrent + 1; ++i)
             service.request(QStringLiteral("host%1.org").arg(i), collect);
         service.request(QStringLiteral("host0.org"), collect);
@@ -357,9 +408,11 @@ private slots:
 
         service.shutdown();
         QTRY_COMPARE(results.size(), FaviconService::MaxConcurrent + 2);
-        for (const auto &image : results) QVERIFY(image.isNull());
+        for (const auto &image : results)
+            QVERIFY(image.isNull());
         QCOMPARE(manager->active, 0);
-        for (const auto &exchange : manager->exchanges) QVERIFY(exchange->aborted);
+        for (const auto &exchange : manager->exchanges)
+            QVERIFY(exchange->aborted);
 
         service.request(QStringLiteral("new.org"), collect);
         QTRY_COMPARE(results.size(), FaviconService::MaxConcurrent + 3);
@@ -370,7 +423,8 @@ private slots:
         QCOMPARE(manager->exchanges.size(), FaviconService::MaxConcurrent);
     }
 
-    void successfulIconsAreNormalizedAndCachedAcrossInstances() {
+    void successfulIconsAreNormalizedAndCachedAcrossInstances()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         QImage normalized;
@@ -378,11 +432,12 @@ private slots:
             auto *manager = new FakeManager;
             QList<QImage> results;
             FaviconService service(cache.path(), manager);
-            const auto collect = [&](QImage image) { results.append(image); };
+            const auto collect = [&](QImage image) {
+                results.append(image);
+            };
             service.request(QStringLiteral("alpha.org"), collect);
             QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico")));
-            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))
-                ->succeed(png(QSize(300, 150)));
+            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))->succeed(png(QSize(300, 150)));
             QTRY_COMPARE(results.size(), 1);
             normalized = results.first();
             QCOMPARE(normalized.size(), QSize(256, 128));
@@ -398,15 +453,17 @@ private slots:
             auto *manager = new FakeManager;
             QList<QImage> results;
             FaviconService service(cache.path(), manager);
-            service.request(QStringLiteral("alpha.org"), [&](QImage image) { results.append(image); });
+            service.request(QStringLiteral("alpha.org"), [&](QImage image) {
+                results.append(image);
+            });
             QTRY_COMPARE(results.size(), 1);
-            QCOMPARE(results.first().convertToFormat(QImage::Format_RGBA8888),
-                     normalized.convertToFormat(QImage::Format_RGBA8888));
+            QCOMPARE(results.first().convertToFormat(QImage::Format_RGBA8888), normalized.convertToFormat(QImage::Format_RGBA8888));
             QCOMPARE(manager->exchanges.size(), 0);
         }
     }
 
-    void repeatedPrefetchAfterPixelEvictionLeavesRecoveryToConsumer() {
+    void repeatedPrefetchAfterPixelEvictionLeavesRecoveryToConsumer()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         auto *manager = new FakeManager;
@@ -439,7 +496,9 @@ private slots:
         QCOMPARE(manager->exchanges.size(), warmedRequests);
         QCOMPARE(manager->active, 0);
 
-        service.request(firstHost, [&](QImage image) { results.append(image); });
+        service.request(firstHost, [&](QImage image) {
+            results.append(image);
+        });
         QTRY_COMPARE(manager->exchanges.size(), warmedRequests + 1);
         auto *recovery = manager->pending(firstHost, QStringLiteral("/favicon.ico"));
         QVERIFY(recovery);
@@ -451,20 +510,21 @@ private slots:
         QCOMPARE(manager->active, 0);
     }
 
-    void oversizedImageIsRejectedAndNotCached() {
+    void oversizedImageIsRejectedAndNotCached()
+    {
         QTemporaryDir cache;
         QVERIFY(cache.isValid());
         {
             auto *manager = new FakeManager;
             QList<QImage> results;
             FaviconService service(cache.path(), manager);
-            service.request(QStringLiteral("alpha.org"), [&](QImage image) { results.append(image); });
+            service.request(QStringLiteral("alpha.org"), [&](QImage image) {
+                results.append(image);
+            });
             QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico")));
-            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))
-                ->succeed(png(QSize(513, 1)));
+            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))->succeed(png(QSize(513, 1)));
             QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/")));
-            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/"))
-                ->succeed("<html><head></head></html>", "text/html");
+            manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/"))->succeed("<html><head></head></html>", "text/html");
             QTRY_COMPARE(results.size(), 1);
             QVERIFY(results.first().isNull());
         }
@@ -477,14 +537,16 @@ private slots:
         }
     }
 
-    void streamedResponseBytesAreBounded_data() {
+    void streamedResponseBytesAreBounded_data()
+    {
         QTest::addColumn<bool>("html");
         QTest::addColumn<int>("limit");
         QTest::newRow("favicon") << false << 1024 * 1024;
         QTest::newRow("html discovery") << true << 256 * 1024;
     }
 
-    void streamedResponseBytesAreBounded() {
+    void streamedResponseBytesAreBounded()
+    {
         QFETCH(bool, html);
         QFETCH(int, limit);
         QTemporaryDir cache;
@@ -492,7 +554,9 @@ private slots:
         auto *manager = new FakeManager;
         QList<QImage> results;
         FaviconService service(cache.path(), manager);
-        service.request(QStringLiteral("alpha.org"), [&](QImage image) { results.append(image); });
+        service.request(QStringLiteral("alpha.org"), [&](QImage image) {
+            results.append(image);
+        });
         QTRY_VERIFY(manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico")));
         if (html) {
             manager->pending(QStringLiteral("alpha.org"), QStringLiteral("/favicon.ico"))->fail();

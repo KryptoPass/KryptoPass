@@ -23,7 +23,8 @@ pub mod qobject {
         #[qproperty(QString, app_copyright, cxx_name = "appCopyright", READ, CONSTANT)]
         #[qproperty(QString, app_homepage, cxx_name = "appHomepage", READ, CONSTANT)]
         #[qproperty(QString, app_repository, cxx_name = "appRepository", READ, CONSTANT)]
-        #[qproperty(QString, shortcuts_json, cxx_name = "shortcutsJson", READ, NOTIFY)]
+        #[qproperty(QString, about_json, cxx_name = "aboutJson", READ, CONSTANT)]
+        #[qproperty(QString, actions_json, cxx_name = "actionsJson", READ, NOTIFY)]
         #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
         type ShellController = super::ShellControllerRust;
 
@@ -32,8 +33,16 @@ pub mod qobject {
         fn configure_shortcuts(self: Pin<&mut Self>);
 
         #[qinvokable]
-        #[cxx_name = "showAboutDialog"]
-        fn show_about_dialog(self: Pin<&mut Self>);
+        #[cxx_name = "showAboutKdeDialog"]
+        fn show_about_kde_dialog(self: Pin<&mut Self>);
+
+        #[qinvokable]
+        #[cxx_name = "openBugReport"]
+        fn open_bug_report(self: Pin<&mut Self>) -> bool;
+
+        #[qinvokable]
+        #[cxx_name = "setActionEnabled"]
+        fn set_action_enabled(self: Pin<&mut Self>, id: QString, enabled: bool);
 
         #[qinvokable]
         #[cxx_name = "setIdleLockSeconds"]
@@ -50,7 +59,8 @@ pub struct ShellControllerRust {
     app_copyright: QString,
     app_homepage: QString,
     app_repository: QString,
-    shortcuts_json: QString,
+    about_json: QString,
+    actions_json: QString,
     idle_lock_seconds: i32,
 }
 
@@ -65,7 +75,8 @@ impl Default for ShellControllerRust {
             app_copyright: QString::from(crate::app_info::APP.copyright),
             app_homepage: QString::from(crate::app_info::APP.homepage),
             app_repository: QString::from(crate::app_info::APP.repository),
-            shortcuts_json: crate::ui_adapters::native_ffi::ffi::configured_shortcuts(),
+            about_json: crate::ui_adapters::native_ffi::ffi::about_data(),
+            actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
         }
     }
@@ -81,15 +92,23 @@ impl qobject::ShellController {
         }
     }
 
-    pub fn show_about_dialog(self: Pin<&mut Self>) {
-        crate::ui_adapters::native_ffi::ffi::show_about_dialog();
+    pub fn show_about_kde_dialog(self: Pin<&mut Self>) {
+        crate::ui_adapters::native_ffi::ffi::show_about_kde_dialog();
+    }
+
+    pub fn open_bug_report(self: Pin<&mut Self>) -> bool {
+        crate::ui_adapters::native_ffi::ffi::open_bug_report()
+    }
+
+    pub fn set_action_enabled(self: Pin<&mut Self>, id: QString, enabled: bool) {
+        crate::ui_adapters::native_ffi::ffi::set_action_enabled(&id, enabled);
     }
 
     pub fn configure_shortcuts(mut self: Pin<&mut Self>) {
         let value = crate::ui_adapters::native_ffi::ffi::configure_shortcuts();
-        if self.shortcuts_json() != &value {
-            self.as_mut().rust_mut().shortcuts_json = value;
-            self.shortcuts_json_changed();
+        if self.actions_json() != &value {
+            self.as_mut().rust_mut().actions_json = value;
+            self.actions_json_changed();
         }
     }
 }

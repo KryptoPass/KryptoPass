@@ -26,37 +26,74 @@ Controls.Dialog {
     property string operationError: ""
     property string operationWarning: ""
     readonly property var expiryOptions: [
-        { label: qsTr("30 días"), days: 30 },
-        { label: qsTr("90 días"), days: 90 },
-        { label: qsTr("180 días"), days: 180 },
-        { label: qsTr("1 año"), days: 365 },
-        { label: qsTr("2 años"), days: 730 },
-        { label: qsTr("5 años"), days: 1825 },
-        { label: qsTr("Sin caducidad"), days: 0 }
+        {
+            label: qsTr("30 días"),
+            days: 30
+        },
+        {
+            label: qsTr("90 días"),
+            days: 90
+        },
+        {
+            label: qsTr("180 días"),
+            days: 180
+        },
+        {
+            label: qsTr("1 año"),
+            days: 365
+        },
+        {
+            label: qsTr("2 años"),
+            days: 730
+        },
+        {
+            label: qsTr("5 años"),
+            days: 1825
+        },
+        {
+            label: qsTr("Sin caducidad"),
+            days: 0
+        }
     ]
     readonly property var usageOptions: [
-        { label: qsTr("Cifrar"), value: "encrypt" },
-        { label: qsTr("Firmar"), value: "sign" },
-        { label: qsTr("Autenticar"), value: "authenticate" }
+        {
+            label: qsTr("Cifrar"),
+            value: "encrypt"
+        },
+        {
+            label: qsTr("Firmar"),
+            value: "sign"
+        },
+        {
+            label: qsTr("Autenticar"),
+            value: "authenticate"
+        }
     ]
     readonly property var materialOptions: privateMaterialAvailable ? [
-        { label: qsTr("Pública y privada"), value: "both" },
-        { label: qsTr("Solo privada"), value: "private" }
+        {
+            label: qsTr("Pública y privada"),
+            value: "both"
+        },
+        {
+            label: qsTr("Solo privada"),
+            value: "private"
+        }
     ] : [
-        { label: qsTr("Solo pública"), value: "public" }
+        {
+            label: qsTr("Solo pública"),
+            value: "public"
+        }
     ]
-    readonly property var certifierOptions: keyStore.entries
-        .filter(key => key.hasSecret && key.canCertify && key.id.toUpperCase() !== normalizedFingerprint(fingerprint))
-        .map(key => ({ label: (key.title || qsTr("Sin nombre")) + " · " + key.id, fingerprint: key.id }))
+    readonly property var certifierOptions: keyStore.entries.filter(key => key.hasSecret && key.canCertify && key.id.toUpperCase() !== normalizedFingerprint(fingerprint)).map(key => ({
+                label: (key.title || qsTr("Sin nombre")) + " · " + key.id,
+                fingerprint: key.id
+            }))
     readonly property bool controllerBusy: keyStore.controller.busy || keyStore.controller.operationBusy
-    readonly property bool destructive: action === "revokeKey" || action === "revokeIdentity"
-        || action === "revokeSubkey" || action === "delete"
-    readonly property bool needsFile: action === "import" || action === "exportPublic"
-        || action === "backupPrivate" || action === "prepareRevocation"
+    readonly property bool destructive: action === "revokeKey" || action === "revokeIdentity" || action === "revokeSubkey" || action === "delete"
+    readonly property bool needsFile: action === "import" || action === "exportPublic" || action === "backupPrivate" || action === "prepareRevocation"
     readonly property bool privateBackupReady: action !== "backupPrivate" || privateBackupConfirmed
     readonly property bool consequenceReady: !destructive || consequenceConfirmed
-    readonly property bool canSubmit: !controllerBusy && !submitted && !completionMessage
-        && fingerprintReady() && privateBackupReady && consequenceReady && operationInputsReady()
+    readonly property bool canSubmit: !controllerBusy && !submitted && !completionMessage && fingerprintReady() && privateBackupReady && consequenceReady && operationInputsReady()
     property string completionMessage: ""
     property string completedFingerprint: ""
 
@@ -157,7 +194,9 @@ Controls.Dialog {
     }
 
     function requestObject() {
-        const request = { action: action };
+        const request = {
+            action: action
+        };
         if (action !== "create" && action !== "import")
             request.fingerprint = requestFingerprint();
         if (action === "create") {
@@ -209,7 +248,7 @@ Controls.Dialog {
         userIdField.text = "";
         fingerprintField.text = "";
         keyStore.controller.clearOperationError();
-        Qt.callLater(function() {
+        Qt.callLater(function () {
             serverCombo.currentIndex = 0;
             expiryCombo.currentIndex = 3;
             usageCombo.currentIndex = 0;
@@ -301,8 +340,7 @@ Controls.Dialog {
         id: scroll
         clip: true
         contentWidth: availableWidth
-        implicitHeight: Math.min(form.implicitHeight + Kirigami.Units.largeSpacing,
-                                 dialog.parent ? dialog.parent.height - Kirigami.Units.gridUnit * 10 : 480)
+        implicitHeight: Math.min(form.implicitHeight + Kirigami.Units.largeSpacing, dialog.parent ? dialog.parent.height - Kirigami.Units.gridUnit * 10 : 480)
 
         ColumnLayout {
             id: form
@@ -329,8 +367,7 @@ Controls.Dialog {
             }
 
             Controls.Button {
-                visible: !!dialog.completionMessage && !!dialog.completedFingerprint
-                    && (dialog.action === "import" || dialog.action === "refreshExternal")
+                visible: !!dialog.completionMessage && !!dialog.completedFingerprint && (dialog.action === "import" || dialog.action === "refreshExternal")
                 enabled: !dialog.keyStore.contactsController.busy
                 text: qsTr("Vincular a contacto de KDE…")
                 icon.name: "link"
@@ -379,7 +416,8 @@ Controls.Dialog {
                 enabled: !dialog.controllerBusy
                 placeholderText: qsTr("Nombre <correo@example.org>")
                 Accessible.name: qsTr("Nombre y correo de la identidad OpenPGP")
-                onAccepted: if (dialog.canSubmit) dialog.submit()
+                onAccepted: if (dialog.canSubmit)
+                    dialog.submit()
             }
             Controls.Label {
                 Layout.fillWidth: true
@@ -534,8 +572,7 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal"
                 enabled: !dialog.controllerBusy && dialog.keyStore.onlineSettings.enabled
-                model: dialog.keyStore.onlineSettings.keyservers.length
-                    ? dialog.keyStore.onlineSettings.keyservers : [qsTr("Configuración de GnuPG")]
+                model: dialog.keyStore.onlineSettings.keyservers.length ? dialog.keyStore.onlineSettings.keyservers : [qsTr("Configuración de GnuPG")]
                 Accessible.name: qsTr("Servidor de claves")
                 onModelChanged: currentIndex = 0
             }
@@ -610,9 +647,7 @@ Controls.Dialog {
                 visible: dialog.destructive
                 enabled: !dialog.controllerBusy
                 checked: dialog.consequenceConfirmed
-                text: dialog.action === "delete"
-                    ? qsTr("Entiendo que esto solo elimina material local y no revoca la clave")
-                    : qsTr("Entiendo la consecuencia permanente de esta revocación")
+                text: dialog.action === "delete" ? qsTr("Entiendo que esto solo elimina material local y no revoca la clave") : qsTr("Entiendo la consecuencia permanente de esta revocación")
                 onToggled: dialog.consequenceConfirmed = checked
             }
         }

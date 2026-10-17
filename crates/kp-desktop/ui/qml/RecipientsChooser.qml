@@ -30,9 +30,10 @@ ColumnLayout {
         const rows = [];
         for (const contact of contactRows) {
             for (const fingerprint of keyStore.contactFingerprints(contact)) {
-                if (Array.from(contactsController.recipientCandidates).includes(fingerprint)
-                        && encryptableKeys.some(key => key.id.toUpperCase() === fingerprint))
-                    rows.push(Object.assign({}, contact, { openPgpFingerprint: fingerprint }));
+                if (Array.from(contactsController.recipientCandidates).includes(fingerprint) && encryptableKeys.some(key => key.id.toUpperCase() === fingerprint))
+                    rows.push(Object.assign({}, contact, {
+                        openPgpFingerprint: fingerprint
+                    }));
             }
         }
         return rows;
@@ -45,8 +46,7 @@ ColumnLayout {
             modal: true
             standardButtons: Controls.Dialog.Cancel
             implicitWidth: Math.min(Kirigami.Units.gridUnit * 28, chooser.width)
-            implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding + header.implicitHeight + footer.implicitHeight,
-                                     parent ? parent.height - Kirigami.Units.gridUnit * 4 : 480)
+            implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding + header.implicitHeight + footer.implicitHeight, parent ? parent.height - Kirigami.Units.gridUnit * 4 : 480)
             x: parent ? (parent.width - width) / 2 : 0
             y: parent ? (parent.height - height) / 2 : 0
             onRejected: chooser.contactsController.clearRecipientSelection()
@@ -98,7 +98,6 @@ ColumnLayout {
                 }
             }
         }
-
     }
     signal selectionChanged(var fingerprints)
 

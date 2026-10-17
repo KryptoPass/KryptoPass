@@ -12,7 +12,8 @@
 
 #include <algorithm>
 
-namespace {
+namespace
+{
 
 constexpr int kDefaultAutoClearSeconds = 30;
 constexpr int kMaximumAutoClearSeconds = 24 * 60 * 60;
@@ -149,9 +150,7 @@ private:
         }
 
         const QMimeData *mimeData = clipboard_->mimeData(QClipboard::Clipboard);
-        return mimeData && mimeData->hasText()
-            && mimeData->data(QLatin1String(kOwnedTokenMimeType)) == ownedToken_
-            && mimeData->text() == ownedText_;
+        return mimeData && mimeData->hasText() && mimeData->data(QLatin1String(kOwnedTokenMimeType)) == ownedToken_ && mimeData->text() == ownedText_;
     }
 
     void clearIfStillOwned()
@@ -204,7 +203,8 @@ ClipboardGuard *guard()
 
 } // namespace
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 
 bool copy_sensitive(const QString &text, int auto_clear_seconds)
 {

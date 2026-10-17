@@ -39,21 +39,111 @@ ColumnLayout {
     spacing: Kirigami.Units.smallSpacing
 
     readonly property var toolbarActions: [
-        { name: "undo", suffix: "UndoButton", label: qsTr("Deshacer"), icon: "edit-undo", tip: qsTr("Deshacer") },
-        { name: "redo", suffix: "RedoButton", label: qsTr("Rehacer"), icon: "edit-redo", tip: qsTr("Rehacer") },
-        { name: "bold", suffix: "BoldButton", label: qsTr("Negrita"), icon: "format-text-bold", tip: qsTr("Negrita · Ctrl+B") },
-        { name: "italic", suffix: "ItalicButton", label: qsTr("Cursiva"), icon: "format-text-italic", tip: qsTr("Cursiva · Ctrl+I") },
-        { name: "strike", suffix: "StrikeButton", label: qsTr("Tachado"), icon: "format-text-strikethrough", tip: qsTr("Tachado") },
-        { name: "heading", suffix: "HeadingButton", label: qsTr("Encabezado"), icon: "format-text-uppercase", tip: qsTr("Encabezado de nivel 2") },
-        { name: "bulletList", suffix: "BulletListButton", label: qsTr("Lista con viñetas"), icon: "format-list-unordered", tip: qsTr("Lista con viñetas") },
-        { name: "orderedList", suffix: "OrderedListButton", label: qsTr("Lista numerada"), icon: "format-list-ordered", tip: qsTr("Lista numerada") },
-        { name: "taskList", suffix: "TaskListButton", label: qsTr("Lista de tareas"), icon: "view-task", tip: qsTr("Lista de tareas") },
-        { name: "quote", suffix: "QuoteButton", label: qsTr("Cita"), icon: "format-text-blockquote", tip: qsTr("Cita") },
-        { name: "inlineCode", suffix: "InlineCodeButton", label: qsTr("Código en línea"), icon: "format-text-code", tip: qsTr("Código en línea") },
-        { name: "codeBlock", suffix: "CodeBlockButton", label: qsTr("Bloque de código"), icon: "code-context", tip: qsTr("Bloque de código") },
-        { name: "link", suffix: "LinkButton", label: qsTr("Insertar enlace"), icon: "insert-link", tip: qsTr("Insertar enlace · Ctrl+K") },
-        { name: "spoiler", suffix: "SpoilerButton", label: qsTr("Insertar spoiler"), icon: "view-hidden", tip: qsTr("Insertar spoiler") },
-        { name: "highlight", suffix: "HighlightButton", label: qsTr("Resaltar"), icon: "draw-highlight", tip: qsTr("Resaltar") }
+        {
+            name: "undo",
+            suffix: "UndoButton",
+            label: qsTr("Deshacer"),
+            icon: "edit-undo",
+            tip: qsTr("Deshacer")
+        },
+        {
+            name: "redo",
+            suffix: "RedoButton",
+            label: qsTr("Rehacer"),
+            icon: "edit-redo",
+            tip: qsTr("Rehacer")
+        },
+        {
+            name: "bold",
+            suffix: "BoldButton",
+            label: qsTr("Negrita"),
+            icon: "format-text-bold",
+            tip: qsTr("Negrita · Ctrl+B")
+        },
+        {
+            name: "italic",
+            suffix: "ItalicButton",
+            label: qsTr("Cursiva"),
+            icon: "format-text-italic",
+            tip: qsTr("Cursiva · Ctrl+I")
+        },
+        {
+            name: "strike",
+            suffix: "StrikeButton",
+            label: qsTr("Tachado"),
+            icon: "format-text-strikethrough",
+            tip: qsTr("Tachado")
+        },
+        {
+            name: "heading",
+            suffix: "HeadingButton",
+            label: qsTr("Encabezado"),
+            icon: "format-text-uppercase",
+            tip: qsTr("Encabezado de nivel 2")
+        },
+        {
+            name: "bulletList",
+            suffix: "BulletListButton",
+            label: qsTr("Lista con viñetas"),
+            icon: "format-list-unordered",
+            tip: qsTr("Lista con viñetas")
+        },
+        {
+            name: "orderedList",
+            suffix: "OrderedListButton",
+            label: qsTr("Lista numerada"),
+            icon: "format-list-ordered",
+            tip: qsTr("Lista numerada")
+        },
+        {
+            name: "taskList",
+            suffix: "TaskListButton",
+            label: qsTr("Lista de tareas"),
+            icon: "view-task",
+            tip: qsTr("Lista de tareas")
+        },
+        {
+            name: "quote",
+            suffix: "QuoteButton",
+            label: qsTr("Cita"),
+            icon: "format-text-blockquote",
+            tip: qsTr("Cita")
+        },
+        {
+            name: "inlineCode",
+            suffix: "InlineCodeButton",
+            label: qsTr("Código en línea"),
+            icon: "format-text-code",
+            tip: qsTr("Código en línea")
+        },
+        {
+            name: "codeBlock",
+            suffix: "CodeBlockButton",
+            label: qsTr("Bloque de código"),
+            icon: "code-context",
+            tip: qsTr("Bloque de código")
+        },
+        {
+            name: "link",
+            suffix: "LinkButton",
+            label: qsTr("Insertar enlace"),
+            icon: "insert-link",
+            tip: qsTr("Insertar enlace · Ctrl+K")
+        },
+        {
+            name: "spoiler",
+            suffix: "SpoilerButton",
+            label: qsTr("Insertar spoiler"),
+            icon: "view-hidden",
+            tip: qsTr("Insertar spoiler")
+        },
+        {
+            name: "highlight",
+            suffix: "HighlightButton",
+            label: qsTr("Resaltar"),
+            icon: "draw-highlight",
+            tip: qsTr("Resaltar")
+        }
     ]
 
     function clearPreview() {
@@ -112,19 +202,13 @@ ColumnLayout {
         const end = sourceEditor.selectionEnd;
         const selected = end > start ? sourceEditor.getText(start, end) : "";
         const source = sourceEditor.text;
-        const adjacentOpening = start > opening.length
-            ? source.substring(start - opening.length - 1, start - opening.length) : "";
+        const adjacentOpening = start > opening.length ? source.substring(start - opening.length - 1, start - opening.length) : "";
         const adjacentClosing = source.substring(end + closing.length, end + closing.length + 1);
 
-        if (end > start && start >= opening.length
-                && source.substring(start - opening.length, start) === opening
-                && source.substring(end, end + closing.length) === closing
-                && adjacentOpening !== opening.charAt(0)
-                && adjacentClosing !== closing.charAt(0)) {
+        if (end > start && start >= opening.length && source.substring(start - opening.length, start) === opening && source.substring(end, end + closing.length) === closing && adjacentOpening !== opening.charAt(0) && adjacentClosing !== closing.charAt(0)) {
             root.replaceText(start - opening.length, end + closing.length, selected);
             sourceEditor.select(start - opening.length, start - opening.length + selected.length);
-        } else if (selected.length >= opening.length + closing.length
-                && selected.startsWith(opening) && selected.endsWith(closing)) {
+        } else if (selected.length >= opening.length + closing.length && selected.startsWith(opening) && selected.endsWith(closing)) {
             const inner = selected.substring(opening.length, selected.length - closing.length);
             root.replaceText(start, end, inner);
             sourceEditor.select(start, start + inner.length);
@@ -216,21 +300,51 @@ ColumnLayout {
 
     function performAction(name) {
         switch (name) {
-        case "undo": sourceEditor.undo(); break;
-        case "redo": sourceEditor.redo(); break;
-        case "bold": root.toggleInline("**", "**"); break;
-        case "italic": root.toggleInline("*", "*"); break;
-        case "strike": root.toggleInline("~~", "~~"); break;
-        case "heading": root.applyHeading(); break;
-        case "bulletList": root.applyPrefix("- ", line => /^[-*+]\s/.test(line), line => line.replace(/^[-*+]\s/, "")); break;
-        case "orderedList": root.applyPrefix("1. ", line => /^\d+\.\s/.test(line), line => line.replace(/^\d+\.\s/, "")); break;
-        case "taskList": root.applyPrefix("- [ ] ", line => /^- \[ \]\s/.test(line), line => line.replace(/^- \[ \]\s/, "")); break;
-        case "quote": root.applyPrefix("> ", line => /^>\s/.test(line), line => line.replace(/^>\s/, "")); break;
-        case "inlineCode": root.toggleInline("`", "`"); break;
-        case "codeBlock": root.toggleCodeBlock(); break;
-        case "link": root.insertLink(); break;
-        case "spoiler": root.toggleInline("||", "||"); break;
-        case "highlight": root.toggleInline("==", "=="); break;
+        case "undo":
+            sourceEditor.undo();
+            break;
+        case "redo":
+            sourceEditor.redo();
+            break;
+        case "bold":
+            root.toggleInline("**", "**");
+            break;
+        case "italic":
+            root.toggleInline("*", "*");
+            break;
+        case "strike":
+            root.toggleInline("~~", "~~");
+            break;
+        case "heading":
+            root.applyHeading();
+            break;
+        case "bulletList":
+            root.applyPrefix("- ", line => /^[-*+]\s/.test(line), line => line.replace(/^[-*+]\s/, ""));
+            break;
+        case "orderedList":
+            root.applyPrefix("1. ", line => /^\d+\.\s/.test(line), line => line.replace(/^\d+\.\s/, ""));
+            break;
+        case "taskList":
+            root.applyPrefix("- [ ] ", line => /^- \[ \]\s/.test(line), line => line.replace(/^- \[ \]\s/, ""));
+            break;
+        case "quote":
+            root.applyPrefix("> ", line => /^>\s/.test(line), line => line.replace(/^>\s/, ""));
+            break;
+        case "inlineCode":
+            root.toggleInline("`", "`");
+            break;
+        case "codeBlock":
+            root.toggleCodeBlock();
+            break;
+        case "link":
+            root.insertLink();
+            break;
+        case "spoiler":
+            root.toggleInline("||", "||");
+            break;
+        case "highlight":
+            root.toggleInline("==", "==");
+            break;
         }
     }
 
@@ -289,7 +403,9 @@ ColumnLayout {
             Accessible.name: qsTr("Previsualizar Markdown")
             onClicked: root.setPreviewMode(true)
         }
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
     }
 
     Flow {
@@ -310,8 +426,7 @@ ColumnLayout {
                 padding: Kirigami.Units.smallSpacing
                 display: Controls.AbstractButton.IconOnly
                 icon.name: toolButton.modelData.icon
-                enabled: toolButton.modelData.name === "undo" ? sourceEditor.canUndo
-                       : toolButton.modelData.name === "redo" ? sourceEditor.canRedo : true
+                enabled: toolButton.modelData.name === "undo" ? sourceEditor.canUndo : toolButton.modelData.name === "redo" ? sourceEditor.canRedo : true
                 activeFocusOnTab: true
                 Accessible.name: toolButton.modelData.label
                 Controls.ToolTip.visible: hovered || visualFocus
@@ -337,8 +452,8 @@ ColumnLayout {
             contentWidth: availableWidth
 
             Controls.TextArea {
-                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 id: sourceEditor
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 objectName: root.objectNamePrefix + "SourceEditor"
                 width: sourceScroll.availableWidth
                 implicitHeight: Math.max(root.editorMinimumHeight, contentHeight + topPadding + bottomPadding)

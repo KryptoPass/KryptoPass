@@ -30,13 +30,25 @@ Controls.ItemDelegate {
 
     function folderPlacement(y) {
         if (y < height * 0.25)
-            return { parent: parentFolderId, before: scopeId, edge: "before" };
+            return {
+                parent: parentFolderId,
+                before: scopeId,
+                edge: "before"
+            };
         if (y > height * 0.75) {
             const siblings = dropStore.folderRows.filter(folder => folder.parent === parentFolderId);
             const index = siblings.findIndex(folder => folder.id === scopeId);
-            return { parent: parentFolderId, before: index + 1 < siblings.length ? siblings[index + 1].id : "", edge: "after" };
+            return {
+                parent: parentFolderId,
+                before: index + 1 < siblings.length ? siblings[index + 1].id : "",
+                edge: "after"
+            };
         }
-        return { parent: scopeId, before: "", edge: "inside" };
+        return {
+            parent: scopeId,
+            before: "",
+            edge: "inside"
+        };
     }
     function canDropFolder(source, y) {
         if (!acceptsFolderDrop || !acceptsSource(source) || !source.folderId || source.folderId === scopeId)
@@ -81,9 +93,9 @@ Controls.ItemDelegate {
         readonly property var storeAdapter: root.dropStore
         visible: Drag.active
         z: 1000
-        width: folderLabel.width + 24
-        height: folderLabel.implicitHeight + 16
-        radius: 6
+        width: folderLabel.width + Kirigami.Units.largeSpacing * 2
+        height: folderLabel.implicitHeight + Kirigami.Units.smallSpacing * 4
+        radius: Kirigami.Units.cornerRadius
         color: Kirigami.Theme.backgroundColor
         border.color: Kirigami.Theme.highlightColor
         Drag.source: folderPreview
@@ -93,7 +105,7 @@ Controls.ItemDelegate {
         Controls.Label {
             id: folderLabel
             anchors.centerIn: parent
-            width: Math.min(implicitWidth, 240)
+            width: Math.min(implicitWidth, Kirigami.Units.gridUnit * 14)
             text: root.text
             textFormat: Text.PlainText
             elide: Text.ElideRight
@@ -106,17 +118,17 @@ Controls.ItemDelegate {
         keys: ["org.kryptopass.folder"]
         property string edge: "inside"
         property bool validTarget: false
-        onEntered: function(drag) {
+        onEntered: function (drag) {
             validTarget = root.canDropFolder(drag.source, drag.y);
             edge = root.folderPlacement(drag.y).edge;
             drag.accepted = root.acceptsSource(drag.source);
         }
-        onPositionChanged: function(drag) {
+        onPositionChanged: function (drag) {
             validTarget = root.canDropFolder(drag.source, drag.y);
             edge = root.folderPlacement(drag.y).edge;
         }
         onExited: validTarget = false
-        onDropped: function(drop) {
+        onDropped: function (drop) {
             if (!root.canDropFolder(drop.source, drop.y))
                 return;
             const placement = root.folderPlacement(drop.y);
@@ -131,10 +143,10 @@ Controls.ItemDelegate {
         anchors.fill: parent
         enabled: root.acceptsEntryDrop
         keys: ["org.kryptopass.entry"]
-        onEntered: function(drag) {
+        onEntered: function (drag) {
             drag.accepted = root.acceptsSource(drag.source);
         }
-        onDropped: function(drop) {
+        onDropped: function (drop) {
             if (!root.acceptsEntryDrop || !root.acceptsSource(drop.source))
                 return;
             const entry = root.dropStore.entries.find(candidate => candidate.id === drop.source.entryId);
@@ -167,11 +179,7 @@ Controls.ItemDelegate {
     onClicked: root.scopeSelected(scopeId)
     Controls.ToolTip.visible: (folderDrop.containsDrag && folderDrop.validTarget) || (folderDraggingEnabled && hovered && !folderDrag.active)
     Controls.ToolTip.delay: folderDrop.containsDrag ? 0 : Kirigami.Units.toolTipDelay
-    Controls.ToolTip.text: folderDrop.containsDrag
-            ? folderDrop.edge === "inside" ? qsTr("Mover dentro de «%1»").arg(text)
-            : folderDrop.edge === "before" ? qsTr("Colocar antes de «%1»").arg(text)
-            : qsTr("Colocar después de «%1» y sus subcarpetas").arg(text)
-            : qsTr("Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para anidar, o en un borde para ordenar.")
+    Controls.ToolTip.text: folderDrop.containsDrag ? folderDrop.edge === "inside" ? qsTr("Mover dentro de «%1»").arg(text) : folderDrop.edge === "before" ? qsTr("Colocar antes de «%1»").arg(text) : qsTr("Colocar después de «%1» y sus subcarpetas").arg(text) : qsTr("Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para anidar, o en un borde para ordenar.")
 
     contentItem: RowLayout {
         FolderIcon {

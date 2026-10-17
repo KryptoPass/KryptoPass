@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Capture the real application using an empty, isolated user profile."""
+import argparse
 import os
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 from metadata import ROOT, desktop_binary
 
-output = ROOT / "packaging/screenshots/vault.png"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--about", action="store_true", help="Open About before capturing")
+parser.add_argument("--output", type=Path, default=ROOT / "packaging/screenshots/vault.png")
+args = parser.parse_args()
+output = args.output.resolve()
 output.parent.mkdir(parents=True, exist_ok=True)
 with TemporaryDirectory(prefix="kryptopass-screenshot-") as temporary:
     profile = Path(temporary)
@@ -15,4 +20,8 @@ with TemporaryDirectory(prefix="kryptopass-screenshot-") as temporary:
         path = profile / name
         path.mkdir(mode=0o700)
         environment[variable] = str(path)
-    subprocess.run([str(desktop_binary()), "--screenshot", str(output)], env=environment, check=True, timeout=20)
+    command = [str(desktop_binary()), "--screenshot", str(output)]
+    if args.about:
+        command.append("--screenshot-about")
+    subprocess.run(command, env=environment, check=True, timeout=20)
+print(output)

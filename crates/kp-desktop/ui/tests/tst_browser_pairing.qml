@@ -59,8 +59,14 @@ TestCase {
 
     function test_incoming_token_opens_with_rejection_focused_and_enter_denies_data() {
         return [
-            { tag: "enter", key: Qt.Key_Enter },
-            { tag: "return", key: Qt.Key_Return }
+            {
+                tag: "enter",
+                key: Qt.Key_Enter
+            },
+            {
+                tag: "return",
+                key: Qt.Key_Return
+            }
         ];
     }
 
@@ -83,8 +89,16 @@ TestCase {
 
     function test_buttons_emit_the_selected_decision_for_the_current_token_data() {
         return [
-            { tag: "reject", label: "Rechazar conexión", approve: false },
-            { tag: "approve", label: "Vincular navegador", approve: true }
+            {
+                tag: "reject",
+                label: "Rechazar conexión",
+                approve: false
+            },
+            {
+                tag: "approve",
+                label: "Vincular navegador",
+                approve: true
+            }
         ];
     }
 
@@ -152,8 +166,7 @@ TestCase {
         message.font.pixelSize = Math.max(24, message.font.pixelSize * 1.5);
         tryVerify(() => message.lineCount > 1 && !message.truncated);
 
-        verify(message.height >= message.implicitHeight - 1,
-            "The full browser-pairing message should fit at the larger font size");
+        verify(message.height >= message.implicitHeight - 1, "The full browser-pairing message should fit at the larger font size");
         dialog.requestToken = "";
         tryCompare(dialog, "visible", false);
     }

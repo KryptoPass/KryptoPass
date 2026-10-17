@@ -34,17 +34,21 @@ SecretFields {
         bytes[6] = (bytes[6] & 0x0f) | 0x40;
         bytes[8] = (bytes[8] & 0x3f) | 0x80;
         const hex = bytes.map(value => (value < 16 ? "0" : "") + value.toString(16));
-        return hex.slice(0, 4).join("") + "-" + hex.slice(4, 6).join("") + "-"
-            + hex.slice(6, 8).join("") + "-" + hex.slice(8, 10).join("") + "-"
-            + hex.slice(10, 16).join("");
+        return hex.slice(0, 4).join("") + "-" + hex.slice(4, 6).join("") + "-" + hex.slice(6, 8).join("") + "-" + hex.slice(8, 10).join("") + "-" + hex.slice(10, 16).join("");
     }
 
     function addDocument() {
         if (documentModel.count >= maximumDocuments)
             return;
-        documentModel.append({ documentId: createDocumentId(), documentType: "", number: "", country: "", expires: "" });
+        documentModel.append({
+            documentId: createDocumentId(),
+            documentType: "",
+            number: "",
+            country: "",
+            expires: ""
+        });
         syncDocuments();
-        Qt.callLater(function() {
+        Qt.callLater(function () {
             const document = documentRepeater.itemAt(documentRepeater.count - 1);
             if (document)
                 document.focusTypeField();
@@ -94,12 +98,12 @@ SecretFields {
         firstName = String(fields.firstName || "");
         lastName = String(fields.lastName || "");
         const normalizedDocuments = (Array.isArray(fields.documents) ? fields.documents : []).map(document => ({
-            id: String(document.id || createDocumentId()),
-            documentType: String(document.documentType || ""),
-            number: String(document.number || ""),
-            country: String(document.country || ""),
-            expires: String(document.expires || "")
-        }));
+                    id: String(document.id || createDocumentId()),
+                    documentType: String(document.documentType || ""),
+                    number: String(document.number || ""),
+                    country: String(document.country || ""),
+                    expires: String(document.expires || "")
+                }));
         documentModel.clear();
         for (const document of normalizedDocuments) {
             documentModel.append({
@@ -123,12 +127,12 @@ SecretFields {
             firstName: firstName,
             lastName: lastName,
             documents: documents.map(document => ({
-                id: document.id,
-                documentType: document.documentType,
-                number: document.number,
-                country: document.country,
-                expires: document.expires
-            })),
+                        id: document.id,
+                        documentType: document.documentType,
+                        number: document.number,
+                        country: document.country,
+                        expires: document.expires
+                    })),
             emails: emails.slice(),
             phones: phones.slice(),
             address: address,
@@ -136,7 +140,9 @@ SecretFields {
         };
     }
 
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        loadFields({});
+    }
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -156,13 +162,17 @@ SecretFields {
                 Layout.fillWidth: true
                 label: qsTr("Nombre")
                 value: root.firstName
-                onValueEdited: function(value) { root.firstName = value; }
+                onValueEdited: function (value) {
+                    root.firstName = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
                 label: qsTr("Apellidos")
                 value: root.lastName
-                onValueEdited: function(value) { root.lastName = value; }
+                onValueEdited: function (value) {
+                    root.lastName = value;
+                }
             }
         }
 
@@ -198,7 +208,9 @@ SecretFields {
                     Layout.fillWidth: true
                     padding: Kirigami.Units.largeSpacing
 
-                    function focusTypeField() { documentTypeField.forceActiveFocus(); }
+                    function focusTypeField() {
+                        documentTypeField.forceActiveFocus();
+                    }
                     contentItem: ColumnLayout {
                         spacing: Kirigami.Units.smallSpacing
                         RowLayout {
@@ -248,27 +260,35 @@ SecretFields {
                                 Layout.fillWidth: true
                                 label: qsTr("Tipo de documento")
                                 value: documentFrame.documentType
-                                onValueEdited: function(value) { root.updateDocument(documentFrame.index, "documentType", value); }
+                                onValueEdited: function (value) {
+                                    root.updateDocument(documentFrame.index, "documentType", value);
+                                }
                             }
                             SecretInput {
                                 Layout.fillWidth: true
                                 label: qsTr("Número")
                                 value: documentFrame.number
                                 concealed: true
-                                onValueEdited: function(value) { root.updateDocument(documentFrame.index, "number", value); }
+                                onValueEdited: function (value) {
+                                    root.updateDocument(documentFrame.index, "number", value);
+                                }
                             }
                             SecretInput {
                                 Layout.fillWidth: true
                                 label: qsTr("País o región")
                                 value: documentFrame.country
-                                onValueEdited: function(value) { root.updateDocument(documentFrame.index, "country", value); }
+                                onValueEdited: function (value) {
+                                    root.updateDocument(documentFrame.index, "country", value);
+                                }
                             }
                             SecretInput {
                                 Layout.fillWidth: true
                                 label: qsTr("Fecha de vencimiento")
                                 value: documentFrame.expires
                                 placeholderText: qsTr("Fecha opcional")
-                                onValueEdited: function(value) { root.updateDocument(documentFrame.index, "expires", value); }
+                                onValueEdited: function (value) {
+                                    root.updateDocument(documentFrame.index, "expires", value);
+                                }
                             }
                         }
                     }
@@ -290,7 +310,9 @@ SecretFields {
             addLabel: qsTr("Agregar correo")
             maximumValues: 100
             values: root.emails
-            onValuesEdited: function(values) { root.emails = values; }
+            onValuesEdited: function (values) {
+                root.emails = values;
+            }
         }
         StringListEditor {
             objectName: "identityPhonesEditor"
@@ -300,14 +322,18 @@ SecretFields {
             addLabel: qsTr("Agregar teléfono")
             maximumValues: 100
             values: root.phones
-            onValuesEdited: function(values) { root.phones = values; }
+            onValuesEdited: function (values) {
+                root.phones = values;
+            }
         }
         SecretInput {
             Layout.fillWidth: true
             label: qsTr("Dirección")
             value: root.address
             multiline: true
-            onValueEdited: function(value) { root.address = value; }
+            onValueEdited: function (value) {
+                root.address = value;
+            }
         }
         NotesEditor {
             id: notesEditor

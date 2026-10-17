@@ -26,7 +26,10 @@ TestCase {
     }
 
     function typeRows() {
-        return EntryTypes.options.map(option => ({ tag: option.id, option: option }));
+        return EntryTypes.options.map(option => ({
+                    tag: option.id,
+                    option: option
+                }));
     }
 
     function child(parent, name) {
@@ -36,7 +39,9 @@ TestCase {
     }
 
     function createEditor(option) {
-        const editor = createTemporaryObject(option.editor, testCase, { width: 1000 });
+        const editor = createTemporaryObject(option.editor, testCase, {
+            width: 1000
+        });
         verify(editor !== null, option.id + " editor");
         return editor;
     }
@@ -64,8 +69,7 @@ TestCase {
     }
 
     function compareCleared(document) {
-        compare(document.html, "",
-            "The fixture observes lifecycle calls without implementing Rust rendering");
+        compare(document.html, "", "The fixture observes lifecycle calls without implementing Rust rendering");
         compare(document.spoilerActions, []);
         compare(document.revealedActions, []);
     }
@@ -78,14 +82,15 @@ TestCase {
         const form = createEditor(row.option);
         const editor = child(form, "markdownNotesEditor");
         verify(editor instanceof MarkdownEditor);
-        verify(editor.parent instanceof NotesEditor,
-            "Every entry type must use the shared notes component");
+        verify(editor.parent instanceof NotesEditor, "Every entry type must use the shared notes component");
         const sourceEditor = child(editor, "markdownNotesSourceEditor");
         const document = child(editor, "markdownNotesPreviewDocument");
         const spy = sourceSpy(editor);
         const source = "Mañana 🌙\n\n# Recuperación\n||privado||\n<div>literal & texto</div>";
 
-        form.loadFields({ notes: source });
+        form.loadFields({
+            notes: source
+        });
         compare(sourceEditor.text, source);
         compare(editor.sourceText, source);
         compare(form.currentFields().notes, source);
@@ -115,15 +120,16 @@ TestCase {
         const clears = document.clearCount;
         const edits = spy.count;
 
-        form.loadFields({ notes: formatted });
+        form.loadFields({
+            notes: formatted
+        });
         compare(sourceEditor.text, formatted);
         compare(form.currentFields().notes, formatted);
         compare(spy.count, edits, "An identical-source load must not emit a user edit");
         verify(!editor.previewMode);
         verify(document.clearCount > clears);
         compareCleared(document);
-        verify(!sourceEditor.canUndo && !sourceEditor.canRedo,
-            "Even identical source must start a fresh native undo history");
+        verify(!sourceEditor.canUndo && !sourceEditor.canRedo, "Even identical source must start a fresh native undo history");
         sourceEditor.forceActiveFocus();
         keyClick(Qt.Key_Z, Qt.ControlModifier);
         keyClick(Qt.Key_Y, Qt.ControlModifier);
@@ -141,7 +147,9 @@ TestCase {
         const editor = child(form, "markdownNotesEditor");
         const sourceEditor = child(editor, "markdownNotesSourceEditor");
         const spy = sourceSpy(editor);
-        form.loadFields({ notes: "" });
+        form.loadFields({
+            notes: ""
+        });
         compare(spy.count, 0);
 
         sourceEditor.forceActiveFocus();
@@ -153,10 +161,11 @@ TestCase {
         verify(sourceEditor.canUndo, "Deleting a draft must first leave an undo record");
         const edits = spy.count;
 
-        form.loadFields({ notes: "" });
+        form.loadFields({
+            notes: ""
+        });
         compare(spy.count, edits);
-        verify(!sourceEditor.canUndo && !sourceEditor.canRedo,
-            "An identical empty load must discard restoration of a deleted draft");
+        verify(!sourceEditor.canUndo && !sourceEditor.canRedo, "An identical empty load must discard restoration of a deleted draft");
         keyClick(Qt.Key_Z, Qt.ControlModifier);
         keyClick(Qt.Key_Y, Qt.ControlModifier);
         compare(sourceEditor.text, "");
@@ -173,7 +182,9 @@ TestCase {
         const sourceEditor = child(editor, "markdownNotesSourceEditor");
         const document = child(editor, "markdownNotesPreviewDocument");
         const source = "## Contexto\n||secreto||";
-        form.loadFields({ notes: source });
+        form.loadFields({
+            notes: source
+        });
         activate(editor, "markdownNotesModeButton");
         tryVerify(() => document.loadCount > 0, 3000);
         seedRevealedSpoiler(document);
@@ -214,8 +225,7 @@ TestCase {
         keyClick(Qt.Key_Z, Qt.ControlModifier);
         compare(sourceEditor.text, "", "Undo must not restore cleared notes");
         wait(180);
-        compare(document.loadCount, loadsBeforeClear,
-            "A preview queued before clearFields must stay canceled");
+        compare(document.loadCount, loadsBeforeClear, "A preview queued before clearFields must stay canceled");
     }
 
     function test_every_notes_detail_uses_shared_renderer_and_entry_lifecycle_data() {
@@ -223,21 +233,25 @@ TestCase {
     }
 
     function test_every_notes_detail_uses_shared_renderer_and_entry_lifecycle(row) {
-        const host = createTemporaryObject(hostComponent, testCase, { width: 1000 });
+        const host = createTemporaryObject(hostComponent, testCase, {
+            width: 1000
+        });
         verify(host !== null);
         const source = "**Contexto**\n||privado||\n<span>literal & texto</span>";
         const detail = createTemporaryObject(row.option.detail, host, {
             width: 1000,
-            fields: { value: "# Contenido", notes: source, rows: [] },
+            fields: {
+                value: "# Contenido",
+                notes: source,
+                rows: []
+            },
             entryId: "first-entry"
         });
         verify(detail !== null);
         const section = child(detail, "markdownNotesSection");
         verify(section instanceof SecretTextSection);
-        const document = child(section, row.option.id === "note"
-            ? "markdownNotesDetailDocument" : "markdownSectionDocument");
-        const view = child(section, row.option.id === "note"
-            ? "markdownNotesDetailView" : "markdownSectionView");
+        const document = child(section, row.option.id === "note" ? "markdownNotesDetailDocument" : "markdownSectionDocument");
+        const view = child(section, row.option.id === "note" ? "markdownNotesDetailView" : "markdownSectionView");
         verify(view instanceof MarkdownView);
         compare(view.document, document);
         tryVerify(() => document.loadCount > 0, 3000);
@@ -251,16 +265,18 @@ TestCase {
             value: "# Changed unrelated content",
             notes: source,
             rows: [],
-            totp: { currentCode: "123456", period: 30, remainingSeconds: 14 },
+            totp: {
+                currentCode: "123456",
+                period: 30,
+                remainingSeconds: 14
+            },
             hasQr: false
         };
         wait(180);
-        compare(document.loadCount, loadsBeforeRefresh,
-            "Refreshing unrelated fields must preserve the current notes document");
+        compare(document.loadCount, loadsBeforeRefresh, "Refreshing unrelated fields must preserve the current notes document");
         compare(document.clearCount, clearsBeforeRefresh);
         compare(document.spoilerActions, ["spoiler:test"]);
-        compare(document.revealedActions, ["spoiler:test"],
-            "A TOTP or metadata refresh must preserve revealed notes for the same entry");
+        compare(document.revealedActions, ["spoiler:test"], "A TOTP or metadata refresh must preserve revealed notes for the same entry");
 
         seedRevealedSpoiler(document);
         const initialLoads = document.loadCount;
@@ -275,15 +291,17 @@ TestCase {
         const loadsBeforeHide = document.loadCount;
         const clearsBeforeHide = document.clearCount;
         host.visible = false;
-        verify(document.clearCount > clearsBeforeHide,
-            "Hiding an ancestor must clear the rendered notes and revealed spoilers");
+        verify(document.clearCount > clearsBeforeHide, "Hiding an ancestor must clear the rendered notes and revealed spoilers");
         compareCleared(document);
         detail.entryId = "third-entry";
         const changedSource = source + "\n- siguiente";
-        detail.fields = { value: "# Otro contenido", notes: changedSource, rows: [] };
+        detail.fields = {
+            value: "# Otro contenido",
+            notes: changedSource,
+            rows: []
+        };
         wait(180);
-        compare(document.loadCount, loadsBeforeHide,
-            "Neither entry nor field changes may load a hidden document");
+        compare(document.loadCount, loadsBeforeHide, "Neither entry nor field changes may load a hidden document");
 
         host.visible = true;
         tryVerify(() => document.loadCount > loadsBeforeHide, 3000);
@@ -291,7 +309,11 @@ TestCase {
         compareCleared(document);
         seedRevealedSpoiler(document);
         const clearsBeforeEmpty = document.clearCount;
-        detail.fields = { value: "# Otro contenido", notes: "", rows: [] };
+        detail.fields = {
+            value: "# Otro contenido",
+            notes: "",
+            rows: []
+        };
         verify(document.clearCount > clearsBeforeEmpty);
         compareCleared(document);
         verify(!section.visible);
@@ -300,7 +322,9 @@ TestCase {
     function test_login_history_notes_reload_same_source_for_each_version_and_entry() {
         const detail = createTemporaryObject(EntryTypes.find("login").detail, testCase, {
             width: 1000,
-            fields: { notes: "Current context" },
+            fields: {
+                notes: "Current context"
+            },
             entryId: "first-entry"
         });
         verify(detail !== null);
@@ -312,7 +336,12 @@ TestCase {
         compare(view.document, document);
         compare(document.loadCount, 0, "Closed history must not project version notes");
         const source = "## Histórico\n||contexto anterior||";
-        const version = { index: 0, at: 1700000000, passwordOnly: false, notes: source };
+        const version = {
+            index: 0,
+            at: 1700000000,
+            passwordOnly: false,
+            notes: source
+        };
 
         detail.versionDetail = version;
         tryVerify(() => document.loadCount > 0, 3000);
@@ -320,7 +349,9 @@ TestCase {
         seedRevealedSpoiler(document);
         const firstLoads = document.loadCount;
         const firstClears = document.clearCount;
-        detail.versionDetail = Object.assign({}, version, { index: 1 });
+        detail.versionDetail = Object.assign({}, version, {
+            index: 1
+        });
         tryVerify(() => document.loadCount > firstLoads, 3000);
         verify(document.clearCount > firstClears);
         compare(document.lastLoadedSource, source);
@@ -346,7 +377,9 @@ TestCase {
         tryVerify(() => document.loadCount > loadsBeforeHide, 3000);
         seedRevealedSpoiler(document);
 
-        detail.versionDetail = Object.assign({}, version, { passwordOnly: true });
+        detail.versionDetail = Object.assign({}, version, {
+            passwordOnly: true
+        });
         tryCompare(section, "visible", false);
         compareCleared(document);
         const loadsWhilePasswordOnly = document.loadCount;

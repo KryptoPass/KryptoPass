@@ -31,7 +31,9 @@ TestCase {
     function createEditor(kind) {
         const option = EntryTypes.find(kind);
         verify(option !== null, "missing editor option for " + kind);
-        const editor = createTemporaryObject(option.editor, testCase, { width: 720 });
+        const editor = createTemporaryObject(option.editor, testCase, {
+            width: 720
+        });
         verify(editor !== null, "could not create editor for " + kind);
         return editor;
     }
@@ -67,9 +69,7 @@ TestCase {
     function findDetailField(root, label) {
         if (!root)
             return null;
-        if (typeof root.copyRequested === "function"
-                && typeof root.revealRequested === "function"
-                && root.label === label) {
+        if (typeof root.copyRequested === "function" && typeof root.revealRequested === "function" && root.label === label) {
             return root;
         }
         const children = root.children || [];
@@ -97,7 +97,10 @@ TestCase {
 
     function test_custom_records_add_move_remove_and_clear() {
         const editor = createEditor("custom");
-        compare(editor.currentFields(), { records: [], notes: "" });
+        compare(editor.currentFields(), {
+            records: [],
+            notes: ""
+        });
 
         editor.addRecord();
         const firstId = editor.currentFields().records[0].id;
@@ -118,7 +121,10 @@ TestCase {
         compare(fields.records.length, 1);
         compare(fields.records[0].key, "first");
         editor.clearFields();
-        compare(editor.currentFields(), { records: [], notes: "" });
+        compare(editor.currentFields(), {
+            records: [],
+            notes: ""
+        });
     }
 
     function test_custom_record_keeps_focus_while_multiple_characters_are_typed() {
@@ -177,7 +183,13 @@ TestCase {
         compare(identity.currentFields().phones, ["+1 555 0100"]);
         identity.clearFields();
         compare(identity.currentFields(), {
-            firstName: "", lastName: "", documents: [], emails: [], phones: [], address: "", notes: ""
+            firstName: "",
+            lastName: "",
+            documents: [],
+            emails: [],
+            phones: [],
+            address: "",
+            notes: ""
         });
 
         const ssh = createEditor("ssh-key");
@@ -212,7 +224,13 @@ TestCase {
         compare(fields.fingerprint, undefined);
         compare(fields.algorithm, undefined);
         ssh.clearFields();
-        compare(ssh.currentFields(), { importToken: "", passphrase: "", user: "", hosts: [], notes: "" });
+        compare(ssh.currentFields(), {
+            importToken: "",
+            passphrase: "",
+            user: "",
+            hosts: [],
+            notes: ""
+        });
     }
 
     function test_totp_prepared_input_is_editable_and_clearable() {
@@ -220,10 +238,12 @@ TestCase {
         editor.applyPreparedTotp({
             totpInput: "otpauth://totp/Example%3Aada?secret=JBSWY3DPEHPK3PXP&issuer=Example"
         });
-        compare(editor.currentFields().totpInput,
-                "otpauth://totp/Example%3Aada?secret=JBSWY3DPEHPK3PXP&issuer=Example");
+        compare(editor.currentFields().totpInput, "otpauth://totp/Example%3Aada?secret=JBSWY3DPEHPK3PXP&issuer=Example");
         editor.clearFields();
-        compare(editor.currentFields(), { totpInput: "", notes: "" });
+        compare(editor.currentFields(), {
+            totpInput: "",
+            notes: ""
+        });
     }
 
     function test_card_wifi_and_license_fields_load_and_clear() {
@@ -241,8 +261,13 @@ TestCase {
         compare(card.currentFields(), cardFields);
         card.clearFields();
         compare(card.currentFields(), {
-            holder: "", number: "", expiryMonth: 0, expiryYear: 0,
-            cvv: "", pin: "", notes: ""
+            holder: "",
+            number: "",
+            expiryMonth: 0,
+            expiryYear: 0,
+            cvv: "",
+            pin: "",
+            notes: ""
         });
 
         const wifi = createEditor("wifi");
@@ -260,13 +285,21 @@ TestCase {
         compare(security.currentValue, "wpa3");
         compare(wifi.currentFields(), wifiFields);
         wifi.loadFields({
-            ssid: "Open lab", security: "open", password: "", hidden: false, notes: ""
+            ssid: "Open lab",
+            security: "open",
+            password: "",
+            hidden: false,
+            notes: ""
         });
         compare(security.currentValue, "open");
         wifi.clearFields();
         compare(security.currentValue, "wpa");
         compare(wifi.currentFields(), {
-            ssid: "", security: "wpa", password: "", hidden: false, notes: ""
+            ssid: "",
+            security: "wpa",
+            password: "",
+            hidden: false,
+            notes: ""
         });
 
         const license = createEditor("license");
@@ -284,14 +317,23 @@ TestCase {
         compare(license.currentFields(), licenseFields);
         license.clearFields();
         compare(license.currentFields(), {
-            product: "", licenseKey: "", holder: "", email: "", version: "",
-            purchased: "", expires: "", notes: ""
+            product: "",
+            licenseKey: "",
+            holder: "",
+            email: "",
+            version: "",
+            purchased: "",
+            expires: "",
+            notes: ""
         });
     }
 
     function test_card_expiry_editor_keeps_invalid_intermediate_numbers_for_rust_validation() {
         const card = createEditor("card");
-        card.loadFields({ expiryMonth: 12, expiryYear: 2026 });
+        card.loadFields({
+            expiryMonth: 12,
+            expiryYear: 2026
+        });
         const monthInput = findSecretInput(card, qsTr("Mes de vencimiento"));
         const yearInput = findSecretInput(card, qsTr("Año de vencimiento"));
         verify(monthInput !== null, "card month input should be discoverable");
@@ -307,33 +349,54 @@ TestCase {
         const kinds = ["custom", "card", "totp", "identity", "wifi", "ssh-key"];
         const fields = {
             "custom": {
-                records: [{
-                    id: "00000000-0000-4000-8000-000000000001",
-                    key: "Recovery code",
-                    value: "synthetic-recovery-value",
-                    multiline: false,
-                    concealed: true
-                }],
+                records: [
+                    {
+                        id: "00000000-0000-4000-8000-000000000001",
+                        key: "Recovery code",
+                        value: "synthetic-recovery-value",
+                        multiline: false,
+                        concealed: true
+                    }
+                ],
                 notes: "Synthetic custom notes"
             },
             "card": {
-                holder: "Ada Example", number: "4111 1111 1111 1111",
-                expiryMonth: 12, expiryYear: 2032, cvv: "123", pin: "2468", notes: ""
+                holder: "Ada Example",
+                number: "4111 1111 1111 1111",
+                expiryMonth: 12,
+                expiryYear: 2032,
+                cvv: "123",
+                pin: "2468",
+                notes: ""
             },
-            "totp": { totpInput: "JBSWY3DPEHPK3PXP", notes: "" },
+            "totp": {
+                totpInput: "JBSWY3DPEHPK3PXP",
+                notes: ""
+            },
             "identity": {
-                firstName: "Ada", lastName: "Example", documents: [],
-                emails: ["ada@example.invalid"], phones: ["+1 555 0100"],
-                address: "1 Example Street", notes: "Synthetic identity notes"
+                firstName: "Ada",
+                lastName: "Example",
+                documents: [],
+                emails: ["ada@example.invalid"],
+                phones: ["+1 555 0100"],
+                address: "1 Example Street",
+                notes: "Synthetic identity notes"
             },
             "wifi": {
-                ssid: "Lab network", security: "wpa", password: "synthetic-wifi-password",
-                hidden: false, notes: ""
+                ssid: "Lab network",
+                security: "wpa",
+                password: "synthetic-wifi-password",
+                hidden: false,
+                notes: ""
             },
             "ssh-key": {
-                importToken: "", passphrase: "", user: "ada",
-                hosts: ["host.example.invalid"], notes: "",
-                publicKey: "ssh-ed25519 synthetic", fingerprint: "SHA256:synthetic",
+                importToken: "",
+                passphrase: "",
+                user: "ada",
+                hosts: ["host.example.invalid"],
+                notes: "",
+                publicKey: "ssh-ed25519 synthetic",
+                fingerprint: "SHA256:synthetic",
                 algorithm: "ssh-ed25519"
             }
         };
@@ -350,7 +413,9 @@ TestCase {
             verify(editor !== null, "could not create snapshot form for " + kind);
             editor.visible = true;
             editor.loadFields(fields[kind]);
-            surface.height = Qt.binding(function() { return editor.height; });
+            surface.height = Qt.binding(function () {
+                return editor.height;
+            });
             for (const viewportWidth of [360, 800]) {
                 editor.width = viewportWidth;
                 tryVerify(() => editor.width === viewportWidth && editor.height > 0);
@@ -367,15 +432,17 @@ TestCase {
 
     function test_structured_detail_forwards_real_field_and_qr_actions() {
         const fields = {
-            rows: [{
-                id: "number",
-                label: "Card number",
-                value: "",
-                multiline: false,
-                concealed: true,
-                revealed: false,
-                hasValue: true
-            }],
+            rows: [
+                {
+                    id: "number",
+                    label: "Card number",
+                    value: "",
+                    multiline: false,
+                    concealed: true,
+                    revealed: false,
+                    hasValue: true
+                }
+            ],
             notes: "",
             hasQr: false
         };
@@ -411,7 +478,11 @@ TestCase {
 
         const wifi = createTemporaryObject(EntryTypes.find("wifi").detail, testCase, {
             width: 720,
-            fields: { rows: [], notes: "", hasQr: true },
+            fields: {
+                rows: [],
+                notes: "",
+                hasQr: true
+            },
             entryId: "wifi-entry"
         });
         verify(wifi !== null);
@@ -427,14 +498,20 @@ TestCase {
         compare(qrButton.text, qsTr("Mostrar código QR"));
 
         wifi.fields = {
-            rows: [], notes: "", hasQr: true,
+            rows: [],
+            notes: "",
+            hasQr: true,
             qrSource: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyIiBoZWlnaHQ9IjIiPjxyZWN0IHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGZpbGw9ImJsYWNrIi8+PC9zdmc+"
         };
         tryVerify(() => qrButton.text === qsTr("Ocultar código QR"));
         mouseClick(qrButton, qrButton.width / 2, qrButton.height / 2);
         compare(qrSpy.count, 2);
         wifi.entryId = "another-wifi-entry";
-        wifi.fields = { rows: [], notes: "", hasQr: true };
+        wifi.fields = {
+            rows: [],
+            notes: "",
+            hasQr: true
+        };
         tryVerify(() => qrButton.text === qsTr("Mostrar código QR"));
     }
 }

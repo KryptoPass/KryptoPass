@@ -36,15 +36,21 @@ TestCase {
                 id: "org.kryptopass.tests.importer.provider" + suffix,
                 name: name,
                 formats: [format],
-                fileFilters: [
-                    name + " export (*." + format + " *." + format + ".backup)",
-                    name + " compressed export (*." + format + ".gz)"
-                ],
+                fileFilters: [name + " export (*." + format + " *." + format + ".backup)", name + " compressed export (*." + format + ".gz)"],
                 entryTypes: index % 2 === 0 ? ["Logins", "Notes"] : ["Cards", "Identities"],
                 capabilities: [
-                    { label: "Folders", support: "supported" },
-                    { label: "Attachments", support: "reference" },
-                    { label: "Passkeys", support: "unsupported" }
+                    {
+                        label: "Folders",
+                        support: "supported"
+                    },
+                    {
+                        label: "Attachments",
+                        support: "reference"
+                    },
+                    {
+                        label: "Passkeys",
+                        support: "unsupported"
+                    }
                 ],
                 decryptionAvailable: index % 3 !== 0 || index % 2 === 0,
                 requiresDecryptor: index % 3 === 0
@@ -121,9 +127,21 @@ TestCase {
 
     function test_generic_selection_preserves_metadata_and_requests_correct_importer_data() {
         return [
-            { tag: "mouse-json", index: 137, key: 0 },
-            { tag: "return-kdbx", index: 126, key: Qt.Key_Return },
-            { tag: "enter-xml", index: 199, key: Qt.Key_Enter }
+            {
+                tag: "mouse-json",
+                index: 137,
+                key: 0
+            },
+            {
+                tag: "return-kdbx",
+                index: 126,
+                key: Qt.Key_Return
+            },
+            {
+                tag: "enter-xml",
+                index: 199,
+                key: Qt.Key_Enter
+            }
         ];
     }
 
@@ -172,11 +190,39 @@ TestCase {
 
     function test_search_filters_the_entire_catalog_data() {
         return [
-            { tag: "name-case-and-whitespace", query: "  cAtALog mANager 173  ", indexes: [173] },
-            { tag: "name-substring", query: "Manager 19", indexes: Array.from({ length: 10 }, (_, i) => 190 + i) },
-            { tag: "csv-format", query: " CsV ", indexes: Array.from({ length: 50 }, (_, i) => i * 4) },
-            { tag: "kdbx-format", query: " KdBx ", indexes: Array.from({ length: 50 }, (_, i) => i * 4 + 2) },
-            { tag: "entry-type", query: "Identities", indexes: Array.from({ length: 100 }, (_, i) => i * 2 + 1) }
+            {
+                tag: "name-case-and-whitespace",
+                query: "  cAtALog mANager 173  ",
+                indexes: [173]
+            },
+            {
+                tag: "name-substring",
+                query: "Manager 19",
+                indexes: Array.from({
+                    length: 10
+                }, (_, i) => 190 + i)
+            },
+            {
+                tag: "csv-format",
+                query: " CsV ",
+                indexes: Array.from({
+                    length: 50
+                }, (_, i) => i * 4)
+            },
+            {
+                tag: "kdbx-format",
+                query: " KdBx ",
+                indexes: Array.from({
+                    length: 50
+                }, (_, i) => i * 4 + 2)
+            },
+            {
+                tag: "entry-type",
+                query: "Identities",
+                indexes: Array.from({
+                    length: 100
+                }, (_, i) => i * 2 + 1)
+            }
         ];
     }
 
@@ -207,9 +253,21 @@ TestCase {
 
     function test_empty_results_are_safe_data() {
         return [
-            { tag: "empty-catalog", emptyCatalog: true, query: "" },
-            { tag: "unmatched-search", emptyCatalog: false, query: "No such manager or format" },
-            { tag: "no-assumed-proton", emptyCatalog: false, query: "Proton" }
+            {
+                tag: "empty-catalog",
+                emptyCatalog: true,
+                query: ""
+            },
+            {
+                tag: "unmatched-search",
+                emptyCatalog: false,
+                query: "No such manager or format"
+            },
+            {
+                tag: "no-assumed-proton",
+                emptyCatalog: false,
+                query: "Proton"
+            }
         ];
     }
 
@@ -246,8 +304,14 @@ TestCase {
 
     function test_busy_blocks_actions_and_selection_data() {
         return [
-            { tag: "without-selection", selected: false },
-            { tag: "with-selection", selected: true }
+            {
+                tag: "without-selection",
+                selected: false
+            },
+            {
+                tag: "with-selection",
+                selected: true
+            }
         ];
     }
 
@@ -312,8 +376,7 @@ TestCase {
             list.positionViewAtIndex(index, ListView.Center);
             const delegate = delegateAt(list, index);
             const count = liveDelegateCount(list);
-            verify(count > 0 && count < panel.importers.length / 2,
-                "ListView should keep substantially fewer than 200 live delegates; found " + count);
+            verify(count > 0 && count < panel.importers.length / 2, "ListView should keep substantially fewer than 200 live delegates; found " + count);
             verify(list.contentHeight > list.height);
             compare(delegate.modelData.id, panel.importers[index].id);
 

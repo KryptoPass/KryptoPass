@@ -13,8 +13,7 @@ RowLayout {
     readonly property var selectedImporter: importers.find(importer => importer.id === selectedImporterId) || null
     readonly property var filteredImporters: {
         const query = search.text.trim().toLocaleLowerCase();
-        return importers.filter(importer => [importer.name, importer.formats.join(" "), importer.entryTypes.join(" ")]
-            .join(" ").toLocaleLowerCase().includes(query));
+        return importers.filter(importer => [importer.name, importer.formats.join(" "), importer.entryTypes.join(" ")].join(" ").toLocaleLowerCase().includes(query));
     }
     signal importerSelected(string importerId)
     signal chooseFileRequested(string importerId)
@@ -115,8 +114,7 @@ RowLayout {
                     anchors.centerIn: parent
                     width: parent.width - Kirigami.Units.largeSpacing * 2
                     visible: providers.count === 0
-                    text: panel.importers.length === 0
-                        ? qsTr("No hay integraciones disponibles.") : qsTr("No hay coincidencias.")
+                    text: panel.importers.length === 0 ? qsTr("No hay integraciones disponibles.") : qsTr("No hay coincidencias.")
                 }
             }
         }
@@ -171,8 +169,7 @@ RowLayout {
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
-                        text: capabilityRow.modelData.support === "supported" ? qsTr("Completo")
-                            : capabilityRow.modelData.support === "reference" ? qsTr("Solo referencia") : qsTr("No disponible")
+                        text: capabilityRow.modelData.support === "supported" ? qsTr("Completo") : capabilityRow.modelData.support === "reference" ? qsTr("Solo referencia") : qsTr("No disponible")
                         color: capabilityRow.modelData.support === "unsupported" ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
                     }
                 }

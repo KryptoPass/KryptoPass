@@ -21,8 +21,8 @@ Controls.Frame {
     property real progress: -1
     default property alias extraActions: extraActions.data
 
-    signal copyRequested()
-    signal revealRequested()
+    signal copyRequested
+    signal revealRequested
 
     Layout.fillWidth: true
     padding: Kirigami.Units.largeSpacing

@@ -100,6 +100,12 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
 
+[jobs.screenshot-about]
+command = ["just", "screenshot-about"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
+
 [jobs.browser]
 command = ["just", "browser-build"]
 need_stdout = true
@@ -112,3 +118,25 @@ need_stdout = true
 background = false
 default_watch = false
 watch = ["crates/kp-desktop", ".qmlls.ini"]
+
+[jobs.fmt]
+command = ["just", "fmt"]
+need_stdout = true
+default_watch = false
+watch = ["crates", "tools/source_format.py", ".clang-format", ".qmlformat.ini", ".editorconfig"]
+
+[jobs.fmt-native]
+command = ["just", "fmt-native"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/native-tests", "tools/source_format.py", ".clang-format"]
+
+[jobs.fmt-qml]
+command = ["just", "fmt-qml"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-desktop/ui", "tools/source_format.py", ".qmlformat.ini"]
+
+[jobs.fmt-rust]
+command = ["just", "fmt-rust"]
+need_stdout = true

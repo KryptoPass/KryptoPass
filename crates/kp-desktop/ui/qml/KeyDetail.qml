@@ -57,8 +57,7 @@ ColumnLayout {
             delegate: Controls.MenuItem {
                 required property string modelData
                 required property int index
-                text: index === 0 ? qsTr("%1 (predeterminado)").arg(modelData.split("/")[2] || modelData)
-                    : modelData.split("/")[2] || modelData
+                text: index === 0 ? qsTr("%1 (predeterminado)").arg(modelData.split("/")[2] || modelData) : modelData.split("/")[2] || modelData
                 Controls.ToolTip.visible: hovered || visualFocus
                 Controls.ToolTip.text: modelData
                 enabled: root.keyStore.onlineSettings.enabled
@@ -506,9 +505,7 @@ ColumnLayout {
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: root.selectedKey?.hasSecret
-                        ? qsTr("Un certificado de revocación permite revocar esta clave si pierdes el acceso a ella. Guárdalo fuera del equipo y protégelo como un secreto.")
-                        : qsTr("Solo una clave propia, con su parte privada en este llavero, puede crear un certificado de revocación.")
+                    text: root.selectedKey?.hasSecret ? qsTr("Un certificado de revocación permite revocar esta clave si pierdes el acceso a ella. Guárdalo fuera del equipo y protégelo como un secreto.") : qsTr("Solo una clave propia, con su parte privada en este llavero, puede crear un certificado de revocación.")
                     wrapMode: Text.Wrap
                 }
                 Controls.Button {

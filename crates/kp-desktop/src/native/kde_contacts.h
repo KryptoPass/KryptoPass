@@ -5,7 +5,8 @@
 
 class QObject;
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 
 void refresh_contacts(QObject *receiver);
 void open_contact_editor(QObject *receiver, const QString &uid);

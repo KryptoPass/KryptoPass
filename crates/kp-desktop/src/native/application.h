@@ -5,6 +5,7 @@
 #include <QVector>
 #include <memory>
 
-namespace kryptopass {
-std::unique_ptr<QGuiApplication> newApplication(const QVector<QByteArray>& args);
+namespace kryptopass
+{
+std::unique_ptr<QGuiApplication> newApplication(const QVector<QByteArray> &args);
 }

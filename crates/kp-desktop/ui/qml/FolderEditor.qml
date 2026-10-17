@@ -27,10 +27,10 @@ Controls.Dialog {
     readonly property bool canSave: !pending && !storeAdapter.controller.busy && folderNameField.text.trim().length > 0 && dirty
 
     signal saveRequested(string folderId, string name, string parentId, string icon, string color)
-    signal vaultLockApproved()
-    signal vaultLockCancelled()
-    signal vaultSwitchApproved()
-    signal vaultSwitchCancelled()
+    signal vaultLockApproved
+    signal vaultLockCancelled
+    signal vaultSwitchApproved
+    signal vaultSwitchCancelled
 
     anchors.centerIn: parent
     width: Math.min(340, parent.width - Kirigami.Units.gridUnit * 4)
@@ -57,9 +57,7 @@ Controls.Dialog {
         folderId = rename ? storeAdapter.scope : "";
         const existing = rename ? storeAdapter.folders.find(folder => folder.id === folderId) : null;
         folderNameField.text = existing ? existing.name : "";
-        selectedParentId = existing
-                ? existing.parent || ""
-                : storeAdapter.folderRows.some(folder => folder.id === storeAdapter.scope) ? storeAdapter.scope : "";
+        selectedParentId = existing ? existing.parent || "" : storeAdapter.folderRows.some(folder => folder.id === storeAdapter.scope) ? storeAdapter.scope : "";
         folderIcon = existing && existing.icon ? existing.icon : "folder";
         folderColor = existing && existing.color ? existing.color : "transparent";
         saveError = "";
@@ -250,7 +248,7 @@ Controls.Dialog {
                         selectedId: folderEditor.selectedParentId
                         emptyLabel: qsTr("Carpetas principales")
                         accessibleLabel: qsTr("Carpeta superior")
-                        onFolderSelected: function(folderId) {
+                        onFolderSelected: function (folderId) {
                             folderEditor.selectedParentId = folderId;
                             folderEditor.saveError = "";
                         }
@@ -285,21 +283,20 @@ Controls.Dialog {
                     enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                     selectedIcon: folderEditor.folderIcon
                     selectedColor: folderEditor.folderColor
-                    onRevealRequested: function(top, height) {
+                    onRevealRequested: function (top, height) {
                         const flickable = appearanceScroll.contentItem as Flickable;
                         if (!flickable)
                             return;
                         if (top < flickable.contentY)
                             flickable.contentY = top;
                         else if (top + height > flickable.contentY + flickable.height)
-                            flickable.contentY = Math.min(top + height - flickable.height,
-                                                         Math.max(0, flickable.contentHeight - flickable.height));
+                            flickable.contentY = Math.min(top + height - flickable.height, Math.max(0, flickable.contentHeight - flickable.height));
                     }
-                    onIconSelected: function(iconName) {
+                    onIconSelected: function (iconName) {
                         folderEditor.folderIcon = iconName;
                         folderEditor.saveError = "";
                     }
-                    onColorSelected: function(colorValue) {
+                    onColorSelected: function (colorValue) {
                         folderEditor.folderColor = colorValue;
                         folderEditor.saveError = "";
                     }

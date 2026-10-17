@@ -21,21 +21,18 @@ Controls.Pane {
     property alias editorHost: editorHost
 
     readonly property var selected: storeAdapter.selected
-    readonly property var selectedDetail: storeAdapter.detail && selected
-            && storeAdapter.detail.id === selected.id ? storeAdapter.detail : null
+    readonly property var selectedDetail: storeAdapter.detail && selected && storeAdapter.detail.id === selected.id ? storeAdapter.detail : null
     readonly property var relatedEntry: storeAdapter.relatedEntryFor(selected)
-    readonly property bool hasRelatedEntryReference: !!selected
-        && (!!selected.relatedEntryId || storeAdapter.entries.some(entry => entry.id !== selected.id
-            && entry.relatedEntryId === selected.id))
+    readonly property bool hasRelatedEntryReference: !!selected && (!!selected.relatedEntryId || storeAdapter.entries.some(entry => entry.id !== selected.id && entry.relatedEntryId === selected.id))
 
-    signal favoriteToggleRequested()
-    signal restoreRequested()
-    signal permanentDeleteRequested()
-    signal revealToggleRequested()
-    signal copyUsernameRequested()
-    signal copyPasswordRequested()
+    signal favoriteToggleRequested
+    signal restoreRequested
+    signal permanentDeleteRequested
+    signal revealToggleRequested
+    signal copyUsernameRequested
+    signal copyPasswordRequested
     signal copyTotpRequested(bool next)
-    signal retryDetailRequested()
+    signal retryDetailRequested
     signal notificationRequested(string message)
     signal relatedEntryOpenRequested(var entry)
     signal relatedEntryTrashRequested(var entry)
@@ -53,11 +50,7 @@ Controls.Pane {
         interval: 1000
         repeat: true
         triggeredOnStart: true
-        running: root.visible && !root.editing && !root.keysMode
-            && !root.storeAdapter.controller.locked
-            && !!root.selectedDetail
-            && !!root.selectedDetail.content?.fields?.totp
-            && Application.state === Qt.ApplicationActive
+        running: root.visible && !root.editing && !root.keysMode && !root.storeAdapter.controller.locked && !!root.selectedDetail && !!root.selectedDetail.content?.fields?.totp && Application.state === Qt.ApplicationActive
         onTriggered: root.storeAdapter.controller.refreshTotp()
     }
 
@@ -68,6 +61,7 @@ Controls.Pane {
         PanelHeader {
             visible: !root.editing
             Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
             headerHeight: root.headerHeight
             contentItem: RowLayout {
                 Kirigami.Heading {
@@ -77,22 +71,14 @@ Controls.Pane {
                     level: 3
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode
-                        ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
-                           ? qsTr("Propiedades de la clave")
-                           : root.keyStore.scope === "contacts" ? qsTr("Agenda de contactos") : qsTr("Contactos de KDE Contacts"))
-                        : qsTr("Detalle")
+                    text: root.keysMode ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible) ? qsTr("Propiedades de la clave") : root.keyStore.scope === "contacts" ? qsTr("Agenda de contactos") : qsTr("Contactos de KDE Contacts")) : qsTr("Detalle")
                 }
                 Controls.ToolButton {
                     visible: root.keysMode && root.keyStore.scope === "contacts"
-                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible
-                        ? qsTr("Volver a la clave") : qsTr("Ver agenda")
-                    icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
-                        ? "view-certificate" : "view-pim-contacts"
-                    Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible
-                        ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de contactos")
-                    onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected
-                        ? !root.keyStore.contactsOverviewVisible : true
+                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a la clave") : qsTr("Ver agenda")
+                    icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? "view-certificate" : "view-pim-contacts"
+                    Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de contactos")
+                    onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected ? !root.keyStore.contactsOverviewVisible : true
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
@@ -160,20 +146,20 @@ Controls.Pane {
             id: keyDetail
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.keysMode && !root.editing && !!root.keyStore.selected
-                && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
+            visible: root.keysMode && !root.editing && !!root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible)
             selectedKey: root.keyStore.selected
             keyStore: root.keyStore
             operationDialog: root.keyOperationDialog
-            onNotificationRequested: function(message) { root.notificationRequested(message); }
+            onNotificationRequested: function (message) {
+                root.notificationRequested(message);
+            }
         }
 
         KeyContactsOverview {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: Kirigami.Units.largeSpacing
-            visible: root.keysMode && !root.editing
-                && (!root.keyStore.selected || (root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible))
+            visible: root.keysMode && !root.editing && (!root.keyStore.selected || (root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible))
             keyStore: root.keyStore
             operationDialog: root.keyOperationDialog
         }
@@ -265,17 +251,27 @@ Controls.Pane {
                         recipientKeys: root.keyStore.entries
                         revealed: root.revealed
                         versionDetail: root.storeAdapter.historyVersion
-                        onVersionOpenRequested: function(index) { root.storeAdapter.controller.openHistoryVersion(index); }
+                        onVersionOpenRequested: function (index) {
+                            root.storeAdapter.controller.openHistoryVersion(index);
+                        }
                         onVersionCloseRequested: root.storeAdapter.controller.closeHistoryVersion()
-                        onVersionCopyRequested: function(field) { root.storeAdapter.controller.copyHistoryValue(field); }
+                        onVersionCopyRequested: function (field) {
+                            root.storeAdapter.controller.copyHistoryValue(field);
+                        }
                         onActivityExportRequested: root.storeAdapter.controller.exportActivity()
-                        onCopyFieldRequested: function(field) { root.storeAdapter.controller.copyField(field); }
-                        onRevealFieldRequested: function(field) { root.storeAdapter.controller.toggleField(field); }
+                        onCopyFieldRequested: function (field) {
+                            root.storeAdapter.controller.copyField(field);
+                        }
+                        onRevealFieldRequested: function (field) {
+                            root.storeAdapter.controller.toggleField(field);
+                        }
                         onQrRequested: root.storeAdapter.controller.showQr()
                         onRevealToggled: root.revealToggleRequested()
                         onCopyUsernameRequested: root.copyUsernameRequested()
                         onCopyPasswordRequested: root.copyPasswordRequested()
-                        onCopyTotpRequested: function(next) { root.copyTotpRequested(next); }
+                        onCopyTotpRequested: function (next) {
+                            root.copyTotpRequested(next);
+                        }
                     }
 
                     Controls.Frame {
@@ -292,12 +288,8 @@ Controls.Pane {
                                 visible: !!root.relatedEntry
                                 enabled: !root.relatedEntry?.trashed && !root.storeAdapter.controller.busy
                                 text: ""
-                                Accessible.name: root.relatedEntry?.trashed
-                                    ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title)
-                                    : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
-                                Accessible.description: root.relatedEntry
-                                    ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
-                                    : ""
+                                Accessible.name: root.relatedEntry?.trashed ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title) : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
+                                Accessible.description: root.relatedEntry ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind)) : ""
                                 contentItem: RowLayout {
                                     spacing: Kirigami.Units.largeSpacing
                                     EntryIcon {
@@ -316,9 +308,7 @@ Controls.Pane {
                                         selected: relatedEntryCard.highlighted || relatedEntryCard.down
                                         font: relatedEntryCard.font
                                         subtitleFont: relatedEntryCard.font
-                                        subtitle: root.relatedEntry?.trashed
-                                            ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind))
-                                            : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
+                                        subtitle: root.relatedEntry?.trashed ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind)) : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
                                     }
                                     Kirigami.Icon {
                                         visible: !root.relatedEntry?.trashed
@@ -350,9 +340,7 @@ Controls.Pane {
                                     Layout.minimumWidth: 0
                                     Controls.Label {
                                         Layout.fillWidth: true
-                                        text: root.storeAdapter.controller.locked
-                                            ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.")
-                                            : qsTr("Crea un secreto personalizado para acompañar este elemento.")
+                                        text: root.storeAdapter.controller.locked ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.") : qsTr("Crea un secreto personalizado para acompañar este elemento.")
                                         textFormat: Text.PlainText
                                         wrapMode: Text.Wrap
                                         color: Kirigami.Theme.disabledTextColor
@@ -362,8 +350,7 @@ Controls.Pane {
                                     objectName: "createSecurityButton"
                                     text: qsTr("Crear seguridad")
                                     icon.name: "list-add"
-                                    enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy
-                                        && !root.storeAdapter.controller.editorBusy
+                                    enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy && !root.storeAdapter.controller.editorBusy
                                     onClicked: root.createSecurityRequested(root.selected)
                                 }
                             }

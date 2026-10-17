@@ -50,7 +50,9 @@ Controls.Dialog {
                 text: qsTr("Las consultas se realizan cuando las solicitas. El servicio recibe la huella o el ID de la clave.")
                 wrapMode: Text.Wrap
             }
-            Controls.Label { text: qsTr("Servicios de consulta en el navegador") }
+            Controls.Label {
+                text: qsTr("Servicios de consulta en el navegador")
+            }
             Controls.TextArea {
                 id: services
                 Layout.fillWidth: true
@@ -64,7 +66,9 @@ Controls.Dialog {
                 text: qsTr("Una URL HTTP o HTTPS por línea. Añade, edita, elimina o mueve las líneas; la primera es la predeterminada. Marcadores de KGpg: $$FPR$$, $$ID16$$ y $$ID8$$; en minúsculas: $$fpr$$, $$id16$$ y $$id8$$.")
                 wrapMode: Text.Wrap
             }
-            Controls.Label { text: qsTr("Servidores para obtener y actualizar claves") }
+            Controls.Label {
+                text: qsTr("Servidores para obtener y actualizar claves")
+            }
             Controls.TextArea {
                 id: servers
                 Layout.fillWidth: true
@@ -89,7 +93,11 @@ Controls.Dialog {
             text: qsTr("Guardar configuración")
             icon.name: "document-save"
             onClicked: {
-                const settings = { enabled: active.checked, services: dialog.lines(services.text), keyservers: dialog.lines(servers.text) };
+                const settings = {
+                    enabled: active.checked,
+                    services: dialog.lines(services.text),
+                    keyservers: dialog.lines(servers.text)
+                };
                 if (dialog.keyStore.controller.saveOnlineSettings(JSON.stringify(settings)))
                     dialog.accept();
                 else

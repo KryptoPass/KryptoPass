@@ -57,7 +57,9 @@ ColumnLayout {
 
         valueModel.clear();
         for (const value of source)
-            valueModel.append({ value: String(value ?? "") });
+            valueModel.append({
+                value: String(value ?? "")
+            });
         workingValues = readValues();
     }
 
@@ -70,8 +72,10 @@ ColumnLayout {
     function addValue() {
         if (valueModel.count >= maximumValues)
             return;
-        changeValues(() => valueModel.append({ value: "" }));
-        Qt.callLater(function() {
+        changeValues(() => valueModel.append({
+                value: ""
+            }));
+        Qt.callLater(function () {
             const row = valueRepeater.itemAt(valueRepeater.count - 1);
             if (row)
                 row.focusValueField();
@@ -126,7 +130,9 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
 
-            function focusValueField() { valueField.forceActiveFocus(); }
+            function focusValueField() {
+                valueField.forceActiveFocus();
+            }
 
             Controls.TextField {
                 id: valueField

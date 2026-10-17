@@ -11,6 +11,23 @@ fn action_at(rendered: &RenderedDocument, index: usize) -> Result<String, Box<dy
         .ok_or_else(|| format!("Missing spoiler action {index}; got {:?}", rendered.actions).into())
 }
 
+fn action_link_content<'a>(
+    rendered: &'a RenderedDocument,
+    action: &str,
+) -> Result<&'a str, Box<dyn Error>> {
+    let href = format!("href=\"{action}\"");
+    for anchor in rendered.html.split("<a ").skip(1) {
+        let (attributes, content) = anchor.split_once('>').ok_or("Unterminated anchor")?;
+        if attributes.contains(&href) {
+            return content
+                .split_once("</a>")
+                .map(|(content, _)| content)
+                .ok_or_else(|| "Unclosed action anchor".into());
+        }
+    }
+    Err(format!("Missing action anchor {action:?}").into())
+}
+
 fn assert_absent(rendered: &RenderedDocument, private_parts: &[&str]) {
     for private in private_parts {
         assert!(
@@ -204,6 +221,49 @@ fn hidden_spoiler_omits_text_url_code_and_action_metadata() -> TestResult {
         ],
     );
     assert_allowed_html(&rendered)
+}
+
+#[test]
+fn spoiler_eye_control_reserves_identical_space_and_keeps_mask_outside_link() -> TestResult {
+    for secret in [
+        "SHORT_SECRET",
+        "MUCH_LONGER_PRIVATE_CONTENT_WITH_DIFFERENT_LENGTH",
+    ] {
+        let mut document = Document::default();
+        document.load(&format!("PUBLIC_BEFORE ||{secret}|| PUBLIC_AFTER"))?;
+        let hidden = document.render()?;
+        let action = action_at(&hidden, 0)?;
+        let hidden_control = action_link_content(&hidden, &action)?;
+        let decoded_control = hidden_control
+            .replace("&#x2007;", "\u{2007}")
+            .replace("&#8199;", "\u{2007}");
+        assert_eq!(decoded_control, "\u{2007}\u{2007}\u{2007}");
+        assert_eq!(hidden.html.matches("<a ").count(), 1);
+        assert_eq!(hidden.html.matches('█').count(), 12);
+        assert!(hidden.html.contains("<span style=\"color:"));
+        assert!(hidden.html.contains("████████████</span>"));
+        assert!(hidden.html.contains("PUBLIC_BEFORE"));
+        assert!(hidden.html.contains("PUBLIC_AFTER"));
+        assert_absent(&hidden, &[secret, "Ocultar"]);
+        assert_allowed_html(&hidden)?;
+
+        assert!(document.toggle(&action));
+        let revealed = document.render()?;
+        assert_eq!(action_link_content(&revealed, &action)?, hidden_control);
+        assert_eq!(revealed.html.matches("<a ").count(), 1);
+        assert!(revealed.html.contains(secret));
+        assert_eq!(revealed.revealed_actions, vec![action.clone()]);
+        assert_absent(&revealed, &["Ocultar", "████████████"]);
+        assert_allowed_html(&revealed)?;
+
+        assert!(document.toggle(&action));
+        let hidden_again = document.render()?;
+        assert_eq!(hidden_again.html, hidden.html);
+        assert_eq!(hidden_again.actions, hidden.actions);
+        assert!(hidden_again.revealed_actions.is_empty());
+        assert_absent(&hidden_again, &[secret]);
+    }
+    Ok(())
 }
 
 #[test]

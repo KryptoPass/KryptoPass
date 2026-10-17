@@ -12,14 +12,16 @@
 
 #include <algorithm>
 
-namespace {
+namespace
+{
 constexpr auto kIdleSettingsKey = "security/idleLockSeconds";
 constexpr int kDefaultIdleSeconds = 5 * 60;
 constexpr int kMaximumIdleSeconds = 24 * 60 * 60;
 QPointer<kryptopass::desktop::native::SessionLockMonitor> monitor;
 }
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 
 SessionLockMonitor::SessionLockMonitor(QObject *parent, bool watchSession)
     : QObject(parent)
@@ -33,25 +35,29 @@ SessionLockMonitor::SessionLockMonitor(QObject *parent, bool watchSession)
     }
 
     auto session = QDBusConnection::sessionBus();
-    session.connect(QStringLiteral("org.freedesktop.ScreenSaver"), QStringLiteral("/ScreenSaver"),
-                    QStringLiteral("org.freedesktop.ScreenSaver"), QStringLiteral("ActiveChanged"),
-                    this, SLOT(screenSaverChanged(bool)));
+    session.connect(QStringLiteral("org.freedesktop.ScreenSaver"),
+                    QStringLiteral("/ScreenSaver"),
+                    QStringLiteral("org.freedesktop.ScreenSaver"),
+                    QStringLiteral("ActiveChanged"),
+                    this,
+                    SLOT(screenSaverChanged(bool)));
     auto system = QDBusConnection::systemBus();
-    system.connect(QStringLiteral("org.freedesktop.login1"), QStringLiteral("/org/freedesktop/login1"),
-                   QStringLiteral("org.freedesktop.login1.Manager"), QStringLiteral("PrepareForSleep"),
-                   this, SLOT(prepareForSleep(bool)));
+    system.connect(QStringLiteral("org.freedesktop.login1"),
+                   QStringLiteral("/org/freedesktop/login1"),
+                   QStringLiteral("org.freedesktop.login1.Manager"),
+                   QStringLiteral("PrepareForSleep"),
+                   this,
+                   SLOT(prepareForSleep(bool)));
 
-    auto *watcher = new QDBusServiceWatcher(QStringLiteral("org.freedesktop.ScreenSaver"), session,
-                                           QDBusServiceWatcher::WatchForOwnerChange, this);
-    connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this,
-            [this](const QString &, const QString &, const QString &owner) {
-                ++screenQuery_;
-                if (owner.isEmpty()) {
-                    screenSaverChanged(false);
-                } else {
-                    queryScreenSaver();
-                }
-            });
+    auto *watcher = new QDBusServiceWatcher(QStringLiteral("org.freedesktop.ScreenSaver"), session, QDBusServiceWatcher::WatchForOwnerChange, this);
+    connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, [this](const QString &, const QString &, const QString &owner) {
+        ++screenQuery_;
+        if (owner.isEmpty()) {
+            screenSaverChanged(false);
+        } else {
+            queryScreenSaver();
+        }
+    });
     queryScreenSaver();
     acquireSleepInhibitor();
 }
@@ -124,7 +130,9 @@ void SessionLockMonitor::idleTimeoutReached(int identifier, int)
 void SessionLockMonitor::queryScreenSaver()
 {
     const auto request = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.ScreenSaver"),
-        QStringLiteral("/ScreenSaver"), QStringLiteral("org.freedesktop.ScreenSaver"), QStringLiteral("GetActive"));
+                                                        QStringLiteral("/ScreenSaver"),
+                                                        QStringLiteral("org.freedesktop.ScreenSaver"),
+                                                        QStringLiteral("GetActive"));
     const auto query = ++screenQuery_;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, query](QDBusPendingCallWatcher *call) {
@@ -140,9 +148,13 @@ void SessionLockMonitor::queryScreenSaver()
 void SessionLockMonitor::acquireSleepInhibitor()
 {
     auto request = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.login1"),
-        QStringLiteral("/org/freedesktop/login1"), QStringLiteral("org.freedesktop.login1.Manager"), QStringLiteral("Inhibit"));
-    request.setArguments({QStringLiteral("sleep"), QCoreApplication::applicationName(),
-        QCoreApplication::translate("SessionLock", "Bloquear la bóveda antes de suspender"), QStringLiteral("delay")});
+                                                  QStringLiteral("/org/freedesktop/login1"),
+                                                  QStringLiteral("org.freedesktop.login1.Manager"),
+                                                  QStringLiteral("Inhibit"));
+    request.setArguments({QStringLiteral("sleep"),
+                          QCoreApplication::applicationName(),
+                          QCoreApplication::translate("SessionLock", "Bloquear la bóveda antes de suspender"),
+                          QStringLiteral("delay")});
     const auto query = ++sleepQuery_;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::systemBus().asyncCall(request), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, query](QDBusPendingCallWatcher *call) {

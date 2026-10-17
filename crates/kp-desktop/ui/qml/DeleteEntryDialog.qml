@@ -79,7 +79,9 @@ Controls.Dialog {
             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
             Layout.preferredHeight: width
         }
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
         Controls.Button {
             text: qsTr("Cancelar")
             enabled: !deleteEntryDialog.pending && !deleteEntryDialog.storeAdapter.controller.busy

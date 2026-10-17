@@ -30,7 +30,7 @@ Controls.ApplicationWindow {
     onRequestJsonChanged: dismissed = false
     onVisibleChanged: {
         if (visible) {
-            Qt.callLater(function() {
+            Qt.callLater(function () {
                 if (requestWindow.visible) {
                     requestWindow.raise();
                     requestWindow.requestActivate();
@@ -44,7 +44,7 @@ Controls.ApplicationWindow {
             picker.close();
         }
     }
-    onClosing: function(event) {
+    onClosing: function (event) {
         event.accepted = false;
         picker.decide("", false);
         dismissed = true;
@@ -63,8 +63,10 @@ Controls.ApplicationWindow {
         kindOptions: requestWindow.kindOptions
         folders: requestWindow.folders
         folderRows: requestWindow.folderRows
-        onUsernameRequested: function(token, entryId) { requestWindow.usernameRequested(token, entryId); }
-        onDecisionRequested: function(token, entryId, approve) {
+        onUsernameRequested: function (token, entryId) {
+            requestWindow.usernameRequested(token, entryId);
+        }
+        onDecisionRequested: function (token, entryId, approve) {
             requestWindow.dismissed = true;
             requestWindow.decisionRequested(token, entryId, approve);
         }

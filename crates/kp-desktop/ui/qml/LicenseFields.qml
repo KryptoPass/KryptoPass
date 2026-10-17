@@ -51,7 +51,9 @@ SecretFields {
         };
     }
 
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        loadFields({});
+    }
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -61,14 +63,18 @@ SecretFields {
             Layout.fillWidth: true
             label: qsTr("Producto o servicio")
             value: root.product
-            onValueEdited: function(value) { root.product = value; }
+            onValueEdited: function (value) {
+                root.product = value;
+            }
         }
         SecretInput {
             Layout.fillWidth: true
             label: qsTr("Clave de licencia")
             value: root.licenseKey
             concealed: true
-            onValueEdited: function(value) { root.licenseKey = value; }
+            onValueEdited: function (value) {
+                root.licenseKey = value;
+            }
         }
         GridLayout {
             Layout.fillWidth: true
@@ -79,31 +85,41 @@ SecretFields {
                 Layout.fillWidth: true
                 label: qsTr("Titular")
                 value: root.holder
-                onValueEdited: function(value) { root.holder = value; }
+                onValueEdited: function (value) {
+                    root.holder = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
                 label: qsTr("Correo")
                 value: root.email
-                onValueEdited: function(value) { root.email = value; }
+                onValueEdited: function (value) {
+                    root.email = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
                 label: qsTr("Versión")
                 value: root.version
-                onValueEdited: function(value) { root.version = value; }
+                onValueEdited: function (value) {
+                    root.version = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
                 label: qsTr("Fecha de compra")
                 value: root.purchased
-                onValueEdited: function(value) { root.purchased = value; }
+                onValueEdited: function (value) {
+                    root.purchased = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
                 label: qsTr("Fecha de vencimiento")
                 value: root.expires
-                onValueEdited: function(value) { root.expires = value; }
+                onValueEdited: function (value) {
+                    root.expires = value;
+                }
             }
         }
         NotesEditor {

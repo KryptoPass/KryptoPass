@@ -11,16 +11,15 @@ ColumnLayout {
     property string selectedIcon: "folder"
     property string selectedColor: "transparent"
 
-    readonly property int cellSize: 40
-    readonly property int cellSpacing: 12
+    readonly property real cellSize: Kirigami.Units.gridUnit * 2.5
+    readonly property real cellSpacing: Kirigami.Units.largeSpacing
     readonly property color selectionAccent: Kirigami.Theme.highlightColor
 
     component SelectionBackground: Rectangle {
         required property Controls.ToolButton control
 
-        radius: 5
-        color: control.checked ? Qt.alpha(picker.selectionAccent, 0.14)
-                               : control.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
+        radius: Kirigami.Units.cornerRadius
+        color: control.checked ? Qt.alpha(picker.selectionAccent, 0.14) : control.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.07) : "transparent"
         border.width: 1
         border.color: control.checked || control.activeFocus ? picker.selectionAccent : "transparent"
     }
@@ -28,30 +27,102 @@ ColumnLayout {
     readonly property bool darkTheme: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
     readonly property var colorOptions: Desktop.FolderPalette.options
     readonly property var iconOptions: [
-        { value: "folder", name: qsTr("Carpeta") },
-        { value: "user-home", name: qsTr("Inicio") },
-        { value: "applications-office", name: qsTr("Trabajo") },
-        { value: "user-identity", name: qsTr("Personal") },
-        { value: "folder-favorites", name: qsTr("Favoritos") },
-        { value: "office-address-book", name: qsTr("Contactos") },
-        { value: "wallet-open", name: qsTr("Billetera") },
-        { value: "view-financial-account-credit-card", name: qsTr("Tarjetas") },
-        { value: "view-calendar", name: qsTr("Calendario") },
-        { value: "text-x-generic", name: qsTr("Documentos") },
-        { value: "applications-education", name: qsTr("Estudios") },
-        { value: "headphones", name: qsTr("Música") },
-        { value: "mail-message", name: qsTr("Correo") },
-        { value: "globe", name: qsTr("Internet") },
-        { value: "cloudstatus", name: qsTr("Nube") },
-        { value: "network-server", name: qsTr("Servidores") },
-        { value: "security-high", name: qsTr("Seguridad") },
-        { value: "dialog-password", name: qsTr("Contraseñas") },
-        { value: "format-text-code", name: qsTr("Desarrollo") },
-        { value: "utilities-terminal", name: qsTr("Terminal") },
-        { value: "phone", name: qsTr("Teléfono") },
-        { value: "camera-photo", name: qsTr("Fotos") },
-        { value: "applications-games", name: qsTr("Juegos") },
-        { value: "preferences-system", name: qsTr("Sistema") }
+        {
+            value: "folder",
+            name: qsTr("Carpeta")
+        },
+        {
+            value: "user-home",
+            name: qsTr("Inicio")
+        },
+        {
+            value: "applications-office",
+            name: qsTr("Trabajo")
+        },
+        {
+            value: "user-identity",
+            name: qsTr("Personal")
+        },
+        {
+            value: "folder-favorites",
+            name: qsTr("Favoritos")
+        },
+        {
+            value: "office-address-book",
+            name: qsTr("Contactos")
+        },
+        {
+            value: "wallet-open",
+            name: qsTr("Billetera")
+        },
+        {
+            value: "view-financial-account-credit-card",
+            name: qsTr("Tarjetas")
+        },
+        {
+            value: "view-calendar",
+            name: qsTr("Calendario")
+        },
+        {
+            value: "text-x-generic",
+            name: qsTr("Documentos")
+        },
+        {
+            value: "applications-education",
+            name: qsTr("Estudios")
+        },
+        {
+            value: "headphones",
+            name: qsTr("Música")
+        },
+        {
+            value: "mail-message",
+            name: qsTr("Correo")
+        },
+        {
+            value: "globe",
+            name: qsTr("Internet")
+        },
+        {
+            value: "cloudstatus",
+            name: qsTr("Nube")
+        },
+        {
+            value: "network-server",
+            name: qsTr("Servidores")
+        },
+        {
+            value: "security-high",
+            name: qsTr("Seguridad")
+        },
+        {
+            value: "dialog-password",
+            name: qsTr("Contraseñas")
+        },
+        {
+            value: "format-text-code",
+            name: qsTr("Desarrollo")
+        },
+        {
+            value: "utilities-terminal",
+            name: qsTr("Terminal")
+        },
+        {
+            value: "phone",
+            name: qsTr("Teléfono")
+        },
+        {
+            value: "camera-photo",
+            name: qsTr("Fotos")
+        },
+        {
+            value: "applications-games",
+            name: qsTr("Juegos")
+        },
+        {
+            value: "preferences-system",
+            name: qsTr("Sistema")
+        }
     ]
 
     signal iconSelected(string iconName)
@@ -63,7 +134,7 @@ ColumnLayout {
         revealRequested(position.y, button.height);
     }
 
-    spacing: 8
+    spacing: Kirigami.Units.smallSpacing * 2
     opacity: enabled ? 1 : 0.45
 
     Controls.Label {
@@ -107,7 +178,7 @@ ColumnLayout {
                     Rectangle {
                         anchors.centerIn: parent
                         visible: colorButton.modelData.value !== "transparent"
-                        width: 24
+                        width: Kirigami.Units.iconSizes.smallMedium
                         height: width
                         radius: width / 2
                         color: Desktop.FolderPalette.displayColor(colorButton.modelData.value, picker.darkTheme)
@@ -116,7 +187,7 @@ ColumnLayout {
                     }
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 24
+                        width: Kirigami.Units.iconSizes.smallMedium
                         height: width
                         radius: width / 2
                         visible: colorButton.modelData.value === "transparent"
@@ -126,7 +197,7 @@ ColumnLayout {
 
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 24
+                            width: Kirigami.Units.iconSizes.smallMedium
                             height: 1
                             rotation: -45
                             color: Kirigami.Theme.textColor
@@ -146,7 +217,7 @@ ColumnLayout {
     }
 
     Controls.Label {
-        Layout.topMargin: 12
+        Layout.topMargin: Kirigami.Units.largeSpacing
         text: qsTr("Icono")
         font.weight: Font.DemiBold
     }
@@ -186,7 +257,7 @@ ColumnLayout {
                 contentItem: Item {
                     FolderIcon {
                         anchors.centerIn: parent
-                        width: 24
+                        width: Kirigami.Units.iconSizes.smallMedium
                         height: width
                         iconName: iconButton.modelData.value
                         monochrome: true

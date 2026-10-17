@@ -26,7 +26,10 @@ TestCase {
     }
 
     function typeRows() {
-        return EntryTypes.options.map(option => ({ tag: option.id, option: option }));
+        return EntryTypes.options.map(option => ({
+                    tag: option.id,
+                    option: option
+                }));
     }
 
     function editorFields(kind) {
@@ -41,16 +44,21 @@ TestCase {
                 notes: "Recovery information"
             };
         case "note":
-            return { value: "Private note content", notes: "Additional context" };
+            return {
+                value: "Private note content",
+                notes: "Additional context"
+            };
         case "custom":
             return {
-                records: [{
-                    id: "00000000-0000-4000-8000-000000000001",
-                    key: "Recovery code",
-                    value: "private recovery value",
-                    multiline: true,
-                    concealed: true
-                }],
+                records: [
+                    {
+                        id: "00000000-0000-4000-8000-000000000001",
+                        key: "Recovery code",
+                        value: "private recovery value",
+                        multiline: true,
+                        concealed: true
+                    }
+                ],
                 notes: "Custom content notes"
             };
         case "card":
@@ -72,13 +80,15 @@ TestCase {
             return {
                 firstName: "Ada",
                 lastName: "Example",
-                documents: [{
-                    id: "00000000-0000-4000-8000-000000000002",
-                    documentType: "Passport",
-                    number: "P123456",
-                    country: "GB",
-                    expires: "2032-12-31"
-                }],
+                documents: [
+                    {
+                        id: "00000000-0000-4000-8000-000000000002",
+                        documentType: "Passport",
+                        number: "P123456",
+                        country: "GB",
+                        expires: "2032-12-31"
+                    }
+                ],
                 emails: ["ada@example.invalid"],
                 phones: ["+1 555 0100"],
                 address: "1 Example Street",
@@ -122,32 +132,76 @@ TestCase {
     function emptyFields(kind) {
         switch (kind) {
         case "login":
-            return { username: "", password: "", url: "", urls: [], totpInput: "", notes: "" };
+            return {
+                username: "",
+                password: "",
+                url: "",
+                urls: [],
+                totpInput: "",
+                notes: ""
+            };
         case "note":
-            return { value: "", notes: "" };
+            return {
+                value: "",
+                notes: ""
+            };
         case "custom":
-            return { records: [], notes: "" };
+            return {
+                records: [],
+                notes: ""
+            };
         case "card":
             return {
-                holder: "", number: "", expiryMonth: 0, expiryYear: 0,
-                cvv: "", pin: "", notes: ""
+                holder: "",
+                number: "",
+                expiryMonth: 0,
+                expiryYear: 0,
+                cvv: "",
+                pin: "",
+                notes: ""
             };
         case "totp":
-            return { totpInput: "", notes: "" };
+            return {
+                totpInput: "",
+                notes: ""
+            };
         case "identity":
             return {
-                firstName: "", lastName: "", documents: [], emails: [], phones: [],
-                address: "", notes: ""
+                firstName: "",
+                lastName: "",
+                documents: [],
+                emails: [],
+                phones: [],
+                address: "",
+                notes: ""
             };
         case "wifi":
-            return { ssid: "", security: "wpa", password: "", hidden: false, notes: "" };
+            return {
+                ssid: "",
+                security: "wpa",
+                password: "",
+                hidden: false,
+                notes: ""
+            };
         case "license":
             return {
-                product: "", licenseKey: "", holder: "", email: "", version: "",
-                purchased: "", expires: "", notes: ""
+                product: "",
+                licenseKey: "",
+                holder: "",
+                email: "",
+                version: "",
+                purchased: "",
+                expires: "",
+                notes: ""
             };
         case "ssh-key":
-            return { importToken: "", passphrase: "", user: "", hosts: [], notes: "" };
+            return {
+                importToken: "",
+                passphrase: "",
+                user: "",
+                hosts: [],
+                notes: ""
+            };
         default:
             fail("Add an empty editor fixture for " + kind);
         }
@@ -164,20 +218,33 @@ TestCase {
                 remainingSeconds: 15
             };
             fields.history = {
-                events: [{ at: 1700000000, kind: "create" }],
-                versions: [{ index: 0, at: 1700000000, passwordOnly: false }]
+                events: [
+                    {
+                        at: 1700000000,
+                        kind: "create"
+                    }
+                ],
+                versions: [
+                    {
+                        index: 0,
+                        at: 1700000000,
+                        passwordOnly: false
+                    }
+                ]
             };
         } else if (kind !== "note") {
             const structuredFields = {
-                rows: [{
-                    id: "field:test",
-                    label: "Example field",
-                    value: "Example value",
-                    multiline: false,
-                    concealed: false,
-                    revealed: false,
-                    hasValue: true
-                }],
+                rows: [
+                    {
+                        id: "field:test",
+                        label: "Example field",
+                        value: "Example value",
+                        multiline: false,
+                        concealed: false,
+                        revealed: false,
+                        hasValue: true
+                    }
+                ],
                 notes: fields.notes,
                 hasQr: false
             };
@@ -201,7 +268,10 @@ TestCase {
     function entryDetail(kind) {
         return {
             id: kind + "-entry",
-            content: { kind: kind, fields: detailFields(kind) }
+            content: {
+                kind: kind,
+                fields: detailFields(kind)
+            }
         };
     }
 
@@ -247,7 +317,9 @@ TestCase {
     }
 
     function test_catalog_components_follow_common_contract(row) {
-        const editor = createTemporaryObject(row.option.editor, testCase, { width: 640 });
+        const editor = createTemporaryObject(row.option.editor, testCase, {
+            width: 640
+        });
         verify(editor !== null, row.option.id + " editor");
         verify(editor instanceof SecretFields, row.option.id + " editor contract");
         compare(editor.currentFields(), emptyFields(row.option.id));
@@ -331,18 +403,22 @@ TestCase {
         const panel = createDetail("login");
 
         panel.detail = entryDetail("note");
-        tryVerify(() => panel.contentView instanceof SecretContentView
-            && panel.contentView.entryId === "note-entry");
+        tryVerify(() => panel.contentView instanceof SecretContentView && panel.contentView.entryId === "note-entry");
         compare(panel.contentView.fields, detailFields("note"));
         compare(panel.contentView.fields.password, undefined);
 
         panel.detail = entryDetail("login");
-        tryVerify(() => panel.contentView instanceof SecretContentView
-            && panel.contentView.entryId === "login-entry");
+        tryVerify(() => panel.contentView instanceof SecretContentView && panel.contentView.entryId === "login-entry");
         compare(panel.contentView.fields, detailFields("login"));
         compare(panel.contentView.fields.value, undefined);
 
-        panel.detail = { id: "unsupported", content: { kind: "unsupported-test-type", fields: {} } };
+        panel.detail = {
+            id: "unsupported",
+            content: {
+                kind: "unsupported-test-type",
+                fields: {}
+            }
+        };
         tryCompare(panel, "contentView", null);
         panel.detail = null;
         compare(panel.contentView, null);

@@ -32,13 +32,9 @@ Controls.Dialog {
 
     readonly property var filteredOptions: {
         const needle = relatedEntrySearch.text.trim().toLocaleLowerCase();
-        return options.filter(option => option.id && !option.unavailable
-            && (!folderFilterId || (option.folder || "") === (folderFilterId === "unfiled" ? "" : folderFilterId))
-            && (!needle || [option.title || "", option.subtitle || ""].join(" ").toLocaleLowerCase().includes(needle)));
+        return options.filter(option => option.id && !option.unavailable && (!folderFilterId || (option.folder || "") === (folderFilterId === "unfiled" ? "" : folderFilterId)) && (!needle || [option.title || "", option.subtitle || ""].join(" ").toLocaleLowerCase().includes(needle)));
     }
-    readonly property string pendingId: relatedEntryList.currentIndex >= 0
-        && relatedEntryList.currentIndex < filteredOptions.length
-        ? filteredOptions[relatedEntryList.currentIndex].id : ""
+    readonly property string pendingId: relatedEntryList.currentIndex >= 0 && relatedEntryList.currentIndex < filteredOptions.length ? filteredOptions[relatedEntryList.currentIndex].id : ""
 
     signal selectionRequested(string entryId)
     signal candidateHighlighted(string entryId)
@@ -118,7 +114,9 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 spacing: 6
-                Controls.Label { text: qsTr("Buscar elemento") }
+                Controls.Label {
+                    text: qsTr("Buscar elemento")
+                }
                 Kirigami.SearchField {
                     id: relatedEntrySearch
                     objectName: root.searchObjectName
@@ -129,15 +127,15 @@ Controls.Dialog {
                         root.retainedSelectionId = "";
                         relatedEntryList.currentIndex = -1;
                     }
-                    Keys.onReturnPressed: function(event) {
+                    Keys.onReturnPressed: function (event) {
                         root.confirmSelection();
                         event.accepted = true;
                     }
-                    Keys.onEnterPressed: function(event) {
+                    Keys.onEnterPressed: function (event) {
                         root.confirmSelection();
                         event.accepted = true;
                     }
-                    Keys.onDownPressed: function(event) {
+                    Keys.onDownPressed: function (event) {
                         if (relatedEntryList.count > 0) {
                             relatedEntryList.currentIndex = Math.max(0, relatedEntryList.currentIndex);
                             relatedEntryList.forceActiveFocus();
@@ -151,16 +149,24 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 spacing: 6
-                Controls.Label { text: qsTr("Carpeta") }
+                Controls.Label {
+                    text: qsTr("Carpeta")
+                }
                 FolderPicker {
                     objectName: root.folderPickerObjectName
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    folderRows: [{ id: "unfiled", name: qsTr("Sin carpeta"), depth: 0 }].concat(root.folderRows)
+                    folderRows: [
+                        {
+                            id: "unfiled",
+                            name: qsTr("Sin carpeta"),
+                            depth: 0
+                        }
+                    ].concat(root.folderRows)
                     selectedId: root.folderFilterId
                     emptyLabel: qsTr("Todas las carpetas")
                     accessibleLabel: qsTr("Filtrar por carpeta")
-                    onFolderSelected: function(folderId) {
+                    onFolderSelected: function (folderId) {
                         root.retainedSelectionId = "";
                         root.folderFilterId = folderId;
                     }
@@ -184,9 +190,8 @@ Controls.Dialog {
                 keyNavigationWraps: false
                 Accessible.role: Accessible.List
                 Accessible.name: root.listAccessibleName
-                onModelChanged: currentIndex = root.preserveSelectionOnModelChange
-                    ? root.filteredOptions.findIndex(option => option.id === root.retainedSelectionId) : -1
-                Keys.onDownPressed: function(event) {
+                onModelChanged: currentIndex = root.preserveSelectionOnModelChange ? root.filteredOptions.findIndex(option => option.id === root.retainedSelectionId) : -1
+                Keys.onDownPressed: function (event) {
                     if (root.preserveSelectionOnModelChange) {
                         currentIndex = Math.min(count - 1, currentIndex + 1);
                         root.highlightSelection();
@@ -195,7 +200,7 @@ Controls.Dialog {
                         event.accepted = false;
                     }
                 }
-                Keys.onUpPressed: function(event) {
+                Keys.onUpPressed: function (event) {
                     if (root.preserveSelectionOnModelChange) {
                         currentIndex = Math.max(0, currentIndex - 1);
                         root.highlightSelection();
@@ -263,11 +268,11 @@ Controls.Dialog {
             text: root.cancelText
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
             onClicked: root.close()
-            Keys.onReturnPressed: function(event) {
+            Keys.onReturnPressed: function (event) {
                 root.close();
                 event.accepted = true;
             }
-            Keys.onEnterPressed: function(event) {
+            Keys.onEnterPressed: function (event) {
                 root.close();
                 event.accepted = true;
             }
@@ -278,11 +283,11 @@ Controls.Dialog {
             enabled: !!root.pendingId && root.selectionAllowed
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
             onClicked: root.confirmSelection()
-            Keys.onReturnPressed: function(event) {
+            Keys.onReturnPressed: function (event) {
                 root.confirmSelection();
                 event.accepted = true;
             }
-            Keys.onEnterPressed: function(event) {
+            Keys.onEnterPressed: function (event) {
                 root.confirmSelection();
                 event.accepted = true;
             }

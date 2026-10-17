@@ -16,14 +16,18 @@ ColumnLayout {
     property alias folderFilterId: relatedEntryDialog.folderFilterId
 
     readonly property var options: {
-        const choices = [{ id: "", label: qsTr("Sin vínculo"), unavailable: false }];
-        const eligible = entries.filter(candidate => !candidate.trashed
-            && candidate.id !== entryId
-            && (!candidate.relatedEntryId || candidate.relatedEntryId === entryId));
+        const choices = [
+            {
+                id: "",
+                label: qsTr("Sin vínculo"),
+                unavailable: false
+            }
+        ];
+        const eligible = entries.filter(candidate => !candidate.trashed && candidate.id !== entryId && (!candidate.relatedEntryId || candidate.relatedEntryId === entryId));
         eligible.sort((left, right) => left.title.localeCompare(right.title, undefined, {
-            sensitivity: "base",
-            numeric: true
-        }) || left.id.localeCompare(right.id));
+                sensitivity: "base",
+                numeric: true
+            }) || left.id.localeCompare(right.id));
         for (const candidate of eligible) {
             choices.push({
                 id: candidate.id,
@@ -39,15 +43,10 @@ ColumnLayout {
         }
 
         const current = relatedEntryId ? entries.find(candidate => candidate.id === relatedEntryId) : null;
-        if (relatedEntryId && (!current || current.trashed
-                || !eligible.some(candidate => candidate.id === relatedEntryId))) {
+        if (relatedEntryId && (!current || current.trashed || !eligible.some(candidate => candidate.id === relatedEntryId))) {
             choices.push({
                 id: relatedEntryId,
-                label: !current
-                    ? qsTr("Elemento vinculado no disponible")
-                    : current.trashed
-                      ? qsTr("%1 · %2 — En la papelera").arg(current.title).arg(kindName(current.kind))
-                      : qsTr("%1 · %2 — No disponible").arg(current.title).arg(kindName(current.kind)),
+                label: !current ? qsTr("Elemento vinculado no disponible") : current.trashed ? qsTr("%1 · %2 — En la papelera").arg(current.title).arg(kindName(current.kind)) : qsTr("%1 · %2 — No disponible").arg(current.title).arg(kindName(current.kind)),
                 unavailable: true
             });
         }
@@ -168,7 +167,9 @@ ColumnLayout {
             text: qsTr("Desvincular")
             onClicked: root.selectRelatedEntry("")
         }
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
     }
 
     Controls.Label {
@@ -195,8 +196,10 @@ ColumnLayout {
         kindOptions: root.kindOptions
         folderRows: root.folderRows
         selectedId: root.relatedEntryId
-        onSelectionRequested: function(entryId) { root.selectRelatedEntry(entryId); }
-        onModalVisibilityChanged: function(opened) {
+        onSelectionRequested: function (entryId) {
+            root.selectRelatedEntry(entryId);
+        }
+        onModalVisibilityChanged: function (opened) {
             root.externalModalRequested(opened);
             if (!opened && root.visible && root.enabled)
                 relatedEntryButton.forceActiveFocus();

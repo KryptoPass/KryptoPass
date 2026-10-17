@@ -20,15 +20,29 @@ alias r := run
 
 # Corre la app en ventana (pásale args: `just run -- --help`).
 run *args: install-dev-desktop
-    LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}
+    if [[ "$(locale charmap)" == "UTF-8" ]]; then cargo run -- {{ args }}; else LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}; fi
 
 # Loop de dev: bacon recompila y relanza al guardar.
 dev:
     bacon run
 
-# Formato Rust: debe pasar sin diff.
-fmt:
+# Formato Rust, C++ KDE y QML: debe pasar sin diff.
+fmt: fmt-rust fmt-native fmt-qml
+
+fmt-rust:
     cargo fmt --all --check
+
+fmt-native:
+    python3 tools/source_format.py cpp
+
+fmt-qml:
+    python3 tools/source_format.py qml
+
+# Aplica el mismo formato que comprueban verify y CI.
+format:
+    cargo fmt --all
+    python3 tools/source_format.py cpp --write
+    python3 tools/source_format.py qml --write
 
 # Compila + regenera .qmltypes (base de lint y smoke).
 check:
@@ -147,6 +161,10 @@ install prefix:
 # Captura con bóveda y configuración temporales, sin datos del usuario.
 screenshot: build
     python3 packaging/capture_screenshot.py
+
+# Vista previa de Acerca de con metadatos e icono reales, en un perfil aislado.
+screenshot-about: build
+    python3 packaging/capture_screenshot.py --about --output {{ quote(target_dir / "previews/about.png") }}
 
 # Construye el proxy de navegador sin enlazar Qt.
 browser-build:

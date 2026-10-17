@@ -245,8 +245,13 @@ parcial. Preparar además documentación de uso para que Ayuda tenga un destino
 - Comparación de formato C++ de solo lectura: Qt local 6.12.0,
   clang-format 23.1.1 y estilo ECM del sistema. El resultado debe reproducirse
   con la versión de formatter elegida para CI.
-- `just verify`: resultado pendiente durante la redacción; actualizar tras
-  completar la ejecución.
+- `just verify`: **correcto (salida 0)**. Pasaron formato Rust, compilación,
+  Clippy, lint QML, las dos suites nativas, 183 pruebas QML, 215 pruebas Rust,
+  13 pruebas Python, metadatos desktop/AppStream, catálogos y REUSE. Hubo avisos
+  de `raise()` no soportado por el plugin offscreen; las pruebas terminaron
+  sin fallos. Estas puertas no evalúan por sí mismas la conformidad con las HIG.
+- `just smoke`: **correcto (salida 0)**; arranque offscreen limpio con perfil
+  temporal aislado. No sustituye una revisión de interacción en Plasma.
 - No se ha realizado aún una sesión manual completa con Orca, teclado,
   alto contraste, animaciones desactivadas, RTL o escalado en Plasma/Wayland.
   Tampoco se ha verificado menú global, portales o comportamiento en varias
@@ -274,3 +279,52 @@ parcial. Preparar además documentación de uso para que Ayuda tenga un destino
 El criterio visual prioritario es heredar el tema, la fuente y las convenciones
 de KDE. Las reglas genéricas de una skill de diseño —por ejemplo imponer texto
 de 16 píxeles— no deben reemplazar esas preferencias del sistema.
+
+## Correcciones de los P2 (17 de octubre de 2026)
+
+Se implementaron los hallazgos **1, 2, 3, 5, 7, 8 y 9**. El hallazgo **11**
+queda expresamente fuera de este cambio; los P3 mantienen su evaluación.
+La evidencia anterior describe el estado revisado antes de estas correcciones.
+
+- **1 — Ayuda:** guía de uso integrada y disponible sin conexión mediante F1;
+  reporte de errores al tracker de `KAboutData`, Acerca de la aplicación y
+  Acerca de KDE. No se añade un selector de idioma sin catálogos conectados.
+- **2 — Acciones:** `KStandardActions` crea Buscar, Salir, Configurar atajos,
+  Ayuda, Reportar error y los dos Acerca de. El registro nativo publica texto,
+  icono y secuencias; `DesktopAction` los reutiliza para menú, barra y atajos,
+  incluidos los alternativos, y sincroniza la disponibilidad contextual con
+  el registro. Los identificadores anteriores de atajos se conservan.
+- **3 — Menús:** las operaciones de claves permanecen presentes en Archivo y
+  Editar; se desactivan cuando la sección o selección no permite ejecutarlas.
+- **5 — Adaptación:** `AdaptivePanes` presenta navegación, lista y detalle
+  simultáneamente a partir de 60 `gridUnit`; por debajo muestra un panel.
+  Los botones de la barra permiten recorrer los paneles en ventanas estrechas,
+  también con Tab y Espacio. Las acciones globales de navegación de paneles se
+  retiraron del menú Ver y del configurador de atajos a petición del usuario.
+  Los paneles y el editor conservan sus instancias y estado al redimensionar.
+  Tamaño inicial, mínimos de ventana y umbrales usan unidades de Kirigami.
+- **7 — Unidades:** celdas, iconos, márgenes y radios del selector de apariencia
+  y las previsualizaciones de arrastre usan unidades e iconSizes de Kirigami.
+  Se conservan los trazos de borde y los indicadores finos de inserción.
+- **8 — Locale:** `just run` hereda el entorno UTF-8; solo aplica `C.UTF-8`
+  si `locale charmap` no es UTF-8. BUILD y AGENTS reflejan esa política;
+  CI y pruebas conservan su entorno reproducible.
+- **9 — Formato:** configuración KDE de ECM versionada en `.clang-format`,
+  clang-format 23, QML a cuatro espacios con `.qmlformat.ini` y EditorConfig
+  alineado. `just fmt` comprueba Rust, C++ y QML sin escribir; `just format`
+  aplica los tres. Verify, CI y Bacon usan estas mismas comprobaciones.
+  Los archivos existentes se normalizaron con esos formateadores.
+
+Validación añadida: contratos QML para acciones/atajos, disponibilidad,
+reconfiguración, paneles anchos/estrechos, foco por teclado, conservación del
+estado y ayuda con fuente grande. Se comprobó además el locale regional
+`es_VE.UTF-8` con `LC_TIME` independiente y la ruta de fallback no UTF-8.
+Las capturas offscreen de la aplicación real a 480 × 600 y 1296 × 810 se
+revisaron visualmente con perfiles temporales aislados. Estas comprobaciones
+no sustituyen los recorridos manuales pendientes de Plasma/Wayland y Orca.
+
+Resultado final: **`just verify` y `just smoke` correctos (salida 0)**.
+Pasaron las dos suites nativas, 203 pruebas QML, 215 pruebas Rust y 13
+pruebas Python, además de formato, compilación, Clippy, lint QML, metadatos,
+catálogos y REUSE. Persisten los avisos conocidos de `raise()` del plugin
+offscreen en pruebas de ventanas; no hubo fallos.

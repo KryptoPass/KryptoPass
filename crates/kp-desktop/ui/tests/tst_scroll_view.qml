@@ -70,14 +70,19 @@ TestCase {
 
     function selectedItemIsVisible(list) {
         const item = list.currentItem;
-        return item !== null && item.y >= list.contentY - 0.5
-                && item.y + item.height <= list.contentY + list.height + 0.5;
+        return item !== null && item.y >= list.contentY - 0.5 && item.y + item.height <= list.contentY + list.height + 0.5;
     }
 
     function test_selection_below_viewport_becomes_visible_promptly_data() {
         return [
-            { tag: "short-list", count: 20 },
-            { tag: "long-list", count: 2000 }
+            {
+                tag: "short-list",
+                count: 20
+            },
+            {
+                tag: "long-list",
+                count: 2000
+            }
         ];
     }
 
@@ -103,9 +108,7 @@ TestCase {
         const destination = view.listView.contentHeight - view.listView.height;
         const started = Date.now();
         view.listView.currentIndex = 19;
-        tryVerify(() => view.listView.contentY > initialPosition + 0.5
-                && view.listView.contentY < destination - 0.5, 150,
-                "Selection scrolling must show an intermediate position before arrival");
+        tryVerify(() => view.listView.contentY > initialPosition + 0.5 && view.listView.contentY < destination - 0.5, 150, "Selection scrolling must show an intermediate position before arrival");
         const remaining = Math.max(1, 450 - (Date.now() - started));
         tryVerify(() => selectedItemIsVisible(view.listView), remaining);
     }
@@ -129,13 +132,11 @@ TestCase {
         }
         wait(500);
         verify(defaultView.listView.contentY > initialPosition);
-        verify(Math.abs(appView.listView.contentY - defaultView.listView.contentY) < 0.5,
-                "AppListView must retain Qt's wheel displacement");
+        verify(Math.abs(appView.listView.contentY - defaultView.listView.contentY) < 0.5, "AppListView must retain Qt's wheel displacement");
         mouseWheel(appView, 100, 100, 0, 120);
         mouseWheel(defaultView, 100, 100, 0, 120);
         wait(500);
-        verify(Math.abs(appView.listView.contentY - defaultView.listView.contentY) < 0.5,
-                "AppListView must retain Qt's reverse wheel displacement");
+        verify(Math.abs(appView.listView.contentY - defaultView.listView.contentY) < 0.5, "AppListView must retain Qt's reverse wheel displacement");
         compare(appView.listView.currentIndex, 0);
         compare(defaultView.listView.currentIndex, 0);
     }

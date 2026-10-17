@@ -29,14 +29,8 @@ SecretContentView {
                 copyLabel: qsTr("Copiar código de verificación")
                 copyEnabled: !!root.fields?.totp?.currentCode
                 prominent: true
-                hint: root.fields?.totp?.remainingSeconds > 0
-                    ? qsTr("Se renueva en %1 s").arg(root.fields?.totp?.remainingSeconds || 0)
-                    : ""
-                progress: root.fields?.totp?.period > 0
-                    ? Math.max(0, Math.min(1,
-                        Number(root.fields?.totp?.remainingSeconds || 0)
-                        / Number(root.fields?.totp?.period || 1)))
-                    : -1
+                hint: root.fields?.totp?.remainingSeconds > 0 ? qsTr("Se renueva en %1 s").arg(root.fields?.totp?.remainingSeconds || 0) : ""
+                progress: root.fields?.totp?.period > 0 ? Math.max(0, Math.min(1, Number(root.fields?.totp?.remainingSeconds || 0) / Number(root.fields?.totp?.period || 1))) : -1
                 onCopyRequested: root.copyTotpRequested(false)
 
                 Controls.ToolButton {
@@ -95,7 +89,6 @@ SecretContentView {
                     }
                 }
             }
-
         }
 
         ColumnLayout {
@@ -146,15 +139,9 @@ SecretContentView {
                     required property var modelData
                     Layout.fillWidth: true
                     label: String(modelData.label || qsTr("Campo"))
-                    value: !modelData.hasValue
-                        ? qsTr("Sin valor")
-                        : modelData.concealed && !modelData.revealed
-                          ? "••••••••"
-                          : String(modelData.value || "")
+                    value: !modelData.hasValue ? qsTr("Sin valor") : modelData.concealed && !modelData.revealed ? "••••••••" : String(modelData.value || "")
                     hint: String(modelData.hint || "")
-                    multiline: !!modelData.multiline
-                        || String(modelData.value || "").indexOf("\n") >= 0
-                        || String(modelData.value || "").indexOf("\r") >= 0
+                    multiline: !!modelData.multiline || String(modelData.value || "").indexOf("\n") >= 0 || String(modelData.value || "").indexOf("\r") >= 0
                     copyLabel: qsTr("Copiar %1").arg(label)
                     copyEnabled: !!modelData.hasValue
                     revealable: !!modelData.concealed && !!modelData.hasValue

@@ -32,7 +32,8 @@ y job en `bacon.toml`, no un comando suelto en un doc.
 - Nombres QML explícitos con `cxx_name` (sin conversión automática
   snake→camel). Lo que QML lee debe existir en los tipos generados.
 - Estilo fijo en código (`org.kde.desktop` salvo `QT_QUICK_CONTROLS_STYLE`);
-  locale UTF-8 en entorno (`LANG=C.UTF-8 LC_ALL=C.UTF-8`).
+  locale UTF-8 heredado del usuario en desarrollo; fallback `C.UTF-8` solo
+  si el entorno no es UTF-8. CI y pruebas fijan el locale reproducible.
 
 ## Nombres e identidad
 

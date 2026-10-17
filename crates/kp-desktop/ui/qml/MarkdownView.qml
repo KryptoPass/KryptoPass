@@ -14,6 +14,8 @@ Controls.Control {
     readonly property var revealedActions: document?.revealedActions || []
     readonly property string selectedText: textView.selectedText
     readonly property real contentHeight: body.implicitHeight
+    property var _spoilerPositions: ({})
+    property int _layoutRevision: 0
     signal linkRequested(string link)
 
     padding: Kirigami.Units.largeSpacing
@@ -26,6 +28,24 @@ Controls.Control {
     function clearSelection() {
         textView.deselect();
     }
+
+    function updateSpoilerPositions() {
+        const positions = {};
+        // Only the renderer's action anchors reserve space for inline controls.
+        // Source text with the same spaces must remain ordinary selectable text.
+        const marker = "\u2007\u2007\u2007";
+        const plainText = textView.getText(0, textView.length);
+        for (let position = plainText.indexOf(marker); position >= 0; position = plainText.indexOf(marker, position + marker.length)) {
+            const fragment = textView.getFormattedText(position, position + marker.length);
+            const match = fragment.match(/href="(kryptopass-spoiler:[0-9]+:[0-9]+)"/);
+            if (match && root.spoilerActions.indexOf(match[1]) >= 0)
+                positions[match[1]] = position;
+        }
+        root._spoilerPositions = positions;
+        ++root._layoutRevision;
+    }
+
+    onSpoilerActionsChanged: Qt.callLater(root.updateSpoilerPositions)
 
     function updateTheme() {
         if (document)
@@ -76,10 +96,46 @@ Controls.Control {
             font: root.font
             Accessible.name: root.accessibleLabel
             onLinkActivated: link => root.document.activateLink(link)
+            onTextChanged: Qt.callLater(root.updateSpoilerPositions)
+            onWidthChanged: ++root._layoutRevision
+            onContentHeightChanged: ++root._layoutRevision
+            onFontChanged: ++root._layoutRevision
             HoverHandler {
-                cursorShape: textView.hoveredLink
-                    ? Qt.PointingHandCursor
-                    : Qt.IBeamCursor
+                cursorShape: textView.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor
+            }
+            Repeater {
+                model: root.spoilerActions
+                delegate: Controls.ToolButton {
+                    id: spoilerButton
+                    required property int index
+                    required property string modelData
+                    readonly property bool revealed: root.revealedActions.indexOf(spoilerButton.modelData) >= 0
+                    readonly property int markerPosition: root._spoilerPositions[modelData] ?? -1
+                    readonly property rect markerStart: {
+                        const revision = root._layoutRevision;
+                        return textView.positionToRectangle(markerPosition);
+                    }
+                    readonly property rect markerEnd: {
+                        const revision = root._layoutRevision;
+                        return textView.positionToRectangle(markerPosition + 3);
+                    }
+                    objectName: "markdownSpoilerToggle" + spoilerButton.index
+                    visible: markerPosition >= 0
+                    x: Math.min(markerStart.x, markerEnd.x)
+                    y: markerStart.y
+                    width: Math.abs(markerEnd.x - markerStart.x)
+                    height: markerStart.height
+                    padding: 0
+                    display: Controls.AbstractButton.IconOnly
+                    icon.name: revealed ? "view-hidden" : "view-visible"
+                    icon.width: Kirigami.Units.iconSizes.small
+                    icon.height: Kirigami.Units.iconSizes.small
+                    activeFocusOnTab: true
+                    Accessible.name: revealed ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1) : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: Accessible.name
+                    onClicked: root.document.activateLink(spoilerButton.modelData)
+                }
             }
         }
         Controls.Label {
@@ -88,43 +144,6 @@ Controls.Control {
             text: root.document?.error || ""
             color: Kirigami.Theme.negativeTextColor
             wrapMode: Text.Wrap
-        }
-        ColumnLayout {
-            Layout.fillWidth: true
-            visible: root.spoilerActions.length > 0
-            spacing: Kirigami.Units.smallSpacing
-
-            Controls.Label {
-                Layout.fillWidth: true
-                text: qsTr("Spoilers")
-                color: Kirigami.Theme.disabledTextColor
-            }
-            Flow {
-                Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
-
-                Repeater {
-                    model: root.spoilerActions
-                    delegate: Controls.ToolButton {
-                        id: spoilerButton
-                        required property int index
-                        required property string modelData
-                        readonly property bool revealed: root.revealedActions.indexOf(spoilerButton.modelData) >= 0
-                        objectName: "markdownSpoilerToggle" + spoilerButton.index
-                        display: Controls.AbstractButton.IconOnly
-                        icon.name: revealed ? "view-visible" : "view-hidden"
-                        activeFocusOnTab: true
-                        Accessible.name: revealed
-                            ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1)
-                            : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
-                        Controls.ToolTip.visible: hovered || visualFocus
-                        Controls.ToolTip.text: revealed
-                            ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1)
-                            : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
-                        onClicked: root.document.activateLink(spoilerButton.modelData)
-                    }
-                }
-            }
         }
     }
 }

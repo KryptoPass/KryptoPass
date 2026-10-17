@@ -13,14 +13,17 @@ Controls.Pane {
     required property real headerHeight
     required property Controls.Action newFolderAction
 
+    property bool showBackButton: false
+    signal backRequested
+
     property bool entryDraggingEnabled: false
     signal entryMoveRequested(string entryId, string folderId)
     signal folderMoveRequested(string folderId, string parentId, string beforeId)
 
     signal sectionSelectionRequested(bool showKeys)
     signal scopeSelectionRequested(string scopeId)
-    signal renameFolderRequested()
-    signal deleteFolderRequested()
+    signal renameFolderRequested
+    signal deleteFolderRequested
 
     Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 14
     Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 11
@@ -35,6 +38,15 @@ Controls.Pane {
             Layout.fillWidth: true
             headerHeight: root.headerHeight
             contentItem: RowLayout {
+                Controls.ToolButton {
+                    visible: root.showBackButton
+                    text: qsTr("Volver a la lista")
+                    icon.name: "go-previous"
+                    display: Controls.AbstractButton.IconOnly
+                    onClicked: root.backRequested()
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.text: text
+                }
                 Controls.ToolButton {
                     id: sectionPicker
                     objectName: "sectionPicker"
@@ -130,7 +142,7 @@ Controls.Pane {
                 scopeId: modelData.id
                 text: modelData.name
                 icon.name: modelData.icon
-                onScopeSelected: function(scopeId) {
+                onScopeSelected: function (scopeId) {
                     root.scopeSelectionRequested(scopeId);
                 }
             }
@@ -150,12 +162,15 @@ Controls.Pane {
                 enabled: root.entryDraggingEnabled && !root.keysMode
                 keys: ["org.kryptopass.folder"]
                 function acceptsSource(source) {
-                    return !!source && source.storeAdapter === root.storeAdapter
-                            && root.storeAdapter.canMoveFolder(source.folderId, "");
+                    return !!source && source.storeAdapter === root.storeAdapter && root.storeAdapter.canMoveFolder(source.folderId, "");
                 }
-                function sourceFolderId(source) { return source.folderId; }
-                onEntered: function(drag) { drag.accepted = acceptsSource(drag.source); }
-                onDropped: function(drop) {
+                function sourceFolderId(source) {
+                    return source.folderId;
+                }
+                onEntered: function (drag) {
+                    drag.accepted = acceptsSource(drag.source);
+                }
+                onDropped: function (drop) {
                     if (!enabled || !acceptsSource(drop.source))
                         return;
                     const sourceId = sourceFolderId(drop.source);
@@ -189,20 +204,20 @@ Controls.Pane {
                     scopeId: modelData.id
                     acceptsEntryDrop: root.entryDraggingEnabled && !root.keysMode
                     dropStore: root.storeAdapter
-                    onEntryDropped: function(entryId, folderId) {
+                    onEntryDropped: function (entryId, folderId) {
                         root.entryMoveRequested(entryId, folderId);
                     }
                     folderDraggingEnabled: root.entryDraggingEnabled && !root.keysMode
                     acceptsFolderDrop: folderDraggingEnabled
                     parentFolderId: modelData.parent
-                    onFolderDropped: function(folderId, parentId, beforeId) {
+                    onFolderDropped: function (folderId, parentId, beforeId) {
                         root.folderMoveRequested(folderId, parentId, beforeId);
                     }
                     depth: modelData.depth
                     folderColor: modelData.color || "transparent"
                     text: modelData.name
                     icon.name: modelData.icon || "folder"
-                    onScopeSelected: function(scopeId) {
+                    onScopeSelected: function (scopeId) {
                         root.scopeSelectionRequested(scopeId);
                     }
                     Keys.onReturnPressed: clicked()

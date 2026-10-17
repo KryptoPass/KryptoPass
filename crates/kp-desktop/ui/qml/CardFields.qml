@@ -47,7 +47,9 @@ SecretFields {
         };
     }
 
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        loadFields({});
+    }
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -57,7 +59,9 @@ SecretFields {
             Layout.fillWidth: true
             label: qsTr("Titular")
             value: root.holder
-            onValueEdited: function(value) { root.holder = value; }
+            onValueEdited: function (value) {
+                root.holder = value;
+            }
         }
         SecretInput {
             Layout.fillWidth: true
@@ -66,8 +70,12 @@ SecretFields {
             concealed: true
             maximumLength: 64
             inputMethodHints: Qt.ImhDigitsOnly
-            validator: RegularExpressionValidator { regularExpression: /[0-9 -]*/ }
-            onValueEdited: function(value) { root.number = value; }
+            validator: RegularExpressionValidator {
+                regularExpression: /[0-9 -]*/
+            }
+            onValueEdited: function (value) {
+                root.number = value;
+            }
         }
         GridLayout {
             Layout.fillWidth: true
@@ -81,8 +89,11 @@ SecretFields {
                 value: root.expiryMonth > 0 ? String(root.expiryMonth) : ""
                 placeholderText: qsTr("1–12")
                 inputMethodHints: Qt.ImhDigitsOnly
-                validator: IntValidator { bottom: 1; top: 12 }
-                onValueEdited: function(value) {
+                validator: IntValidator {
+                    bottom: 1
+                    top: 12
+                }
+                onValueEdited: function (value) {
                     root.expiryMonth = value.length ? Number(value) : 0;
                 }
             }
@@ -92,9 +103,12 @@ SecretFields {
                 value: root.expiryYear > 0 ? String(root.expiryYear) : ""
                 placeholderText: qsTr("AAAA")
                 inputMethodHints: Qt.ImhDigitsOnly
-                validator: IntValidator { bottom: 1900; top: 9999 }
+                validator: IntValidator {
+                    bottom: 1900
+                    top: 9999
+                }
                 hint: qsTr("Escribe el año con cuatro cifras.")
-                onValueEdited: function(value) {
+                onValueEdited: function (value) {
                     root.expiryYear = value.length ? Number(value) : 0;
                 }
             }
@@ -105,9 +119,13 @@ SecretFields {
                 concealed: true
                 maximumLength: 4
                 inputMethodHints: Qt.ImhDigitsOnly
-                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
+                validator: RegularExpressionValidator {
+                    regularExpression: /[0-9]{0,4}/
+                }
                 hint: qsTr("Usa 3 o 4 cifras.")
-                onValueEdited: function(value) { root.cvv = value; }
+                onValueEdited: function (value) {
+                    root.cvv = value;
+                }
             }
             SecretInput {
                 Layout.fillWidth: true
@@ -116,8 +134,12 @@ SecretFields {
                 concealed: true
                 maximumLength: 64
                 inputMethodHints: Qt.ImhDigitsOnly
-                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,64}/ }
-                onValueEdited: function(value) { root.pin = value; }
+                validator: RegularExpressionValidator {
+                    regularExpression: /[0-9]{0,64}/
+                }
+                onValueEdited: function (value) {
+                    root.pin = value;
+                }
             }
         }
         NotesEditor {

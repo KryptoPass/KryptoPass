@@ -20,8 +20,7 @@ Item {
         width: Math.min(root.width, root.iconSize)
         height: Math.min(root.height, root.iconSize)
         source: root.entryIcon?.kind === "theme" ? "" : root.imageSource
-        sourceSize: Qt.size(Math.ceil(root.iconSize * Screen.devicePixelRatio),
-                            Math.ceil(root.iconSize * Screen.devicePixelRatio))
+        sourceSize: Qt.size(Math.ceil(root.iconSize * Screen.devicePixelRatio), Math.ceil(root.iconSize * Screen.devicePixelRatio))
         asynchronous: true
         fillMode: Image.PreserveAspectFit
         visible: status === Image.Ready

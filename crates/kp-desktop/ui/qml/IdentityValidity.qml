@@ -12,13 +12,20 @@ Controls.Control {
     readonly property int level: code === "ultimate" ? 3 : code === "full" ? 2 : code === "marginal" ? 1 : 0
     readonly property string label: {
         switch (code) {
-        case "ultimate": return qsTr("Total");
-        case "full": return qsTr("Plena");
-        case "marginal": return qsTr("Marginal");
-        case "never": return qsTr("No válida");
-        case "revoked": return qsTr("Revocada");
-        case "invalid": return qsTr("Inválida");
-        default: return qsTr("Sin verificar");
+        case "ultimate":
+            return qsTr("Total");
+        case "full":
+            return qsTr("Plena");
+        case "marginal":
+            return qsTr("Marginal");
+        case "never":
+            return qsTr("No válida");
+        case "revoked":
+            return qsTr("Revocada");
+        case "invalid":
+            return qsTr("Inválida");
+        default:
+            return qsTr("Sin verificar");
         }
     }
     // Older records may still carry the former wording from the adapter.
@@ -85,13 +92,11 @@ Controls.Control {
                             orientation: Gradient.Horizontal
                             GradientStop {
                                 position: 0.0
-                                color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g,
-                                    Kirigami.Theme.highlightColor.b, 0)
+                                color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0)
                             }
                             GradientStop {
                                 position: 1.0
-                                color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g,
-                                    Kirigami.Theme.highlightColor.b, root.level / 3)
+                                color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, root.level / 3)
                             }
                         }
                     }

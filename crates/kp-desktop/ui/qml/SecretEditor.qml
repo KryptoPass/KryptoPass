@@ -27,7 +27,9 @@ Controls.Pane {
     property bool dirty: false
     property bool externalModalOpen: false
     property bool preparingSecretMaterial: false
-    DraftBaseline { id: draftBaseline }
+    DraftBaseline {
+        id: draftBaseline
+    }
     property string requestedId: ""
     property string pendingEntryId: ""
     property string discardAction: ""
@@ -41,11 +43,11 @@ Controls.Pane {
     readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !preparingSecretMaterial && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
 
     signal saveRequested(string draftJson)
-    signal generatePasswordRequested()
-    signal windowCloseApproved()
-    signal vaultLockApproved()
-    signal vaultLockCancelled()
-    signal navigationCancelled()
+    signal generatePasswordRequested
+    signal windowCloseApproved
+    signal vaultLockApproved
+    signal vaultLockCancelled
+    signal navigationCancelled
 
     visible: opened
     padding: 0
@@ -69,7 +71,10 @@ Controls.Pane {
             id: entryId,
             folder: draftFolderId,
             title: titleField.text,
-            content: { kind: fieldsHost.kind, fields: fieldsHost.currentFields() },
+            content: {
+                kind: fieldsHost.kind,
+                fields: fieldsHost.currentFields()
+            },
             icon: draftIcon,
             recipients: recipientChooser.selectedFingerprints.slice(),
             relatedEntryId: relatedEntryId,
@@ -111,10 +116,7 @@ Controls.Pane {
     }
 
     function openRelatedEntry(entry) {
-        if (!entry || entry.trashed || entry.relatedEntryId || storeAdapter.relatedEntryFor(entry)
-                || storeAdapter.controller.locked || saving || savePending || waitingForEditor
-                || externalModalOpen || preparingSecretMaterial || storeAdapter.controller.busy
-                || storeAdapter.controller.editorBusy || storeAdapter.controller.iconBusy)
+        if (!entry || entry.trashed || entry.relatedEntryId || storeAdapter.relatedEntryFor(entry) || storeAdapter.controller.locked || saving || savePending || waitingForEditor || externalModalOpen || preparingSecretMaterial || storeAdapter.controller.busy || storeAdapter.controller.editorBusy || storeAdapter.controller.iconBusy)
             return;
         const source = {
             id: entry.id,
@@ -122,7 +124,7 @@ Controls.Pane {
             folder: entry.folder || "",
             recipients: Array.isArray(entry.recipients) ? entry.recipients.slice() : []
         };
-        guardNavigation(function() {
+        guardNavigation(function () {
             editor.pendingRelatedEntry = source;
             editor.openEntry(null);
             if (!editor.waitingForEditor && !editor.opened)
@@ -176,7 +178,10 @@ Controls.Pane {
             titleField.text = qsTr("Seguridad de %1").arg(relatedPrefill.title);
             draftFolderId = relatedPrefill.folder;
             kindField.currentIndex = customIndex;
-            fieldsHost.loadContent({ kind: "custom", fields: {} });
+            fieldsHost.loadContent({
+                kind: "custom",
+                fields: {}
+            });
             recipientChooser.selectedFingerprints = relatedPrefill.recipients.slice();
             relatedEntryId = relatedPrefill.id;
         }
@@ -345,8 +350,12 @@ Controls.Pane {
             themeIconName.forceActiveFocus();
         }
         onAccepted: {
-            if (!themeIconName.acceptableInput) return;
-            editor.draftIcon = { kind: "theme", name: themeIconName.text };
+            if (!themeIconName.acceptableInput)
+                return;
+            editor.draftIcon = {
+                kind: "theme",
+                name: themeIconName.text
+            };
             editor.draftIconSource = "";
             editor.updateDirty();
         }
@@ -355,21 +364,48 @@ Controls.Pane {
             EntryIcon {
                 Layout.alignment: Qt.AlignHCenter
                 iconSize: Kirigami.Units.iconSizes.large
-                entryIcon: ({ kind: "theme", name: themeIconName.text })
+                entryIcon: ({
+                        kind: "theme",
+                        name: themeIconName.text
+                    })
                 fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
             }
             GridLayout {
                 columns: 4
                 Repeater {
                     model: [
-                        { name: qsTr("Internet"), icon: "internet-web-browser" },
-                        { name: qsTr("Correo"), icon: "mail-message" },
-                        { name: qsTr("Trabajo"), icon: "applications-office" },
-                        { name: qsTr("Personal"), icon: "user-identity" },
-                        { name: qsTr("Servidor"), icon: "network-server" },
-                        { name: qsTr("Billetera"), icon: "wallet-open" },
-                        { name: qsTr("Desarrollo"), icon: "utilities-terminal" },
-                        { name: qsTr("Juegos"), icon: "applications-games" }
+                        {
+                            name: qsTr("Internet"),
+                            icon: "internet-web-browser"
+                        },
+                        {
+                            name: qsTr("Correo"),
+                            icon: "mail-message"
+                        },
+                        {
+                            name: qsTr("Trabajo"),
+                            icon: "applications-office"
+                        },
+                        {
+                            name: qsTr("Personal"),
+                            icon: "user-identity"
+                        },
+                        {
+                            name: qsTr("Servidor"),
+                            icon: "network-server"
+                        },
+                        {
+                            name: qsTr("Billetera"),
+                            icon: "wallet-open"
+                        },
+                        {
+                            name: qsTr("Desarrollo"),
+                            icon: "utilities-terminal"
+                        },
+                        {
+                            name: qsTr("Juegos"),
+                            icon: "applications-games"
+                        }
                     ]
                     delegate: Controls.ToolButton {
                         required property var modelData
@@ -393,7 +429,9 @@ Controls.Pane {
                 id: themeIconName
                 Layout.fillWidth: true
                 maximumLength: 128
-                validator: RegularExpressionValidator { regularExpression: /[a-zA-Z0-9-]{1,128}/ }
+                validator: RegularExpressionValidator {
+                    regularExpression: /[a-zA-Z0-9-]{1,128}/
+                }
                 Accessible.name: qsTr("Nombre del icono del tema")
                 placeholderText: "internet-web-browser"
             }
@@ -409,7 +447,8 @@ Controls.Pane {
         target: editor.storeAdapter.controller
 
         function onIconPrepared(json) {
-            if (!editor.opened || !editor.loaded) return;
+            if (!editor.opened || !editor.loaded)
+                return;
             const result = JSON.parse(json);
             editor.draftIcon = result.icon;
             editor.draftIconSource = result.iconSource;
@@ -520,7 +559,9 @@ Controls.Pane {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 6
-                            Controls.Label { text: qsTr("Nombre") }
+                            Controls.Label {
+                                text: qsTr("Nombre")
+                            }
                             Controls.TextField {
                                 id: titleField
                                 objectName: "entryNameField"
@@ -533,7 +574,9 @@ Controls.Pane {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Kirigami.Units.smallSpacing
-                            Controls.Label { text: qsTr("Icono") }
+                            Controls.Label {
+                                text: qsTr("Icono")
+                            }
                             RowLayout {
                                 Layout.fillWidth: true
                                 EntryIcon {
@@ -566,7 +609,10 @@ Controls.Pane {
                                         }
                                         Controls.MenuItem {
                                             text: qsTr("Elegir imagen…")
-                                            onTriggered: { editor.externalModalOpen = true; iconFileDialog.open(); }
+                                            onTriggered: {
+                                                editor.externalModalOpen = true;
+                                                iconFileDialog.open();
+                                            }
                                         }
                                         Controls.MenuItem {
                                             text: qsTr("Elegir icono del tema…")
@@ -585,7 +631,9 @@ Controls.Pane {
                                 Layout.fillWidth: true
                                 Layout.minimumWidth: 0
                                 spacing: 6
-                                Controls.Label { text: qsTr("Tipo") }
+                                Controls.Label {
+                                    text: qsTr("Tipo")
+                                }
                                 Controls.ComboBox {
                                     id: kindField
                                     Layout.fillWidth: true
@@ -595,14 +643,19 @@ Controls.Pane {
                                     valueRole: "id"
                                     Accessible.name: qsTr("Tipo de elemento")
                                     enabled: !editor.entryId && !editor.preparingSecretMaterial
-                                    onActivated: { if (!editor.entryId && !editor.preparingSecretMaterial) fieldsHost.selectType(currentValue); }
+                                    onActivated: {
+                                        if (!editor.entryId && !editor.preparingSecretMaterial)
+                                            fieldsHost.selectType(currentValue);
+                                    }
                                 }
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 Layout.minimumWidth: 0
                                 spacing: 6
-                                Controls.Label { text: qsTr("Carpeta") }
+                                Controls.Label {
+                                    text: qsTr("Carpeta")
+                                }
                                 FolderPicker {
                                     id: folderField
                                     Layout.fillWidth: true
@@ -610,7 +663,7 @@ Controls.Pane {
                                     folderRows: editor.storeAdapter.folderRows
                                     selectedId: editor.draftFolderId
                                     accessibleLabel: qsTr("Carpeta del elemento")
-                                    onFolderSelected: function(folderId) {
+                                    onFolderSelected: function (folderId) {
                                         editor.draftFolderId = folderId;
                                         editor.updateDirty();
                                     }
@@ -625,12 +678,14 @@ Controls.Pane {
                         enabled: !editor.saving && !editor.savePending && !editor.preparingSecretMaterial
                         onEdited: editor.updateDirty()
                         onGeneratePasswordRequested: editor.generatePasswordRequested()
-                        onExternalModalRequested: function(opened) { editor.externalModalOpen = opened; }
-                        onPrepareSshKeyRequested: function(fileUrl, passphrase) {
+                        onExternalModalRequested: function (opened) {
+                            editor.externalModalOpen = opened;
+                        }
+                        onPrepareSshKeyRequested: function (fileUrl, passphrase) {
                             editor.preparingSecretMaterial = true;
                             editor.storeAdapter.controller.prepareSshKey(fileUrl, passphrase);
                         }
-                        onPrepareTotpQrRequested: function(fileUrl) {
+                        onPrepareTotpQrRequested: function (fileUrl) {
                             editor.preparingSecretMaterial = true;
                             editor.storeAdapter.controller.prepareTotpQr(fileUrl);
                         }
@@ -641,7 +696,7 @@ Controls.Pane {
                         Layout.fillWidth: true
                         enabled: !editor.saving && !editor.savePending
                         keyStore: editor.keyStore
-                        onSelectionChanged: function(fingerprints) {
+                        onSelectionChanged: function (fingerprints) {
                             editor.updateDirty();
                         }
                     }
@@ -656,8 +711,10 @@ Controls.Pane {
                         folderRows: editor.storeAdapter.folderRows
                         entryId: editor.entryId
                         relatedEntryId: editor.relatedEntryId
-                        onExternalModalRequested: function(opened) { editor.externalModalOpen = opened; }
-                        onSelectionChanged: function(relatedId) {
+                        onExternalModalRequested: function (opened) {
+                            editor.externalModalOpen = opened;
+                        }
+                        onSelectionChanged: function (relatedId) {
                             editor.relatedEntryId = relatedId;
                             editor.updateDirty();
                         }
@@ -675,7 +732,9 @@ Controls.Pane {
             background: null
             contentItem: RowLayout {
                 spacing: 8
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
                 Controls.BusyIndicator {
                     visible: editor.saving
                     running: visible

@@ -16,12 +16,10 @@ Controls.ApplicationWindow {
     property bool completed: false
     property var selectedFingerprints: []
     readonly property var availableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
-    readonly property bool eligibleSelection: selectedFingerprints.length > 0
-        && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
-    signal imported()
+    readonly property bool eligibleSelection: selectedFingerprints.length > 0 && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
+    signal imported
 
-    flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint
-        | Qt.WindowCloseButtonHint | Qt.WindowMaximizeButtonHint
+    flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint | Qt.WindowMaximizeButtonHint
     modality: Qt.WindowModal
     width: Math.min(1040, screen.width - Kirigami.Units.gridUnit * 2)
     height: Math.min(760, screen.height - Kirigami.Units.gridUnit * 2)
@@ -62,7 +60,7 @@ Controls.ApplicationWindow {
         hide();
     }
 
-    onClosing: function(event) {
+    onClosing: function (event) {
         if (busy)
             event.accepted = false;
     }
@@ -95,7 +93,7 @@ Controls.ApplicationWindow {
         importers: JSON.parse(dialog.controller.importersJson || "[]")
         busy: dialog.busy
         onImporterSelected: dialog.clearReview()
-        onChooseFileRequested: function(importerId) {
+        onChooseFileRequested: function (importerId) {
             if (!selectedImporter || importerId !== selectedImporter.id)
                 return;
             sourceDialog.importerId = importerId;
@@ -158,15 +156,12 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: dialog.controller.reviewed && !dialog.eligibleSelection
-                    text: dialog.availableKeys.length > 0
-                        ? qsTr("Elige al menos una clave para continuar.")
-                        : qsTr("No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.")
+                    text: dialog.availableKeys.length > 0 ? qsTr("Elige al menos una clave para continuar.") : qsTr("No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.")
                     wrapMode: Text.Wrap
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
-                    visible: dialog.controller.reviewed && dialog.eligibleSelection
-                        && !dialog.availableKeys.some(key => key.hasSecret && dialog.selectedFingerprints.includes(key.id))
+                    visible: dialog.controller.reviewed && dialog.eligibleSelection && !dialog.availableKeys.some(key => key.hasSecret && dialog.selectedFingerprints.includes(key.id))
                     type: Kirigami.MessageType.Warning
                     text: qsTr("Para leer los datos necesitarás la clave privada de alguien con acceso.")
                 }

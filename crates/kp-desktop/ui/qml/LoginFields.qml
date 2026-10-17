@@ -16,8 +16,7 @@ SecretFields {
     property bool totpVisible: false
     property string notes: ""
     property bool passwordVisible: false
-    readonly property var normalizedUrls: String(urlsText || "")
-        .split(/\r?\n/).map(value => value.trim()).filter(value => !!value)
+    readonly property var normalizedUrls: String(urlsText || "").split(/\r?\n/).map(value => value.trim()).filter(value => !!value)
 
     onUsernameChanged: edited()
     onPasswordChanged: edited()
@@ -47,15 +46,17 @@ SecretFields {
         };
     }
 
-    function clearFields() { loadFields({}); }
-    function applyGeneratedPassword(value) { password = value; }
+    function clearFields() {
+        loadFields({});
+    }
+    function applyGeneratedPassword(value) {
+        password = value;
+    }
 
     spacing: 24
 
     function setUrls(values, legacyUrl) {
-        const next = Array.isArray(values)
-            ? values.map(value => String(value || "").trim()).filter(value => !!value)
-            : [];
+        const next = Array.isArray(values) ? values.map(value => String(value || "").trim()).filter(value => !!value) : [];
         if (!next.length && legacyUrl)
             next.push(String(legacyUrl).trim());
         urls = next;
@@ -79,7 +80,9 @@ SecretFields {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            Controls.Label { text: qsTr("Correo o usuario") }
+            Controls.Label {
+                text: qsTr("Correo o usuario")
+            }
             Controls.TextField {
                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
@@ -91,13 +94,15 @@ SecretFields {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            Controls.Label { text: qsTr("Contraseña") }
+            Controls.Label {
+                text: qsTr("Contraseña")
+            }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 Controls.TextField {
-                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     id: passwordField
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     objectName: "entryPasswordField"
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
@@ -134,13 +139,15 @@ SecretFields {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            Controls.Label { text: qsTr("Autenticación de dos pasos (TOTP)") }
+            Controls.Label {
+                text: qsTr("Autenticación de dos pasos (TOTP)")
+            }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 Controls.TextField {
-                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     id: totpField
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     rightPadding: totpRevealButton.width + Kirigami.Units.smallSpacing
@@ -177,7 +184,9 @@ SecretFields {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            Controls.Label { text: qsTr("Sitios web") }
+            Controls.Label {
+                text: qsTr("Sitios web")
+            }
             Controls.TextArea {
                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true

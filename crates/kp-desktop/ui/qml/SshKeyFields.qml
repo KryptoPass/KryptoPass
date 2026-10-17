@@ -100,7 +100,9 @@ SecretFields {
                 label: qsTr("Frase de contraseña")
                 value: root.passphrase
                 concealed: true
-                onValueEdited: function(value) { root.passphrase = value; }
+                onValueEdited: function (value) {
+                    root.passphrase = value;
+                }
             }
             Controls.Button {
                 text: qsTr("Elegir archivo de clave…")
@@ -160,7 +162,9 @@ SecretFields {
             Layout.fillWidth: true
             label: qsTr("Usuario")
             value: root.user
-            onValueEdited: function(value) { root.user = value; }
+            onValueEdited: function (value) {
+                root.user = value;
+            }
         }
         StringListEditor {
             objectName: "sshHostsEditor"
@@ -169,7 +173,9 @@ SecretFields {
             inputLabel: qsTr("Equipo o host")
             addLabel: qsTr("Agregar equipo")
             values: root.hosts
-            onValuesEdited: function(values) { root.hosts = values; }
+            onValuesEdited: function (values) {
+                root.hosts = values;
+            }
         }
         NotesEditor {
             id: notesEditor

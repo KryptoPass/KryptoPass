@@ -40,15 +40,19 @@ Controls.Dialog {
         backend.clearError();
         open();
     }
-    function openForExport() { prepare(true); }
-    function openForRestore() { prepare(false); }
+    function openForExport() {
+        prepare(true);
+    }
+    function openForRestore() {
+        prepare(false);
+    }
 
     Backend.BackupController {
         id: backend
-        onBackupExported: function(path) {
+        onBackupExported: function (path) {
             dialog.completionMessage = qsTr("Copia de seguridad guardada en %1.").arg(dialog.displayPath(path));
         }
-        onBackupRestored: function(path) {
+        onBackupRestored: function (path) {
             dialog.close();
             dialog.openVaultRequested(path);
         }
@@ -73,8 +77,7 @@ Controls.Dialog {
         id: scroll
         clip: true
         contentWidth: availableWidth
-        implicitHeight: Math.min(form.implicitHeight + Kirigami.Units.largeSpacing * 2,
-                                 Math.max(200, dialog.parent.height - Kirigami.Units.gridUnit * 10))
+        implicitHeight: Math.min(form.implicitHeight + Kirigami.Units.largeSpacing * 2, Math.max(200, dialog.parent.height - Kirigami.Units.gridUnit * 10))
 
         Controls.Pane {
             width: scroll.availableWidth
@@ -99,17 +102,13 @@ Controls.Dialog {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     visible: !dialog.completionMessage
-                    text: dialog.exportMode
-                          ? qsTr("Guarda una copia cifrada de los datos de la bóveda actual, incluidos nombres y carpetas.")
-                          : qsTr("Crearemos y abriremos una bóveda nueva con los datos de la copia. No se mezclan con los datos que estás viendo ahora.")
+                    text: dialog.exportMode ? qsTr("Guarda una copia cifrada de los datos de la bóveda actual, incluidos nombres y carpetas.") : qsTr("Crearemos y abriremos una bóveda nueva con los datos de la copia. No se mezclan con los datos que estás viendo ahora.")
                 }
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !dialog.completionMessage
                     wrapMode: Text.Wrap
-                    text: dialog.exportMode
-                          ? qsTr("Para restaurar en otra PC también necesitas tus claves privadas. La copia de datos no las incluye: guárdalas por separado.")
-                          : qsTr("Usaremos automáticamente una de las claves con las que protegiste la copia. Su parte privada debe estar en tu llavero; no necesitas elegirla otra vez.")
+                    text: dialog.exportMode ? qsTr("Para restaurar en otra PC también necesitas tus claves privadas. La copia de datos no las incluye: guárdalas por separado.") : qsTr("Usaremos automáticamente una de las claves con las que protegiste la copia. Su parte privada debe estar en tu llavero; no necesitas elegirla otra vez.")
                 }
                 Controls.Label {
                     Layout.fillWidth: true
@@ -183,8 +182,7 @@ Controls.Dialog {
                     enabled: !dialog.busy
                     property var selectedFingerprints: []
                     readonly property var availableKeys: dialog.keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
-                    readonly property bool eligibleSelection: selectedFingerprints.length > 0
-                        && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
+                    readonly property bool eligibleSelection: selectedFingerprints.length > 0 && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
 
                     Repeater {
                         model: recipients.availableKeys
@@ -206,8 +204,7 @@ Controls.Dialog {
                     }
                     Kirigami.InlineMessage {
                         Layout.fillWidth: true
-                        visible: recipients.eligibleSelection
-                                 && !recipients.availableKeys.some(key => key.hasSecret && recipients.selectedFingerprints.includes(key.id))
+                        visible: recipients.eligibleSelection && !recipients.availableKeys.some(key => key.hasSecret && recipients.selectedFingerprints.includes(key.id))
                         type: Kirigami.MessageType.Information
                         text: qsTr("No tienes aquí la clave privada de las claves seleccionadas. Para restaurar esta copia tendrás que importarla o usar la PC donde la conservas.")
                     }
@@ -227,19 +224,14 @@ Controls.Dialog {
                     Controls.Label {
                         Layout.fillWidth: true
                         visible: recipients.availableKeys.length === 0
-                        text: dialog.keyStore.controller.busy
-                              ? qsTr("Buscando tus claves…")
-                              : qsTr("No hay claves disponibles para proteger la copia. Importa o crea una clave desde Claves y vuelve a intentarlo.")
+                        text: dialog.keyStore.controller.busy ? qsTr("Buscando tus claves…") : qsTr("No hay claves disponibles para proteger la copia. Importa o crea una clave desde Claves y vuelve a intentarlo.")
                         wrapMode: Text.Wrap
                     }
                 }
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !dialog.busy && !dialog.completionMessage && !backend.errorMessage
-                    text: dialog.exportMode
-                          ? (!dialog.outputPath.toString() ? qsTr("Elige dónde guardar la copia para continuar.")
-                             : !recipients.eligibleSelection ? qsTr("Selecciona una clave válida para continuar.") : qsTr("Todo listo para crear la copia."))
-                          : (!dialog.inputPath.toString() ? qsTr("Selecciona una copia para continuar.") : qsTr("Todo listo para restaurar en una bóveda nueva."))
+                    text: dialog.exportMode ? (!dialog.outputPath.toString() ? qsTr("Elige dónde guardar la copia para continuar.") : !recipients.eligibleSelection ? qsTr("Selecciona una clave válida para continuar.") : qsTr("Todo listo para crear la copia.")) : (!dialog.inputPath.toString() ? qsTr("Selecciona una copia para continuar.") : qsTr("Todo listo para restaurar en una bóveda nueva."))
                     wrapMode: Text.Wrap
                 }
                 Controls.BusyIndicator {
@@ -269,8 +261,7 @@ Controls.Dialog {
             visible: !dialog.completionMessage
             text: dialog.exportMode ? qsTr("Crear copia") : qsTr("Restaurar y abrir")
             icon.name: dialog.exportMode ? "document-save" : "document-revert"
-            enabled: !dialog.busy && !dialog.completionMessage
-                     && (dialog.exportMode ? (!!dialog.outputPath.toString() && recipients.eligibleSelection) : !!dialog.inputPath.toString())
+            enabled: !dialog.busy && !dialog.completionMessage && (dialog.exportMode ? (!!dialog.outputPath.toString() && recipients.eligibleSelection) : !!dialog.inputPath.toString())
             onClicked: {
                 if (dialog.exportMode)
                     backend.exportBackup(dialog.outputPath, JSON.stringify(recipients.selectedFingerprints));

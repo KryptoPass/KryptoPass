@@ -25,10 +25,15 @@ SecretFields {
     }
 
     function currentFields() {
-        return { totpInput: totpInput, notes: notes };
+        return {
+            totpInput: totpInput,
+            notes: notes
+        };
     }
 
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        loadFields({});
+    }
 
     function applyPreparedTotp(json) {
         let prepared = json;

@@ -22,7 +22,12 @@ SecretFields {
         notesEditor.resetSource(loadedNotes);
     }
 
-    function currentFields() { return { value: value, notes: notes }; }
+    function currentFields() {
+        return {
+            value: value,
+            notes: notes
+        };
+    }
     function clearFields() {
         value = "";
         notes = "";

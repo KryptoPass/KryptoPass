@@ -14,14 +14,14 @@ Controls.Button {
 
     readonly property bool menuOpen: folderMenu.opened
     readonly property var selectedFolder: (folderRows || []).find(folder => folder.id === selectedId) || null
-    readonly property string selectedName: selectedId === ""
-            ? emptyLabel
-            : selectedFolder ? selectedFolder.name : qsTr("Carpeta no disponible")
-    readonly property var options: [{
-        id: "",
-        name: emptyLabel,
-        depth: 0
-    }].concat(folderRows || [])
+    readonly property string selectedName: selectedId === "" ? emptyLabel : selectedFolder ? selectedFolder.name : qsTr("Carpeta no disponible")
+    readonly property var options: [
+        {
+            id: "",
+            name: emptyLabel,
+            depth: 0
+        }
+    ].concat(folderRows || [])
 
     signal folderSelected(string folderId)
 
@@ -73,20 +73,12 @@ Controls.Button {
                 Accessible.description: checked ? qsTr("Seleccionada") : qsTr("Seleccionar carpeta")
 
                 contentItem: Controls.Label {
-                    leftPadding: folderMenuItem.mirrored
-                            ? 0
-                            : folderMenuItem.indicator.width + Kirigami.Units.smallSpacing
-                    rightPadding: folderMenuItem.mirrored
-                            ? folderMenuItem.indicator.width + Kirigami.Units.smallSpacing
-                            : 0
-                    text: folderMenuItem.modelData.id === ""
-                            ? folderMenuItem.modelData.name
-                            : "\u00a0".repeat(Math.min(12, folderMenuItem.modelData.depth || 0) * 2) + folderMenuItem.modelData.name
+                    leftPadding: folderMenuItem.mirrored ? 0 : folderMenuItem.indicator.width + Kirigami.Units.smallSpacing
+                    rightPadding: folderMenuItem.mirrored ? folderMenuItem.indicator.width + Kirigami.Units.smallSpacing : 0
+                    text: folderMenuItem.modelData.id === "" ? folderMenuItem.modelData.name : "\u00a0".repeat(Math.min(12, folderMenuItem.modelData.depth || 0) * 2) + folderMenuItem.modelData.name
                     textFormat: Text.PlainText
                     font: folderMenuItem.font
-                    color: !folderMenuItem.enabled
-                            ? Kirigami.Theme.disabledTextColor
-                            : folderMenuItem.pressed ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                    color: !folderMenuItem.enabled ? Kirigami.Theme.disabledTextColor : folderMenuItem.pressed ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -97,10 +89,10 @@ Controls.Button {
                 }
             }
 
-            onObjectAdded: function(index, object) {
+            onObjectAdded: function (index, object) {
                 folderMenu.insertItem(index, object);
             }
-            onObjectRemoved: function(index, object) {
+            onObjectRemoved: function (index, object) {
                 folderMenu.removeItem(object);
             }
         }

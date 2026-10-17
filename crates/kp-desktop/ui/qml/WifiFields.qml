@@ -31,10 +31,18 @@ SecretFields {
     }
 
     function currentFields() {
-        return { ssid: ssid, security: security, password: password, hidden: hidden, notes: notes };
+        return {
+            ssid: ssid,
+            security: security,
+            password: password,
+            hidden: hidden,
+            notes: notes
+        };
     }
 
-    function clearFields() { loadFields({}); }
+    function clearFields() {
+        loadFields({});
+    }
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -44,22 +52,38 @@ SecretFields {
             Layout.fillWidth: true
             label: qsTr("Nombre de la red (SSID)")
             value: root.ssid
-            onValueEdited: function(value) { root.ssid = value; }
+            onValueEdited: function (value) {
+                root.ssid = value;
+            }
         }
 
         ColumnLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
-            Controls.Label { text: qsTr("Seguridad") }
+            Controls.Label {
+                text: qsTr("Seguridad")
+            }
             Controls.ComboBox {
                 id: securityField
                 objectName: "wifiSecurityField"
                 Layout.fillWidth: true
                 model: [
-                    { value: "open", label: qsTr("Abierta") },
-                    { value: "wep", label: qsTr("WEP") },
-                    { value: "wpa", label: qsTr("WPA / WPA2") },
-                    { value: "wpa3", label: qsTr("WPA3") }
+                    {
+                        value: "open",
+                        label: qsTr("Abierta")
+                    },
+                    {
+                        value: "wep",
+                        label: qsTr("WEP")
+                    },
+                    {
+                        value: "wpa",
+                        label: qsTr("WPA / WPA2")
+                    },
+                    {
+                        value: "wpa3",
+                        label: qsTr("WPA3")
+                    }
                 ]
                 textRole: "label"
                 valueRole: "value"
@@ -74,10 +98,10 @@ SecretFields {
             label: qsTr("Contraseña de la red")
             value: root.password
             concealed: true
-            hint: root.security === "wpa3"
-                ? qsTr("El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.")
-                : root.security === "open" ? qsTr("Déjala vacía para una red abierta.") : ""
-            onValueEdited: function(value) { root.password = value; }
+            hint: root.security === "wpa3" ? qsTr("El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.") : root.security === "open" ? qsTr("Déjala vacía para una red abierta.") : ""
+            onValueEdited: function (value) {
+                root.password = value;
+            }
         }
 
         Controls.CheckBox {

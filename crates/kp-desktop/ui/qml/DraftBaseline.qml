@@ -5,9 +5,15 @@ QtObject {
     id: root
     property var value: null
 
-    function capture(draft) { value = snapshot(draft); }
-    function matches(draft) { return value !== null && equal(value, draft); }
-    function clear() { value = null; }
+    function capture(draft) {
+        value = snapshot(draft);
+    }
+    function matches(draft) {
+        return value !== null && equal(value, draft);
+    }
+    function clear() {
+        value = null;
+    }
 
     // Own the object structure without serializing another plaintext copy.
     // String values remain Qt/JS managed and cannot be reliably zeroized here.
@@ -39,5 +45,4 @@ QtObject {
         }
         return true;
     }
-
 }

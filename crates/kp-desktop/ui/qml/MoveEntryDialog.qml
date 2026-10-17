@@ -79,7 +79,7 @@ Controls.Dialog {
             folderRows: moveDialog.storeAdapter.folderRows
             selectedId: moveDialog.destinationFolderId
             accessibleLabel: qsTr("Carpeta de destino")
-            onFolderSelected: function(folderId) {
+            onFolderSelected: function (folderId) {
                 moveDialog.destinationFolderId = folderId;
             }
         }
@@ -92,7 +92,9 @@ Controls.Dialog {
             Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
             Layout.preferredHeight: width
         }
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
         Controls.Button {
             text: qsTr("Cancelar")
             enabled: !moveDialog.pending && !moveDialog.storeAdapter.controller.busy

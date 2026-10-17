@@ -7,9 +7,9 @@
 #include <KContacts/Addressee>
 #include <KJob>
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QCoreApplication>
-#include <QAbstractItemView>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QHash>
@@ -21,8 +21,8 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QMetaObject>
-#include <QProcess>
 #include <QPointer>
+#include <QProcess>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
@@ -30,7 +30,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-namespace {
+namespace
+{
 
 constexpr auto kFingerprintApp = "KADDRESSBOOK";
 constexpr auto kFingerprintField = "OPENPGPFP";
@@ -59,17 +60,14 @@ QStringList normalizedFingerprints(const QString &encodedFingerprints)
 
 const QRegularExpression &canonicalFingerprintLineExpression()
 {
-    static const QRegularExpression expression(
-        QStringLiteral("^[\\t ]*OpenPGP:[\\t ]+([A-Fa-f0-9]{40}|[A-Fa-f0-9]{64})[\\t ]*$"),
-        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression expression(QStringLiteral("^[\\t ]*OpenPGP:[\\t ]+([A-Fa-f0-9]{40}|[A-Fa-f0-9]{64})[\\t ]*$"),
+                                               QRegularExpression::CaseInsensitiveOption);
     return expression;
 }
 
 const QRegularExpression &openPgpFingerprintUriLineExpression()
 {
-    static const QRegularExpression expression(
-        QStringLiteral("^[\\t ]*openpgp4fpr:([A-Fa-f0-9]{40})[\\t ]*$"),
-        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression expression(QStringLiteral("^[\\t ]*openpgp4fpr:([A-Fa-f0-9]{40})[\\t ]*$"), QRegularExpression::CaseInsensitiveOption);
     return expression;
 }
 
@@ -107,10 +105,9 @@ QStringList noteFingerprints(const QString &notes)
     // The URI form is deliberately accepted only as a complete token. Its
     // fingerprint is exactly 40 hex digits; URL suffixes and 64-digit values
     // must not be partially interpreted as this compatibility format.
-    static const QRegularExpression uriExpression(
-        QStringLiteral("(^|[\\s<\\[(\"',;])openpgp4fpr:([A-Fa-f0-9]{40})"
-                       "(?=$|[\\s>\\]),;\"']|\\.(?=$|\\s))"),
-        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression uriExpression(QStringLiteral("(^|[\\s<\\[(\"',;])openpgp4fpr:([A-Fa-f0-9]{40})"
+                                                                 "(?=$|[\\s>\\]),;\"']|\\.(?=$|\\s))"),
+                                                  QRegularExpression::CaseInsensitiveOption);
     auto matches = uriExpression.globalMatch(notes);
     while (matches.hasNext()) {
         append(matches.next().captured(2));
@@ -120,8 +117,7 @@ QStringList noteFingerprints(const QString &notes)
 
 QStringList contactFingerprints(const KContacts::Addressee &contact)
 {
-    QStringList fingerprints = normalizedFingerprints(
-        contact.custom(QLatin1String(kFingerprintApp), QLatin1String(kFingerprintField)));
+    QStringList fingerprints = normalizedFingerprints(contact.custom(QLatin1String(kFingerprintApp), QLatin1String(kFingerprintField)));
     QSet<QString> seen(fingerprints.cbegin(), fingerprints.cend());
     for (const QString &fingerprint : noteFingerprints(contact.note())) {
         if (!seen.contains(fingerprint)) {
@@ -144,8 +140,7 @@ QString notesWithFingerprintBlock(const QString &notes, const QStringList &finge
         }
 
         QString lineEnding(1, notes.at(index));
-        if (notes.at(index) == QLatin1Char('\r') && index + 1 < notes.size()
-            && notes.at(index + 1) == QLatin1Char('\n')) {
+        if (notes.at(index) == QLatin1Char('\r') && index + 1 < notes.size() && notes.at(index + 1) == QLatin1Char('\n')) {
             lineEnding = QStringLiteral("\r\n");
         }
         const QString line = notes.mid(lineStart, index - lineStart);
@@ -202,12 +197,7 @@ void invokeContacts(QObject *receiver, const QStringList &records, const QString
     if (!receiver) {
         return;
     }
-    QMetaObject::invokeMethod(
-        receiver,
-        "receiveContacts",
-        Qt::QueuedConnection,
-        Q_ARG(QStringList, records),
-        Q_ARG(QString, error));
+    QMetaObject::invokeMethod(receiver, "receiveContacts", Qt::QueuedConnection, Q_ARG(QStringList, records), Q_ARG(QString, error));
 }
 
 void invokeOperation(QObject *receiver, bool success, const QString &error)
@@ -215,20 +205,14 @@ void invokeOperation(QObject *receiver, bool success, const QString &error)
     if (!receiver) {
         return;
     }
-    QMetaObject::invokeMethod(
-        receiver,
-        "receiveOperation",
-        Qt::QueuedConnection,
-        Q_ARG(bool, success),
-        Q_ARG(QString, error));
+    QMetaObject::invokeMethod(receiver, "receiveOperation", Qt::QueuedConnection, Q_ARG(bool, success), Q_ARG(QString, error));
 }
 
 void showEditor(QObject *receiver, const Akonadi::Item &item, bool creating)
 {
     const QPointer<QObject> receiverGuard(receiver);
-    auto *dialog = new Akonadi::ContactEditorDialog(
-        creating ? Akonadi::ContactEditorDialog::CreateMode : Akonadi::ContactEditorDialog::EditMode,
-        QApplication::activeWindow());
+    auto *dialog = new Akonadi::ContactEditorDialog(creating ? Akonadi::ContactEditorDialog::CreateMode : Akonadi::ContactEditorDialog::EditMode,
+                                                    QApplication::activeWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     if (!creating) {
         dialog->setContact(item);
@@ -290,16 +274,16 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
         ? previous
         : (previous.isEmpty() ? normalizedFingerprint : previous + QLatin1Char(',') + normalizedFingerprint);
     const QString updatedNotes = notesWithFingerprintBlock(contact.note(), fingerprintsForNotes);
-    const QString existingDisplay = detectedFingerprints.isEmpty()
-        ? QCoreApplication::translate("Contacts", "(ninguna)")
-        : detectedFingerprints.join(QStringLiteral(", "));
-    const QString confirmation = QCoreApplication::translate("Contacts", "¿Vincular esta huella con el contacto?\n\nContacto: %1\nHuella: %2\n\n"
-        "KryptoPass añadirá la huella a las preferencias de KDE si falta y mantendrá un bloque de huellas al final de las notas para facilitar la sincronización. "
-        "Conservará el resto del contenido y las preferencias existentes.\n\n"
-        "Huella(s) detectadas:\n%3")
-                                    .arg(contactName, normalizedFingerprint, existingDisplay);
-    const auto answer = QMessageBox::question(
-        QApplication::activeWindow(), QCoreApplication::translate("Contacts", "Añadir huella OpenPGP"), confirmation);
+    const QString existingDisplay =
+        detectedFingerprints.isEmpty() ? QCoreApplication::translate("Contacts", "(ninguna)") : detectedFingerprints.join(QStringLiteral(", "));
+    const QString confirmation = QCoreApplication::translate("Contacts",
+                                                             "¿Vincular esta huella con el contacto?\n\nContacto: %1\nHuella: %2\n\n"
+                                                             "KryptoPass añadirá la huella a las preferencias de KDE si falta y mantendrá un bloque de huellas "
+                                                             "al final de las notas para facilitar la sincronización. "
+                                                             "Conservará el resto del contenido y las preferencias existentes.\n\n"
+                                                             "Huella(s) detectadas:\n%3")
+                                     .arg(contactName, normalizedFingerprint, existingDisplay);
+    const auto answer = QMessageBox::question(QApplication::activeWindow(), QCoreApplication::translate("Contacts", "Añadir huella OpenPGP"), confirmation);
     if (!receiverGuard) {
         return;
     }
@@ -314,8 +298,7 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
     }
 
     if (updatedField != previous) {
-        contact.insertCustom(
-            QLatin1String(kFingerprintApp), QLatin1String(kFingerprintField), updatedField);
+        contact.insertCustom(QLatin1String(kFingerprintApp), QLatin1String(kFingerprintField), updatedField);
     }
     if (updatedNotes != contact.note()) {
         contact.setNote(updatedNotes);
@@ -372,9 +355,7 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
         const QString email = contact.preferredEmail().trimmed();
         QString displayName = name;
         if (!email.isEmpty()) {
-            displayName = displayName.isEmpty()
-                ? email
-                : QStringLiteral("%1 <%2>").arg(displayName, email);
+            displayName = displayName.isEmpty() ? email : QStringLiteral("%1 <%2>").arg(displayName, email);
         }
         if (displayName.isEmpty()) {
             displayName = uid;
@@ -386,10 +367,9 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
     }
 
     if (itemsByUid.isEmpty()) {
-        invokeOperation(
-            receiverGuard.data(),
-            false,
-            QCoreApplication::translate("Contacts", "No hay contactos únicos con una identidad válida para vincular."));
+        invokeOperation(receiverGuard.data(),
+                        false,
+                        QCoreApplication::translate("Contacts", "No hay contactos únicos con una identidad válida para vincular."));
         return;
     }
 
@@ -399,9 +379,8 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
     dialog->resize(520, 440);
 
     auto *layout = new QVBoxLayout(dialog);
-    auto *description = new QLabel(
-        QCoreApplication::translate("Contacts", "Selecciona un contacto de KDE Contacts para añadirle esta huella OpenPGP."),
-        dialog);
+    auto *description =
+        new QLabel(QCoreApplication::translate("Contacts", "Selecciona un contacto de KDE Contacts para añadirle esta huella OpenPGP."), dialog);
     description->setWordWrap(true);
     layout->addWidget(description);
 
@@ -429,71 +408,51 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
     chooseButton->setEnabled(false);
     layout->addWidget(buttons);
 
-    QObject::connect(
-        contactList,
-        &QListWidget::currentRowChanged,
-        dialog,
-        [chooseButton](int row) { chooseButton->setEnabled(row >= 0); });
-    QObject::connect(
-        search,
-        &QLineEdit::textChanged,
-        dialog,
-        [contactList](const QString &query) {
-            const QString needle = query.trimmed();
-            for (int index = 0; index < contactList->count(); ++index) {
-                auto *row = contactList->item(index);
-                const bool matches = needle.isEmpty()
-                    || row->data(Qt::UserRole + 1).toString().contains(needle, Qt::CaseInsensitive);
-                row->setHidden(!matches);
-            }
-            if (contactList->currentItem() && contactList->currentItem()->isHidden()) {
-                contactList->setCurrentRow(-1);
-            }
-        });
-    QObject::connect(
-        contactList,
-        &QListWidget::itemDoubleClicked,
-        dialog,
-        [dialog](QListWidgetItem *) { dialog->accept(); });
+    QObject::connect(contactList, &QListWidget::currentRowChanged, dialog, [chooseButton](int row) {
+        chooseButton->setEnabled(row >= 0);
+    });
+    QObject::connect(search, &QLineEdit::textChanged, dialog, [contactList](const QString &query) {
+        const QString needle = query.trimmed();
+        for (int index = 0; index < contactList->count(); ++index) {
+            auto *row = contactList->item(index);
+            const bool matches = needle.isEmpty() || row->data(Qt::UserRole + 1).toString().contains(needle, Qt::CaseInsensitive);
+            row->setHidden(!matches);
+        }
+        if (contactList->currentItem() && contactList->currentItem()->isHidden()) {
+            contactList->setCurrentRow(-1);
+        }
+    });
+    QObject::connect(contactList, &QListWidget::itemDoubleClicked, dialog, [dialog](QListWidgetItem *) {
+        dialog->accept();
+    });
     QObject::connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
 
-    QObject::connect(
-        dialog,
-        &QDialog::accepted,
-        receiver,
-        [receiverGuard, contactList, fingerprint, itemsByUid, namesByUid]() {
-            if (!receiverGuard) {
-                return;
-            }
-            const QListWidgetItem *selected = contactList->currentItem();
-            if (!selected || selected->isHidden()) {
-                invokeOperation(
-                    receiverGuard.data(),
-                    false,
-                    QCoreApplication::translate("Contacts", "Selecciona un contacto para vincular."));
-                return;
-            }
+    QObject::connect(dialog, &QDialog::accepted, receiver, [receiverGuard, contactList, fingerprint, itemsByUid, namesByUid]() {
+        if (!receiverGuard) {
+            return;
+        }
+        const QListWidgetItem *selected = contactList->currentItem();
+        if (!selected || selected->isHidden()) {
+            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "Selecciona un contacto para vincular."));
+            return;
+        }
 
-            const QString uid = selected->data(Qt::UserRole).toString();
-            const auto item = itemsByUid.constFind(uid);
-            if (item == itemsByUid.cend()) {
-                invokeOperation(
-                    receiverGuard.data(),
-                    false,
-                    QCoreApplication::translate("Contacts", "El contacto seleccionado ya no está disponible."));
-                return;
-            }
+        const QString uid = selected->data(Qt::UserRole).toString();
+        const auto item = itemsByUid.constFind(uid);
+        if (item == itemsByUid.cend()) {
+            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "El contacto seleccionado ya no está disponible."));
+            return;
+        }
 
-            const Akonadi::Item selectedItem = item.value();
-            const QString contactName = namesByUid.value(uid, uid);
-            QTimer::singleShot(0, receiverGuard.data(), [receiverGuard, selectedItem, fingerprint, contactName] {
-                if (receiverGuard) {
-                    finishLink(
-                        receiverGuard.data(), selectedItem, fingerprint.toUpper(), contactName);
-                }
-            });
+        const Akonadi::Item selectedItem = item.value();
+        const QString contactName = namesByUid.value(uid, uid);
+        QTimer::singleShot(0, receiverGuard.data(), [receiverGuard, selectedItem, fingerprint, contactName] {
+            if (receiverGuard) {
+                finishLink(receiverGuard.data(), selectedItem, fingerprint.toUpper(), contactName);
+            }
         });
+    });
     QObject::connect(dialog, &QDialog::rejected, receiver, [receiverGuard] {
         if (receiverGuard) {
             invokeOperation(receiverGuard.data(), false, {});
@@ -539,7 +498,8 @@ void startContactSearch(QObject *receiver)
 
 } // namespace
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 
 void refresh_contacts(QObject *receiver)
 {
@@ -568,7 +528,9 @@ void open_contact_editor(QObject *receiver, const QString &uid)
         if (job->error() || items.isEmpty()) {
             invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se encontró el contacto que quieres editar."));
         } else if (items.size() != 1) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "El identificador del contacto no es único; no se abrió ningún registro."));
+            invokeOperation(receiverGuard.data(),
+                            false,
+                            QCoreApplication::translate("Contacts", "El identificador del contacto no es único; no se abrió ningún registro."));
         } else {
             showEditor(receiverGuard.data(), items.at(0), false);
         }
@@ -591,8 +553,7 @@ void choose_contact_for_key(QObject *receiver, const QString &fingerprint)
             return;
         }
         if (job->error()) {
-            invokeOperation(
-                receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se pudieron consultar los contactos de KDE."));
+            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se pudieron consultar los contactos de KDE."));
         } else {
             showContactSelector(receiverGuard.data(), fingerprint.toUpper(), job->items());
         }

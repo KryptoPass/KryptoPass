@@ -10,15 +10,20 @@
 #include <QUrl>
 #include <functional>
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 // Owned by the icon worker; all methods and completions run on that thread.
-class FaviconService final : public QObject {
+class FaviconService final : public QObject
+{
 public:
     using Completion = std::function<void(QImage)>;
     static constexpr int MaxConcurrent = 6;
 
-    explicit FaviconService(QString cacheDirectory, QNetworkAccessManager *manager = nullptr,
-                            int retryDelayMs = 60000, int timeoutMs = 5000, QString cacheNamespace = {});
+    explicit FaviconService(QString cacheDirectory,
+                            QNetworkAccessManager *manager = nullptr,
+                            int retryDelayMs = 60000,
+                            int timeoutMs = 5000,
+                            QString cacheNamespace = {});
     void request(const QString &host, Completion completion = {});
     void shutdown();
 

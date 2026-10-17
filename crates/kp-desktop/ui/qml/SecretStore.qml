@@ -46,9 +46,9 @@ QtObject {
         const rows = [];
         const visited = Object.create(null);
         const orderedFolders = folders.slice().sort((left, right) => (left.position - right.position) || left.name.localeCompare(right.name, undefined, {
-            sensitivity: "base",
-            numeric: true
-        }) || left.id.localeCompare(right.id));
+                sensitivity: "base",
+                numeric: true
+            }) || left.id.localeCompare(right.id));
         const walk = (parentId, depth) => {
             if (depth > orderedFolders.length)
                 return;
@@ -205,8 +205,7 @@ QtObject {
             selectedId = visibleEntries.length ? visibleEntries[0].id : "";
     }
     onFoldersChanged: {
-        if (!["all", "favorites", "trash"].includes(scope)
-                && !folders.some(folder => folder.id === scope))
+        if (!["all", "favorites", "trash"].includes(scope) && !folders.some(folder => folder.id === scope))
             selectScope("all");
     }
 

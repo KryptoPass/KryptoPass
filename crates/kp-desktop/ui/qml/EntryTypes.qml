@@ -110,10 +110,14 @@ QtObject {
         NoteDetail {}
     }
     readonly property Component customDetail: Component {
-        StructuredSecretDetail { objectName: "customDetail" }
+        StructuredSecretDetail {
+            objectName: "customDetail"
+        }
     }
     readonly property Component cardDetail: Component {
-        StructuredSecretDetail { objectName: "cardDetail" }
+        StructuredSecretDetail {
+            objectName: "cardDetail"
+        }
     }
     readonly property Component totpDetail: Component {
         StructuredSecretDetail {
@@ -123,7 +127,9 @@ QtObject {
         }
     }
     readonly property Component identityDetail: Component {
-        StructuredSecretDetail { objectName: "identityDetail" }
+        StructuredSecretDetail {
+            objectName: "identityDetail"
+        }
     }
     readonly property Component wifiDetail: Component {
         StructuredSecretDetail {
@@ -132,9 +138,13 @@ QtObject {
         }
     }
     readonly property Component licenseDetail: Component {
-        StructuredSecretDetail { objectName: "licenseDetail" }
+        StructuredSecretDetail {
+            objectName: "licenseDetail"
+        }
     }
     readonly property Component sshKeyDetail: Component {
-        StructuredSecretDetail { objectName: "sshKeyDetail" }
+        StructuredSecretDetail {
+            objectName: "sshKeyDetail"
+        }
     }
 }

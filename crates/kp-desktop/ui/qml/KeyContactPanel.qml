@@ -11,8 +11,7 @@ ColumnLayout {
     required property KeyStore keyStore
     required property var selectedKey
     readonly property Backend.ContactsController contactsController: keyStore.contactsController
-    readonly property var linkedContacts: keyStore.contactRows.filter(contact =>
-        keyStore.contactFingerprints(contact).includes((selectedKey?.id || "").toUpperCase()))
+    readonly property var linkedContacts: keyStore.contactRows.filter(contact => keyStore.contactFingerprints(contact).includes((selectedKey?.id || "").toUpperCase()))
 
     spacing: Kirigami.Units.largeSpacing
 

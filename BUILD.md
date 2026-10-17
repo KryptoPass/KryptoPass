@@ -7,11 +7,16 @@
   `qml6-module-org-kde-kirigami` (o el paquete equivalente de tu distro).
 - Rust reciente (ver `rust-toolchain.toml`; `rustup` lo instala solo).
 - `just` y `bacon` (`cargo install just bacon`).
-- Locale UTF-8 (`LANG=C.UTF-8 LC_ALL=C.UTF-8`); `just run` ya lo fija.
+- Locale UTF-8: `just run` hereda los formatos regionales del usuario. Solo
+  utiliza `C.UTF-8` como fallback cuando `locale charmap` no devuelve UTF-8.
+- `clang-format` 23 para el C++ propio y `qmlformat` de la instalación Qt elegida.
+  El estilo KDE de ECM está versionado en `.clang-format`; `.qmlformat.ini`
+  fija cuatro espacios para QML, también en `.editorconfig`.
 
 ## Comandos
 
 ```bash
+just format   # aplica formato Rust, C++ KDE y QML
 just verify   # fmt + check + clippy + lint + test
 just build    # binario dev (acepta flags: just build --release)
 just run      # app en ventana (alias: just r)
@@ -25,6 +30,10 @@ bacon         # check continuo en fondo (q = job qmllint)
 
 - `just lint` corre tras `cargo check` a propósito: necesita los
   `.qmltypes` frescos que genera el build.
+- `just fmt` comprueba los tres formatos sin modificar archivos. Los jobs
+  `bacon fmt`, `bacon fmt-native` y `bacon fmt-qml` usan esas mismas puertas.
+  Al actualizar la versión mayor de clang-format, revisar el diff de formato
+  y actualizar el requisito de `tools/source_format.py` en el mismo cambio.
 - Sin display (CI): `QT_QPA_PLATFORM=offscreen`.
 - Estilo QML fijado en código (`org.kde.desktop`); override con
   `QT_QUICK_CONTROLS_STYLE`.
@@ -98,6 +107,8 @@ Los controles Qt cargan además las traducciones del sistema.
 `just screenshot` genera `packaging/screenshots/vault.png` con una bóveda
 vacía y un perfil temporal. La URL de AppStream apunta a ese archivo en la
 rama principal; estará disponible cuando se publique allí.
+`just screenshot-about` abre el diálogo con los metadatos e icono reales y
+guarda su vista previa en `previews/about.png` dentro del target de Cargo.
 
 Los mensajes Rust se traducen al publicarlos, antes de llegar a QML. Los
 mensajes con argumentos usan `i18n::format` y marcadores `%1`, `%2`, etc.;
@@ -123,3 +134,24 @@ Mover carpeta para organizar la jerarquía sin arrastrar.
 REUSE.toml proporciona las declaraciones SPDX de los archivos y conserva
 las licencias propias de las skills incluidas. Esta integración no convierte
 el proyecto en parte oficial de KDE ni requiere trasladar el repositorio.
+
+## Ayuda y ventanas estrechas
+
+F1 y Ayuda → Ayuda de KryptoPass abren una guía integrada sin conexión.
+El mismo menú permite abrir el tracker declarado en KAboutData, consultar
+Acerca de KryptoPass y Acerca de KDE. Acerca de KryptoPass integra
+una cabecera de identidad y grupos de acciones inspirados en KDE Connect SMS
+con controles Qt/Kirigami, en un diálogo modal QML. Recibe los metadatos y el
+icono de `KAboutData` mediante una proyección pública de ShellController;
+el repositorio procede del mismo manifiesto. La licencia completa se abre en un visor desplazable
+con texto seleccionable. Las acciones comunes usan
+KStandardActions; DesktopAction presenta el texto, icono y atajos del
+registro nativo y comunica a ese registro su disponibilidad contextual.
+El configurador conserva las secuencias alternativas y los cambios se aplican
+al cerrar el diálogo.
+
+La composición pasa de tres paneles a uno cuando el ancho es menor de 60
+unidades de fuente de Kirigami. Los botones de la barra permiten cambiar de
+panel en ventanas estrechas y son accesibles con Tab y Espacio. El editor
+y los paneles conservan sus instancias al cambiar el ancho. Los menús conservan
+sus acciones de bóveda y claves; las que no aplican quedan desactivadas.

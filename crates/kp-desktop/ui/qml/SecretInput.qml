@@ -76,9 +76,7 @@ ColumnLayout {
 
         Controls.ToolButton {
             visible: root.concealed
-            text: root.secretVisible
-                ? qsTr("Ocultar %1").arg(root.label)
-                : qsTr("Mostrar %1").arg(root.label)
+            text: root.secretVisible ? qsTr("Ocultar %1").arg(root.label) : qsTr("Mostrar %1").arg(root.label)
             icon.name: root.secretVisible ? "view-hidden" : "view-visible"
             display: Controls.AbstractButton.IconOnly
             checkable: true

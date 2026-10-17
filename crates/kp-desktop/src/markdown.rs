@@ -203,15 +203,14 @@ create_formatter!(QtFormatter<RenderState>, {
                 // Máscara fija: no revela la longitud del secreto.
                 const MASK: &str = "████████████";
 
-                write!(context, "<a href=\"{url}\" style=\"color:{color}\">{MASK}</a>")?;
+                write!(context, "<span style=\"color:{color}\">{MASK}</span>")?;
+                write!(context, "<a href=\"{url}\">&#x2007;&#x2007;&#x2007;</a>")?;
 
                 return Ok(ChildRendering::Skip);
             }
         } else if context.user.revealed.contains(&index) {
             let url = action(context.user.revision, index);
-            let color = context.user.theme.link.clone();
-            context.write_str(" ")?;
-            write!(context, "<a href=\"{url}\" style=\"color:{color}\">Ocultar</a>")?;
+            write!(context, "<a href=\"{url}\">&#x2007;&#x2007;&#x2007;</a>")?;
         }
     },
     NodeValue::Highlight => |context, entering| {

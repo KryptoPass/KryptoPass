@@ -1,6 +1,37 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="es" sourcelanguage="es">
   <context>
+    <name>AboutDialog</name>
+    <message>
+      <source>Acerca de %1</source>
+      <translation>Acerca de %1</translation>
+    </message>
+    <message>
+      <source>Versión %1</source>
+      <translation>Versión %1</translation>
+    </message>
+    <message>
+      <source>Sitio web</source>
+      <translation>Sitio web</translation>
+    </message>
+    <message>
+      <source>Código fuente</source>
+      <translation>Código fuente</translation>
+    </message>
+    <message>
+      <source>Informar de un error</source>
+      <translation>Informar de un error</translation>
+    </message>
+    <message>
+      <source>Creado por</source>
+      <translation>Creado por</translation>
+    </message>
+    <message>
+      <source>Licencia</source>
+      <translation>Licencia</translation>
+    </message>
+  </context>
+  <context>
     <name>Backend</name>
     <message>
       <source> El archivo ya fue publicado, pero no se pudo sincronizar su carpeta; podría no persistir ante un corte de energía.</source>
@@ -3720,6 +3751,61 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>HelpDialog</name>
+    <message>
+      <source>Ayuda de %1</source>
+      <translation>Ayuda de %1</translation>
+    </message>
+    <message>
+      <source>Organizar la bóveda</source>
+      <translation>Organizar la bóveda</translation>
+    </message>
+    <message>
+      <source>En Carpetas, selecciona una vista o carpeta y usa Archivo → Nuevo elemento para guardar credenciales o notas. Selecciona un elemento para consultar su detalle y usa Editar para cambiarlo. La búsqueda filtra la vista actual.</source>
+      <translation>En Carpetas, selecciona una vista o carpeta y usa Archivo → Nuevo elemento para guardar credenciales o notas. Selecciona un elemento para consultar su detalle y usa Editar para cambiarlo. La búsqueda filtra la vista actual.</translation>
+    </message>
+    <message>
+      <source>Claves OpenPGP</source>
+      <translation>Claves OpenPGP</translation>
+    </message>
+    <message>
+      <source>En Ver → Claves puedes consultar el llavero local de GnuPG, crear o importar claves y copiar su huella. Las operaciones de claves se habilitan en esa sección.</source>
+      <translation>En Ver → Claves puedes consultar el llavero local de GnuPG, crear o importar claves y copiar su huella. Las operaciones de claves se habilitan en esa sección.</translation>
+    </message>
+    <message>
+      <source>Bloqueo y portapapeles</source>
+      <translation>Bloqueo y portapapeles</translation>
+    </message>
+    <message>
+      <source>Usa Ver → Bloquear bóveda para cerrar el acceso al contenido. La aplicación también se bloquea con la sesión, antes de suspender y tras el tiempo de inactividad configurado. En Preferencias puedes ajustar ese tiempo y la limpieza automática del portapapeles.</source>
+      <translation>Usa Ver → Bloquear bóveda para cerrar el acceso al contenido. La aplicación también se bloquea con la sesión, antes de suspender y tras el tiempo de inactividad configurado. En Preferencias puedes ajustar ese tiempo y la limpieza automática del portapapeles.</translation>
+    </message>
+    <message>
+      <source>Copias de seguridad</source>
+      <translation>Copias de seguridad</translation>
+    </message>
+    <message>
+      <source>Archivo → Crear copia de seguridad exporta la bóveda cifrada para los destinatarios que elijas. Conserva las claves privadas necesarias para abrirla. Usa Archivo → Restaurar copia de seguridad para recuperar una copia.</source>
+      <translation>Archivo → Crear copia de seguridad exporta la bóveda cifrada para los destinatarios que elijas. Conserva las claves privadas necesarias para abrirla. Usa Archivo → Restaurar copia de seguridad para recuperar una copia.</translation>
+    </message>
+    <message>
+      <source>Ventanas estrechas y teclado</source>
+      <translation>Ventanas estrechas y teclado</translation>
+    </message>
+    <message>
+      <source>Cuando hay poco espacio, se muestra un panel a la vez. Usa los botones de la barra para cambiar de panel. Puedes recorrer los controles con Tab y activar los botones con Espacio. F1 abre esta ayuda.</source>
+      <translation>Cuando hay poco espacio, se muestra un panel a la vez. Usa los botones de la barra para cambiar de panel. Puedes recorrer los controles con Tab y activar los botones con Espacio. F1 abre esta ayuda.</translation>
+    </message>
+    <message>
+      <source>Informar de un problema</source>
+      <translation>Informar de un problema</translation>
+    </message>
+    <message>
+      <source>Ayuda → Informar de un error abre el gestor de incidencias de KryptoPass. Describe los pasos y la versión de la aplicación. Evita incluir contraseñas, claves privadas o contenido de la bóveda.</source>
+      <translation>Ayuda → Informar de un error abre el gestor de incidencias de KryptoPass. Describe los pasos y la versión de la aplicación. Evita incluir contraseñas, claves privadas o contenido de la bóveda.</translation>
+    </message>
+  </context>
+  <context>
     <name>IdentityFields</name>
     <message>
       <source>Nombre</source>
@@ -4941,56 +5027,12 @@ https://cuenta.ejemplo.test</translation>
       <translation>La acción se completó, pero no se pudo guardar en el historial.</translation>
     </message>
     <message>
-      <source>Nuevo elemento…</source>
-      <translation>Nuevo elemento…</translation>
-    </message>
-    <message>
-      <source>Editar…</source>
-      <translation>Editar…</translation>
-    </message>
-    <message>
-      <source>Mover a la papelera</source>
-      <translation>Mover a la papelera</translation>
-    </message>
-    <message>
-      <source>Nueva carpeta…</source>
-      <translation>Nueva carpeta…</translation>
-    </message>
-    <message>
-      <source>Recargar llavero</source>
-      <translation>Recargar llavero</translation>
-    </message>
-    <message>
-      <source>Crear clave OpenPGP…</source>
-      <translation>Crear clave OpenPGP…</translation>
-    </message>
-    <message>
-      <source>Importar clave OpenPGP…</source>
-      <translation>Importar clave OpenPGP…</translation>
-    </message>
-    <message>
-      <source>Copiar huella</source>
-      <translation>Copiar huella</translation>
-    </message>
-    <message>
       <source>Desbloquear bóveda</source>
       <translation>Desbloquear bóveda</translation>
     </message>
     <message>
       <source>Bloquear bóveda</source>
       <translation>Bloquear bóveda</translation>
-    </message>
-    <message>
-      <source>Subir carpeta</source>
-      <translation>Subir carpeta</translation>
-    </message>
-    <message>
-      <source>Bajar carpeta</source>
-      <translation>Bajar carpeta</translation>
-    </message>
-    <message>
-      <source>Mover carpeta…</source>
-      <translation>Mover carpeta…</translation>
     </message>
     <message>
       <source>&amp;Archivo</source>
@@ -5007,10 +5049,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Restaurar copia de seguridad…</source>
       <translation>Restaurar copia de seguridad…</translation>
-    </message>
-    <message>
-      <source>&amp;Salir</source>
-      <translation>&amp;Salir</translation>
     </message>
     <message>
       <source>&amp;Editar</source>
@@ -5045,6 +5083,10 @@ https://cuenta.ejemplo.test</translation>
       <translation>&amp;Ver</translation>
     </message>
     <message>
+      <source>No se pudo abrir el gestor de incidencias.</source>
+      <translation>No se pudo abrir el gestor de incidencias.</translation>
+    </message>
+    <message>
       <source>Carpetas</source>
       <translation>Carpetas</translation>
     </message>
@@ -5077,16 +5119,16 @@ https://cuenta.ejemplo.test</translation>
       <translation>15 minutos</translation>
     </message>
     <message>
-      <source>Configurar atajos de teclado…</source>
-      <translation>Configurar atajos de teclado…</translation>
-    </message>
-    <message>
       <source>A&amp;yuda</source>
       <translation>A&amp;yuda</translation>
     </message>
     <message>
-      <source>Acerca de %1</source>
-      <translation>Acerca de %1</translation>
+      <source>Mostrar navegación</source>
+      <translation>Mostrar navegación</translation>
+    </message>
+    <message>
+      <source>Volver a la lista</source>
+      <translation>Volver a la lista</translation>
     </message>
     <message>
       <source>Buscar nombre, email o huella…</source>
@@ -5095,6 +5137,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Buscar en esta vista…</source>
       <translation>Buscar en esta vista…</translation>
+    </message>
+    <message>
+      <source>Mostrar detalle</source>
+      <translation>Mostrar detalle</translation>
     </message>
     <message>
       <source>Procesando operación OpenPGP</source>
@@ -6265,14 +6311,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Importar clave OpenPGP…</translation>
     </message>
     <message>
-      <source>Buscar</source>
-      <translation>Buscar</translation>
-    </message>
-    <message>
-      <source>Salir</source>
-      <translation>Salir</translation>
-    </message>
-    <message>
       <source>Bloquear o desbloquear bóveda</source>
       <translation>Bloquear o desbloquear bóveda</translation>
     </message>
@@ -6295,6 +6333,10 @@ https://cuenta.ejemplo.test</translation>
   </context>
   <context>
     <name>SidebarPane</name>
+    <message>
+      <source>Volver a la lista</source>
+      <translation>Volver a la lista</translation>
+    </message>
     <message>
       <source>Mover al nivel principal</source>
       <translation>Mover al nivel principal</translation>

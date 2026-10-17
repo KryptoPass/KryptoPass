@@ -34,15 +34,21 @@ pub(crate) mod ffi {
         #[namespace = "kryptopass::desktop::native"]
         fn initialize_desktop();
         #[namespace = "kryptopass::desktop::native"]
-        fn show_about_dialog();
-        #[namespace = "kryptopass::desktop::native"]
         fn capture_screenshot(path: &QString);
         #[namespace = "kryptopass::desktop::native"]
         fn translate_ui(source: &QString) -> QString;
         #[namespace = "kryptopass::desktop::native"]
         fn translate_plural(source: &QString, count: i32) -> QString;
         #[namespace = "kryptopass::desktop::native"]
-        fn configured_shortcuts() -> QString;
+        fn desktop_actions() -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn about_data() -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn set_action_enabled(id: &QString, enabled: bool);
+        #[namespace = "kryptopass::desktop::native"]
+        fn show_about_kde_dialog();
+        #[namespace = "kryptopass::desktop::native"]
+        fn open_bug_report() -> bool;
         #[namespace = "kryptopass::desktop::native"]
         fn configure_shortcuts() -> QString;
         type QStringList = cxx_qt_lib::QStringList;

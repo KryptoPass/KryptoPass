@@ -1,10 +1,11 @@
 #pragma once
 
-#include <QObject>
 #include <QDBusUnixFileDescriptor>
+#include <QObject>
 #include <QtGlobal>
 
-namespace kryptopass::desktop::native {
+namespace kryptopass::desktop::native
+{
 
 class SessionLockMonitor final : public QObject
 {

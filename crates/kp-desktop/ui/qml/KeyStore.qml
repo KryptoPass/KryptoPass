@@ -41,8 +41,7 @@ QtObject {
         const key = JSON.parse(record);
         const fingerprint = (key.id || "").toUpperCase();
         const linkedContacts = contactRows.filter(row => store.contactFingerprints(row).includes(fingerprint));
-        const contactNames = linkedContacts.map(contact => contact.name || contact.email || contact.uid || "")
-            .filter(name => !!name);
+        const contactNames = linkedContacts.map(contact => contact.name || contact.email || contact.uid || "").filter(name => !!name);
         return Object.assign({}, key, {
             contactName: contactNames.join(", "),
             contactUid: linkedContacts.length === 1 ? (linkedContacts[0].uid || "") : "",

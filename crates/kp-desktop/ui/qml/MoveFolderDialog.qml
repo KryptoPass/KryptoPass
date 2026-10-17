@@ -42,7 +42,9 @@ Controls.Dialog {
             selectedId: dialog.destinationId
             emptyLabel: qsTr("Carpetas principales")
             accessibleLabel: qsTr("Carpeta de destino")
-            onFolderSelected: function(id) { dialog.destinationId = id; }
+            onFolderSelected: function (id) {
+                dialog.destinationId = id;
+            }
         }
         Kirigami.InlineMessage {
             Layout.fillWidth: true
@@ -83,6 +85,8 @@ Controls.Dialog {
                 dialog.operationError = dialog.storeAdapter.errorMessage;
             }
         }
-        function onVaultLocked() { dialog.close(); }
+        function onVaultLocked() {
+            dialog.close();
+        }
     }
 }

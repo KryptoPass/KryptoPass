@@ -9,7 +9,8 @@
 using kryptopass::desktop::native::SessionLockMonitor;
 using kryptopass::desktop::native::set_idle_lock_seconds;
 
-namespace {
+namespace
+{
 int addedTimeout(const QHash<int, int> &before)
 {
     const auto current = KIdleTime::instance()->idleTimeouts();
@@ -57,8 +58,9 @@ private Q_SLOTS:
         connect(&monitor, &SessionLockMonitor::blockedChanged, this, [&events](bool blocked) {
             events.append(blocked ? QStringLiteral("blocked") : QStringLiteral("unblocked"));
         });
-        connect(&monitor, &SessionLockMonitor::lockRequested, this,
-                [&events] { events.append(QStringLiteral("lock")); });
+        connect(&monitor, &SessionLockMonitor::lockRequested, this, [&events] {
+            events.append(QStringLiteral("lock"));
+        });
         const auto first = [&](bool active) {
             if (screenFirst) {
                 monitor.screenSaverChanged(active);

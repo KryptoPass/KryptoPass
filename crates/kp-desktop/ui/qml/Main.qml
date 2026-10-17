@@ -7,17 +7,17 @@ import org.kryptopass.desktop as Backend
 
 Controls.ApplicationWindow {
     id: root
-    width: 1280
-    height: 800
-    minimumWidth: 900
-    minimumHeight: 580
+    width: Kirigami.Units.gridUnit * 72
+    height: Kirigami.Units.gridUnit * 45
+    minimumWidth: Kirigami.Units.gridUnit * 24
+    minimumHeight: Kirigami.Units.gridUnit * 24
     visible: true
     title: Qt.application.name
     LayoutMirroring.enabled: Qt.locale().textDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
-    Backend.ShellController { id: shell }
-    readonly property var shortcuts: JSON.parse(shell.shortcutsJson)
-    function configureShortcuts() { shell.configureShortcuts(); }
+    Backend.ShellController {
+        id: shell
+    }
     SecretStore {
         id: store
         objectName: "secretStore"
@@ -36,8 +36,10 @@ Controls.ApplicationWindow {
         folders: store.folders
         folderRows: store.folderRows
         vaultLocked: store.controller.locked
-        onUsernameRequested: function(token, entryId) { store.controller.requestBrowserUsername(token, entryId); }
-        onDecisionRequested: function(token, entryId, approve) {
+        onUsernameRequested: function (token, entryId) {
+            store.controller.requestBrowserUsername(token, entryId);
+        }
+        onDecisionRequested: function (token, entryId, approve) {
             store.controller.decideBrowserAccess(token, entryId, approve);
         }
     }
@@ -45,7 +47,7 @@ Controls.ApplicationWindow {
         id: browserPairingDialog
         requestToken: store.controller.browserPairing
         vaultLocked: store.controller.locked
-        onDecisionRequested: function(token, approve) {
+        onDecisionRequested: function (token, approve) {
             store.controller.decideBrowserPairing(token, approve);
         }
     }
@@ -63,25 +65,26 @@ Controls.ApplicationWindow {
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
     readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || importWindow.busy || editor.savePending || folderEditor.pending
     readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || importWindow.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
-    readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError)
-        || (folderEditor.opened && !!folderEditor.saveError)
-        || (moveDialog.opened && !!moveDialog.operationError)
-        || (folderMoveDialog.opened && !!folderMoveDialog.operationError)
-        || (deleteEntryDialog.opened && !!deleteEntryDialog.operationError)
-        || (deleteFolderDialog.opened && !!deleteFolderDialog.operationError)
-        || (passwordGenerator.opened && !!passwordGenerator.operationError)
+    readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError) || (folderEditor.opened && !!folderEditor.saveError) || (moveDialog.opened && !!moveDialog.operationError) || (folderMoveDialog.opened && !!folderMoveDialog.operationError) || (deleteEntryDialog.opened && !!deleteEntryDialog.operationError) || (deleteFolderDialog.opened && !!deleteFolderDialog.operationError) || (passwordGenerator.opened && !!passwordGenerator.operationError)
     readonly property var activeStore: keysMode ? keys : store
     function selectSection(showKeys) {
-        if (keysMode === showKeys)
+        if (keysMode === showKeys) {
+            panes.showPane(1);
             return;
-        editor.guardNavigation(function() { root.applySection(showKeys); });
+        }
+        editor.guardNavigation(function () {
+            root.applySection(showKeys);
+        });
     }
     function selectScope(showKeys, scopeId) {
-        if (keysMode === showKeys && activeStore.scope === scopeId)
+        if (keysMode === showKeys && activeStore.scope === scopeId) {
+            panes.showPane(1);
             return;
-        editor.guardNavigation(function() {
+        }
+        editor.guardNavigation(function () {
             root.applySection(showKeys);
             root.activeStore.selectScope(scopeId);
+            panes.showPane(1);
         });
     }
     function applySection(showKeys) {
@@ -89,6 +92,7 @@ Controls.ApplicationWindow {
             return;
         keysMode = showKeys;
         search.text = activeStore.query;
+        panes.showPane(1);
         if (showKeys) {
             store.controller.selectEntry("");
             keys.controller.refreshKeys();
@@ -175,7 +179,9 @@ Controls.ApplicationWindow {
             completeSensitiveTransition();
             return;
         }
-        editor.guardNavigation(function() { root.completeSensitiveTransition(); });
+        editor.guardNavigation(function () {
+            root.completeSensitiveTransition();
+        });
     }
     function completeSensitiveTransition() {
         if (sensitiveTransitionBlocked || passwordGenerator.generating) {
@@ -247,8 +253,12 @@ Controls.ApplicationWindow {
     Component.onCompleted: {
         store.controller.loadStore();
         keys.controller.refreshKeys();
+        if (Qt.application.arguments.indexOf("--screenshot-about") !== -1)
+            Qt.callLater(function () {
+                aboutDialog.open();
+            });
     }
-    onClosing: function(close) {
+    onClosing: function (close) {
         if (root.allowClose) {
             store.controller.clearSensitiveState();
             secureClipboard.clearOwned();
@@ -387,105 +397,148 @@ Controls.ApplicationWindow {
         overlayItem: Controls.Overlay.overlay
     }
 
-    Controls.Action {
+    DesktopAction {
         id: newEntry
-        text: qsTr("Nuevo elemento…")
-        icon.name: "document-new"
+        controller: shell
+        actionId: "newEntry"
         enabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked
-        shortcut: root.shortcuts.newEntry[0] || ""
         onTriggered: editor.openEntry(null)
     }
-    Controls.Action {
+    DesktopAction {
         id: editEntry
-        text: qsTr("Editar…")
-        icon.name: "document-edit"
+        controller: shell
+        actionId: "editEntry"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
-        shortcut: root.shortcuts.editEntry[0] || ""
         onTriggered: editor.openEntry(store.selected)
     }
-    Controls.Action {
+    DesktopAction {
         id: trashEntry
-        text: qsTr("Mover a la papelera")
-        icon.name: "user-trash"
+        controller: shell
+        actionId: "trashEntry"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
-        shortcut: root.shortcuts.trashEntry[0] || ""
         onTriggered: {
             root.beginOperation("trash", store.selectedId);
-            store.updateEntry(store.selectedId, { trashed: true });
+            store.updateEntry(store.selectedId, {
+                trashed: true
+            });
         }
     }
-    Controls.Action {
+    DesktopAction {
         id: newFolder
-        text: qsTr("Nueva carpeta…")
-        icon.name: "folder-new"
+        controller: shell
+        actionId: "newFolder"
         enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked
-        shortcut: root.shortcuts.newFolder[0] || ""
         onTriggered: folderEditor.openFolder(false)
     }
-    Controls.Action {
+    DesktopAction {
         id: refreshKeys
-        text: qsTr("Recargar llavero")
-        icon.name: "view-refresh"
+        controller: shell
+        actionId: "refreshKeys"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: root.shortcuts.refreshKeys[0] || ""
         onTriggered: keys.controller.refreshKeys()
     }
-    Controls.Action {
+    DesktopAction {
         id: createKey
-        text: qsTr("Crear clave OpenPGP…")
-        icon.name: "document-new"
+        controller: shell
+        actionId: "createKey"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: root.shortcuts.createKey[0] || ""
         onTriggered: mainKeyOperationDialog.openFor("create")
     }
-    Controls.Action {
+    DesktopAction {
         id: importKey
-        text: qsTr("Importar clave OpenPGP…")
-        icon.name: "document-import"
+        controller: shell
+        actionId: "importKey"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        shortcut: root.shortcuts.importKey[0] || ""
         onTriggered: mainKeyOperationDialog.openFor("import")
     }
-    Controls.Action {
+    DesktopAction {
         id: copyFingerprint
-        shortcut: root.shortcuts.copyFingerprint[0] || ""
-        text: qsTr("Copiar huella")
-        icon.name: "edit-copy"
+        controller: shell
+        actionId: "copyFingerprint"
         enabled: root.keysMode && !!keys.selected
         onTriggered: entryDetailPane.copySelectedFingerprint()
     }
-    Controls.Action {
+    DesktopAction {
         id: lockVaultAction
-        shortcut: root.shortcuts.lockVault[0] || ""
+        controller: shell
+        actionId: "lockVault"
         text: store.controller.locked ? qsTr("Desbloquear bóveda") : qsTr("Bloquear bóveda")
         icon.name: store.controller.locked ? "object-unlocked" : "object-locked"
         enabled: !root.sensitiveTransitionBlocked && !passwordGenerator.generating
         onTriggered: root.requestLock()
     }
     readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
-    Controls.Action {
+    DesktopAction {
         id: folderUp
-        text: qsTr("Subir carpeta")
-        icon.name: "go-up"
-        shortcut: root.shortcuts.folderUp[0] || ""
+        controller: shell
+        actionId: "folderUp"
         enabled: root.folderActionsEnabled
         onTriggered: store.controller.stepFolder(store.scope, -1)
     }
-    Controls.Action {
+    DesktopAction {
         id: folderDown
-        text: qsTr("Bajar carpeta")
-        icon.name: "go-down"
-        shortcut: root.shortcuts.folderDown[0] || ""
+        controller: shell
+        actionId: "folderDown"
         enabled: root.folderActionsEnabled
         onTriggered: store.controller.stepFolder(store.scope, 1)
     }
-    Controls.Action {
+    DesktopAction {
         id: moveFolderAction
-        text: qsTr("Mover carpeta…")
-        icon.name: "folder-move"
-        shortcut: root.shortcuts.moveFolder[0] || ""
+        controller: shell
+        actionId: "moveFolder"
         enabled: root.folderActionsEnabled
         onTriggered: folderMoveDialog.prepare(store.scope)
+    }
+    DesktopAction {
+        id: findAction
+        controller: shell
+        actionId: "find"
+        enabled: !editor.opened
+        onTriggered: {
+            panes.showPane(1);
+            Qt.callLater(function () {
+                search.forceActiveFocus(Qt.ShortcutFocusReason);
+            });
+        }
+    }
+    DesktopAction {
+        id: quitAction
+        controller: shell
+        actionId: "quit"
+        onTriggered: root.close()
+    }
+    DesktopAction {
+        id: configureShortcutsAction
+        controller: shell
+        actionId: "configureShortcuts"
+        onTriggered: shell.configureShortcuts()
+    }
+    DesktopAction {
+        id: helpAction
+        controller: shell
+        actionId: "help"
+        onTriggered: helpDialog.open()
+    }
+    DesktopAction {
+        id: reportBugAction
+        controller: shell
+        actionId: "reportBug"
+        onTriggered: {
+            if (!shell.openBugReport())
+                root.notify(qsTr("No se pudo abrir el gestor de incidencias."), "error");
+        }
+    }
+    DesktopAction {
+        id: aboutAppAction
+        controller: shell
+        actionId: "aboutApp"
+        onTriggered: aboutDialog.open()
+    }
+    DesktopAction {
+        id: aboutKdeAction
+        controller: shell
+        actionId: "aboutKde"
+        onTriggered: shell.showAboutKdeDialog()
     }
     menuBar: Controls.MenuBar {
         Controls.Menu {
@@ -496,20 +549,15 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 action: newFolder
             }
-            Controls.MenuSeparator {
-                visible: root.keysMode
-            }
+            Controls.MenuSeparator {}
             Controls.MenuItem {
                 action: createKey
-                visible: root.keysMode
             }
             Controls.MenuItem {
                 action: importKey
-                visible: root.keysMode
             }
             Controls.MenuItem {
                 action: refreshKeys
-                visible: root.keysMode
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
@@ -529,12 +577,15 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
-                text: qsTr("&Salir")
-                onTriggered: root.close()
+                action: quitAction
             }
         }
         Controls.Menu {
             title: qsTr("&Editar")
+            Controls.MenuItem {
+                action: findAction
+            }
+            Controls.MenuSeparator {}
             Controls.MenuItem {
                 action: editEntry
             }
@@ -548,12 +599,17 @@ Controls.ApplicationWindow {
             }
             Controls.MenuItem {
                 action: copyFingerprint
-                visible: root.keysMode
             }
             Controls.MenuSeparator {}
-            Controls.MenuItem { action: folderUp }
-            Controls.MenuItem { action: folderDown }
-            Controls.MenuItem { action: moveFolderAction }
+            Controls.MenuItem {
+                action: folderUp
+            }
+            Controls.MenuItem {
+                action: folderDown
+            }
+            Controls.MenuItem {
+                action: moveFolderAction
+            }
         }
         Controls.Menu {
             title: qsTr("&Ver")
@@ -654,16 +710,23 @@ Controls.ApplicationWindow {
                 }
             }
             Controls.MenuItem {
-                text: qsTr("Configurar atajos de teclado…")
-                icon.name: "configure-shortcuts"
-                onTriggered: root.configureShortcuts()
+                action: configureShortcutsAction
             }
         }
         Controls.Menu {
             title: qsTr("A&yuda")
             Controls.MenuItem {
-                text: qsTr("Acerca de %1").arg(Qt.application.name)
-                onTriggered: aboutDialog.open()
+                action: helpAction
+            }
+            Controls.MenuItem {
+                action: reportBugAction
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
+                action: aboutAppAction
+            }
+            Controls.MenuItem {
+                action: aboutKdeAction
             }
         }
     }
@@ -671,91 +734,36 @@ Controls.ApplicationWindow {
     Controls.ToolButton {
         id: toolbarSizeHint
         visible: false
-        text: qsTr("Recargar llavero")
-        icon.name: "view-refresh"
+        action: refreshKeys
     }
 
-    Shortcut {
-        sequences: root.shortcuts.find
-        onActivated: search.forceActiveFocus()
-    }
-    Shortcut {
-        sequences: root.shortcuts.quit
-        onActivated: root.close()
-    }
-
-    Shortcut {
-        sequences: root.shortcuts.newEntry.slice(1)
-        enabled: newEntry.enabled
-        onActivated: newEntry.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.editEntry.slice(1)
-        enabled: editEntry.enabled
-        onActivated: editEntry.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.trashEntry.slice(1)
-        enabled: trashEntry.enabled
-        onActivated: trashEntry.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.newFolder.slice(1)
-        enabled: newFolder.enabled
-        onActivated: newFolder.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.refreshKeys.slice(1)
-        enabled: refreshKeys.enabled
-        onActivated: refreshKeys.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.createKey.slice(1)
-        enabled: createKey.enabled
-        onActivated: createKey.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.importKey.slice(1)
-        enabled: importKey.enabled
-        onActivated: importKey.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.copyFingerprint.slice(1)
-        enabled: copyFingerprint.enabled
-        onActivated: copyFingerprint.trigger()
-    }
-    Shortcut {
-        sequences: root.shortcuts.lockVault.slice(1)
-        enabled: lockVaultAction.enabled
-        onActivated: lockVaultAction.trigger()
-    }
-
-    Shortcut { sequences: root.shortcuts.folderUp.slice(1); enabled: folderUp.enabled; onActivated: folderUp.trigger() }
-    Shortcut { sequences: root.shortcuts.folderDown.slice(1); enabled: folderDown.enabled; onActivated: folderDown.trigger() }
-    Shortcut { sequences: root.shortcuts.moveFolder.slice(1); enabled: moveFolderAction.enabled; onActivated: moveFolderAction.trigger() }
     MoveFolderDialog {
         id: folderMoveDialog
         storeAdapter: store
     }
 
-    Controls.SplitView {
+    AdaptivePanes {
+        id: panes
         anchors.fill: parent
-        orientation: Qt.Horizontal
-        handle: SplitterHandle {}
-
-        SidebarPane {
+        navigationContent: SidebarPane {
+            anchors.fill: parent
+            focus: true
+            showBackButton: panes.compact
+            onBackRequested: panes.showPane(1)
             entryDraggingEnabled: !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
-            onFolderMoveRequested: function(folderId, parentId, beforeId) {
+            onFolderMoveRequested: function (folderId, parentId, beforeId) {
                 if (root.mutationsBlocked || store.controller.locked || editor.opened || editor.waitingForEditor)
                     return;
                 root.beginOperation("moveFolder", folderId);
                 store.controller.moveFolder(folderId, parentId, beforeId);
             }
-            onEntryMoveRequested: function(entryId, folderId) {
+            onEntryMoveRequested: function (entryId, folderId) {
                 if (root.mutationsBlocked || store.controller.locked || editor.opened || editor.waitingForEditor)
                     return;
                 root.beginOperation("move", entryId);
-                store.updateEntry(entryId, { folder: folderId });
+                store.updateEntry(entryId, {
+                    folder: folderId
+                });
             }
             keysMode: root.keysMode
             activeStore: root.activeStore
@@ -770,257 +778,303 @@ Controls.ApplicationWindow {
             }
             onRenameFolderRequested: {
                 if (!root.mutationsBlocked && !store.controller.locked)
-                    editor.guardNavigation(function() { folderEditor.openFolder(true); });
+                    editor.guardNavigation(function () {
+                        folderEditor.openFolder(true);
+                    });
             }
             onDeleteFolderRequested: {
                 if (!root.mutationsBlocked && !store.controller.locked)
-                    editor.guardNavigation(function() { deleteFolderDialog.openForSelected(); });
+                    editor.guardNavigation(function () {
+                        deleteFolderDialog.openForSelected();
+                    });
             }
         }
-
-        Controls.Pane {
-            Controls.SplitView.fillWidth: true
-            Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 36
-            padding: 0
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-                PanelHeader {
-                    Layout.fillWidth: true
-                    headerHeight: root.panelHeaderHeight
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.smallSpacing
-                        Kirigami.SearchField {
-                            id: search
-                            enabled: !editor.opened
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: Kirigami.Units.gridUnit * 22
-                            placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
-                            onTextChanged: root.activeStore.query = text
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                        Controls.ToolButton {
-                            action: newEntry
-                            visible: !root.keysMode
-                        }
-                        Controls.ToolButton {
-                            visible: !root.keysMode && !!store.selected && !store.selected.trashed
-                            text: qsTr("Mover a otra carpeta…")
-                            icon.name: "folder-move"
-                            enabled: editEntry.enabled
-                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
-                            onClicked: moveDialog.openMove()
-                            Controls.ToolTip.visible: hovered || visualFocus
-                            Controls.ToolTip.text: text
-                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                        }
-                        Controls.ToolButton {
-                            action: refreshKeys
-                            visible: root.keysMode
-                        }
-                        Controls.ToolButton {
-                            action: createKey
-                            visible: root.keysMode
-                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
-                            Controls.ToolTip.visible: hovered || visualFocus
-                            Controls.ToolTip.text: text
-                        }
-                        Controls.ToolButton {
-                            action: importKey
-                            visible: root.keysMode
-                            display: root.width < 1100 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
-                            Controls.ToolTip.visible: hovered || visualFocus
-                            Controls.ToolTip.text: text
-                        }
-                        Controls.ToolButton {
-                            action: lockVaultAction
-                            display: Controls.AbstractButton.IconOnly
-                            Controls.ToolTip.visible: hovered || visualFocus
-                            Controls.ToolTip.text: text
-                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                        }
-                        Controls.BusyIndicator {
-                            visible: root.keysMode && (keys.controller.busy || keys.controller.operationBusy)
-                            running: visible
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                            Layout.preferredHeight: width
-                            Accessible.name: keys.controller.operationBusy ? qsTr("Procesando operación OpenPGP") : qsTr("Actualizando claves de GnuPG")
-                        }
+        headerContent: ColumnLayout {
+            width: parent.width
+            spacing: 0
+            PanelHeader {
+                Layout.fillWidth: true
+                headerHeight: root.panelHeaderHeight
+                contentItem: RowLayout {
+                    spacing: Kirigami.Units.smallSpacing
+                    Controls.ToolButton {
+                        text: qsTr("Mostrar navegación")
+                        icon.name: "sidebar-expand"
+                        onClicked: panes.showPane(0)
+                        visible: panes.compact && panes.currentPane === 1
+                        display: Controls.AbstractButton.IconOnly
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Controls.ToolButton {
+                        text: qsTr("Volver a la lista")
+                        icon.name: "go-previous"
+                        onClicked: panes.showPane(1)
+                        visible: panes.compact && panes.currentPane === 2
+                        display: Controls.AbstractButton.IconOnly
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Kirigami.SearchField {
+                        id: search
+                        enabled: !editor.opened
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: Kirigami.Units.gridUnit * 22
+                        placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
+                        onTextChanged: root.activeStore.query = text
+                    }
+                    Controls.ToolButton {
+                        text: qsTr("Mostrar detalle")
+                        icon.name: "view-preview"
+                        onClicked: panes.showPane(2)
+                        visible: panes.compact && panes.currentPane === 1
+                        display: Controls.AbstractButton.IconOnly
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    Controls.ToolButton {
+                        action: newEntry
+                        visible: !root.keysMode
+                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Controls.ToolButton {
+                        visible: !root.keysMode && !!store.selected && !store.selected.trashed
+                        text: qsTr("Mover a otra carpeta…")
+                        icon.name: "folder-move"
+                        enabled: editEntry.enabled
+                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                        onClicked: moveDialog.openMove()
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    }
+                    Controls.ToolButton {
+                        action: refreshKeys
+                        visible: root.keysMode
+                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Controls.ToolButton {
+                        action: createKey
+                        visible: root.keysMode
+                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Controls.ToolButton {
+                        action: importKey
+                        visible: root.keysMode
+                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                    }
+                    Controls.ToolButton {
+                        action: lockVaultAction
+                        display: Controls.AbstractButton.IconOnly
+                        Controls.ToolTip.visible: hovered || visualFocus
+                        Controls.ToolTip.text: text
+                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    }
+                    Controls.BusyIndicator {
+                        visible: root.keysMode && (keys.controller.busy || keys.controller.operationBusy)
+                        running: visible
+                        Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                        Layout.preferredHeight: width
+                        Accessible.name: keys.controller.operationBusy ? qsTr("Procesando operación OpenPGP") : qsTr("Actualizando claves de GnuPG")
                     }
                 }
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    visible: root.keysMode && !!keys.controller.loadError && !keyErrorDialog.opened
-                    position: Kirigami.InlineMessage.Position.Header
-                    type: Kirigami.MessageType.Error
-                    text: qsTr("No se pudieron cargar las claves de GnuPG.")
-                    actions: [
-                        Kirigami.Action {
-                            text: qsTr("Reintentar")
-                            icon.name: "view-refresh"
-                            enabled: refreshKeys.enabled
-                            onTriggered: keys.controller.refreshKeys()
-                        },
-                        Kirigami.Action {
-                            text: qsTr("Ver detalles…")
-                            icon.name: "dialog-information"
-                            onTriggered: keyErrorDialog.open()
-                        }
-                    ]
-                }
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    visible: !!secureClipboard.errorMessage
-                    position: Kirigami.InlineMessage.Position.Header
-                    type: Kirigami.MessageType.Error
-                    text: secureClipboard.errorMessage
-                }
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    visible: !!store.controller.errorMessage && !root.localStoreErrorVisible && !root.closeMessage
-                    position: Kirigami.InlineMessage.Position.Header
-                    type: Kirigami.MessageType.Error
-                    text: store.controller.errorMessage
-                    actions: [
-                        Kirigami.Action {
-                            text: qsTr("Reintentar")
-                            icon.name: "view-refresh"
-                            enabled: !root.storeOperationBusy
-                            onTriggered: {
-                                if (store.selectedId && !store.controller.locked)
-                                    store.controller.selectEntry(store.selectedId);
-                                else
-                                    store.controller.loadStore();
-                            }
-                        }
-                    ]
-                }
-                Controls.SplitView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    orientation: Qt.Horizontal
-                    handle: SplitterHandle {}
-                    EntryListPane {
-                        entryDraggingEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
-                        keysMode: root.keysMode
-                        activeStore: root.activeStore
-                        storeAdapter: store
-                        keyStore: keys
-                        scopeTitle: root.scopeTitle
-                        headerHeight: root.panelHeaderHeight
-                        onSelectionRequested: function (entryId) {
-                            if (root.activeStore.selectedId === entryId)
-                                return;
-                            editor.guardNavigation(function() {
-                                root.activeStore.selectedId = entryId;
-                            });
-                        }
-                        onEntryOpenRequested: function (entry) {
-                            if (!root.mutationsBlocked)
-                                editor.guardNavigation(function() {
-                                    store.selectedId = entry.id;
-                                    editor.openEntry(entry);
-                                });
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: root.keysMode && !!keys.controller.loadError && !keyErrorDialog.opened
+                position: Kirigami.InlineMessage.Position.Header
+                type: Kirigami.MessageType.Error
+                text: qsTr("No se pudieron cargar las claves de GnuPG.")
+                actions: [
+                    Kirigami.Action {
+                        text: qsTr("Reintentar")
+                        icon.name: "view-refresh"
+                        enabled: refreshKeys.enabled
+                        onTriggered: keys.controller.refreshKeys()
+                    },
+                    Kirigami.Action {
+                        text: qsTr("Ver detalles…")
+                        icon.name: "dialog-information"
+                        onTriggered: keyErrorDialog.open()
+                    }
+                ]
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: !!secureClipboard.errorMessage
+                position: Kirigami.InlineMessage.Position.Header
+                type: Kirigami.MessageType.Error
+                text: secureClipboard.errorMessage
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: !!store.controller.errorMessage && !root.localStoreErrorVisible && !root.closeMessage
+                position: Kirigami.InlineMessage.Position.Header
+                type: Kirigami.MessageType.Error
+                text: store.controller.errorMessage
+                actions: [
+                    Kirigami.Action {
+                        text: qsTr("Reintentar")
+                        icon.name: "view-refresh"
+                        enabled: !root.storeOperationBusy
+                        onTriggered: {
+                            if (store.selectedId && !store.controller.locked)
+                                store.controller.selectEntry(store.selectedId);
+                            else
+                                store.controller.loadStore();
                         }
                     }
-                    EntryDetailPane {
-                        id: entryDetailPane
-                        editing: editor.opened
-                        keysMode: root.keysMode
-                        storeAdapter: store
-                        keyStore: keys
-                        keyOperationDialog: mainKeyOperationDialog
-                        revealed: root.revealed
-                        headerHeight: root.panelHeaderHeight
-                        editAction: editEntry
-                        trashAction: trashEntry
-                        copyFingerprintAction: copyFingerprint
-                        onNotificationRequested: function(message) { root.notify(message, "success"); }
-                        onFavoriteToggleRequested: {
-                            if (root.mutationsBlocked || store.controller.locked)
-                                return;
-                            root.beginOperation("favorite", store.selectedId);
-                            store.updateEntry(store.selectedId, { favorite: !store.selected.favorite });
-                        }
-                        onRestoreRequested: {
-                            if (root.mutationsBlocked || store.controller.locked)
-                                return;
-                            root.beginOperation("restore", store.selectedId);
-                            store.updateEntry(store.selectedId, { trashed: false });
-                        }
-                        onPermanentDeleteRequested: {
-                            if (!root.mutationsBlocked && !store.controller.locked)
-                                deleteEntryDialog.openForSelected();
-                        }
-                        onRevealToggleRequested: {
-                            store.controller.togglePassword();
-                        }
-                        onCopyUsernameRequested: store.controller.copyUsername()
-                        onCopyPasswordRequested: store.controller.copyPassword()
-                        onCopyTotpRequested: function(next) { store.controller.copyTotp(next); }
-                        onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
-                        onRelatedEntryOpenRequested: function(entry) {
-                            if (!root.mutationsBlocked)
-                                editor.guardNavigation(function() { root.navigateToRelatedEntry(entry); });
-                        }
-                        onRelatedEntryTrashRequested: function(entry) {
-                            if (!root.mutationsBlocked)
-                                editor.guardNavigation(function() { root.navigateToRelatedEntry(entry); });
-                        }
-                        onCreateSecurityRequested: function(entry) {
-                            if (!root.mutationsBlocked && !store.controller.locked)
-                                editor.guardNavigation(function() { editor.openRelatedEntry(entry); });
-                        }
-                    }
+                ]
+            }
+        }
+        listContent: EntryListPane {
+            anchors.fill: parent
+            focus: true
+            onDetailRequested: panes.showPane(2)
+            entryDraggingEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
+            keysMode: root.keysMode
+            activeStore: root.activeStore
+            storeAdapter: store
+            keyStore: keys
+            scopeTitle: root.scopeTitle
+            headerHeight: root.panelHeaderHeight
+            onSelectionRequested: function (entryId) {
+                if (root.activeStore.selectedId === entryId)
+                    return;
+                editor.guardNavigation(function () {
+                    root.activeStore.selectedId = entryId;
+                });
+            }
+            onEntryOpenRequested: function (entry) {
+                if (!root.mutationsBlocked)
+                    editor.guardNavigation(function () {
+                        store.selectedId = entry.id;
+                        editor.openEntry(entry);
+                    });
+            }
+        }
+        detailContent: EntryDetailPane {
+            id: entryDetailPane
+            anchors.fill: parent
+            focus: true
+            editing: editor.opened
+            keysMode: root.keysMode
+            storeAdapter: store
+            keyStore: keys
+            keyOperationDialog: mainKeyOperationDialog
+            revealed: root.revealed
+            headerHeight: root.panelHeaderHeight
+            editAction: editEntry
+            trashAction: trashEntry
+            copyFingerprintAction: copyFingerprint
+            onNotificationRequested: function (message) {
+                root.notify(message, "success");
+            }
+            onFavoriteToggleRequested: {
+                if (root.mutationsBlocked || store.controller.locked)
+                    return;
+                root.beginOperation("favorite", store.selectedId);
+                store.updateEntry(store.selectedId, {
+                    favorite: !store.selected.favorite
+                });
+            }
+            onRestoreRequested: {
+                if (root.mutationsBlocked || store.controller.locked)
+                    return;
+                root.beginOperation("restore", store.selectedId);
+                store.updateEntry(store.selectedId, {
+                    trashed: false
+                });
+            }
+            onPermanentDeleteRequested: {
+                if (!root.mutationsBlocked && !store.controller.locked)
+                    deleteEntryDialog.openForSelected();
+            }
+            onRevealToggleRequested: {
+                store.controller.togglePassword();
+            }
+            onCopyUsernameRequested: store.controller.copyUsername()
+            onCopyPasswordRequested: store.controller.copyPassword()
+            onCopyTotpRequested: function (next) {
+                store.controller.copyTotp(next);
+            }
+            onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
+            onRelatedEntryOpenRequested: function (entry) {
+                if (!root.mutationsBlocked)
+                    editor.guardNavigation(function () {
+                        root.navigateToRelatedEntry(entry);
+                    });
+            }
+            onRelatedEntryTrashRequested: function (entry) {
+                if (!root.mutationsBlocked)
+                    editor.guardNavigation(function () {
+                        root.navigateToRelatedEntry(entry);
+                    });
+            }
+            onCreateSecurityRequested: function (entry) {
+                if (!root.mutationsBlocked && !store.controller.locked)
+                    editor.guardNavigation(function () {
+                        editor.openRelatedEntry(entry);
+                    });
+            }
+        }
+        footerContent: PanelFooter {
+            width: parent.width
+            headerHeight: root.panelHeaderHeight
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.largeSpacing
+                Controls.Label {
+                    Layout.maximumWidth: parent.width * 0.6
+                    elide: Text.ElideRight
+                    textFormat: Text.PlainText
+                    text: root.keysMode ? qsTr("%n clave", "", keys.visibleEntries.length) + " · " + root.scopeTitle : qsTr("%n elemento", "", store.visibleEntries.length) + " · " + root.scopeTitle
                 }
-                PanelFooter {
+                Item {
                     Layout.fillWidth: true
-                    headerHeight: root.panelHeaderHeight
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.largeSpacing
-                        Controls.Label {
-                            Layout.maximumWidth: parent.width * 0.6
-                            elide: Text.ElideRight
-                            textFormat: Text.PlainText
-                            text: root.keysMode ? qsTr("%n clave", "", keys.visibleEntries.length) + " · " + root.scopeTitle : qsTr("%n elemento", "", store.visibleEntries.length) + " · " + root.scopeTitle
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                        Controls.Label {
-                            visible: true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            horizontalAlignment: Text.AlignRight
-                            elide: Text.ElideRight
-                            text: root.keysMode ? keys.controller.status : store.controller.status
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Controls.BusyIndicator {
-                            visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy || importWindow.busy)
-                            running: visible
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                            Layout.preferredHeight: width
-                            Accessible.name: qsTr("Procesando la bóveda")
-                        }
-                    }
+                }
+                Controls.Label {
+                    visible: true
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideRight
+                    text: root.keysMode ? keys.controller.status : store.controller.status
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Controls.BusyIndicator {
+                    visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy || importWindow.busy)
+                    running: visible
+                    Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                    Layout.preferredHeight: width
+                    Accessible.name: qsTr("Procesando la bóveda")
                 }
             }
         }
     }
     SecretEditor {
         id: editor
+        onOpenedChanged: {
+            if (opened)
+                panes.showPane(2);
+        }
         parent: entryDetailPane.editorHost
         anchors.fill: parent
         storeAdapter: store
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened
-                           || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened
-                           || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importWindow.opened
+        externalModalOpen: browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }
@@ -1046,7 +1100,9 @@ Controls.ApplicationWindow {
         storeAdapter: store
         onMoveRequested: function (entryId, folderId) {
             root.beginOperation("move", entryId);
-            store.updateEntry(entryId, { folder: folderId });
+            store.updateEntry(entryId, {
+                folder: folderId
+            });
         }
     }
     DeleteFolderDialog {
@@ -1068,7 +1124,7 @@ Controls.ApplicationWindow {
     PasswordGenerator {
         id: passwordGenerator
         windowWidth: root.width
-        onGenerateRequested: function(length, lowercase, uppercase, digits, symbols, excluded) {
+        onGenerateRequested: function (length, lowercase, uppercase, digits, symbols, excluded) {
             root.beginOperation("generate", "");
             store.controller.generatePassword(length, lowercase, uppercase, digits, symbols, excluded);
         }
@@ -1086,17 +1142,26 @@ Controls.ApplicationWindow {
     BackupDialog {
         id: backupDialog
         keyStore: keys
-        onOpenVaultRequested: function(path) {
-            Qt.callLater(function() { root.requestActiveVault(path); });
+        onOpenVaultRequested: function (path) {
+            Qt.callLater(function () {
+                root.requestActiveVault(path);
+            });
         }
     }
     KeyOperationDialog {
         id: mainKeyOperationDialog
         keyStore: keys
     }
+    HelpDialog {
+        id: helpDialog
+    }
     AboutDialog {
         id: aboutDialog
-        controller: shell
+        aboutData: JSON.parse(shell.aboutJson)
+        repositoryUrl: shell.appRepository
+        onLinkRequested: function (target) {
+            Qt.openUrlExternally(target);
+        }
     }
     KeyErrorDialog {
         id: keyErrorDialog

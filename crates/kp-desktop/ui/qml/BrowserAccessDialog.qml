@@ -38,10 +38,7 @@ EntryPickerDialog {
             folder: folder,
             icon: metadata ? metadata.icon || null : null,
             iconSource: metadata ? metadata.iconSource || "" : "",
-            subtitle: candidate.usernameState === "unloaded" ? qsTr("Selecciona para ver el usuario")
-                : candidate.usernameState === "loading" ? qsTr("Cargando usuario…")
-                : candidate.usernameState === "error" ? qsTr("No se pudo leer el usuario")
-                : candidate.username || qsTr("Sin usuario")
+            subtitle: candidate.usernameState === "unloaded" ? qsTr("Selecciona para ver el usuario") : candidate.usernameState === "loading" ? qsTr("Cargando usuario…") : candidate.usernameState === "error" ? qsTr("No se pudo leer el usuario") : candidate.username || qsTr("Sin usuario")
         };
     })
 
@@ -64,7 +61,7 @@ EntryPickerDialog {
         else
             close();
     }
-    onCandidateHighlighted: function(entryId) {
+    onCandidateHighlighted: function (entryId) {
         const candidate = candidates.find(item => item.id === entryId);
         if (request && candidate && candidate.usernameState === "unloaded")
             usernameRequested(request.token, entryId);
@@ -73,7 +70,9 @@ EntryPickerDialog {
         if (vaultLocked && opened)
             close();
     }
-    onSelectionRequested: function(entryId) { decide(entryId, true); }
+    onSelectionRequested: function (entryId) {
+        decide(entryId, true);
+    }
     onClosed: decide("", false)
 
     introduction: Component {

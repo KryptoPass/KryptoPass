@@ -36,7 +36,9 @@ Controls.Dialog {
         wrapMode: Text.Wrap
     }
     footer: RowLayout {
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
         Controls.Button {
             id: rejectButton
             text: qsTr("Rechazar conexión")
@@ -48,8 +50,14 @@ Controls.Dialog {
             text: qsTr("Vincular navegador")
             enabled: !dialog.vaultLocked
             onClicked: dialog.decide(true)
-            Keys.onReturnPressed: { if (enabled) dialog.decide(true); }
-            Keys.onEnterPressed: { if (enabled) dialog.decide(true); }
+            Keys.onReturnPressed: {
+                if (enabled)
+                    dialog.decide(true);
+            }
+            Keys.onEnterPressed: {
+                if (enabled)
+                    dialog.decide(true);
+            }
         }
     }
 }

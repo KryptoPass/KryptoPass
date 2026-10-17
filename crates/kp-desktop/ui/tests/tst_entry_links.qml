@@ -13,7 +13,9 @@ TestCase {
 
     Component {
         id: pickerComponent
-        RelatedEntryPicker { width: 560 }
+        RelatedEntryPicker {
+            width: 560
+        }
     }
 
     Component {
@@ -22,8 +24,14 @@ TestCase {
     }
 
     readonly property var kindOptions: [
-        { id: "login", name: "Inicio de sesión" },
-        { id: "note", name: "Nota" }
+        {
+            id: "login",
+            name: "Inicio de sesión"
+        },
+        {
+            id: "note",
+            name: "Nota"
+        }
     ]
 
     function init() {
@@ -32,11 +40,41 @@ TestCase {
 
     function entries(relatedEntryId) {
         return [
-            { id: "current", title: "Current", kind: "login", trashed: false, relatedEntryId: relatedEntryId || "" },
-            { id: "partner", title: "Partner", kind: "note", trashed: false, relatedEntryId: relatedEntryId === "partner" ? "current" : "" },
-            { id: "free", title: "Free", kind: "note", trashed: false, relatedEntryId: "" },
-            { id: "occupied", title: "Occupied", kind: "login", trashed: false, relatedEntryId: "elsewhere" },
-            { id: "trash", title: "Trashed", kind: "note", trashed: true, relatedEntryId: relatedEntryId === "trash" ? "current" : "" }
+            {
+                id: "current",
+                title: "Current",
+                kind: "login",
+                trashed: false,
+                relatedEntryId: relatedEntryId || ""
+            },
+            {
+                id: "partner",
+                title: "Partner",
+                kind: "note",
+                trashed: false,
+                relatedEntryId: relatedEntryId === "partner" ? "current" : ""
+            },
+            {
+                id: "free",
+                title: "Free",
+                kind: "note",
+                trashed: false,
+                relatedEntryId: ""
+            },
+            {
+                id: "occupied",
+                title: "Occupied",
+                kind: "login",
+                trashed: false,
+                relatedEntryId: "elsewhere"
+            },
+            {
+                id: "trash",
+                title: "Trashed",
+                kind: "note",
+                trashed: true,
+                relatedEntryId: relatedEntryId === "trash" ? "current" : ""
+            }
         ];
     }
 
@@ -93,13 +131,22 @@ TestCase {
 
     function test_folder_picker_filters_and_candidate_uses_entry_icon() {
         const candidates = [
-            { id: "current", title: "Current", kind: "note", trashed: false, relatedEntryId: "" },
+            {
+                id: "current",
+                title: "Current",
+                kind: "note",
+                trashed: false,
+                relatedEntryId: ""
+            },
             {
                 id: "work-entry",
                 title: "Work credential",
                 kind: "login",
                 folder: "work",
-                icon: { kind: "theme", name: "network-server" },
+                icon: {
+                    kind: "theme",
+                    name: "network-server"
+                },
                 trashed: false,
                 relatedEntryId: ""
             },
@@ -108,20 +155,47 @@ TestCase {
                 title: "Personal credential",
                 kind: "login",
                 folder: "personal",
-                icon: { kind: "theme", name: "user-home" },
+                icon: {
+                    kind: "theme",
+                    name: "user-home"
+                },
                 trashed: false,
                 relatedEntryId: ""
             }
         ];
         const folders = [
-            { id: "root", name: "Accounts", parent: "" },
-            { id: "work", name: "Work", parent: "root" },
-            { id: "personal", name: "Personal", parent: "root" }
+            {
+                id: "root",
+                name: "Accounts",
+                parent: ""
+            },
+            {
+                id: "work",
+                name: "Work",
+                parent: "root"
+            },
+            {
+                id: "personal",
+                name: "Personal",
+                parent: "root"
+            }
         ];
         const folderRows = [
-            { id: "root", name: "Accounts", depth: 0 },
-            { id: "work", name: "Work", depth: 1 },
-            { id: "personal", name: "Personal", depth: 1 }
+            {
+                id: "root",
+                name: "Accounts",
+                depth: 0
+            },
+            {
+                id: "work",
+                name: "Work",
+                depth: 1
+            },
+            {
+                id: "personal",
+                name: "Personal",
+                depth: 1
+            }
         ];
         const picker = createPicker("", candidates, folders, folderRows);
 
@@ -151,7 +225,13 @@ TestCase {
 
     function test_large_picker_search_confirm_and_bounded_virtualized_list() {
         const candidates = [
-            { id: "current", title: "Current", kind: "note", trashed: false, relatedEntryId: "" }
+            {
+                id: "current",
+                title: "Current",
+                kind: "note",
+                trashed: false,
+                relatedEntryId: ""
+            }
         ];
         for (let index = 0; index < 998; ++index) {
             candidates.push({
@@ -174,9 +254,21 @@ TestCase {
         compare(candidates.length, 1000);
 
         const folders = [
-            { id: "root", name: "Accounts", parent: "" },
-            { id: "work", name: "Work", parent: "root" },
-            { id: "emergency", name: "Emergency", parent: "" }
+            {
+                id: "root",
+                name: "Accounts",
+                parent: ""
+            },
+            {
+                id: "work",
+                name: "Work",
+                parent: "root"
+            },
+            {
+                id: "emergency",
+                name: "Emergency",
+                parent: ""
+            }
         ];
         const picker = createPicker("", candidates, folders);
         const changed = spyFor(picker, "selectionChanged");
@@ -194,8 +286,7 @@ TestCase {
         compare(list.count, 999);
         verify(list.height > 0 && list.height < dialog.height);
         verify(list.contentHeight > list.height);
-        verify(list.contentItem.children.length < list.count,
-            "ListView should realize only the visible delegates for 1000 records");
+        verify(list.contentItem.children.length < list.count, "ListView should realize only the visible delegates for 1000 records");
         compare(Array.from(modalState.signalArguments[0]), [true]);
 
         search.text = "Recovery Vault";

@@ -16,6 +16,7 @@ Controls.Pane {
     property bool entryDraggingEnabled: false
 
     // The shell owns adapter mutations and the editor dialog; this pane reports user intent.
+    signal detailRequested
     signal selectionRequested(string entryId)
     signal entryOpenRequested(var entry)
 
@@ -61,6 +62,7 @@ Controls.Pane {
                 id: entryList
                 model: root.activeStore.visibleEntries
                 currentIndex: root.activeStore.visibleEntries.findIndex(e => e.id === root.activeStore.selectedId)
+                focus: true
                 activeFocusOnTab: true
                 keyNavigationEnabled: true
                 Accessible.role: Accessible.List
@@ -82,6 +84,7 @@ Controls.Pane {
                             onClicked: {
                                 root.selectionRequested(entry.id);
                                 entryList.forceActiveFocus();
+                                root.detailRequested();
                             }
                         }
                     }
@@ -92,12 +95,7 @@ Controls.Pane {
                             focus: true
                             readonly property var modelData: rowLoader.modelData
                             readonly property var relatedEntry: root.storeAdapter.relatedEntryFor(modelData)
-                            readonly property string subtitleText: qsTranslate("Main", "%1 · %2")
-                                .arg(root.storeAdapter.folderName(modelData.folder))
-                                .arg(root.storeAdapter.kindName(modelData.kind))
-                                + (relatedEntry
-                                   ? qsTr(" · Vinculado con %1").arg(relatedEntry.title)
-                                   : modelData.relatedEntryId ? qsTr(" · Vinculado") : "")
+                            readonly property string subtitleText: qsTranslate("Main", "%1 · %2").arg(root.storeAdapter.folderName(modelData.folder)).arg(root.storeAdapter.kindName(modelData.kind)) + (relatedEntry ? qsTr(" · Vinculado con %1").arg(relatedEntry.title) : modelData.relatedEntryId ? qsTr(" · Vinculado") : "")
                             text: modelData.title
                             Accessible.name: modelData.title
                             Accessible.description: subtitleText
@@ -112,6 +110,7 @@ Controls.Pane {
                             onClicked: {
                                 root.selectionRequested(modelData.id);
                                 entryList.forceActiveFocus();
+                                root.detailRequested();
                             }
                             onDoubleClicked: {
                                 if (!root.keysMode && !modelData.trashed && !root.storeAdapter.controller.busy)
@@ -153,9 +152,9 @@ Controls.Pane {
                                 readonly property var storeAdapter: root.storeAdapter
                                 visible: Drag.active
                                 z: 1000
-                                width: dragRow.implicitWidth + 24
-                                height: dragRow.implicitHeight + 16
-                                radius: 6
+                                width: dragRow.implicitWidth + Kirigami.Units.largeSpacing * 2
+                                height: dragRow.implicitHeight + Kirigami.Units.smallSpacing * 4
+                                radius: Kirigami.Units.cornerRadius
                                 color: Kirigami.Theme.backgroundColor
                                 border.color: Kirigami.Theme.highlightColor
                                 Drag.source: dragPreview
@@ -171,11 +170,11 @@ Controls.Pane {
                                         fallbackIcon: entryDelegate.icon.name
                                     }
                                     Controls.Label {
-                                    id: dragLabel
-                                    text: entryDelegate.text
-                                    textFormat: Text.PlainText
-                                    elide: Text.ElideRight
-                                    Layout.preferredWidth: Math.min(implicitWidth, 240)
+                                        id: dragLabel
+                                        text: entryDelegate.text
+                                        textFormat: Text.PlainText
+                                        elide: Text.ElideRight
+                                        Layout.preferredWidth: Math.min(implicitWidth, Kirigami.Units.gridUnit * 14)
                                     }
                                 }
                             }

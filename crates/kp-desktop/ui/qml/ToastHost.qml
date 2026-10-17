@@ -13,9 +13,7 @@ Item {
     property bool closing: false
     readonly property int enterDuration: Math.min(160, Kirigami.Units.shortDuration)
     readonly property int exitDuration: Math.min(120, Kirigami.Units.shortDuration)
-    readonly property int messageType: severity === "success" ? Kirigami.MessageType.Positive
-        : severity === "warning" ? Kirigami.MessageType.Warning
-        : severity === "error" ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
+    readonly property int messageType: severity === "success" ? Kirigami.MessageType.Positive : severity === "warning" ? Kirigami.MessageType.Warning : severity === "error" ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
 
     width: 0
     height: 0

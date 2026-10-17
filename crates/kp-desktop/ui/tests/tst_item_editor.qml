@@ -32,7 +32,10 @@ TestCase {
 
     function fields(kind, session) {
         if (kind === "note")
-            return { value: session + " private note", notes: session + " note context" };
+            return {
+                value: session + " private note",
+                notes: session + " note context"
+            };
         return {
             username: session + "@example.invalid",
             password: session + " private password",
@@ -45,12 +48,24 @@ TestCase {
 
     function emptyFields(kind) {
         if (kind === "note")
-            return { value: "", notes: "" };
-        return { username: "", password: "", url: "", urls: [], totpInput: "", notes: "" };
+            return {
+                value: "",
+                notes: ""
+            };
+        return {
+            username: "",
+            password: "",
+            url: "",
+            urls: [],
+            totpInput: "",
+            notes: ""
+        };
     }
 
     function createHost() {
-        const host = createTemporaryObject(hostComponent, testCase, { width: 640 });
+        const host = createTemporaryObject(hostComponent, testCase, {
+            width: 640
+        });
         verify(host !== null);
         awaitKind(host, "login");
         return host;
@@ -67,7 +82,10 @@ TestCase {
     }
 
     function seedBothDrafts(host) {
-        host.loadContent({ kind: "login", fields: fields("login", "previous") });
+        host.loadContent({
+            kind: "login",
+            fields: fields("login", "previous")
+        });
         awaitKind(host, "login");
         select(host, "note");
         host.form.loadFields(fields("note", "previous"));
@@ -86,7 +104,10 @@ TestCase {
         const host = createHost();
         const login = fields("login", "draft");
         const note = fields("note", "draft");
-        host.loadContent({ kind: "login", fields: login });
+        host.loadContent({
+            kind: "login",
+            fields: login
+        });
         compare(host.currentFields(), login);
 
         select(host, "note");
@@ -99,7 +120,16 @@ TestCase {
     }
 
     function test_clear_removes_active_and_cached_drafts_data() {
-        return [{ tag: "login", activeKind: "login" }, { tag: "note", activeKind: "note" }];
+        return [
+            {
+                tag: "login",
+                activeKind: "login"
+            },
+            {
+                tag: "note",
+                activeKind: "note"
+            }
+        ];
     }
 
     function test_clear_removes_active_and_cached_drafts(row) {
@@ -118,10 +148,26 @@ TestCase {
 
     function test_new_session_cannot_restore_previous_drafts_data() {
         return [
-            { tag: "login-to-login", activeKind: "login", nextKind: "login" },
-            { tag: "login-to-note", activeKind: "login", nextKind: "note" },
-            { tag: "note-to-login", activeKind: "note", nextKind: "login" },
-            { tag: "note-to-note", activeKind: "note", nextKind: "note" }
+            {
+                tag: "login-to-login",
+                activeKind: "login",
+                nextKind: "login"
+            },
+            {
+                tag: "login-to-note",
+                activeKind: "login",
+                nextKind: "note"
+            },
+            {
+                tag: "note-to-login",
+                activeKind: "note",
+                nextKind: "login"
+            },
+            {
+                tag: "note-to-note",
+                activeKind: "note",
+                nextKind: "note"
+            }
         ];
     }
 
@@ -131,7 +177,10 @@ TestCase {
         select(host, row.activeKind);
         const next = fields(row.nextKind, "next-session");
 
-        host.loadContent({ kind: row.nextKind, fields: next });
+        host.loadContent({
+            kind: row.nextKind,
+            fields: next
+        });
         awaitKind(host, row.nextKind);
         compare(host.currentFields(), next);
         const otherKind = row.nextKind === "login" ? "note" : "login";
@@ -145,7 +194,10 @@ TestCase {
         const host = createHost();
         const login = fields("login", "generated");
         const note = fields("note", "generated");
-        host.loadContent({ kind: "login", fields: login });
+        host.loadContent({
+            kind: "login",
+            fields: login
+        });
         host.applyGeneratedPassword("first generated password");
         login.password = "first generated password";
         compare(host.currentFields(), login);
@@ -163,7 +215,10 @@ TestCase {
     function test_edited_distinguishes_user_changes_from_load_and_clear() {
         const host = createHost();
         const edited = spyFor(host, "edited");
-        host.loadContent({ kind: "login", fields: fields("login", "loaded") });
+        host.loadContent({
+            kind: "login",
+            fields: fields("login", "loaded")
+        });
         awaitKind(host, "login");
         compare(edited.count, 0);
 
@@ -180,7 +235,10 @@ TestCase {
         compare(edited.count, 1);
 
         edited.clear();
-        host.loadContent({ kind: "login", fields: fields("login", "another-session") });
+        host.loadContent({
+            kind: "login",
+            fields: fields("login", "another-session")
+        });
         awaitKind(host, "login");
         compare(edited.count, 0);
         host.clearFields();
@@ -197,7 +255,12 @@ TestCase {
 
     function test_unknown_kind_has_no_editable_form() {
         const host = createHost();
-        host.loadContent({ kind: "unsupported-test-type", fields: { password: "must not load" } });
+        host.loadContent({
+            kind: "unsupported-test-type",
+            fields: {
+                password: "must not load"
+            }
+        });
         tryCompare(host, "form", null);
         compare(host.ready, false);
         compare(host.currentFields(), {});
@@ -211,7 +274,10 @@ TestCase {
         verify(baseline !== null);
         const draft = {
             title: "Original title",
-            content: { kind: "login", fields: fields("login", "baseline") },
+            content: {
+                kind: "login",
+                fields: fields("login", "baseline")
+            },
             recipients: ["first", "second"],
             icon: null
         };
@@ -241,7 +307,12 @@ TestCase {
         const baseline = createTemporaryObject(baselineComponent, testCase);
         verify(baseline !== null);
         const draft = {
-            content: { fields: { password: "original", urls: ["https://original.invalid"] } },
+            content: {
+                fields: {
+                    password: "original",
+                    urls: ["https://original.invalid"]
+                }
+            },
             recipients: ["original recipient"]
         };
         baseline.capture(draft);
@@ -257,14 +328,26 @@ TestCase {
     function test_baseline_clear_drops_previous_session_snapshot() {
         const baseline = createTemporaryObject(baselineComponent, testCase);
         verify(baseline !== null);
-        const previous = { content: { fields: { password: "previous secret" } } };
+        const previous = {
+            content: {
+                fields: {
+                    password: "previous secret"
+                }
+            }
+        };
         baseline.capture(previous);
         verify(baseline.matches(previous));
         baseline.clear();
         compare(baseline.value, null);
         verify(!baseline.matches(previous));
         verify(!baseline.matches(null));
-        const next = { content: { fields: { password: "next secret" } } };
+        const next = {
+            content: {
+                fields: {
+                    password: "next secret"
+                }
+            }
+        };
         baseline.capture(next);
         verify(baseline.matches(next));
         verify(!baseline.matches(previous));
