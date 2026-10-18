@@ -1,0 +1,26 @@
+[package]
+name = "kp-transport"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bounded asynchronous peer transport primitives"
+publish = false
+
+[lib]
+name = "kryptopass_transport"
+
+[features]
+loopback-dev = ["tokio/net", "tokio/io-util"]
+
+[dependencies]
+async-trait = "0.1"
+kp-protocol = { path = "../kp-protocol" }
+thiserror = "2.0"
+tokio = { version = "1", features = ["macros", "sync", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "sync", "time"] }
+
+[lints]
+workspace = true

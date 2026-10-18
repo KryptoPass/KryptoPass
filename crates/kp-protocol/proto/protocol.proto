@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package org.kryptopass.protocol.v1;
+
+// This schema is a wire contract shared with future Kotlin implementations.
+// Values are never interpreted as Rust-native serialized structs.
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_PAIRING_INVITE = 1;
+  MESSAGE_TYPE_PAIRING_HELLO = 2;
+  MESSAGE_TYPE_NOISE_HANDSHAKE = 3;
+  MESSAGE_TYPE_PAIRING_IDENTITY = 4;
+  MESSAGE_TYPE_PAIRING_CONFIRMATION = 5;
+  MESSAGE_TYPE_PAIRING_COMPLETE = 6;
+  MESSAGE_TYPE_PAIRING_ABORT = 7;
+  MESSAGE_TYPE_SYNC_HELLO = 8;
+  MESSAGE_TYPE_SYNC_MANIFEST = 9;
+  MESSAGE_TYPE_SYNC_REQUEST = 10;
+  MESSAGE_TYPE_SYNC_CHUNK = 11;
+  MESSAGE_TYPE_SYNC_COMMIT = 12;
+  MESSAGE_TYPE_SYNC_ACK = 13;
+  MESSAGE_TYPE_SYNC_CONFLICT = 14;
+  MESSAGE_TYPE_KEY_TRANSFER_OFFER = 15;
+  MESSAGE_TYPE_KEY_TRANSFER_CHUNK = 16;
+  MESSAGE_TYPE_KEY_TRANSFER_COMPLETE = 17;
+  MESSAGE_TYPE_KEY_TRANSFER_ABORT = 18;
+}
+
+// `payload` is the encoded message selected by `message_type`.
+message Envelope {
+  uint32 protocol_version = 1;
+  bytes session_id = 2;
+  uint64 message_id = 3;
+  MessageType message_type = 4;
+  bytes payload = 5;
+}
+
+enum AbortCode {
+  ABORT_CODE_UNSPECIFIED = 0;
+  ABORT_CODE_USER_CANCELLED = 1;
+  ABORT_CODE_EXPIRED = 2;
+  ABORT_CODE_REJECTED = 3;
+  ABORT_CODE_FAILED = 4;
+}
+
+message PairingInvite {
+  bytes invite_id = 1;            // 16 bytes
+  bytes single_use_token = 2;     // 32 random bytes; never log or Debug-print
+  uint64 expires_at_unix_ms = 3;
+  uint32 protocol_version = 4;    // required; currently 1
+}
+
+message PairingHello {
+  reserved 2;
+  reserved "ephemeral_public_key";
+  bytes invite_id = 1;            // 16 bytes
+}
+
+message NoiseHandshake {
+  uint32 step = 1;                // 1 through 3 for Noise XX
+  bytes handshake_message = 2;
+}
+
+message PairingIdentity {
+  reserved 3;
+  reserved "static_public_key";
+  bytes device_id = 1;             // 32-byte digest of the signing key
+  bytes signing_public_key = 2;    // 32-byte Ed25519 public key
+  bytes transcript_hash = 4;       // 32-byte authenticated handshake context
+  bytes proof = 5;                 // 64 bytes; signed context is defined in Phase 2
+}
+
+message PairingConfirmation {
+  bytes transcript_hash = 1;       // 32 bytes
+  bool accepted = 2;
+}
+
+message PairingComplete {
+  bytes transcript_hash = 1;       // 32 bytes
+}
+
+message PairingAbort {
+  AbortCode code = 1;
+}
+
+message SyncHello {
+  bytes vault_id = 1;              // 16 bytes
+  bytes device_id = 2;             // 32 bytes
+  uint64 known_revision_count = 3;
+}
+
+message RevisionHead {
+  bytes record_id = 1;             // 16 bytes
+  bytes revision_id = 2;           // 16 bytes
+  bytes revision_hash = 3;         // 32 bytes
+}
+
+message SyncManifest {
+  bytes snapshot_id = 1;           // 16 bytes
+  repeated RevisionHead heads = 2; // at most 1024
+}
+
+message RequestedRevision {
+  bytes record_id = 1;             // 16 bytes
+  bytes revision_id = 2;           // 16 bytes
+}
+
+message SyncRequest {
+  bytes snapshot_id = 1;           // 16 bytes
+  repeated RequestedRevision revisions = 2; // at most 256
+}
+
+// `data` is an opaque encrypted object fragment, not plaintext vault content.
+message SyncChunk {
+  bytes transfer_id = 1;           // 16 bytes
+  uint32 chunk_index = 2;          // zero-based
+  uint32 chunk_count = 3;
+  uint64 total_size = 4;
+  bytes sha256_digest = 5;          // digest of complete transfer
+  bytes data = 6;                  // at most 48 KiB
+}
+
+message SyncCommit {
+  bytes transfer_id = 1;           // 16 bytes
+  bytes sha256_digest = 2;         // 32 bytes
+}
+
+enum AckStatus {
+  ACK_STATUS_UNSPECIFIED = 0;
+  ACK_STATUS_ACCEPTED = 1;
+  ACK_STATUS_REJECTED = 2;
+}
+
+message SyncAck {
+  bytes transfer_id = 1;           // 16 bytes
+  AckStatus status = 2;
+}
+
+message SyncConflict {
+  bytes record_id = 1;             // 16 bytes
+  repeated bytes revision_ids = 2; // 2 through 16 unique 16-byte IDs
+}
+
+// These messages reserve the future key-provisioning wire format. Fase 1
+// exposes no handler that reads, exports, imports, or persists private keys.
+message KeyTransferOffer {
+  bytes transfer_id = 1;           // 16 bytes
+  bytes openpgp_fingerprint = 2;   // 20 or 32 bytes
+  uint64 total_size = 3;
+}
+
+message KeyTransferChunk {
+  bytes transfer_id = 1;           // 16 bytes
+  uint32 chunk_index = 2;          // zero-based
+  uint32 chunk_count = 3;
+  uint64 total_size = 4;
+  bytes sha256_digest = 5;         // digest of complete transfer
+  bytes data = 6;                  // at most 48 KiB
+}
+
+message KeyTransferComplete {
+  bytes transfer_id = 1;           // 16 bytes
+  bytes openpgp_fingerprint = 2;   // 20 or 32 bytes
+}
+
+message KeyTransferAbort {
+  bytes transfer_id = 1;           // 16 bytes
+  AbortCode code = 2;
+}

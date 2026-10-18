@@ -29,6 +29,24 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop/ui/qml", "crates/kp-desktop/ui/tests", "crates/kp-desktop/build.rs"]
 
+[jobs.check-p2p]
+command = ["just", "check-p2p"]
+need_stdout = false
+default_watch = false
+watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
+
+[jobs.test-p2p]
+command = ["just", "test-p2p"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
+
+[jobs.p2p-demo]
+command = ["just", "p2p-demo"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
+
 [jobs.test-icons]
 command = ["just", "test-icons"]
 need_stdout = true
@@ -140,3 +158,10 @@ watch = ["crates/kp-desktop/ui", "tools/source_format.py", ".qmlformat.ini"]
 [jobs.fmt-rust]
 command = ["just", "fmt-rust"]
 need_stdout = true
+[jobs.pairing-lab]
+command = ["cargo", "check", "-p", "kp-pairing-lab", "-p", "kp-desktop"]
+need_stdout = false
+[jobs.check-lan]
+command = ["just", "check-lan"]
+need_stdout = false
+watch = ["crates/kp-lan", "crates/kp-pairing-lab", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]

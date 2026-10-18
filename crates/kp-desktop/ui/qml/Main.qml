@@ -51,6 +51,16 @@ Controls.ApplicationWindow {
             store.controller.decideBrowserPairing(token, approve);
         }
     }
+    DevicePairingLabDialog {
+        id: devicePairingLab
+        Component.onCompleted: {
+            if (available && Qt.application.arguments.indexOf("--pairing-lab") !== -1)
+                open();
+        }
+        onCopyRequested: function (code) {
+            secureClipboard.copySensitive(code);
+        }
+    }
     KeyStore {
         id: keys
         objectName: "keyStore"
@@ -716,6 +726,11 @@ Controls.ApplicationWindow {
         Controls.Menu {
             title: qsTr("A&yuda")
             Controls.MenuItem {
+                text: qsTr("Vincular con Android (pruebas)")
+                visible: devicePairingLab.available
+                onTriggered: devicePairingLab.open()
+            }
+            Controls.MenuItem {
                 action: helpAction
             }
             Controls.MenuItem {
@@ -1074,7 +1089,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importWindow.opened
+        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }

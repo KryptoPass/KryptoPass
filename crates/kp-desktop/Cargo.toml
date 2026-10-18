@@ -35,6 +35,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 base64 = "0.22"
 kryptopass-browser = { package = "kp-browser", path = "../kp-browser" }
+kryptopass-pairing-lab = { package = "kp-pairing-lab", path = "../kp-pairing-lab" }
+kryptopass-identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass-pairing = { package = "kp-pairing", path = "../kp-pairing" }
+tokio = { version = "1", features = ["rt", "sync", "time", "macros", "net"] }
 rqrr = "0.10"
 image = { version = "=0.25.6", default-features = false, features = ["png", "jpeg"] }
 

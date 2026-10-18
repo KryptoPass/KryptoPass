@@ -1,0 +1,23 @@
+[package]
+name = "kp-protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Versioned KryptoPass peer protocol"
+publish = false
+
+[lib]
+name = "kryptopass_protocol"
+
+[dependencies]
+prost = "0.14.4"
+sha2 = "0.10"
+thiserror = "2.0"
+
+[build-dependencies]
+prost-build = "0.14.4"
+protoc-bin-vendored = "3.2.0"
+
+[lints]
+workspace = true

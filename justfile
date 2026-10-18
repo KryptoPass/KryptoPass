@@ -70,6 +70,37 @@ test-security:
     cargo test -p kp-desktop process_security::tests
     cargo test -p kp-desktop infrastructure::openpgp::tests
 
+# Núcleo P2P independiente de Qt.
+check-p2p:
+    cargo check -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
+
+# Señalización y transporte LAN independientes de Qt.
+check-lan:
+    cargo check -p kp-lan -p kp-pairing-lab
+
+test-p2p:
+    cargo test -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
+
+# Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
+p2p-demo:
+    cargo run -p kp-pairing --example pairing_demo
+
+# Contrato local de desarrollo para el emulador; no abre un puerto LAN.
+pairing-interop-host:
+    cargo build -p kp-pairing-lab --bin pairing-interop-host
+
+pairing-lab: build
+    {{ quote(desktop_binary) }} --pairing-lab
+
+# Reabre el mismo perfil aislado; no crea carpetas ni cambia su llavero GnuPG.
+pairing-lab-profile profile: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for directory in {{ quote(profile / "data") }} {{ quote(profile / "config") }} {{ quote(profile / "cache") }} {{ quote(profile / "gnupg") }}; do
+        test -d "$directory"
+    done
+    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --pairing-lab
+
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 test-items: check
     python3 crates/kp-desktop/ui/tests/run_item_types.py

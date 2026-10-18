@@ -1,0 +1,327 @@
+{
+  "source": "https://raw.githubusercontent.com/matrix-org/matrix-spec/v1.16/data-definitions/sas-emoji.json",
+  "source_version": "Matrix v1.16 sas-emoji.json",
+  "usage": "KryptoPass reuses only this display catalog; its SAS derivation is independent of Matrix.",
+  "emojis": [
+    {
+      "index": 0,
+      "emoji": "🐶",
+      "name": "Dog"
+    },
+    {
+      "index": 1,
+      "emoji": "🐱",
+      "name": "Cat"
+    },
+    {
+      "index": 2,
+      "emoji": "🦁",
+      "name": "Lion"
+    },
+    {
+      "index": 3,
+      "emoji": "🐎",
+      "name": "Horse"
+    },
+    {
+      "index": 4,
+      "emoji": "🦄",
+      "name": "Unicorn"
+    },
+    {
+      "index": 5,
+      "emoji": "🐷",
+      "name": "Pig"
+    },
+    {
+      "index": 6,
+      "emoji": "🐘",
+      "name": "Elephant"
+    },
+    {
+      "index": 7,
+      "emoji": "🐰",
+      "name": "Rabbit"
+    },
+    {
+      "index": 8,
+      "emoji": "🐼",
+      "name": "Panda"
+    },
+    {
+      "index": 9,
+      "emoji": "🐓",
+      "name": "Rooster"
+    },
+    {
+      "index": 10,
+      "emoji": "🐧",
+      "name": "Penguin"
+    },
+    {
+      "index": 11,
+      "emoji": "🐢",
+      "name": "Turtle"
+    },
+    {
+      "index": 12,
+      "emoji": "🐟",
+      "name": "Fish"
+    },
+    {
+      "index": 13,
+      "emoji": "🐙",
+      "name": "Octopus"
+    },
+    {
+      "index": 14,
+      "emoji": "🦋",
+      "name": "Butterfly"
+    },
+    {
+      "index": 15,
+      "emoji": "🌷",
+      "name": "Flower"
+    },
+    {
+      "index": 16,
+      "emoji": "🌳",
+      "name": "Tree"
+    },
+    {
+      "index": 17,
+      "emoji": "🌵",
+      "name": "Cactus"
+    },
+    {
+      "index": 18,
+      "emoji": "🍄",
+      "name": "Mushroom"
+    },
+    {
+      "index": 19,
+      "emoji": "🌏",
+      "name": "Globe"
+    },
+    {
+      "index": 20,
+      "emoji": "🌙",
+      "name": "Moon"
+    },
+    {
+      "index": 21,
+      "emoji": "☁️",
+      "name": "Cloud"
+    },
+    {
+      "index": 22,
+      "emoji": "🔥",
+      "name": "Fire"
+    },
+    {
+      "index": 23,
+      "emoji": "🍌",
+      "name": "Banana"
+    },
+    {
+      "index": 24,
+      "emoji": "🍎",
+      "name": "Apple"
+    },
+    {
+      "index": 25,
+      "emoji": "🍓",
+      "name": "Strawberry"
+    },
+    {
+      "index": 26,
+      "emoji": "🌽",
+      "name": "Corn"
+    },
+    {
+      "index": 27,
+      "emoji": "🍕",
+      "name": "Pizza"
+    },
+    {
+      "index": 28,
+      "emoji": "🎂",
+      "name": "Cake"
+    },
+    {
+      "index": 29,
+      "emoji": "❤️",
+      "name": "Heart"
+    },
+    {
+      "index": 30,
+      "emoji": "😀",
+      "name": "Smiley"
+    },
+    {
+      "index": 31,
+      "emoji": "🤖",
+      "name": "Robot"
+    },
+    {
+      "index": 32,
+      "emoji": "🎩",
+      "name": "Hat"
+    },
+    {
+      "index": 33,
+      "emoji": "👓",
+      "name": "Glasses"
+    },
+    {
+      "index": 34,
+      "emoji": "🔧",
+      "name": "Spanner"
+    },
+    {
+      "index": 35,
+      "emoji": "🎅",
+      "name": "Santa"
+    },
+    {
+      "index": 36,
+      "emoji": "👍",
+      "name": "Thumbs Up"
+    },
+    {
+      "index": 37,
+      "emoji": "☂️",
+      "name": "Umbrella"
+    },
+    {
+      "index": 38,
+      "emoji": "⌛",
+      "name": "Hourglass"
+    },
+    {
+      "index": 39,
+      "emoji": "⏰",
+      "name": "Clock"
+    },
+    {
+      "index": 40,
+      "emoji": "🎁",
+      "name": "Gift"
+    },
+    {
+      "index": 41,
+      "emoji": "💡",
+      "name": "Light Bulb"
+    },
+    {
+      "index": 42,
+      "emoji": "📕",
+      "name": "Book"
+    },
+    {
+      "index": 43,
+      "emoji": "✏️",
+      "name": "Pencil"
+    },
+    {
+      "index": 44,
+      "emoji": "📎",
+      "name": "Paperclip"
+    },
+    {
+      "index": 45,
+      "emoji": "✂️",
+      "name": "Scissors"
+    },
+    {
+      "index": 46,
+      "emoji": "🔒",
+      "name": "Lock"
+    },
+    {
+      "index": 47,
+      "emoji": "🔑",
+      "name": "Key"
+    },
+    {
+      "index": 48,
+      "emoji": "🔨",
+      "name": "Hammer"
+    },
+    {
+      "index": 49,
+      "emoji": "☎️",
+      "name": "Telephone"
+    },
+    {
+      "index": 50,
+      "emoji": "🏁",
+      "name": "Flag"
+    },
+    {
+      "index": 51,
+      "emoji": "🚂",
+      "name": "Train"
+    },
+    {
+      "index": 52,
+      "emoji": "🚲",
+      "name": "Bicycle"
+    },
+    {
+      "index": 53,
+      "emoji": "✈️",
+      "name": "Aeroplane"
+    },
+    {
+      "index": 54,
+      "emoji": "🚀",
+      "name": "Rocket"
+    },
+    {
+      "index": 55,
+      "emoji": "🏆",
+      "name": "Trophy"
+    },
+    {
+      "index": 56,
+      "emoji": "⚽",
+      "name": "Ball"
+    },
+    {
+      "index": 57,
+      "emoji": "🎸",
+      "name": "Guitar"
+    },
+    {
+      "index": 58,
+      "emoji": "🎺",
+      "name": "Trumpet"
+    },
+    {
+      "index": 59,
+      "emoji": "🔔",
+      "name": "Bell"
+    },
+    {
+      "index": 60,
+      "emoji": "⚓",
+      "name": "Anchor"
+    },
+    {
+      "index": 61,
+      "emoji": "🎧",
+      "name": "Headphones"
+    },
+    {
+      "index": 62,
+      "emoji": "📁",
+      "name": "Folder"
+    },
+    {
+      "index": 63,
+      "emoji": "📌",
+      "name": "Pin"
+    }
+  ]
+}

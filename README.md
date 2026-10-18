@@ -46,6 +46,9 @@ QMAKE=/ruta/a/qmake6 just verify
 ## Documentación técnica
 
 - [Guía de trabajo](AGENTS.md)
+- [Plan de implementación P2P](docs/p2p-implementation-plan.md)
+- [Progreso y puertas del hito P2P](docs/p2p-progress.md)
+- [Transporte LAN WebRTC Desktop / Android](docs/lan-transport-v1.md)
 - [Arquitectura de componentes](docs/COMPONENT_BOUNDARIES.md)
 - [Contrato de datos sensibles](docs/SECRET_DATA_CONTRACT.md)
 - [Seguridad y recuperación](docs/SECURITY_AND_RECOVERY.md)

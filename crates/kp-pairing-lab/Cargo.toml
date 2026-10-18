@@ -1,0 +1,31 @@
+[package]
+name = "kp-pairing-lab"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Explicit local development pairing between Desktop and the Android emulator"
+publish = false
+
+[lib]
+name = "kryptopass_pairing_lab"
+
+[[bin]]
+name = "pairing-interop-host"
+path = "src/bin/interop_host.rs"
+
+[dependencies]
+async-trait = "0.1"
+base64 = "0.22"
+getrandom = "0.3"
+kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass_lan = { package = "kp-lan", path = "../kp-lan" }
+kryptopass_pairing = { package = "kp-pairing", path = "../kp-pairing" }
+kryptopass_transport = { package = "kp-transport", path = "../kp-transport", features = ["loopback-dev"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt", "macros", "net", "sync", "time", "io-util", "io-std"] }
+zeroize = "1"
+
+[lints]
+workspace = true

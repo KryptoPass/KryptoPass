@@ -62,3 +62,20 @@ mensajes de commit (Conventional Commits).
 
 Un cambio coherente por commit, mensaje en imperativo que describa el
 resultado. `just ready` en verde antes de commitear.
+
+## Desarrollo P2P
+
+Antes de trabajar en P2P, leer `docs/p2p-implementation-plan.md` y
+`docs/p2p-progress.md`. El primero conserva el plan completo del usuario;
+el segundo registra las puertas y la evidencia de pruebas. Actualizar el
+progreso al cerrar una fase. El primer hito termina con dos nodos Rust en
+memoria, Noise XX, SAS y confianza persistente probados. No empezar WebRTC,
+Android ni transferencia de claves privadas de producción antes de cumplir
+las puertas correspondientes del plan.
+
+Petición posterior del usuario (2026-10-18): adelantar la integración LAN entre
+Desktop y Android tras confirmar manualmente pairing y reconexión por emulador.
+Mantener pausados los agentes de tests y seguridad hasta que los reactive;
+solo implementación y comprobaciones de compilación/apertura. Esta autorización
+permite avanzar el laboratorio, no declarar aceptada su seguridad o sus suites.
+Consultar `docs/lan-transport-v1.md`; no habilitar transferencia privada GPG.

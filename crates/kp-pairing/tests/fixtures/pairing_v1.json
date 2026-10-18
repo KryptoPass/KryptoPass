@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "source": "Independently computed with Python hashlib/hmac (HKDF-SHA256) and cryptography Ed25519; no Rust pairing helper was used for expected values.",
+  "inputs": {
+    "mode": "pairing",
+    "mode_byte": 1,
+    "session_id_hex": "0102030405060708090a0b0c0d0e0f10",
+    "invite_id_hex": "202122232425262728292a2b2c2d2e2f",
+    "raw_token_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+    "expires_at_ms": 1800000123456,
+    "final_noise_hash_hex": "c45c15197c218929b7fa75ba56e99954f8e0fc81577c2c3ef632907af668c6fa",
+    "static_i_hex": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c",
+    "static_r_hex": "5869aff450549732cbaaed5e5df9b30a6da31cb0e5742bad5ad4a1a768f1a67b",
+    "ed_i_hex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+    "ed_r_hex": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7"
+  },
+  "expected": {
+    "invitation_token_hash_hex": "a5b94c757652eadd84c28cbeca1f39484a18e61ed6292fccf582c1aa0ae57c0d",
+    "noise_prologue_hex": "6f72672e6b727970746f706173732e6e6f6973652d70726f6c6f6775652e76310000000001010102030405060708090a0b0c0d0e0f10202122232425262728292a2b2c2d2e2f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f000001a3185e3240",
+    "canonical_context_hex": "6f72672e6b727970746f706173732e70616972696e672e636f6e746578742e76310000000001010102030405060708090a0b0c0d0e0f10202122232425262728292a2b2c2d2e2fa5b94c757652eadd84c28cbeca1f39484a18e61ed6292fccf582c1aa0ae57c0d000001a3185e3240c45c15197c218929b7fa75ba56e99954f8e0fc81577c2c3ef632907af668c6fa07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c5869aff450549732cbaaed5e5df9b30a6da31cb0e5742bad5ad4a1a768f1a67b03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b829acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "initiator_proof_message_hex": "6f72672e6b727970746f706173732e70616972696e672e6964656e746974792d70726f6f662e763100006f72672e6b727970746f706173732e70616972696e672e636f6e746578742e76310000000001010102030405060708090a0b0c0d0e0f10202122232425262728292a2b2c2d2e2fa5b94c757652eadd84c28cbeca1f39484a18e61ed6292fccf582c1aa0ae57c0d000001a3185e3240c45c15197c218929b7fa75ba56e99954f8e0fc81577c2c3ef632907af668c6fa07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c5869aff450549732cbaaed5e5df9b30a6da31cb0e5742bad5ad4a1a768f1a67b03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b829acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "responder_proof_message_hex": "6f72672e6b727970746f706173732e70616972696e672e6964656e746974792d70726f6f662e763100016f72672e6b727970746f706173732e70616972696e672e636f6e746578742e76310000000001010102030405060708090a0b0c0d0e0f10202122232425262728292a2b2c2d2e2fa5b94c757652eadd84c28cbeca1f39484a18e61ed6292fccf582c1aa0ae57c0d000001a3185e3240c45c15197c218929b7fa75ba56e99954f8e0fc81577c2c3ef632907af668c6fa07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c5869aff450549732cbaaed5e5df9b30a6da31cb0e5742bad5ad4a1a768f1a67b03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b829acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "ed25519_proof_vector": {
+      "role": "initiator",
+      "public_key_hex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+      "signature_hex": "5c1a5f614a54fb2259f109f92f89a99aabc27dc6a6187df27b9bcc3bc986d2412887d04f4a337bece25cd1b3aba8e1298aa9f8cc2347d74f4221c67411629a07",
+      "note": "Verification-only fixed vector; the corresponding private seed is intentionally omitted."
+    },
+    "hkdf_sha256_6_bytes_hex": "871ab7e51bd1",
+    "sas_indices": [
+      33,
+      49,
+      42,
+      55,
+      57,
+      17,
+      47
+    ],
+    "reconnect_prologue_hex": "6f72672e6b727970746f706173732e6e6f6973652d70726f6c6f6775652e76310000000001020102030405060708090a0b0c0d0e0f100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "noise_xx_test_vector": {
+    "description": "Synthetic test-only Noise_XX_25519_AESGCM_SHA256 transcript using Snow 0.10 fixed_ephemeral_key_for_testing_only and its default resolver. Never use these static or ephemeral private test keys in production.",
+    "static_i_private_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    "static_r_private_hex": "2122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40",
+    "ephemeral_i_private_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f60",
+    "ephemeral_r_private_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f80",
+    "initiator_payload_hex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+    "responder_payload_hex": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "message_1_hex": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+    "message_2_hex": "244fe3b963e899dd295baffce248d3530f3a9a7479ba063002680ebfe7adad49c6c6d0a96e51a4d2e3dee1b6c9bfc7117491fcefbd981c7a55bcb515617d6a3a6384da1cc830bff2c09f71377ce0ab7bf376786872a3addbe9690737e585d91cbe8be2f63191f6f068626872cdcfe4d8b03f24dc5e0cb9564bd1e16d3d4a3b5a",
+    "message_3_hex": "fa420597b48383e52342d72df50f0c583afa6cf5990fb332a6ba1b38147d422d771f426545133ae331eef8a5b399b189de09c1e211dd4f3bf12ea3d7010554b428acdbe4f3f1d8eb7d442f24a2bc3ff04e65184ca1394b70c93dd681a61aeb4f",
+    "final_noise_hash_hex": "c45c15197c218929b7fa75ba56e99954f8e0fc81577c2c3ef632907af668c6fa",
+    "static_i_public_hex": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c",
+    "static_r_public_hex": "5869aff450549732cbaaed5e5df9b30a6da31cb0e5742bad5ad4a1a768f1a67b",
+    "sas_indices": [
+      33,
+      49,
+      42,
+      55,
+      57,
+      17,
+      47
+    ],
+    "sas_emojis": [
+      {
+        "index": 33,
+        "emoji": "👓",
+        "name": "Glasses"
+      },
+      {
+        "index": 49,
+        "emoji": "☎️",
+        "name": "Telephone"
+      },
+      {
+        "index": 42,
+        "emoji": "📕",
+        "name": "Book"
+      },
+      {
+        "index": 55,
+        "emoji": "🏆",
+        "name": "Trophy"
+      },
+      {
+        "index": 57,
+        "emoji": "🎸",
+        "name": "Guitar"
+      },
+      {
+        "index": 17,
+        "emoji": "🌵",
+        "name": "Cactus"
+      },
+      {
+        "index": 47,
+        "emoji": "🔑",
+        "name": "Key"
+      }
+    ]
+  }
+}
