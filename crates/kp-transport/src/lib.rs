@@ -20,6 +20,33 @@ pub use memory::{
 use async_trait::async_trait;
 use kryptopass_protocol::Channel;
 
+/// Observed route of an active carrier; never an authorization decision.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ConnectionRoute {
+    #[default]
+    Unknown,
+    Local,
+    Direct,
+    Turn,
+}
+
+/// Address family of the selected path without exposing candidate addresses.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ConnectionFamily {
+    #[default]
+    Unknown,
+    Ipv4,
+    Ipv6,
+    Mixed,
+}
+
+/// Volatile carrier metadata. It contains no addresses, SDP or credentials.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ConnectionInfo {
+    pub route: ConnectionRoute,
+    pub family: ConnectionFamily,
+}
+
 /// Asynchronous, ordered transport for opaque peer protocol frames.
 ///
 /// Implementations must preserve the order of successful sends in each
@@ -32,6 +59,12 @@ use kryptopass_protocol::Channel;
 /// in error text or debug output.
 #[async_trait]
 pub trait PeerTransport: Send {
+    /// Read selected-path metadata without consuming frames or changing trust.
+    /// Unsupported carriers return unknown; callers bound the observation time.
+    async fn connection_info(&mut self) -> ConnectionInfo {
+        ConnectionInfo::default()
+    }
+
     /// Enqueue one opaque frame for the peer.
     ///
     /// `data` is copied only when the transport can accept the frame. The

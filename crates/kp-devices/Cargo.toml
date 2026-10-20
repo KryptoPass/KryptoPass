@@ -1,0 +1,28 @@
+[package]
+name = "kp-devices"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Trusted-device directory and authenticated session ownership"
+publish = false
+
+[lib]
+name = "kryptopass_devices"
+
+[dependencies]
+kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass_pairing = { package = "kp-pairing", path = "../kp-pairing" }
+kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
+kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
+prost = "0.14"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
+tracing = "0.1"
+
+[dev-dependencies]
+async-trait = "0.1"
+tokio = { version = "1", features = ["test-util"] }
+
+[lints]
+workspace = true

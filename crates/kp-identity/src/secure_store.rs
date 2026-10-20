@@ -21,6 +21,12 @@ pub trait SecureKeyStore: Send + Sync {
 
     /// Stores the value only if no value already exists for this account.
     fn store_if_absent(&self, secret: &[u8]) -> Result<StoreIfAbsent, SecureStoreError>;
+
+    /// Removes this profile's credential. Implementations without a scoped
+    /// deletion operation fail closed by default.
+    fn delete(&self) -> Result<(), SecureStoreError> {
+        Err(SecureStoreError::UnsupportedPlatform)
+    }
 }
 
 /// Errors from operating-system secure storage.
@@ -155,6 +161,15 @@ impl SecureKeyStore for SystemSecretKeyStore {
         entry.set_secret(secret).map_err(map_keyring_error)?;
         Ok(StoreIfAbsent::Stored)
     }
+
+    fn delete(&self) -> Result<(), SecureStoreError> {
+        let _lock = self.profile_lock()?;
+        let entry = self.entry()?;
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(error) => Err(map_keyring_error(error)),
+        }
+    }
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -175,6 +190,10 @@ impl SecureKeyStore for SystemSecretKeyStore {
     }
 
     fn store_if_absent(&self, _secret: &[u8]) -> Result<StoreIfAbsent, SecureStoreError> {
+        Err(SecureStoreError::UnsupportedPlatform)
+    }
+
+    fn delete(&self) -> Result<(), SecureStoreError> {
         Err(SecureStoreError::UnsupportedPlatform)
     }
 }

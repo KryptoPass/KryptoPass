@@ -12,12 +12,12 @@ use std::time::Duration;
 use async_trait::async_trait;
 use hkdf::Hkdf;
 use kryptopass_identity::{
-    DeviceIdentity, InvitationTokenHash, PublicIdentity, SqliteTrustStore, TrustStoreError,
-    verify_signature,
+    DeviceId, DeviceIdentity, InvitationTokenHash, PublicIdentity, SqliteTrustStore,
+    TrustStoreError, verify_signature,
 };
 use kryptopass_protocol::{
     Channel, HandshakeRole, MessagePayload, NoiseHandshakeOrder, ProtocolError, SessionCodec,
-    decode_pairing_invite, encode_pairing_invite, proto,
+    channel_for_type, decode_pairing_invite, encode_pairing_invite, proto,
 };
 use kryptopass_transport::{PeerTransport, TransportError};
 use prost::Message;
@@ -727,6 +727,9 @@ pub enum PairingError {
     /// A verified signature was invalid.
     #[error("identity proof is invalid")]
     InvalidProof,
+    /// The established session has failed or has already closed.
+    #[error("authenticated session is closed")]
+    SessionClosed,
 }
 
 /// Pairing engine consuming one transport and one local trust store.
@@ -835,8 +838,12 @@ impl<'a, T: PeerTransport> PairingEngine<'a, T> {
                     sas,
                     session: EstablishedSession {
                         transport: self.transport,
-                        _noise: noise,
-                        _codec: codec,
+                        noise,
+                        codec,
+                        peer,
+                        local_device_id: self.identity.device_id(),
+                        closed: false,
+                        failed: false,
                     },
                 })
             }
@@ -1119,14 +1126,151 @@ pub struct PairingOutcome<T> {
 /// Authenticated Noise transport retained after local trust has committed.
 pub struct EstablishedSession<T> {
     transport: T,
-    _noise: TransportState,
-    _codec: SessionCodec,
+    noise: TransportState,
+    codec: SessionCodec,
+    peer: PublicIdentity,
+    local_device_id: DeviceId,
+    closed: bool,
+    failed: bool,
 }
 
 impl<T: PeerTransport> EstablishedSession<T> {
-    /// Closes the authenticated peer connection.
+    /// Read volatile carrier observations; this cannot change the authenticated identity.
+    pub async fn connection_info(&mut self) -> kryptopass_transport::ConnectionInfo {
+        if self.closed || self.failed {
+            return kryptopass_transport::ConnectionInfo::default();
+        }
+        self.transport.connection_info().await
+    }
+
+    /// Returns the exact public identity authenticated by this Noise handshake.
+    pub const fn peer_identity(&self) -> PublicIdentity {
+        self.peer
+    }
+
+    /// Returns the local identity bound to this authenticated session.
+    pub const fn local_device_id(&self) -> DeviceId {
+        self.local_device_id
+    }
+
+    /// Sends a typed, validated message through the existing Noise transport
+    /// state and session codec. A send error or cancelled send poisons this
+    /// session so its cipher nonce and protocol counters can never be reused.
+    /// Callers should await sends to completion and tear down the whole session
+    /// if the calling task is cancelled.
+    pub async fn send_message<M: Message>(
+        &mut self,
+        message_type: proto::MessageType,
+        payload: &M,
+    ) -> Result<(), PairingError> {
+        if self.closed || self.failed {
+            let _ = self.close().await;
+            return Err(PairingError::SessionClosed);
+        }
+
+        let mut operation = SessionOperationGuard::new(&mut self.failed);
+        let result = async {
+            let channel = channel_for_type(message_type as i32)?;
+            let mut plaintext = Zeroizing::new(self.codec.encode(message_type, payload)?);
+            if plaintext.len() > MAX_NOISE_PLAINTEXT_SIZE {
+                plaintext.zeroize();
+                return Err(PairingError::NoiseMessageTooLarge);
+            }
+            let mut ciphertext = Zeroizing::new(vec![0_u8; MAX_NOISE_CIPHERTEXT_SIZE]);
+            let written = self
+                .noise
+                .write_message(&plaintext, &mut ciphertext)
+                .map_err(|_| PairingError::CryptoFailure)?;
+            plaintext.zeroize();
+            if !(16..=MAX_NOISE_CIPHERTEXT_SIZE).contains(&written) {
+                return Err(PairingError::NoiseMessageTooLarge);
+            }
+            self.transport.send(channel, &ciphertext[..written]).await?;
+            ciphertext.zeroize();
+            Ok(())
+        }
+        .await;
+        if result.is_ok() {
+            operation.complete();
+        }
+        drop(operation);
+        if result.is_err() {
+            let _ = self.close().await;
+        }
+        result
+    }
+
+    /// Receives and authenticates one typed message using the existing Noise
+    /// transport state and session codec. Authentication, framing, channel, or
+    /// protocol errors close the session immediately.
+    pub async fn receive_message(
+        &mut self,
+    ) -> Result<kryptopass_protocol::DecodedMessage, PairingError> {
+        if self.closed || self.failed {
+            let _ = self.close().await;
+            return Err(PairingError::SessionClosed);
+        }
+
+        let result = async {
+            let frame = self.transport.receive().await?;
+            if frame.data.len() > MAX_NOISE_CIPHERTEXT_SIZE || frame.data.len() < 16 {
+                return Err(PairingError::UnexpectedMessage);
+            }
+            let mut plaintext = Zeroizing::new(vec![0_u8; MAX_NOISE_PLAINTEXT_SIZE]);
+            let written = self
+                .noise
+                .read_message(&frame.data, &mut plaintext)
+                .map_err(|_| PairingError::CryptoFailure)?;
+            if written > MAX_NOISE_PLAINTEXT_SIZE {
+                return Err(PairingError::NoiseMessageTooLarge);
+            }
+            self.codec
+                .decode_on(frame.channel, &plaintext[..written])
+                .map_err(Into::into)
+        }
+        .await;
+        if result.is_err() {
+            self.failed = true;
+            let _ = self.close().await;
+        }
+        result
+    }
+
+    /// Closes the authenticated peer connection. Cleanup is idempotent.
     pub async fn close(&mut self) -> Result<(), TransportError> {
+        if self.closed {
+            return Ok(());
+        }
+        self.closed = true;
         self.transport.close().await
+    }
+}
+
+struct SessionOperationGuard<'a> {
+    failed: &'a mut bool,
+    completed: bool,
+}
+
+impl<'a> SessionOperationGuard<'a> {
+    fn new(failed: &'a mut bool) -> Self {
+        *failed = true;
+        Self {
+            failed,
+            completed: false,
+        }
+    }
+
+    fn complete(&mut self) {
+        *self.failed = false;
+        self.completed = true;
+    }
+}
+
+impl Drop for SessionOperationGuard<'_> {
+    fn drop(&mut self) {
+        if !self.completed {
+            *self.failed = true;
+        }
     }
 }
 

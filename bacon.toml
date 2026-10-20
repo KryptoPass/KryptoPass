@@ -79,6 +79,12 @@ need_stdout = true
 default_watch = false
 watch = ["crates"]
 
+[jobs.turn-smoke]
+command = ["just", "turn-smoke"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-lan", "justfile", "bacon.toml"]
+
 [keybindings]
 q = "job:qmllint"
 
@@ -165,3 +171,8 @@ need_stdout = false
 command = ["just", "check-lan"]
 need_stdout = false
 watch = ["crates/kp-lan", "crates/kp-pairing-lab", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
+
+[jobs.check-devices]
+command = ["just", "check-devices"]
+need_stdout = false
+watch = ["crates/kp-devices", "crates/kp-pairing", "crates/kp-pairing-lab", "crates/kp-protocol", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]

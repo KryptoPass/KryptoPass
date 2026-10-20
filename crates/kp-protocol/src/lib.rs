@@ -164,6 +164,14 @@ pub enum MessagePayload {
     KeyTransferComplete(proto::KeyTransferComplete),
     /// Reserved key transfer abort; this crate performs no key operation.
     KeyTransferAbort(proto::KeyTransferAbort),
+    /// Authenticated active-session identity exchange.
+    SessionHello(proto::SessionHello),
+    /// Active-session keepalive request.
+    SessionPing(proto::SessionPing),
+    /// Active-session keepalive response.
+    SessionPong(proto::SessionPong),
+    /// Authenticated active-session closure.
+    SessionClose(proto::SessionClose),
 }
 
 impl fmt::Debug for MessagePayload {
@@ -187,6 +195,10 @@ impl fmt::Debug for MessagePayload {
             Self::KeyTransferChunk(_) => "KeyTransferChunk",
             Self::KeyTransferComplete(_) => "KeyTransferComplete",
             Self::KeyTransferAbort(_) => "KeyTransferAbort",
+            Self::SessionHello(_) => "SessionHello",
+            Self::SessionPing(_) => "SessionPing",
+            Self::SessionPong(_) => "SessionPong",
+            Self::SessionClose(_) => "SessionClose",
         };
         f.write_str(name)
     }
@@ -512,6 +524,10 @@ fn message_type_name(message_type: proto::MessageType) -> &'static str {
         Type::KeyTransferChunk => "KeyTransferChunk",
         Type::KeyTransferComplete => "KeyTransferComplete",
         Type::KeyTransferAbort => "KeyTransferAbort",
+        Type::SessionHello => "SessionHello",
+        Type::SessionPing => "SessionPing",
+        Type::SessionPong => "SessionPong",
+        Type::SessionClose => "SessionClose",
     }
 }
 
@@ -590,6 +606,10 @@ fn decode_payload(type_value: i32, bytes: &[u8]) -> Result<MessagePayload, Proto
                 validate_key_transfer_abort
             )
         }
+        Type::SessionHello => decode!(proto::SessionHello, SessionHello, validate_session_hello),
+        Type::SessionPing => decode!(proto::SessionPing, SessionPing, validate_session_ping),
+        Type::SessionPong => decode!(proto::SessionPong, SessionPong, validate_session_pong),
+        Type::SessionClose => decode!(proto::SessionClose, SessionClose, validate_session_close),
     })
 }
 
@@ -781,6 +801,42 @@ fn validate_pairing_abort(value: &proto::PairingAbort) -> Result<(), ProtocolErr
         .map_err(|_| ProtocolError::InvalidField { field: "code" })?;
     if code == proto::AbortCode::Unspecified {
         return Err(ProtocolError::InvalidField { field: "code" });
+    }
+    Ok(())
+}
+
+fn validate_session_hello(value: &proto::SessionHello) -> Result<(), ProtocolError> {
+    if value.session_version != 1 {
+        return Err(ProtocolError::UnsupportedVersion {
+            actual: value.session_version,
+        });
+    }
+    require_id(&value.device_id, 32, "device_id")?;
+    if value.reconnect_port > u32::from(u16::MAX) {
+        return Err(ProtocolError::InvalidField {
+            field: "reconnect_port",
+        });
+    }
+    Ok(())
+}
+
+fn validate_session_ping(value: &proto::SessionPing) -> Result<(), ProtocolError> {
+    if value.nonce == 0 {
+        return Err(ProtocolError::InvalidField { field: "nonce" });
+    }
+    Ok(())
+}
+
+fn validate_session_pong(value: &proto::SessionPong) -> Result<(), ProtocolError> {
+    if value.nonce == 0 {
+        return Err(ProtocolError::InvalidField { field: "nonce" });
+    }
+    Ok(())
+}
+
+fn validate_session_close(value: &proto::SessionClose) -> Result<(), ProtocolError> {
+    if !(1..=5).contains(&value.reason) {
+        return Err(ProtocolError::InvalidField { field: "reason" });
     }
     Ok(())
 }

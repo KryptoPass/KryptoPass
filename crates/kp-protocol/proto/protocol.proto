@@ -24,6 +24,10 @@ enum MessageType {
   MESSAGE_TYPE_KEY_TRANSFER_CHUNK = 16;
   MESSAGE_TYPE_KEY_TRANSFER_COMPLETE = 17;
   MESSAGE_TYPE_KEY_TRANSFER_ABORT = 18;
+  MESSAGE_TYPE_SESSION_HELLO = 19;
+  MESSAGE_TYPE_SESSION_PING = 20;
+  MESSAGE_TYPE_SESSION_PONG = 21;
+  MESSAGE_TYPE_SESSION_CLOSE = 22;
 }
 
 // `payload` is the encoded message selected by `message_type`.
@@ -166,4 +170,25 @@ message KeyTransferComplete {
 message KeyTransferAbort {
   bytes transfer_id = 1;           // 16 bytes
   AbortCode code = 2;
+}
+
+// Optional active-session extension, used only after authenticated trust commit.
+// Existing pairing messages and their canonical signing context are unchanged.
+message SessionHello {
+  uint32 session_version = 1;     // required; active-session extension version 1
+  bytes device_id = 2;            // 32 bytes; must equal the authenticated peer
+  uint32 reconnect_port = 3;      // optional LAN resume endpoint; 0 absent, 1..65535 valid
+}
+
+message SessionPing {
+  uint64 nonce = 1;               // non-zero; one outstanding request per direction
+}
+
+message SessionPong {
+  uint64 nonce = 1;               // exact echo of the outstanding ping nonce
+}
+
+message SessionClose {
+  uint32 reason = 1;              // 1 user, 2 app closing, 3 superseded,
+                                 // 4 trust revoked, 5 protocol error; others invalid
 }

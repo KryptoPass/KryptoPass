@@ -78,6 +78,10 @@ check-p2p:
 check-lan:
     cargo check -p kp-lan -p kp-pairing-lab
 
+# Primitivas de dispositivos y sesiones, sin Qt ni una interfaz nueva.
+check-devices:
+    cargo check -p kp-devices -p kp-pairing-lab
+
 test-p2p:
     cargo test -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
 
@@ -137,6 +141,10 @@ smoke: build
         exit 1
     fi
     echo "smoke: arranque offscreen limpio"
+
+# TURN dataplane real opt-in: pipea un bundle temporal en stdin; no consulta el broker.
+turn-smoke:
+    KP_TURN_SMOKE=1 cargo test -p kp-lan --test turn_smoke -- --ignored --nocapture
 
 # Genera archivos de instalación desde Cargo.toml (no editar gen/ a mano).
 gen-install:

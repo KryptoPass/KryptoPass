@@ -407,6 +407,91 @@ fn sqlite_trust_is_bound_persistent_and_revocation_survives_restart() {
 
 #[cfg(target_os = "linux")]
 #[test]
+fn forgetting_authorized_peer_allows_a_new_approval_without_changing_other_state() {
+    let profile = PrivateTempProfile::new();
+    let local_key_store = FakeSecureKeyStore::default();
+    let local = DeviceIdentity::create_new(&local_key_store)
+        .expect("create local identity in isolated secure-store fixture");
+    let local_record = local_key_store
+        .record()
+        .expect("local identity record is persisted");
+    let forgotten_peer = random_peer().public_identity();
+    let other_peer = random_peer().public_identity();
+    let revoked_peer = random_peer().public_identity();
+
+    let mut trust = SqliteTrustStore::open_new(profile.path(), local.device_id())
+        .expect("create isolated trust database");
+    trust
+        .authorize_peer(&forgotten_peer, 10)
+        .expect("authorize peer before forgetting");
+    trust
+        .authorize_peer(&other_peer, 11)
+        .expect("authorize unrelated peer");
+    trust
+        .authorize_peer(&revoked_peer, 12)
+        .expect("authorize peer that will be revoked");
+    trust
+        .revoke_peer(&revoked_peer.device_id, 13)
+        .expect("retain a revocation tombstone");
+
+    trust
+        .forget_authorized_peer(&forgotten_peer.device_id)
+        .expect("forget only the selected active authorization");
+    assert!(matches!(
+        trust.lookup_trusted_peer(&forgotten_peer.device_id),
+        Err(TrustStoreError::UnknownOrRevokedPeer)
+    ));
+    assert_eq!(
+        trust
+            .lookup_trusted_peer(&other_peer.device_id)
+            .expect("unrelated peer remains trusted"),
+        other_peer
+    );
+    assert!(matches!(
+        trust.forget_authorized_peer(&revoked_peer.device_id),
+        Err(TrustStoreError::UnknownOrRevokedPeer)
+    ));
+    assert!(matches!(
+        trust.authorize_peer(&revoked_peer, 14),
+        Err(TrustStoreError::PeerRevoked)
+    ));
+    drop(trust);
+
+    let mut trust = SqliteTrustStore::open_existing(profile.path(), local.device_id())
+        .expect("reopen trust database after forgetting");
+    assert!(matches!(
+        trust.lookup_trusted_peer(&forgotten_peer.device_id),
+        Err(TrustStoreError::UnknownOrRevokedPeer)
+    ));
+    assert_eq!(
+        trust
+            .lookup_trusted_peer(&other_peer.device_id)
+            .expect("unrelated peer remains trusted after restart"),
+        other_peer
+    );
+
+    // A fresh pairing must authenticate and receive local approval before this
+    // core authorization call can restore trust for the same device identity.
+    trust
+        .authorize_peer(&forgotten_peer, 20)
+        .expect("allow a new approved pairing with the same identity");
+    assert_eq!(
+        trust
+            .lookup_trusted_peer(&forgotten_peer.device_id)
+            .expect("newly approved peer is trusted again"),
+        forgotten_peer
+    );
+    assert_eq!(local_key_store.record(), Some(local_record));
+    assert_eq!(
+        DeviceIdentity::load_existing(&local_key_store)
+            .expect("forgetting a peer leaves the local identity intact")
+            .public_identity(),
+        local.public_identity()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
 fn sqlite_rejects_local_identity_mismatch_and_peer_key_substitution() {
     let profile = PrivateTempProfile::new();
     let local = random_peer();

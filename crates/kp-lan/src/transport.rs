@@ -139,6 +139,73 @@ impl WebRtcTransport {
 
 #[async_trait::async_trait]
 impl PeerTransport for WebRtcTransport {
+    async fn connection_info(&mut self) -> kryptopass_transport::ConnectionInfo {
+        use kryptopass_transport::{ConnectionFamily, ConnectionInfo, ConnectionRoute};
+        use std::net::IpAddr;
+        use webrtc::peer_connection::RTCIceCandidateType;
+        if !self.is_open() {
+            return ConnectionInfo::default();
+        }
+        let Some(pc) = self.connection.as_ref() else {
+            return ConnectionInfo::default();
+        };
+        let Some(sctp) = pc.sctp().await else {
+            return ConnectionInfo::default();
+        };
+        let Ok(Some(pair)) = sctp
+            .transport()
+            .ice_transport()
+            .get_selected_candidate_pair()
+            .await
+        else {
+            return ConnectionInfo::default();
+        };
+        let local = pair.local();
+        let remote = pair.remote();
+        let local_ip = local.address.parse::<IpAddr>().ok();
+        let remote_ip = remote.address.parse::<IpAddr>().ok();
+        let family = match (local_ip, remote_ip) {
+            (Some(IpAddr::V4(_)), Some(IpAddr::V4(_))) => ConnectionFamily::Ipv4,
+            (Some(IpAddr::V6(_)), Some(IpAddr::V6(_))) => ConnectionFamily::Ipv6,
+            (Some(_), Some(_)) => ConnectionFamily::Mixed,
+            _ => ConnectionFamily::Unknown,
+        };
+        // Some engines nominate a peer-reflexive alias for an advertised relay endpoint.
+        let remote_relay = if remote.typ != RTCIceCandidateType::Relay {
+            pc.remote_description().await.is_some_and(|description| {
+                description
+                    .sdp
+                    .lines()
+                    .filter_map(|line| line.strip_prefix("a=candidate:"))
+                    .take(64)
+                    .any(|line| {
+                        let fields: Vec<_> = line.split_ascii_whitespace().collect();
+                        fields.len() >= 8
+                            && fields[7] == "relay"
+                            && fields[4] == remote.address
+                            && fields[5].parse::<u16>() == Ok(remote.port)
+                    })
+            })
+        } else {
+            false
+        };
+        let route = if local.typ == RTCIceCandidateType::Relay
+            || remote.typ == RTCIceCandidateType::Relay
+            || remote_relay
+        {
+            ConnectionRoute::Turn
+        } else if local.typ == RTCIceCandidateType::Host
+            && remote.typ == RTCIceCandidateType::Host
+            && local_ip.is_some_and(private_endpoint)
+            && remote_ip.is_some_and(private_endpoint)
+        {
+            ConnectionRoute::Local
+        } else {
+            ConnectionRoute::Direct
+        };
+        ConnectionInfo { route, family }
+    }
+
     async fn send(&mut self, channel: Channel, data: &[u8]) -> Result<(), TransportError> {
         if !self.is_open() {
             return Err(TransportError::Closed);
@@ -450,4 +517,13 @@ fn process_fragment(
         }));
     }
     Ok(None)
+}
+
+fn private_endpoint(address: std::net::IpAddr) -> bool {
+    match address {
+        std::net::IpAddr::V4(ip) => ip.is_private() || ip.is_loopback() || ip.is_link_local(),
+        std::net::IpAddr::V6(ip) => {
+            ip.is_unique_local() || ip.is_loopback() || ip.is_unicast_link_local()
+        }
+    }
 }

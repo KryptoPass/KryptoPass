@@ -1,9 +1,9 @@
-//! LAN-only signaling and reliable WebRTC transport.
+//! LAN and Internet signaling with reliable WebRTC transport.
 //!
-//! This crate creates no STUN/TURN configuration and does not contact a
-//! signaling service. It accepts one WebSocket SDP offer on an explicitly
-//! bound local address, returns a fully gathered SDP answer, and exposes the
-//! negotiated reliable/ordered data channel as a
+//! LAN signaling accepts an SDP offer on an explicitly bound local address
+//! without external ICE servers. [`RelayHost`] provides outbound WSS signaling
+//! with locally configured STUN/TURN for Internet connections. Both expose the
+//! negotiated reliable, ordered DataChannel as a
 //! [`PeerTransport`](kryptopass_transport::PeerTransport).
 //!
 //! IPv4 private, link-local, and loopback addresses and IPv6 ULA/loopback
@@ -15,9 +15,14 @@
 mod address;
 mod error;
 mod host;
+mod internet;
 mod transport;
+mod turn;
 
-pub use address::local_addresses;
+pub use address::{InterfaceKind, LanInterface, local_addresses, local_interfaces};
 pub use error::LanError;
-pub use host::LanHost;
+pub use host::{LanHost, ReconnectHost, ResumeAttempt, ResumeListener};
+pub use internet::{
+    IceServerConfig, InternetIceConfig, InternetIceTransportPolicy, RelayHost, RelayRoute,
+};
 pub use transport::{WebRtcCancelHandle, WebRtcTransport};

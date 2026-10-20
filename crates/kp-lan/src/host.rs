@@ -12,8 +12,8 @@ use mdns_sd::{ServiceDaemon, ServiceInfo};
 use serde::{Deserialize, Serialize};
 use tokio::{
     net::TcpListener,
-    sync::{mpsc, watch},
-    time::timeout,
+    sync::{Mutex as AsyncMutex, mpsc, watch},
+    time::{Instant, sleep_until, timeout},
 };
 use tokio_tungstenite::{
     accept_hdr_async_with_config,
@@ -26,15 +26,25 @@ use webrtc::{
     data_channel::DataChannel,
     peer_connection::{
         PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler, RTCConfigurationBuilder,
-        RTCIceGatheringState, RTCSessionDescription,
+        RTCIceCandidateType, RTCIceGatheringState, RTCIceProtocol, RTCIceServer,
+        RTCIceTransportPolicy, RTCPeerConnectionIceEvent, RTCSessionDescription,
     },
 };
 
-use crate::{LanError, address::is_supported_address, transport::WebRtcTransport};
+use crate::{
+    LanError,
+    address::{is_supported_address, is_supported_internet_address},
+    transport::WebRtcTransport,
+};
 
 const SERVICE_TYPE: &str = "_kryptopass._tcp.local.";
 const DATA_CHANNEL_LABEL: &str = "kryptopass-v1";
 const SIGNALING_TIMEOUT: Duration = Duration::from_secs(30);
+const TURN_GATHERING_DEADLINE: Duration = Duration::from_secs(10);
+const RECONNECT_ACCEPT_INTERVAL: Duration = Duration::from_secs(2);
+const RECONNECT_PATH: &str = "/kp/lan/v1/resume";
+const RESUME_PATH_PREFIX: &str = "/kp/lan/v1/resume/";
+const MAX_RESUME_MESSAGE: usize = 128;
 const MAX_SIGNALING_MESSAGE: usize = 256 * 1024;
 const MAX_CANDIDATES: usize = 64;
 const DATA_CHANNEL_SEND_BUFFER_LIMIT: usize = 256 * 1024;
@@ -49,6 +59,262 @@ pub struct LanHost {
     address: IpAddr,
     session_id: [u8; 16],
     discovery: Option<MdnsRegistration>,
+}
+
+/// Persistent LAN signaling endpoint for fresh reconnect handshakes.
+///
+/// Unlike [`LanHost`], this endpoint has no mDNS advertisement and accepts
+/// repeated attempts at `/kp/lan/v1/resume`. Each accepted attempt gets a new
+/// random signaling session ID before the peer's SDP offer is read. Signaling
+/// only creates a carrier; the caller must still run a fresh authenticated
+/// Noise reconnect against its persisted trust record.
+pub struct ReconnectHost {
+    listener: TcpListener,
+    address: IpAddr,
+    accept_state: AsyncMutex<ReconnectAcceptState>,
+}
+
+/// Process-owned wildcard LAN endpoint for reconnecting authorized peers.
+///
+/// The peer ID in the WebSocket path is an untrusted selector. The caller's
+/// authorization callback runs before the server sends a resume notice or
+/// creates a WebRTC peer connection. Identity authentication still belongs to
+/// the caller's fresh Noise handshake.
+pub struct ResumeListener {
+    listener_v4: TcpListener,
+    listener_v6: Option<TcpListener>,
+    port: u16,
+    accept_state: AsyncMutex<ReconnectAcceptState>,
+    discovery: Mutex<ResumeDiscovery>,
+}
+
+struct ResumeDiscovery {
+    _registrations: Vec<MdnsRegistration>,
+    addresses: Vec<IpAddr>,
+}
+
+/// One accepted and negotiated transport selected by an initiator DeviceId.
+pub struct ResumeAttempt {
+    /// Untrusted initiator ID from the canonical WebSocket path. It is only a
+    /// selector; the Noise handshake must authenticate this exact peer.
+    pub initiator_device_id: [u8; 32],
+    /// Fresh signaling session ID sent in the resume notice.
+    pub session_id: [u8; 16],
+    /// Newly negotiated WebRTC carrier for a fresh Noise handshake.
+    pub transport: WebRtcTransport,
+}
+
+impl ResumeListener {
+    /// Bind one dual-stack wildcard signaling port and announce it on local
+    /// LAN interfaces. Loopback is never announced through mDNS.
+    pub async fn bind(local_device_id: [u8; 32]) -> Result<Self, LanError> {
+        if local_device_id.iter().all(|byte| *byte == 0) {
+            return Err(LanError::InvalidSession);
+        }
+        let listener_v4 = TcpListener::bind(SocketAddr::new(
+            IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+            0,
+        ))
+        .await
+        .map_err(|_| LanError::Bind)?;
+        let port = listener_v4.local_addr().map_err(|_| LanError::Bind)?.port();
+        let listener_v6 = bind_ipv6_listener(port).await;
+        if listener_v6.is_none() {
+            tracing::debug!("IPv6 resume listener unavailable");
+        }
+        let (registrations, addresses) =
+            register_resume_mdns(local_device_id, port, listener_v6.is_some());
+        tracing::info!(
+            mdns_services = addresses.len(),
+            ipv6_listener = listener_v6.is_some(),
+            "LAN resume listener ready"
+        );
+        Ok(Self {
+            listener_v4,
+            listener_v6,
+            port,
+            accept_state: AsyncMutex::new(ReconnectAcceptState {
+                last_accepted_at: None,
+            }),
+            discovery: Mutex::new(ResumeDiscovery {
+                _registrations: registrations,
+                addresses,
+            }),
+        })
+    }
+
+    /// Return the shared ephemeral TCP port for IPv4 and IPv6 listeners.
+    #[must_use]
+    pub const fn port(&self) -> u16 {
+        self.port
+    }
+
+    /// Refresh best-effort mDNS advertisements after network interfaces change.
+    pub fn refresh_mdns(&self, local_device_id: [u8; 32]) {
+        let addresses = resume_mdns_addresses(self.listener_v6.is_some());
+        let Ok(mut discovery) = self.discovery.lock() else {
+            tracing::warn!("LAN resume discovery state is unavailable");
+            return;
+        };
+        if addresses != discovery.addresses {
+            if addresses.is_empty() {
+                *discovery = ResumeDiscovery {
+                    _registrations: Vec::new(),
+                    addresses,
+                };
+            } else {
+                let (registrations, registered_addresses) =
+                    register_resume_mdns(local_device_id, self.port, self.listener_v6.is_some());
+                // Replace the prior advertisements only after the new set has
+                // been registered successfully, preserving discovery on errors.
+                if !registered_addresses.is_empty() {
+                    *discovery = ResumeDiscovery {
+                        _registrations: registrations,
+                        addresses: registered_addresses,
+                    };
+                }
+            }
+            tracing::info!(
+                mdns_services = discovery.addresses.len(),
+                "LAN resume discovery refreshed"
+            );
+        }
+    }
+
+    /// Accept one bounded attempt after authorizing its DeviceId selector.
+    ///
+    /// The callback runs after the exact path and no-query rule are validated,
+    /// and before WebRTC or the resume notice is created. Dropping this future
+    /// cancels the in-progress socket/negotiation; the listener itself remains
+    /// available for later attempts.
+    pub async fn accept_authorized<F>(&self, authorize: F) -> Result<ResumeAttempt, LanError>
+    where
+        F: Fn([u8; 32]) -> bool + Send + Sync + 'static,
+    {
+        let mut state = self.accept_state.lock().await;
+        if let Some(last_accepted_at) = state.last_accepted_at {
+            sleep_until(last_accepted_at + RECONNECT_ACCEPT_INTERVAL).await;
+        }
+        let accepted = if let Some(listener_v6) = self.listener_v6.as_ref() {
+            tokio::select! {
+                result = self.listener_v4.accept() => result,
+                result = listener_v6.accept() => result,
+            }
+        } else {
+            self.listener_v4.accept().await
+        };
+        let (socket, remote) = accepted.map_err(|_| LanError::Signaling)?;
+        state.last_accepted_at = Some(Instant::now());
+        drop(state);
+
+        let local = socket.local_addr().map_err(|_| LanError::Signaling)?;
+        if !is_supported_address(local.ip())
+            || !is_supported_address(remote.ip())
+            || local.is_ipv4() != remote.is_ipv4()
+        {
+            return Err(LanError::InvalidSignaling);
+        }
+        let endpoint = SignalingEndpoint::DurableResume(Arc::new(authorize));
+        let (initiator_device_id, session_id, transport) = timeout(
+            SIGNALING_TIMEOUT,
+            negotiate_socket(socket, remote, local.ip(), endpoint),
+        )
+        .await
+        .map_err(|_| {
+            tracing::warn!(stage = "negotiation_deadline", "LAN negotiation failed");
+            LanError::Timeout
+        })??;
+        let (Some(initiator_device_id), Some(session_id)) = (initiator_device_id, session_id)
+        else {
+            return Err(LanError::InvalidSignaling);
+        };
+        Ok(ResumeAttempt {
+            initiator_device_id,
+            session_id,
+            transport,
+        })
+    }
+}
+
+async fn bind_ipv6_listener(port: u16) -> Option<TcpListener> {
+    let socket = socket2::Socket::new(
+        socket2::Domain::IPV6,
+        socket2::Type::STREAM,
+        Some(socket2::Protocol::TCP),
+    )
+    .ok()?;
+    socket.set_only_v6(true).ok()?;
+    socket.set_reuse_address(true).ok()?;
+    socket
+        .bind(&SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), port).into())
+        .ok()?;
+    socket.listen(128).ok()?;
+    let listener: std::net::TcpListener = socket.into();
+    listener.set_nonblocking(true).ok()?;
+    TcpListener::from_std(listener).ok()
+}
+
+struct ReconnectAcceptState {
+    last_accepted_at: Option<Instant>,
+}
+
+impl ReconnectHost {
+    /// Bind a persistent resume listener to an explicitly selected LAN address.
+    ///
+    /// The caller announces the returned ephemeral port only inside the
+    /// authenticated session hello. This host does not advertise a pairing
+    /// service through mDNS.
+    pub async fn bind(address: IpAddr) -> Result<Self, LanError> {
+        if !is_supported_address(address) {
+            return Err(LanError::InvalidAddress);
+        }
+        let listener = TcpListener::bind(SocketAddr::new(address, 0))
+            .await
+            .map_err(|_| LanError::Bind)?;
+        tracing::info!("LAN reconnect listener ready");
+        Ok(Self {
+            listener,
+            address,
+            accept_state: AsyncMutex::new(ReconnectAcceptState {
+                last_accepted_at: None,
+            }),
+        })
+    }
+
+    /// Return the ephemeral TCP port used for reconnect signaling.
+    #[must_use]
+    pub fn port(&self) -> u16 {
+        self.listener
+            .local_addr()
+            .map(|address| address.port())
+            .unwrap_or_default()
+    }
+
+    /// Accept one reconnect attempt while retaining the listener for later attempts.
+    ///
+    /// Only one negotiation runs at a time. Accepted TCP attempts are spaced by
+    /// at least two seconds; a 30-second deadline then covers WebSocket
+    /// signaling, ICE gathering, and DataChannel opening.
+    pub async fn accept(&self) -> Result<([u8; 16], WebRtcTransport), LanError> {
+        let mut state = self.accept_state.lock().await;
+        if let Some(last_accepted_at) = state.last_accepted_at {
+            sleep_until(last_accepted_at + RECONNECT_ACCEPT_INTERVAL).await;
+        }
+        let (socket, remote) = self
+            .listener
+            .accept()
+            .await
+            .map_err(|_| LanError::Signaling)?;
+        state.last_accepted_at = Some(Instant::now());
+        let negotiation =
+            negotiate_socket(socket, remote, self.address, SignalingEndpoint::Reconnect);
+        match timeout(SIGNALING_TIMEOUT, negotiation).await {
+            Ok(Ok((_, Some(session_id), transport))) => Ok((session_id, transport)),
+            Ok(Ok((_, None, _))) => Err(LanError::InvalidSession),
+            Ok(Err(error)) => Err(error),
+            Err(_) => at_stage(Err(LanError::Timeout), "negotiation_deadline"),
+        }
+    }
 }
 
 impl LanHost {
@@ -114,163 +380,302 @@ impl LanHost {
     }
 
     async fn accept_inner(
-        self,
+        &self,
         socket: tokio::net::TcpStream,
         remote: SocketAddr,
     ) -> Result<WebRtcTransport, LanError> {
-        let expected_path = signaling_path(&self.session_id);
-        if !is_supported_address(remote.ip()) || remote.is_ipv4() != self.address.is_ipv4() {
+        negotiate_socket(
+            socket,
+            remote,
+            self.address,
+            SignalingEndpoint::Pairing(self.session_id),
+        )
+        .await
+        .map(|(_, _, transport)| transport)
+    }
+}
+
+#[derive(Clone)]
+enum SignalingEndpoint {
+    Pairing([u8; 16]),
+    Reconnect,
+    DurableResume(Arc<dyn Fn([u8; 32]) -> bool + Send + Sync>),
+}
+
+async fn negotiate_socket(
+    socket: tokio::net::TcpStream,
+    remote: SocketAddr,
+    address: IpAddr,
+    endpoint: SignalingEndpoint,
+) -> Result<(Option<[u8; 32]>, Option<[u8; 16]>, WebRtcTransport), LanError> {
+    let authorized_device = Arc::new(Mutex::new(None));
+    let selected_device = Arc::clone(&authorized_device);
+    let endpoint_for_upgrade = endpoint.clone();
+    if !is_supported_address(remote.ip()) || remote.is_ipv4() != address.is_ipv4() {
+        return Err(LanError::InvalidSignaling);
+    }
+
+    let ws_config = WebSocketConfig::default()
+        .read_buffer_size(8 * 1024)
+        .write_buffer_size(8 * 1024)
+        .max_write_buffer_size(MAX_SIGNALING_MESSAGE + 16 * 1024)
+        .max_message_size(Some(MAX_SIGNALING_MESSAGE))
+        .max_frame_size(Some(MAX_SIGNALING_MESSAGE));
+    let mut websocket = at_stage(
+        accept_hdr_async_with_config(
+            socket,
+            move |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
+                let valid = match &endpoint_for_upgrade {
+                    SignalingEndpoint::Pairing(session_id) => {
+                        request.uri().path() == signaling_path(session_id)
+                            && request.uri().query().is_none()
+                    }
+                    SignalingEndpoint::Reconnect => {
+                        request.uri().path() == RECONNECT_PATH && request.uri().query().is_none()
+                    }
+                    SignalingEndpoint::DurableResume(authorize) => {
+                        if request.uri().query().is_some() {
+                            false
+                        } else if let Some(device_id) = parse_resume_path(request.uri().path()) {
+                            if authorize(device_id) {
+                                if let Ok(mut selected) = selected_device.lock() {
+                                    *selected = Some(device_id);
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                };
+                if valid {
+                    Ok(response)
+                } else {
+                    let mut response = tokio_tungstenite::tungstenite::http::Response::new(Some(
+                        "invalid signaling path".to_owned(),
+                    ));
+                    *response.status_mut() =
+                        tokio_tungstenite::tungstenite::http::StatusCode::BAD_REQUEST;
+                    Err(response)
+                }
+            },
+            Some(ws_config),
+        )
+        .await
+        .map_err(|_| LanError::InvalidSignaling),
+        "websocket_upgrade",
+    )?;
+
+    let is_resume = matches!(
+        endpoint,
+        SignalingEndpoint::Reconnect | SignalingEndpoint::DurableResume(_)
+    );
+    let reconnect_session = if is_resume {
+        let session_id = fresh_session_id()?;
+        let session_hex = hex(&session_id);
+        let resume = serde_json::to_string(&ResumeNotice {
+            version: 1,
+            kind: SignalType::Resume,
+            session: &session_hex,
+        })
+        .map_err(|_| LanError::Signaling)?;
+        if resume.len() > MAX_RESUME_MESSAGE {
             return Err(LanError::InvalidSignaling);
         }
+        at_stage(
+            websocket
+                .send(Message::Text(resume.into()))
+                .await
+                .map_err(|_| LanError::Signaling),
+            "send_resume",
+        )?;
+        Some(session_id)
+    } else {
+        None
+    };
+    let initiator_device_id = authorized_device
+        .lock()
+        .map_err(|_| LanError::InvalidSignaling)?
+        .take();
 
-        let ws_config = WebSocketConfig::default()
-            .read_buffer_size(8 * 1024)
-            .write_buffer_size(8 * 1024)
-            .max_write_buffer_size(MAX_SIGNALING_MESSAGE + 16 * 1024)
-            .max_message_size(Some(MAX_SIGNALING_MESSAGE))
-            .max_frame_size(Some(MAX_SIGNALING_MESSAGE));
-        let mut websocket = at_stage(
-            accept_hdr_async_with_config(
-                socket,
-                move |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
-                    let valid =
-                        request.uri().path() == expected_path && request.uri().query().is_none();
-                    if valid {
-                        Ok(response)
-                    } else {
-                        let mut response = tokio_tungstenite::tungstenite::http::Response::new(
-                            Some("invalid signaling path".to_owned()),
-                        );
-                        *response.status_mut() =
-                            tokio_tungstenite::tungstenite::http::StatusCode::BAD_REQUEST;
-                        Err(response)
-                    }
-                },
-                Some(ws_config),
-            )
+    let transport = negotiate_offer_answer(
+        &mut websocket,
+        vec![SocketAddr::new(address, 0)],
+        Vec::new(),
+        CandidatePolicy::Lan,
+        // Preserve the builder's prior default behavior for LAN peers.
+        RTCIceTransportPolicy::Unspecified,
+    )
+    .await?;
+    websocket
+        .close(Some(CloseFrame {
+            code: CloseCode::Normal,
+            reason: "".into(),
+        }))
+        .await
+        .map_err(|_| LanError::Signaling)?;
+
+    Ok((initiator_device_id, reconnect_session, transport))
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum CandidatePolicy {
+    Lan,
+    Internet { allow_loopback: bool },
+}
+
+pub(crate) async fn negotiate_offer_answer<S>(
+    websocket: &mut tokio_tungstenite::WebSocketStream<S>,
+    udp_addresses: Vec<SocketAddr>,
+    ice_servers: Vec<RTCIceServer>,
+    policy: CandidatePolicy,
+    ice_policy: RTCIceTransportPolicy,
+) -> Result<WebRtcTransport, LanError>
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
+{
+    let offer = at_stage(receive_offer(websocket).await, "receive_offer")?;
+    at_stage(validate_sdp(&offer.sdp, policy), "offer_sdp")?;
+    tracing::info!("WebRTC offer accepted");
+
+    let turn_configured = has_turn_server(&ice_servers);
+    let (data_channel_tx, mut data_channel_rx) = mpsc::channel(1);
+    let (gathering_tx, mut gathering_rx) = watch::channel(false);
+    let (relay_candidate_tx, mut relay_candidate_rx) = watch::channel(false);
+    let handler = Arc::new(LanPeerConnectionHandler {
+        data_channel_tx,
+        gathering_tx,
+        relay_candidate_tx,
+        candidate_policy: policy,
+        received_channels: AtomicUsize::new(0),
+        peer_connection: Mutex::new(None),
+    });
+    let configuration = RTCConfigurationBuilder::default()
+        .with_ice_servers(ice_servers)
+        .with_ice_transport_policy(ice_policy)
+        .build();
+    let pc = at_stage(
+        PeerConnectionBuilder::<SocketAddr>::new()
+            .with_configuration(configuration)
+            .with_udp_addrs(udp_addresses)
+            .with_data_channel_send_buffer_limit(DATA_CHANNEL_SEND_BUFFER_LIMIT)
+            .with_dedicated_reactor_pool_size(1)
+            .with_handler(handler.clone())
+            .build()
             .await
-            .map_err(|_| LanError::InvalidSignaling),
-            "websocket_upgrade",
-        )?;
+            .map_err(|_| LanError::WebRtc),
+        "peer_connection",
+    )?;
+    let pc: Arc<dyn PeerConnection> = Arc::new(pc);
+    *handler
+        .peer_connection
+        .lock()
+        .map_err(|_| LanError::WebRtc)? = Some(Arc::downgrade(&pc));
+    let pc_guard = PeerConnectionGuard::new(Arc::clone(&pc));
 
-        let offer = at_stage(receive_offer(&mut websocket).await, "receive_offer")?;
-        at_stage(validate_sdp(&offer.sdp), "offer_sdp")?;
-        tracing::info!("LAN offer accepted");
+    let remote_description =
+        RTCSessionDescription::offer(offer.sdp).map_err(|_| LanError::InvalidSignaling)?;
+    at_stage(
+        pc.set_remote_description(remote_description)
+            .await
+            .map_err(|_| LanError::WebRtc),
+        "set_remote_offer",
+    )?;
+    let answer = at_stage(
+        pc.create_answer(None).await.map_err(|_| LanError::WebRtc),
+        "create_answer",
+    )?;
+    at_stage(
+        pc.set_local_description(answer)
+            .await
+            .map_err(|_| LanError::WebRtc),
+        "set_local_answer",
+    )?;
 
-        let (data_channel_tx, mut data_channel_rx) = mpsc::channel(1);
-        let (gathering_tx, mut gathering_rx) = watch::channel(false);
-        let handler = Arc::new(LanPeerConnectionHandler {
-            data_channel_tx,
-            gathering_tx,
-            received_channels: AtomicUsize::new(0),
-            peer_connection: Mutex::new(None),
-        });
-        let configuration = RTCConfigurationBuilder::default()
-            .with_ice_servers(Vec::new())
-            .build();
-        let pc = at_stage(
-            PeerConnectionBuilder::<SocketAddr>::new()
-                .with_configuration(configuration)
-                .with_udp_addrs(vec![SocketAddr::new(self.address, 0)])
-                .with_data_channel_send_buffer_limit(DATA_CHANNEL_SEND_BUFFER_LIMIT)
-                .with_dedicated_reactor_pool_size(1)
-                .with_handler(handler.clone())
-                .build()
-                .await
-                .map_err(|_| LanError::WebRtc),
-            "peer_connection",
-        )?;
-        let pc: Arc<dyn PeerConnection> = Arc::new(pc);
-        *handler
-            .peer_connection
-            .lock()
-            .map_err(|_| LanError::WebRtc)? = Some(Arc::downgrade(&pc));
-        let pc_guard = PeerConnectionGuard::new(Arc::clone(&pc));
-
-        let remote_description =
-            RTCSessionDescription::offer(offer.sdp).map_err(|_| LanError::InvalidSignaling)?;
-        at_stage(
-            pc.set_remote_description(remote_description)
-                .await
-                .map_err(|_| LanError::WebRtc),
-            "set_remote_offer",
-        )?;
-        let answer = at_stage(
-            pc.create_answer(None).await.map_err(|_| LanError::WebRtc),
-            "create_answer",
-        )?;
-        at_stage(
-            pc.set_local_description(answer)
-                .await
-                .map_err(|_| LanError::WebRtc),
-            "set_local_answer",
-        )?;
-
+    let gather_reason = if turn_configured {
+        wait_for_turn_gathering(&mut gathering_rx, &mut relay_candidate_rx).await
+    } else {
         if !*gathering_rx.borrow() {
             gathering_rx.changed().await.map_err(|_| LanError::WebRtc)?;
         }
         if !*gathering_rx.borrow() {
             return Err(LanError::WebRtc);
         }
+        GatheringStopReason::Complete
+    };
 
-        let local_description = pc.local_description().await.ok_or(LanError::WebRtc)?;
-        let answer_sdp = at_stage(
-            data_channel_answer_sdp(&local_description.sdp),
-            "answer_sdp",
-        )?;
-        let answer_json = serde_json::to_string(&SignalingAnswer {
-            version: 1,
-            kind: SignalType::Answer,
-            sdp: &answer_sdp,
-        })
-        .map_err(|_| LanError::Signaling)?;
-        if answer_json.len() > MAX_SIGNALING_MESSAGE {
-            return Err(LanError::InvalidSignaling);
-        }
-        at_stage(
-            websocket
-                .send(Message::Text(answer_json.into()))
-                .await
-                .map_err(|_| LanError::Signaling),
-            "send_answer",
-        )?;
-        tracing::info!("LAN answer sent");
-
-        let data_channel = at_stage(
-            data_channel_rx
-                .recv()
-                .await
-                .unwrap_or(Err(LanError::InvalidDataChannel)),
-            "data_channel",
-        )?;
-        at_stage(wait_for_open(&data_channel).await, "data_channel_open")?;
-        tracing::info!("LAN DataChannel opened");
-        websocket
-            .close(Some(CloseFrame {
-                code: CloseCode::Normal,
-                reason: "".into(),
-            }))
-            .await
-            .map_err(|_| LanError::Signaling)?;
-
-        Ok(WebRtcTransport::new(pc_guard.disarm(), data_channel))
+    let local_description = pc.local_description().await.ok_or(LanError::WebRtc)?;
+    let (candidate_count, relay_candidate_count) = sdp_candidate_counts(&local_description.sdp);
+    if turn_configured {
+        tracing::info!(
+            reason = gather_reason.as_str(),
+            candidates = candidate_count,
+            relay_candidates = relay_candidate_count,
+            "ICE gathering snapshot selected"
+        );
     }
+    if ice_policy == RTCIceTransportPolicy::Relay {
+        if relay_candidate_count == 0 {
+            return at_stage(Err(LanError::WebRtc), "relay_candidate_missing");
+        }
+        if relay_candidate_count != candidate_count {
+            return at_stage(Err(LanError::WebRtc), "relay_candidate_policy");
+        }
+    }
+    let answer_sdp = at_stage(
+        data_channel_answer_sdp(&local_description.sdp, policy),
+        "answer_sdp",
+    )?;
+    let answer_json = serde_json::to_string(&SignalingAnswer {
+        version: 1,
+        kind: SignalType::Answer,
+        sdp: &answer_sdp,
+    })
+    .map_err(|_| LanError::Signaling)?;
+    if answer_json.len() > MAX_SIGNALING_MESSAGE {
+        return Err(LanError::InvalidSignaling);
+    }
+    at_stage(
+        websocket
+            .send(Message::Text(answer_json.into()))
+            .await
+            .map_err(|_| LanError::Signaling),
+        "send_answer",
+    )?;
+    tracing::info!("WebRTC answer sent");
+
+    let data_channel = at_stage(
+        data_channel_rx
+            .recv()
+            .await
+            .unwrap_or(Err(LanError::InvalidDataChannel)),
+        "data_channel",
+    )?;
+    at_stage(wait_for_open(&data_channel).await, "data_channel_open")?;
+    tracing::info!("WebRTC DataChannel opened");
+    Ok(WebRtcTransport::new(pc_guard.disarm(), data_channel))
 }
 
 fn at_stage<T>(result: Result<T, LanError>, stage: &'static str) -> Result<T, LanError> {
     result.inspect_err(|error| {
-        tracing::warn!(stage, error = %error, "LAN negotiation failed");
+        tracing::warn!(stage, error = %error, "WebRTC negotiation failed");
     })
 }
 
 struct MdnsRegistration {
     daemon: ServiceDaemon,
-    fullname: String,
+    fullnames: Vec<String>,
 }
 
 impl Drop for MdnsRegistration {
     fn drop(&mut self) {
-        let _ = self.daemon.unregister(&self.fullname);
+        for fullname in &self.fullnames {
+            let _ = self.daemon.unregister(fullname);
+        }
         let _ = self.daemon.shutdown();
     }
 }
@@ -300,7 +705,105 @@ fn register_mdns(address: IpAddr, port: u16) -> Option<MdnsRegistration> {
     let fullname = service.get_fullname().to_owned();
     let daemon = ServiceDaemon::new().ok()?;
     daemon.register(service).ok()?;
-    Some(MdnsRegistration { daemon, fullname })
+    Some(MdnsRegistration {
+        daemon,
+        fullnames: vec![fullname],
+    })
+}
+
+fn resume_mdns_addresses(ipv6_available: bool) -> Vec<IpAddr> {
+    let interfaces = crate::address::local_interfaces().unwrap_or_default();
+    let has_physical = interfaces.iter().any(|interface| {
+        matches!(
+            interface.kind,
+            crate::InterfaceKind::Wifi | crate::InterfaceKind::Ethernet
+        )
+    });
+    interfaces
+        .into_iter()
+        .filter(|interface| {
+            !interface.address.is_loopback()
+                && (interface.address.is_ipv4() || ipv6_available)
+                && if has_physical {
+                    matches!(
+                        interface.kind,
+                        crate::InterfaceKind::Wifi | crate::InterfaceKind::Ethernet
+                    )
+                } else {
+                    matches!(
+                        interface.kind,
+                        crate::InterfaceKind::Other | crate::InterfaceKind::Virtual
+                    )
+                }
+        })
+        .take(8)
+        .map(|interface| interface.address)
+        .collect()
+}
+
+fn register_resume_mdns(
+    local_device_id: [u8; 32],
+    port: u16,
+    ipv6_available: bool,
+) -> (Vec<MdnsRegistration>, Vec<IpAddr>) {
+    let addresses = resume_mdns_addresses(ipv6_available);
+    if addresses.is_empty() {
+        return (Vec::new(), addresses);
+    }
+    let Some(daemon) = ServiceDaemon::new().ok() else {
+        return (Vec::new(), Vec::new());
+    };
+    let device = hex_bytes(&local_device_id);
+    let mut fullnames = Vec::new();
+    let mut registered_addresses = Vec::new();
+    for address in addresses {
+        let mut random = [0_u8; 8];
+        if getrandom::fill(&mut random).is_err() {
+            continue;
+        }
+        let suffix = hex_bytes(&random);
+        let instance = format!("kryptopass-resume-{suffix}");
+        let hostname = format!("kp-resume-{suffix}.local.");
+        let properties = [
+            ("v", "1"),
+            ("transport", "webrtc"),
+            ("mode", "resume"),
+            ("device", device.as_str()),
+        ];
+        let Ok(service) = ServiceInfo::new(
+            SERVICE_TYPE,
+            &instance,
+            &hostname,
+            address,
+            port,
+            &properties[..],
+        ) else {
+            continue;
+        };
+        let fullname = service.get_fullname().to_owned();
+        if daemon.register(service).is_ok() {
+            fullnames.push(fullname);
+            registered_addresses.push(address);
+        }
+    }
+    if fullnames.is_empty() {
+        let _ = daemon.shutdown();
+        return (Vec::new(), Vec::new());
+    }
+    (
+        vec![MdnsRegistration { daemon, fullnames }],
+        registered_addresses,
+    )
+}
+
+fn hex_bytes(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+
+    let mut result = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(result, "{byte:02x}");
+    }
+    result
 }
 
 #[derive(Deserialize)]
@@ -322,9 +825,19 @@ struct SignalingAnswer<'a> {
     sdp: &'a str,
 }
 
+#[derive(Serialize)]
+struct ResumeNotice<'a> {
+    #[serde(rename = "v")]
+    version: u8,
+    #[serde(rename = "type")]
+    kind: SignalType,
+    session: &'a str,
+}
+
 #[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum SignalType {
+    Resume,
     Offer,
     Answer,
 }
@@ -374,7 +887,44 @@ fn signaling_path(session_id: &[u8; 16]) -> String {
     path
 }
 
-fn data_channel_answer_sdp(sdp: &str) -> Result<String, LanError> {
+fn parse_resume_path(path: &str) -> Option<[u8; 32]> {
+    let suffix = path.strip_prefix(RESUME_PATH_PREFIX)?;
+    if suffix.len() != 64
+        || !suffix
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return None;
+    }
+    let mut device_id = [0_u8; 32];
+    for (index, byte) in device_id.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&suffix[index * 2..index * 2 + 2], 16).ok()?;
+    }
+    device_id.iter().any(|byte| *byte != 0).then_some(device_id)
+}
+
+fn fresh_session_id() -> Result<[u8; 16], LanError> {
+    for _ in 0..2 {
+        let mut session_id = [0_u8; 16];
+        getrandom::fill(&mut session_id).map_err(|_| LanError::Signaling)?;
+        if session_id.iter().any(|byte| *byte != 0) {
+            return Ok(session_id);
+        }
+    }
+    Err(LanError::InvalidSession)
+}
+
+fn hex(session_id: &[u8; 16]) -> String {
+    use std::fmt::Write;
+
+    let mut result = String::with_capacity(32);
+    for byte in session_id {
+        let _ = write!(result, "{byte:02x}");
+    }
+    result
+}
+
+fn data_channel_answer_sdp(sdp: &str, policy: CandidatePolicy) -> Result<String, LanError> {
     if sdp.is_empty() || sdp.len() > MAX_SIGNALING_MESSAGE {
         return Err(LanError::InvalidSignaling);
     }
@@ -391,11 +941,11 @@ fn data_channel_answer_sdp(sdp: &str) -> Result<String, LanError> {
         answer.push_str(line);
         answer.push_str("\r\n");
     }
-    validate_sdp(&answer)?;
+    validate_sdp(&answer, policy)?;
     Ok(answer)
 }
 
-fn validate_sdp(sdp: &str) -> Result<(), LanError> {
+fn validate_sdp(sdp: &str, policy: CandidatePolicy) -> Result<(), LanError> {
     if sdp.is_empty() || sdp.len() > MAX_SIGNALING_MESSAGE {
         return Err(LanError::InvalidSignaling);
     }
@@ -413,15 +963,15 @@ fn validate_sdp(sdp: &str) -> Result<(), LanError> {
                 return Err(LanError::InvalidSignaling);
             }
         } else if lower.starts_with("c=") {
-            validate_sdp_address_line(line, 2)?;
+            validate_sdp_address_line(line, 2, policy)?;
         } else if lower.starts_with("o=") {
-            validate_sdp_address_line(line, 5)?;
+            validate_sdp_address_line(line, 5, policy)?;
         } else if lower.starts_with("a=candidate:") {
             candidates += 1;
             if candidates > MAX_CANDIDATES {
                 return Err(LanError::InvalidSignaling);
             }
-            validate_candidate(line)?;
+            validate_candidate(line, policy)?;
         } else if lower.contains("stun:")
             || lower.contains("turn:")
             || lower.starts_with("a=ice-server:")
@@ -436,7 +986,11 @@ fn validate_sdp(sdp: &str) -> Result<(), LanError> {
     Ok(())
 }
 
-fn validate_sdp_address_line(line: &str, address_field: usize) -> Result<(), LanError> {
+fn validate_sdp_address_line(
+    line: &str,
+    address_field: usize,
+    policy: CandidatePolicy,
+) -> Result<(), LanError> {
     let fields: Vec<_> = line.split_ascii_whitespace().collect();
     if fields.len() <= address_field {
         return Err(LanError::InvalidSignaling);
@@ -447,13 +1001,25 @@ fn validate_sdp_address_line(line: &str, address_field: usize) -> Result<(), Lan
         .ok_or(LanError::InvalidSignaling)?
         .parse()
         .map_err(|_| LanError::InvalidSignaling)?;
-    if !address.is_unspecified() && !is_supported_address(address) {
+    // Native WebRTC uses loopback in o= as session metadata. It is not an ICE
+    // destination; c= and every candidate still use the transport address policy.
+    let origin_placeholder = address_field == 5 && address.is_loopback();
+    if !address.is_unspecified() && !origin_placeholder && !address_allowed(address, policy) {
         return Err(LanError::InvalidSignaling);
     }
     Ok(())
 }
 
-fn validate_candidate(line: &str) -> Result<(), LanError> {
+fn validate_candidate(line: &str, policy: CandidatePolicy) -> Result<(), LanError> {
+    match policy {
+        CandidatePolicy::Lan => validate_lan_candidate(line),
+        CandidatePolicy::Internet { allow_loopback } => {
+            validate_internet_candidate(line, allow_loopback)
+        }
+    }
+}
+
+fn validate_lan_candidate(line: &str) -> Result<(), LanError> {
     if line.len() > 512 {
         return Err(LanError::InvalidSignaling);
     }
@@ -490,15 +1056,132 @@ fn validate_candidate(line: &str) -> Result<(), LanError> {
     Ok(())
 }
 
+fn validate_internet_candidate(line: &str, allow_loopback: bool) -> Result<(), LanError> {
+    if line.len() > 512 {
+        return Err(LanError::InvalidSignaling);
+    }
+    let candidate = line
+        .get("a=candidate:".len()..)
+        .ok_or(LanError::InvalidSignaling)?;
+    let fields: Vec<_> = candidate.split_ascii_whitespace().collect();
+    if fields.len() < 8
+        || fields[0].is_empty()
+        || fields[0].len() > 32
+        || !fields[0]
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'+' || byte == b'/')
+        || fields[1] != "1"
+        || !fields[2].eq_ignore_ascii_case("udp")
+        || fields[3].parse::<u32>().is_err()
+        || !fields[6].eq_ignore_ascii_case("typ")
+    {
+        return Err(LanError::InvalidSignaling);
+    }
+    let candidate_type = fields[7].to_ascii_lowercase();
+    if !matches!(
+        candidate_type.as_str(),
+        "host" | "srflx" | "prflx" | "relay"
+    ) {
+        return Err(LanError::InvalidSignaling);
+    }
+    let address: IpAddr = fields[4].parse().map_err(|_| LanError::InvalidSignaling)?;
+    let port = fields[5]
+        .parse::<u16>()
+        .map_err(|_| LanError::InvalidSignaling)?;
+    if !address_allowed(address, CandidatePolicy::Internet { allow_loopback }) || port == 0 {
+        return Err(LanError::InvalidSignaling);
+    }
+    if fields.len() > 8 && (fields.len() - 8) % 2 != 0 {
+        return Err(LanError::InvalidSignaling);
+    }
+
+    let mut related_address = None;
+    let mut related_port = None;
+    let mut seen = std::collections::HashSet::new();
+    for extension in fields[8..].chunks_exact(2) {
+        let name = extension[0].to_ascii_lowercase();
+        let value = extension[1];
+        if name.is_empty()
+            || name.len() > 32
+            || value.is_empty()
+            || value.len() > 128
+            || !name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+            || !value.bytes().all(|byte| byte.is_ascii_graphic())
+            || !seen.insert(name.clone())
+        {
+            return Err(LanError::InvalidSignaling);
+        }
+        match name.as_str() {
+            "raddr" => {
+                let related: IpAddr = value.parse().map_err(|_| LanError::InvalidSignaling)?;
+                related_address = Some(related);
+            }
+            "rport" => {
+                related_port = Some(
+                    value
+                        .parse::<u16>()
+                        .map_err(|_| LanError::InvalidSignaling)?,
+                );
+            }
+            "generation" | "network-id" | "network-cost" => {
+                if value.parse::<u32>().is_err() {
+                    return Err(LanError::InvalidSignaling);
+                }
+            }
+            "ufrag" => {}
+            "tcptype" => return Err(LanError::InvalidSignaling),
+            _ => {}
+        }
+    }
+    match (related_address, related_port) {
+        (None, None) => {}
+        (Some(related), Some(related_port)) => {
+            // RFC 8839 permits redacting related-address metadata as an unspecified
+            // address with port 9. Existing native SDKs also emit port 0. Neither
+            // placeholder is the candidate destination, which stays strict above.
+            let redacted = candidate_type != "host"
+                && related.is_unspecified()
+                && matches!(related_port, 0 | 9);
+            if !redacted
+                && (related_port == 0
+                    || !address_allowed(related, CandidatePolicy::Internet { allow_loopback }))
+            {
+                return Err(LanError::InvalidSignaling);
+            }
+        }
+        _ => return Err(LanError::InvalidSignaling),
+    }
+    Ok(())
+}
+
+fn address_allowed(address: IpAddr, policy: CandidatePolicy) -> bool {
+    match policy {
+        CandidatePolicy::Lan => is_supported_address(address),
+        CandidatePolicy::Internet { allow_loopback } => {
+            is_supported_internet_address(address) || (allow_loopback && address.is_loopback())
+        }
+    }
+}
+
 struct LanPeerConnectionHandler {
     data_channel_tx: mpsc::Sender<Result<Arc<dyn DataChannel>, LanError>>,
     gathering_tx: watch::Sender<bool>,
+    relay_candidate_tx: watch::Sender<bool>,
+    candidate_policy: CandidatePolicy,
     received_channels: AtomicUsize,
     peer_connection: Mutex<Option<Weak<dyn PeerConnection>>>,
 }
 
 #[async_trait::async_trait]
 impl PeerConnectionEventHandler for LanPeerConnectionHandler {
+    async fn on_ice_candidate(&self, event: RTCPeerConnectionIceEvent) {
+        if is_usable_relay_candidate(&event, self.candidate_policy) {
+            self.relay_candidate_tx.send_replace(true);
+        }
+    }
+
     async fn on_ice_gathering_state_change(&self, state: RTCIceGatheringState) {
         if state == RTCIceGatheringState::Complete {
             self.gathering_tx.send_replace(true);
@@ -541,6 +1224,90 @@ impl PeerConnectionEventHandler for LanPeerConnectionHandler {
             }
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GatheringStopReason {
+    Complete,
+    RelayReady,
+    Deadline,
+}
+
+impl GatheringStopReason {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Complete => "complete",
+            Self::RelayReady => "relay_ready",
+            Self::Deadline => "deadline",
+        }
+    }
+}
+
+async fn wait_for_turn_gathering(
+    gathering_rx: &mut watch::Receiver<bool>,
+    relay_candidate_rx: &mut watch::Receiver<bool>,
+) -> GatheringStopReason {
+    let deadline = tokio::time::sleep(TURN_GATHERING_DEADLINE);
+    tokio::pin!(deadline);
+    loop {
+        if *gathering_rx.borrow() {
+            return GatheringStopReason::Complete;
+        }
+        if *relay_candidate_rx.borrow() {
+            return GatheringStopReason::RelayReady;
+        }
+        tokio::select! {
+            result = gathering_rx.changed() => {
+                if result.is_err() {
+                    return GatheringStopReason::Deadline;
+                }
+            }
+            result = relay_candidate_rx.changed() => {
+                if result.is_err() {
+                    return GatheringStopReason::Deadline;
+                }
+            }
+            () = &mut deadline => return GatheringStopReason::Deadline,
+        }
+    }
+}
+
+fn has_turn_server(ice_servers: &[RTCIceServer]) -> bool {
+    ice_servers.iter().any(|server| {
+        server.urls.iter().any(|url| {
+            url.split_once(':').is_some_and(|(scheme, _)| {
+                scheme.eq_ignore_ascii_case("turn") || scheme.eq_ignore_ascii_case("turns")
+            })
+        })
+    })
+}
+
+fn is_usable_relay_candidate(event: &RTCPeerConnectionIceEvent, policy: CandidatePolicy) -> bool {
+    let candidate = &event.candidate;
+    if candidate.typ != RTCIceCandidateType::Relay
+        || candidate.component != 1
+        || candidate.protocol != RTCIceProtocol::Udp
+    {
+        return false;
+    }
+    let Ok(candidate) = candidate.to_json() else {
+        return false;
+    };
+    let line = format!("a={}", candidate.candidate);
+    validate_candidate(&line, policy).is_ok()
+}
+
+fn sdp_candidate_counts(sdp: &str) -> (usize, usize) {
+    sdp.lines()
+        .filter_map(|line| line.trim_end_matches('\r').strip_prefix("a=candidate:"))
+        .filter(|candidate| candidate.split_ascii_whitespace().nth(1) != Some("2"))
+        .fold((0, 0), |(total, relay), candidate| {
+            let is_relay = candidate
+                .split_ascii_whitespace()
+                .nth(7)
+                .is_some_and(|typ| typ.eq_ignore_ascii_case("relay"));
+            (total + 1, relay + usize::from(is_relay))
+        })
 }
 
 async fn wait_for_open(channel: &Arc<dyn DataChannel>) -> Result<(), LanError> {
@@ -603,3 +1370,11 @@ impl Drop for PeerConnectionGuard {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "internet_sdp_tests.rs"]
+mod internet_sdp_tests;
+
+#[cfg(test)]
+#[path = "turn_gathering_tests.rs"]
+mod gathering_tests;

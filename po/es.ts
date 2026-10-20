@@ -1576,8 +1576,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
     <message>
+      <source>Abriendo identidad protegida por el llavero del sistema…</source>
+      <translation>Abriendo identidad protegida por el llavero del sistema…</translation>
+    </message>
+    <message>
+      <source>Cancela la vinculación pendiente antes de borrar dispositivos.</source>
+      <translation>Cancela la vinculación pendiente antes de borrar dispositivos.</translation>
+    </message>
+    <message>
+      <source>Cargando dispositivos autorizados del perfil…</source>
+      <translation>Cargando dispositivos autorizados del perfil…</translation>
+    </message>
+    <message>
       <source>Carpetas</source>
       <translation>Carpetas</translation>
+    </message>
+    <message>
+      <source>Cerrando la sesión y limpiando el perfil de vinculación…</source>
+      <translation>Cerrando la sesión y limpiando el perfil de vinculación…</translation>
+    </message>
+    <message>
+      <source>Cerrando la sesión. La confianza guardada se conserva.</source>
+      <translation>Cerrando la sesión. La confianza guardada se conserva.</translation>
     </message>
     <message>
       <source>Claves SSH</source>
@@ -1590,6 +1610,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Claves públicas de origen conservadas como referencia por diferir de la privada</source>
       <translation>Claves públicas de origen conservadas como referencia por diferir de la privada</translation>
+    </message>
+    <message>
+      <source>Compara los siete emojis con Android y confirma en ambas pantallas.</source>
+      <translation>Compara los siete emojis con Android y confirma en ambas pantallas.</translation>
+    </message>
+    <message>
+      <source>Comprobando…</source>
+      <translation>Comprobando…</translation>
+    </message>
+    <message>
+      <source>Confianza guardada. Abriendo la sesión autenticada…</source>
+      <translation>Confianza guardada. Abriendo la sesión autenticada…</translation>
     </message>
     <message>
       <source>Correo electrónico</source>
@@ -1620,12 +1652,52 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Descripción: {name}</translation>
     </message>
     <message>
+      <source>Directo</source>
+      <translation>Directo</translation>
+    </message>
+    <message>
+      <source>Dispositivo conectado. Sesión autenticada activa.</source>
+      <translation>Dispositivo conectado. Sesión autenticada activa.</translation>
+    </message>
+    <message>
+      <source>Dispositivo desconectado. La confianza guardada se conserva.</source>
+      <translation>Dispositivo desconectado. La confianza guardada se conserva.</translation>
+    </message>
+    <message>
+      <source>Dispositivo olvidado en este equipo. Para volver a vincularlo, compara un SAS nuevo.</source>
+      <translation>Dispositivo olvidado en este equipo. Para volver a vincularlo, compara un SAS nuevo.</translation>
+    </message>
+    <message>
+      <source>Dispositivo {}</source>
+      <translation>Dispositivo {}</translation>
+    </message>
+    <message>
+      <source>Dispositivos recuperados. Selecciona uno y pulsa Reconectar; no necesitas repetir los emojis.</source>
+      <translation>Dispositivos recuperados. Selecciona uno y pulsa Reconectar; no necesitas repetir los emojis.</translation>
+    </message>
+    <message>
       <source>El archivo no es compatible con la integración seleccionada. Comprueba el gestor y el formato de exportación.</source>
       <translation>El archivo no es compatible con la integración seleccionada. Comprueba el gestor y el formato de exportación.</translation>
     </message>
     <message>
       <source>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</source>
       <translation>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>El dispositivo ya no está autorizado.</source>
+      <translation>El dispositivo ya no está autorizado.</translation>
+    </message>
+    <message>
+      <source>El llavero del sistema no permitió abrir la identidad. No se creó un sustituto.</source>
+      <translation>El llavero del sistema no permitió abrir la identidad. No se creó un sustituto.</translation>
+    </message>
+    <message>
+      <source>El perfil de pruebas falta o no es válido. No se reparó automáticamente.</source>
+      <translation>El perfil de pruebas falta o no es válido. No se reparó automáticamente.</translation>
+    </message>
+    <message>
+      <source>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</source>
+      <translation>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</translation>
     </message>
     <message>
       <source>Elementos con fechas originales conservadas como campos de referencia</source>
@@ -1640,8 +1712,36 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Elementos personalizados adicionales para conservar campos y su ocultación</translation>
     </message>
     <message>
+      <source>Emparejamiento rechazado. No se concedió confianza.</source>
+      <translation>Emparejamiento rechazado. No se concedió confianza.</translation>
+    </message>
+    <message>
+      <source>Escanea el QR desde Android o copia el código de conexión.</source>
+      <translation>Escanea el QR desde Android o copia el código de conexión.</translation>
+    </message>
+    <message>
+      <source>Espera a que termine la operación de conexión antes de cambiar el nombre.</source>
+      <translation>Espera a que termine la operación de conexión antes de cambiar el nombre.</translation>
+    </message>
+    <message>
+      <source>Esperando la confirmación del teléfono…</source>
+      <translation>Esperando la confirmación del teléfono…</translation>
+    </message>
+    <message>
+      <source>Esperando recuperar la conexión con el dispositivo autorizado…</source>
+      <translation>Esperando recuperar la conexión con el dispositivo autorizado…</translation>
+    </message>
+    <message>
       <source>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</source>
       <translation>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</translation>
+    </message>
+    <message>
+      <source>Este dispositivo ya no está autorizado en este equipo.</source>
+      <translation>Este dispositivo ya no está autorizado en este equipo.</translation>
+    </message>
+    <message>
+      <source>Ethernet</source>
+      <translation>Ethernet</translation>
     </message>
     <message>
       <source>Favoritos</source>
@@ -1664,8 +1764,36 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Identidades</translation>
     </message>
     <message>
+      <source>Introduce un servidor WSS válido, sin credenciales ni parámetros.</source>
+      <translation>Introduce un servidor WSS válido, sin credenciales ni parámetros.</translation>
+    </message>
+    <message>
+      <source>LAN</source>
+      <translation>LAN</translation>
+    </message>
+    <message>
+      <source>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</source>
+      <translation>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</translation>
+    </message>
+    <message>
       <source>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</source>
       <translation>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</translation>
+    </message>
+    <message>
+      <source>La invitación o conexión caducó. Genera otro código.</source>
+      <translation>La invitación o conexión caducó. Genera otro código.</translation>
+    </message>
+    <message>
+      <source>La sesión no superó la comprobación de seguridad. La confianza guardada se conserva, pero la conexión se detuvo.</source>
+      <translation>La sesión no superó la comprobación de seguridad. La confianza guardada se conserva, pero la conexión se detuvo.</translation>
+    </message>
+    <message>
+      <source>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</source>
+      <translation>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</translation>
+    </message>
+    <message>
+      <source>La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva.</source>
+      <translation>La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva.</translation>
     </message>
     <message>
       <source>Leyendo y revisando la exportación…</source>
@@ -1676,20 +1804,96 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Licencias</translation>
     </message>
     <message>
+      <source>Listener LAN listo. Abre KryptoPass en Android y pulsa Reconectar para este Desktop.</source>
+      <translation>Listener LAN listo. Abre KryptoPass en Android y pulsa Reconectar para este Desktop.</translation>
+    </message>
+    <message>
+      <source>Listo para una prueba local con el emulador.</source>
+      <translation>Listo para una prueba local con el emulador.</translation>
+    </message>
+    <message>
+      <source>Local</source>
+      <translation>Local</translation>
+    </message>
+    <message>
       <source>Logins</source>
       <translation>Logins</translation>
+    </message>
+    <message>
+      <source>No hay dispositivos autorizados. Crea una invitación para vincular Android.</source>
+      <translation>No hay dispositivos autorizados. Crea una invitación para vincular Android.</translation>
+    </message>
+    <message>
+      <source>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</source>
+      <translation>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</translation>
+    </message>
+    <message>
+      <source>No se completó el borrado. No se creó otra identidad. Puedes reintentar el reinicio del perfil.</source>
+      <translation>No se completó el borrado. No se creó otra identidad. Puedes reintentar el reinicio del perfil.</translation>
+    </message>
+    <message>
+      <source>No se pudieron cargar los nombres locales. La confianza se conserva.</source>
+      <translation>No se pudieron cargar los nombres locales. La confianza se conserva.</translation>
+    </message>
+    <message>
+      <source>No se pudo abrir el perfil de pruebas.</source>
+      <translation>No se pudo abrir el perfil de pruebas.</translation>
+    </message>
+    <message>
+      <source>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</source>
+      <translation>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</translation>
+    </message>
+    <message>
+      <source>No se pudo abrir el perfil existente. No se creó una identidad nueva.</source>
+      <translation>No se pudo abrir el perfil existente. No se creó una identidad nueva.</translation>
     </message>
     <message>
       <source>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</source>
       <translation>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</translation>
     </message>
     <message>
+      <source>No se pudo guardar el nombre. La identidad y la confianza se conservan.</source>
+      <translation>No se pudo guardar el nombre. La identidad y la confianza se conservan.</translation>
+    </message>
+    <message>
+      <source>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</source>
+      <translation>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</translation>
+    </message>
+    <message>
+      <source>No se pudo iniciar el listener de recuperación local.</source>
+      <translation>No se pudo iniciar el listener de recuperación local.</translation>
+    </message>
+    <message>
+      <source>No se pudo localizar el perfil de dispositivos.</source>
+      <translation>No se pudo localizar el perfil de dispositivos.</translation>
+    </message>
+    <message>
+      <source>No se pudo localizar el perfil de pruebas.</source>
+      <translation>No se pudo localizar el perfil de pruebas.</translation>
+    </message>
+    <message>
+      <source>No se pudo preparar el servidor de conexión por Internet.</source>
+      <translation>No se pudo preparar el servidor de conexión por Internet.</translation>
+    </message>
+    <message>
       <source>Notas</source>
       <translation>Notas</translation>
     </message>
     <message>
+      <source>Operación cancelada.</source>
+      <translation>Operación cancelada.</translation>
+    </message>
+    <message>
+      <source>Operación cancelada. La confianza ya guardada se conserva.</source>
+      <translation>Operación cancelada. La confianza ya guardada se conserva.</translation>
+    </message>
+    <message>
       <source>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</source>
       <translation>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</translation>
+    </message>
+    <message>
+      <source>Pairing lab: device session state updated</source>
+      <translation>Pairing lab: device session state updated</translation>
     </message>
     <message>
       <source>Papelera</source>
@@ -1702,6 +1906,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Passkeys conservadas como referencia; no permiten autenticar</source>
       <translation>Passkeys conservadas como referencia; no permiten autenticar</translation>
+    </message>
+    <message>
+      <source>Perfil de vinculación eliminado. Crea una invitación para empezar de cero. La bóveda y OpenPGP se conservan.</source>
+      <translation>Perfil de vinculación eliminado. Crea una invitación para empezar de cero. La bóveda y OpenPGP se conservan.</translation>
+    </message>
+    <message>
+      <source>Preparando la reconexión LAN con este dispositivo…</source>
+      <translation>Preparando la reconexión LAN con este dispositivo…</translation>
+    </message>
+    <message>
+      <source>Rechazando…</source>
+      <translation>Rechazando…</translation>
+    </message>
+    <message>
+      <source>Red</source>
+      <translation>Red</translation>
     </message>
     <message>
       <source>Redes Wi-Fi</source>
@@ -1720,8 +1940,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</translation>
     </message>
     <message>
+      <source>Selecciona la dirección de Desktop en tu red local.</source>
+      <translation>Selecciona la dirección de Desktop en tu red local.</translation>
+    </message>
+    <message>
       <source>Selecciona un archivo local del gestor elegido.</source>
       <translation>Selecciona un archivo local del gestor elegido.</translation>
+    </message>
+    <message>
+      <source>Selecciona un dispositivo emparejado.</source>
+      <translation>Selecciona un dispositivo emparejado.</translation>
     </message>
     <message>
       <source>Selecciona una integración de importación.</source>
@@ -1730,6 +1958,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Sin carpeta</source>
       <translation>Sin carpeta</translation>
+    </message>
+    <message>
+      <source>TURN</source>
+      <translation>TURN</translation>
     </message>
     <message>
       <source>Tarjetas</source>
@@ -1748,12 +1980,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Unix {}</translation>
     </message>
     <message>
+      <source>Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.</source>
+      <translation>Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.</translation>
+    </message>
+    <message>
       <source>Usuario</source>
       <translation>Usuario</translation>
     </message>
     <message>
       <source>Usuario copiado</source>
       <translation>Usuario copiado</translation>
+    </message>
+    <message>
+      <source>VPN / virtual</source>
+      <translation>VPN / virtual</translation>
     </message>
     <message>
       <source>Validando la bóveda restaurada…</source>
@@ -2782,6 +3022,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>{label} exceeds the maximum size</translation>
     </message>
     <message>
+      <source>{label} · {} — {}</source>
+      <translation>{label} · {} — {}</translation>
+    </message>
+    <message>
       <source>{} ({patterns})</source>
       <translation>{} ({patterns})</translation>
     </message>
@@ -3295,6 +3539,385 @@ Huella(s) detectadas:
     <message>
       <source>Tiempo restante del código de verificación</source>
       <translation>Tiempo restante del código de verificación</translation>
+    </message>
+  </context>
+  <context>
+    <name>DevicePairingLabDialog</name>
+    <message>
+      <source>Dispositivos</source>
+      <translation>Dispositivos</translation>
+    </message>
+    <message>
+      <source>Conectado</source>
+      <translation>Conectado</translation>
+    </message>
+    <message>
+      <source>Conectando</source>
+      <translation>Conectando</translation>
+    </message>
+    <message>
+      <source>Reconectando</source>
+      <translation>Reconectando</translation>
+    </message>
+    <message>
+      <source>Conexión interrumpida</source>
+      <translation>Conexión interrumpida</translation>
+    </message>
+    <message>
+      <source>Desconectado</source>
+      <translation>Desconectado</translation>
+    </message>
+    <message>
+      <source>Escanea el QR y elige Reconectar en Android. El código de conexión caduca en 5 minutos.</source>
+      <translation>Escanea el QR y elige Reconectar en Android. El código de conexión caduca en 5 minutos.</translation>
+    </message>
+    <message>
+      <source>Escanea el QR y elige Vincular dispositivo en Android. El código de conexión caduca en 5 minutos.</source>
+      <translation>Escanea el QR y elige Vincular dispositivo en Android. El código de conexión caduca en 5 minutos.</translation>
+    </message>
+    <message>
+      <source>Compara los siete emojis y sus nombres con Android. Confirma solo si todos coinciden en ambas pantallas.</source>
+      <translation>Compara los siete emojis y sus nombres con Android. Confirma solo si todos coinciden en ambas pantallas.</translation>
+    </message>
+    <message>
+      <source>La otra pantalla está confirmando la comparación.</source>
+      <translation>La otra pantalla está confirmando la comparación.</translation>
+    </message>
+    <message>
+      <source>Intentando recuperar la sesión autenticada con este dispositivo.</source>
+      <translation>Intentando recuperar la sesión autenticada con este dispositivo.</translation>
+    </message>
+    <message>
+      <source>Cerrando el enlace. El dispositivo seguirá emparejado.</source>
+      <translation>Cerrando el enlace. El dispositivo seguirá emparejado.</translation>
+    </message>
+    <message>
+      <source>La invitación caducó. Genera una nueva para volver a intentarlo.</source>
+      <translation>La invitación caducó. Genera una nueva para volver a intentarlo.</translation>
+    </message>
+    <message>
+      <source>No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar los dispositivos.</source>
+      <translation>No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar los dispositivos.</translation>
+    </message>
+    <message>
+      <source>El perfil local de pruebas no está disponible. No se creó una identidad sustituta.</source>
+      <translation>El perfil local de pruebas no está disponible. No se creó una identidad sustituta.</translation>
+    </message>
+    <message>
+      <source>El llavero del sistema no pudo abrir la identidad de pruebas. No se creó una identidad sustituta.</source>
+      <translation>El llavero del sistema no pudo abrir la identidad de pruebas. No se creó una identidad sustituta.</translation>
+    </message>
+    <message>
+      <source>No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.</source>
+      <translation>No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.</translation>
+    </message>
+    <message>
+      <source>La vinculación fue rechazada y no se concedió confianza.</source>
+      <translation>La vinculación fue rechazada y no se concedió confianza.</translation>
+    </message>
+    <message>
+      <source>La operación se canceló. La confianza que ya estaba guardada se conserva.</source>
+      <translation>La operación se canceló. La confianza que ya estaba guardada se conserva.</translation>
+    </message>
+    <message>
+      <source>Comprueba el acceso a Internet y vuelve a intentarlo.</source>
+      <translation>Comprueba el acceso a Internet y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>Comprueba que ambos dispositivos estén en la misma red y vuelve a intentarlo.</source>
+      <translation>Comprueba que ambos dispositivos estén en la misma red y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>La sesión está desconectada. La confianza guardada se conserva; puedes reconectar el dispositivo.</source>
+      <translation>La sesión está desconectada. La confianza guardada se conserva; puedes reconectar el dispositivo.</translation>
+    </message>
+    <message>
+      <source>La sesión autenticada está activa. Cerrar esta ventana no la desconecta.</source>
+      <translation>La sesión autenticada está activa. Cerrar esta ventana no la desconecta.</translation>
+    </message>
+    <message>
+      <source>Conecta tus dispositivos</source>
+      <translation>Conecta tus dispositivos</translation>
+    </message>
+    <message>
+      <source>Vincula Android y conserva una conexión segura entre tus dispositivos.</source>
+      <translation>Vincula Android y conserva una conexión segura entre tus dispositivos.</translation>
+    </message>
+    <message>
+      <source>Conexión de pruebas · Sin sincronización de bóveda</source>
+      <translation>Conexión de pruebas · Sin sincronización de bóveda</translation>
+    </message>
+    <message>
+      <source>Hay una sesión activa con %1. Desconecta ese dispositivo antes de vincular o reconectar otro.</source>
+      <translation>Hay una sesión activa con %1. Desconecta ese dispositivo antes de vincular o reconectar otro.</translation>
+    </message>
+    <message>
+      <source>Código de conexión</source>
+      <translation>Código de conexión</translation>
+    </message>
+    <message>
+      <source>Código QR de vinculación local</source>
+      <translation>Código QR de vinculación local</translation>
+    </message>
+    <message>
+      <source>Escanea este código con KryptoPass Android.</source>
+      <translation>Escanea este código con KryptoPass Android.</translation>
+    </message>
+    <message>
+      <source>Comprueba que ambos dispositivos tengan acceso a Internet.</source>
+      <translation>Comprueba que ambos dispositivos tengan acceso a Internet.</translation>
+    </message>
+    <message>
+      <source>Asegúrate de que ambos dispositivos estén en la misma red local.</source>
+      <translation>Asegúrate de que ambos dispositivos estén en la misma red local.</translation>
+    </message>
+    <message>
+      <source>Usa este modo solo para el emulador en esta computadora.</source>
+      <translation>Usa este modo solo para el emulador en esta computadora.</translation>
+    </message>
+    <message>
+      <source>Ocultar código manual</source>
+      <translation>Ocultar código manual</translation>
+    </message>
+    <message>
+      <source>Mostrar código manual</source>
+      <translation>Mostrar código manual</translation>
+    </message>
+    <message>
+      <source>Código de invitación de un solo uso</source>
+      <translation>Código de invitación de un solo uso</translation>
+    </message>
+    <message>
+      <source>Copiar código</source>
+      <translation>Copiar código</translation>
+    </message>
+    <message>
+      <source>Compara los siete elementos</source>
+      <translation>Compara los siete elementos</translation>
+    </message>
+    <message>
+      <source>Elemento %1: %2</source>
+      <translation>Elemento %1: %2</translation>
+    </message>
+    <message>
+      <source>Si un solo emoji o nombre no coincide, rechaza la vinculación.</source>
+      <translation>Si un solo emoji o nombre no coincide, rechaza la vinculación.</translation>
+    </message>
+    <message>
+      <source>No se pudo mostrar la comparación completa. Rechaza la vinculación y vuelve a intentarlo.</source>
+      <translation>No se pudo mostrar la comparación completa. Rechaza la vinculación y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>No coinciden</source>
+      <translation>No coinciden</translation>
+    </message>
+    <message>
+      <source>Los 7 coinciden</source>
+      <translation>Los 7 coinciden</translation>
+    </message>
+    <message>
+      <source>Ocultar opciones de conexión</source>
+      <translation>Ocultar opciones de conexión</translation>
+    </message>
+    <message>
+      <source>Opciones de conexión</source>
+      <translation>Opciones de conexión</translation>
+    </message>
+    <message>
+      <source>Actualizar redes</source>
+      <translation>Actualizar redes</translation>
+    </message>
+    <message>
+      <source>Conectar por Internet</source>
+      <translation>Conectar por Internet</translation>
+    </message>
+    <message>
+      <source>Servidor de conexión (wss://…)</source>
+      <translation>Servidor de conexión (wss://…)</translation>
+    </message>
+    <message>
+      <source>Servidor de conexión por Internet</source>
+      <translation>Servidor de conexión por Internet</translation>
+    </message>
+    <message>
+      <source>Usar conexión por red local</source>
+      <translation>Usar conexión por red local</translation>
+    </message>
+    <message>
+      <source>Interfaz de red local de Desktop</source>
+      <translation>Interfaz de red local de Desktop</translation>
+    </message>
+    <message>
+      <source>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</source>
+      <translation>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</translation>
+    </message>
+    <message>
+      <source>Modo emulador avanzado: solo funciona cuando Android se ejecuta en esta computadora.</source>
+      <translation>Modo emulador avanzado: solo funciona cuando Android se ejecuta en esta computadora.</translation>
+    </message>
+    <message>
+      <source>Dispositivos autorizados</source>
+      <translation>Dispositivos autorizados</translation>
+    </message>
+    <message>
+      <source>Cargando dispositivos autorizados…</source>
+      <translation>Cargando dispositivos autorizados…</translation>
+    </message>
+    <message>
+      <source>Todavía no hay dispositivos autorizados en este perfil. Vincula Android para añadir uno.</source>
+      <translation>Todavía no hay dispositivos autorizados en este perfil. Vincula Android para añadir uno.</translation>
+    </message>
+    <message>
+      <source>Dispositivo</source>
+      <translation>Dispositivo</translation>
+    </message>
+    <message>
+      <source>Emparejado</source>
+      <translation>Emparejado</translation>
+    </message>
+    <message>
+      <source>Confianza no disponible</source>
+      <translation>Confianza no disponible</translation>
+    </message>
+    <message>
+      <source>Estado de confianza: %1</source>
+      <translation>Estado de confianza: %1</translation>
+    </message>
+    <message>
+      <source>·</source>
+      <translation>·</translation>
+    </message>
+    <message>
+      <source>Estado de conexión: %1</source>
+      <translation>Estado de conexión: %1</translation>
+    </message>
+    <message>
+      <source>Transporte: %1</source>
+      <translation>Transporte: %1</translation>
+    </message>
+    <message>
+      <source>Comprobando…</source>
+      <translation>Comprobando…</translation>
+    </message>
+    <message>
+      <source>Red: %1</source>
+      <translation>Red: %1</translation>
+    </message>
+    <message>
+      <source>ID %1</source>
+      <translation>ID %1</translation>
+    </message>
+    <message>
+      <source>Cambiar nombre</source>
+      <translation>Cambiar nombre</translation>
+    </message>
+    <message>
+      <source>Editar nombre local del dispositivo</source>
+      <translation>Editar nombre local del dispositivo</translation>
+    </message>
+    <message>
+      <source>Ocultar ID</source>
+      <translation>Ocultar ID</translation>
+    </message>
+    <message>
+      <source>Detalles</source>
+      <translation>Detalles</translation>
+    </message>
+    <message>
+      <source>Ver identificador completo del dispositivo</source>
+      <translation>Ver identificador completo del dispositivo</translation>
+    </message>
+    <message>
+      <source>Reconectar</source>
+      <translation>Reconectar</translation>
+    </message>
+    <message>
+      <source>Desconectar</source>
+      <translation>Desconectar</translation>
+    </message>
+    <message>
+      <source>Olvidar</source>
+      <translation>Olvidar</translation>
+    </message>
+    <message>
+      <source>Identificador completo del dispositivo</source>
+      <translation>Identificador completo del dispositivo</translation>
+    </message>
+    <message>
+      <source>Copiar ID</source>
+      <translation>Copiar ID</translation>
+    </message>
+    <message>
+      <source>Vincular</source>
+      <translation>Vincular</translation>
+    </message>
+    <message>
+      <source>Vincular dispositivo</source>
+      <translation>Vincular dispositivo</translation>
+    </message>
+    <message>
+      <source>Actualizar</source>
+      <translation>Actualizar</translation>
+    </message>
+    <message>
+      <source>Actualizar dispositivos</source>
+      <translation>Actualizar dispositivos</translation>
+    </message>
+    <message>
+      <source>Reiniciar vinculación</source>
+      <translation>Reiniciar vinculación</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Cerrar</source>
+      <translation>Cerrar</translation>
+    </message>
+    <message>
+      <source>¿Reiniciar vinculación?</source>
+      <translation>¿Reiniciar vinculación?</translation>
+    </message>
+    <message>
+      <source>¿Olvidar dispositivo?</source>
+      <translation>¿Olvidar dispositivo?</translation>
+    </message>
+    <message>
+      <source>Se cerrará la conexión y se borrarán la identidad privada de este perfil de vinculación, sus autorizaciones y nombres locales. La bóveda y las claves OpenPGP se conservan. Para volver a vincular, compara un SAS nuevo.</source>
+      <translation>Se cerrará la conexión y se borrarán la identidad privada de este perfil de vinculación, sus autorizaciones y nombres locales. La bóveda y las claves OpenPGP se conservan. Para volver a vincular, compara un SAS nuevo.</translation>
+    </message>
+    <message>
+      <source>Se cerrará la conexión y se eliminarán la autorización y el nombre local de «%1» en este equipo. También olvida este equipo en Android antes de volver a emparejarlos. La bóveda y OpenPGP se conservan.</source>
+      <translation>Se cerrará la conexión y se eliminarán la autorización y el nombre local de «%1» en este equipo. También olvida este equipo en Android antes de volver a emparejarlos. La bóveda y OpenPGP se conservan.</translation>
+    </message>
+    <message>
+      <source>Olvidar dispositivo</source>
+      <translation>Olvidar dispositivo</translation>
+    </message>
+    <message>
+      <source>Nombre del dispositivo</source>
+      <translation>Nombre del dispositivo</translation>
+    </message>
+    <message>
+      <source>Solo se guarda en este equipo.</source>
+      <translation>Solo se guarda en este equipo.</translation>
+    </message>
+    <message>
+      <source>Nombre local del dispositivo</source>
+      <translation>Nombre local del dispositivo</translation>
+    </message>
+    <message>
+      <source>Quitar nombre</source>
+      <translation>Quitar nombre</translation>
+    </message>
+    <message>
+      <source>Guardando…</source>
+      <translation>Guardando…</translation>
+    </message>
+    <message>
+      <source>Guardar</source>
+      <translation>Guardar</translation>
     </message>
   </context>
   <context>
@@ -5117,6 +5740,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>15 minutos</source>
       <translation>15 minutos</translation>
+    </message>
+    <message>
+      <source>Dispositivos</source>
+      <translation>Dispositivos</translation>
     </message>
     <message>
       <source>A&amp;yuda</source>

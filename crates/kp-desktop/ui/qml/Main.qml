@@ -18,6 +18,10 @@ Controls.ApplicationWindow {
     Backend.ShellController {
         id: shell
     }
+    Backend.PairingLabController {
+        id: deviceController
+    }
+    Component.onDestruction: deviceController.shutdownResumeOwner()
     SecretStore {
         id: store
         objectName: "secretStore"
@@ -53,6 +57,7 @@ Controls.ApplicationWindow {
     }
     DevicePairingLabDialog {
         id: devicePairingLab
+        controller: deviceController
         Component.onCompleted: {
             if (available && Qt.application.arguments.indexOf("--pairing-lab") !== -1)
                 open();
@@ -261,6 +266,7 @@ Controls.ApplicationWindow {
     readonly property bool revealed: !!store.detail?.content?.fields?.passwordRevealed
     readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Contactos") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
     Component.onCompleted: {
+        deviceController.startResumeOwner();
         store.controller.loadStore();
         keys.controller.refreshKeys();
         if (Qt.application.arguments.indexOf("--screenshot-about") !== -1)
@@ -722,14 +728,14 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 action: configureShortcutsAction
             }
-        }
-        Controls.Menu {
-            title: qsTr("A&yuda")
             Controls.MenuItem {
-                text: qsTr("Vincular con Android (pruebas)")
+                text: qsTr("Dispositivos")
                 visible: devicePairingLab.available
                 onTriggered: devicePairingLab.open()
             }
+        }
+        Controls.Menu {
+            title: qsTr("A&yuda")
             Controls.MenuItem {
                 action: helpAction
             }

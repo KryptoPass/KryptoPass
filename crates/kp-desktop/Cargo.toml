@@ -38,6 +38,8 @@ kryptopass-browser = { package = "kp-browser", path = "../kp-browser" }
 kryptopass-pairing-lab = { package = "kp-pairing-lab", path = "../kp-pairing-lab" }
 kryptopass-identity = { package = "kp-identity", path = "../kp-identity" }
 kryptopass-pairing = { package = "kp-pairing", path = "../kp-pairing" }
+kryptopass-devices = { package = "kp-devices", path = "../kp-devices" }
+kryptopass-lan = { package = "kp-lan", path = "../kp-lan" }
 tokio = { version = "1", features = ["rt", "sync", "time", "macros", "net"] }
 rqrr = "0.10"
 image = { version = "=0.25.6", default-features = false, features = ["png", "jpeg"] }

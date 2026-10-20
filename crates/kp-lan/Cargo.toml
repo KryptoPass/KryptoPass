@@ -19,12 +19,16 @@ if-addrs = "0.15"
 kp-protocol = { path = "../kp-protocol" }
 mdns-sd = "=0.21.5"
 kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+socket2 = "0.6"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "net", "rt", "sync", "time"] }
-tokio-tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake"] }
+tokio-tungstenite = { version = "=0.30.0", default-features = false, features = ["connect", "handshake", "rustls-tls-webpki-roots"] }
 tracing = "0.1"
+url = "2"
+zeroize = "1"
 # Disabling defaults also disables DTLS crypto; select its standard provider explicitly.
 webrtc = { version = "=0.21.1", default-features = false, features = ["runtime-tokio", "crypto-ring"] }
 

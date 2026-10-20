@@ -45,7 +45,7 @@ If sending that frame fails before the transport accepts it, retry those exact
 bytes. Encoding a replacement frame would leave a gap. If the transport cannot
 tell whether a frame was accepted, discard the session and create a new one.
 
-Channel::Control carries pairing and synchronization metadata.
+Channel::Control carries pairing, active-session control, and synchronization metadata.
 Channel::Data carries SyncChunk and the reserved KeyTransferChunk.
 Channel is transport metadata, not an extra protobuf field.
 SessionCodec.decode_on verifies that transport metadata agrees with the
@@ -86,10 +86,24 @@ are fixed-width byte strings. Repeated entries must be unique where stated.
 | KeyTransferChunk | Same fragment limits and digest fields as SyncChunk. | Reserved data message. |
 | KeyTransferComplete | transfer_id: 16; OpenPGP fingerprint: 20 or 32 bytes. | Reserved control message. |
 | KeyTransferAbort | transfer_id: 16; defined non-zero AbortCode. | Reserved control message. |
+| SessionHello (19) | session_version = 1; device_id: 32 non-zero bytes; optional reconnect_port: 0..65535. | Control; only after local persisted trust. |
+| SessionPing (20) | Non-zero uint64 nonce. | Control; active-session keepalive request. |
+| SessionPong (21) | Non-zero uint64 nonce. | Control; exact echo of the outstanding ping. |
+| SessionClose (22) | reason in 1–5. | Control; bounded authenticated close. |
 
 The key-transfer types are schema and codec definitions only. No Phase 1
 component exports, imports, persists, or authorizes private-key material.
 Applications must not attach an operation handler to these messages yet.
+
+## Active-session extension
+
+The debug session owner retains the authenticated Noise state and codec after
+trust is persisted. Message IDs 19–22 add bilateral Hello, keepalive, and close.
+The envelope stays at version 1, while SessionHello carries extension version 1.
+Both endpoints must support it. Older endpoints may finish pairing but cannot
+retain an active session; this must not erase trust. Exact state, timeout,
+sequence, and lifecycle rules are in [device-session-v1.md](device-session-v1.md).
+No synchronization or private-key-transfer handler is enabled.
 
 ## Pairing identity fields
 
@@ -172,3 +186,7 @@ import/export. Those pairing duties are implemented by `kp-pairing` and
 documented in [pairing-security.md](pairing-security.md). The in-memory
 transport is only a deterministic test adapter. Synchronization and key
 transfer remain reserved and have no active handlers.
+
+La recuperación LAN usa el puerto anunciado solo dentro de Noise y una nueva
+sesión por intento; ver [connection-recovery-v1.md](connection-recovery-v1.md).
+El alias de UI no forma parte del esquema ni del material de identidad.

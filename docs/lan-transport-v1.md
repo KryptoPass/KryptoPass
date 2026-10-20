@@ -109,8 +109,9 @@ Los frames mantienen el orden global entre canales. Tras XX, su contenido es
 el Envelope completo cifrado por Noise, tal como en el transporte anterior.
 Cerrar/cancelar libera el portador y no elimina la confianza persistida. Una
 reconexión crea nuevos PeerConnection, sesión y handshake Noise; no reutiliza
-claves de transporte. El laboratorio cierra el canal al terminar la verificación;
-no implementa todavía una sesión de sincronización sostenida.
+claves de transporte. La extensión [dispositivos y sesión activa](device-session-v1.md)
+retiene el canal después de verificar y persistir confianza, con Hello, latidos
+y cierre autenticados. Todavía no implementa sincronización de bóveda.
 
 ## Descubrimiento y permisos
 
@@ -155,3 +156,7 @@ Si mDNS no atraviesa la red del emulador, usar directamente el código de Deskto
 
 Las comprobaciones efectivamente ejecutadas y las limitaciones pendientes se
 registran en el documento de progreso del repositorio correspondiente.
+
+El endpoint adicional `/kp/lan/v1/resume` se anuncia dentro de SessionHello
+autenticado y asigna una sesión nueva antes de SDP; ver el contrato separado de
+[recuperación LAN](connection-recovery-v1.md). No se anuncia como invitación mDNS.

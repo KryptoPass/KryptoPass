@@ -19,10 +19,14 @@ async-trait = "0.1"
 base64 = "0.22"
 getrandom = "0.3"
 kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass_devices = { package = "kp-devices", path = "../kp-devices" }
 kryptopass_lan = { package = "kp-lan", path = "../kp-lan" }
 kryptopass_pairing = { package = "kp-pairing", path = "../kp-pairing" }
+kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
 kryptopass_transport = { package = "kp-transport", path = "../kp-transport", features = ["loopback-dev"] }
 serde_json = "1"
+rusqlite = { version = "0.40.2", default-features = false }
+rustix = { version = "1.1", features = ["fs", "process", "std"] }
 thiserror = "2"
 tokio = { version = "1", features = ["rt", "macros", "net", "sync", "time", "io-util", "io-std"] }
 zeroize = "1"

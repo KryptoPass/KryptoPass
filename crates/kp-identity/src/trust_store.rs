@@ -238,6 +238,69 @@ impl SqliteTrustStore {
         Ok(())
     }
 
+    /// Removes an active authorization so the peer can be explicitly paired again.
+    ///
+    /// This operation never removes a revoked row. A caller must close any
+    /// session and serialize profile operations before invoking it. The row is
+    /// deleted transactionally; absent and revoked peers return
+    /// [`TrustStoreError::UnknownOrRevokedPeer`].
+    pub fn forget_authorized_peer(&mut self, device_id: &DeviceId) -> Result<(), TrustStoreError> {
+        if *device_id == self.local_device_id {
+            return Err(TrustStoreError::SelfTrust);
+        }
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let removed = tx.execute(
+            "DELETE FROM trusted_peers WHERE device_id = ?1 AND state = 1",
+            [device_id.as_bytes().as_slice()],
+        )?;
+        if removed != 1 {
+            return Err(TrustStoreError::UnknownOrRevokedPeer);
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Validates the exact pairing trust-database paths before a profile reset.
+    ///
+    /// Only the fixed trust database and its SQLite sidecars are considered;
+    /// this never scans or removes other profile files. Missing files are
+    /// allowed so a partially completed reset can be retried.
+    pub fn validate_reset_targets(profile_dir: impl AsRef<Path>) -> Result<(), TrustStoreError> {
+        validate_profile_dir(profile_dir.as_ref())?;
+        for path in reset_database_paths(profile_dir.as_ref()) {
+            validate_reset_file(&path)?;
+        }
+        Ok(())
+    }
+
+    /// Removes only the fixed pairing trust database and SQLite sidecars.
+    ///
+    /// The caller must first stop sessions and serialize profile operations.
+    /// The profile directory is retained. Files are prevalidated before the
+    /// first unlink; if a later unlink fails, the caller receives an error and
+    /// may retry after resolving the filesystem failure.
+    pub fn reset_profile_files(profile_dir: impl AsRef<Path>) -> Result<(), TrustStoreError> {
+        let profile_dir = profile_dir.as_ref();
+        Self::validate_reset_targets(profile_dir)?;
+        let paths = reset_database_paths(profile_dir);
+        for path in paths.iter().skip(1).chain(paths.first()) {
+            match std::fs::remove_file(path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(_) => return Err(TrustStoreError::InvalidProfile),
+            }
+        }
+        for path in reset_database_paths(profile_dir) {
+            validate_reset_file(&path)?;
+            if path.exists() {
+                return Err(TrustStoreError::InvalidProfile);
+            }
+        }
+        Ok(())
+    }
+
     /// Stores a one-time invitation digest without persisting the raw token.
     ///
     /// Expired rows are pruned in the same transaction so the ledger remains
@@ -639,4 +702,46 @@ fn validate_database_header_and_sidecars(_path: &Path) -> Result<(), TrustStoreE
 
 fn array32(value: &[u8]) -> Option<[u8; 32]> {
     value.try_into().ok()
+}
+
+fn reset_database_paths(profile_dir: &Path) -> Vec<PathBuf> {
+    let database = profile_dir.join(DATABASE_FILENAME);
+    let mut wal = database.as_os_str().to_os_string();
+    wal.push("-wal");
+    let mut shm = database.as_os_str().to_os_string();
+    shm.push("-shm");
+    let mut journal = database.as_os_str().to_os_string();
+    journal.push("-journal");
+    vec![
+        database,
+        PathBuf::from(wal),
+        PathBuf::from(shm),
+        PathBuf::from(journal),
+    ]
+}
+
+#[cfg(target_os = "linux")]
+fn validate_reset_file(path: &Path) -> Result<(), TrustStoreError> {
+    use std::os::unix::fs::MetadataExt;
+
+    let metadata = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(_) => return Err(TrustStoreError::InvalidProfile),
+    };
+    if !metadata.is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.uid() != rustix::process::geteuid().as_raw()
+        || metadata.nlink() != 1
+        || metadata.mode() & 0o777 != 0o600
+        || metadata.len() > MAX_DATABASE_SIZE
+    {
+        return Err(TrustStoreError::InvalidProfile);
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn validate_reset_file(_path: &Path) -> Result<(), TrustStoreError> {
+    Err(TrustStoreError::UnsupportedPlatform)
 }

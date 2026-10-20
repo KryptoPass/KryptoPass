@@ -7,18 +7,19 @@ pairing y reconexión por emulador confirmados manualmente por el usuario. Se
 añadió el adaptador WebRTC LAN, señalización WebSocket local y descubrimiento
 mDNS; descubrimiento, pairing y reconexión LAN se comprobaron manualmente entre
 Desktop y Samsung el 2026-10-18. Reutiliza Noise/pairing/trust
-y no habilita sincronización ni GPG. El usuario mantiene detenidos los agentes
-de tests y seguridad desde el 2026-10-17. La aceptación por suites del laboratorio
-queda pendiente; los resultados del hito Rust anterior no la sustituyen.
+y no habilita sincronización ni GPG. El usuario reactivó las pruebas funcionales
+para reparar estos flujos; solo la revisión de seguridad independiente sigue
+pausada. La recuperación tras cortes y reinicios tiene código y pruebas nuevas,
+pero su comprobación completa en LAN real sigue pendiente.
 Contrato e instrucciones: [transporte LAN](lan-transport-v1.md).
 Desktop: `just pairing-lab`.
 La copia conserva exactamente el archivo entregado por el usuario, incluida
 su sección de stack tecnológico. Este documento registra evidencia de avance;
 el plan no debe marcarse como implementado por la mera existencia de interfaces.
 
-## Hito actual — núcleo en memoria y pairing
+## Estado acumulado — núcleo, pairing y laboratorio LAN
 
-Actualizado: 2026-10-17. Coordinación y auditoría: agente principal;
+Actualizado: 2026-10-19. Coordinación y auditoría: agente principal;
 implementación y pruebas: agentes integrados `gpt-6-luna`, esfuerzo `max`.
 Orca no está disponible porque su registro apunta a una AppImage ausente;
 el usuario autorizó expresamente el mecanismo integrado de Codex.
@@ -34,7 +35,10 @@ el usuario autorizó expresamente el mecanismo integrado de Codex.
 | Pruebas adversariales y vectores | Suite específica satisfactoria | 29 tests: 17 adversariales, 3 de flujo, 4 propiedades y 5 vectores; 128 casos por propiedad |
 | Auditoría y verificaciones del workspace | Aceptadas | Formato y Clippy globales pasan; 286 tests del workspace pasan, sin fallos ni ignorados |
 | WebRTC / descubrimiento LAN | Implementado en laboratorio debug, prueba manual satisfactoria | Desktop ↔ Samsung: descubrimiento, pairing con confianza recíproca y reconexión confirmados; suites y revisión pendientes |
-| Sincronización / GnuPG / Internet | No iniciado | Fases posteriores |
+| Primitivas de dispositivos / sesión activa | Integradas en UI Desktop y Android | `kp-devices`, snapshots, sesión retenida y acciones de conexión/limpieza; prueba sostenida pendiente |
+| Recuperación tras Wi-Fi / reinicio / nueva IP | Implementada; pruebas automáticas satisfactorias, LAN real pendiente | Escucha de proceso Desktop, routing persistente Android, nuevo Noise contra claves autorizadas; ver connection-recovery-v1.md |
+| Internet / fase 6 adelantada por el usuario | WAN directa y TURN verificados con Samsung | WSS Cloudflare, broker firmado y credenciales temporales; relay/relay forzado, modo normal con datos móviles y vuelta a Wi-Fi; selección LAN/Internet automática y sesiones largas pendientes |
+| Sincronización / GnuPG | No iniciado | Fases 4 y 5 pendientes |
 | Android Kotlin | Laboratorio integrado | Lógica Kotlin sin Rust; SDK WebRTC nativo C++/JNI autorizado el 2026-10-18, progreso propio |
 
 ## Inspección y ajustes mínimos
@@ -275,3 +279,630 @@ ejecuta un Noise nuevo y comprueba las claves persistidas. Esta es evidencia
 manual en dos equipos, no aceptación de las suites pausadas ni de seguridad
 de producción. `just fmt-rust fmt-qml` y `git diff --check` pasaron; no se
 ejecutaron tests ni se reactivaron sus agentes.
+
+## Primitivas de dispositivos y sesión activa — 2026-10-18
+
+Petición posterior: preparar el backend para futuras pantallas sin implementar
+su UI. Coordinación principal y dos agentes integrados Luna max de implementación;
+los agentes de tests y seguridad permanecen detenidos.
+
+Contrato: [dispositivos y sesión v1](device-session-v1.md). Se separa confianza
+persistida de conexión transitoria; hay snapshots observables con revisión y
+generación por sesión. Tras pairing/reconexión se retienen el mismo Noise y
+SessionCodec. Se agregan SessionHello (19), Ping (20), Pong (21) y Close (22)
+al esquema compartido, con extensión versión 1; el Envelope permanece en v1.
+El esquema actualizado tiene SHA-256
+`606210d03c4e6d03cbda080ccfc2b8baf7a92fece407211dd9783a9de4080aa3`.
+
+La sesión usa hello con límite de 30 s, latidos cada 10 s, respuesta máxima
+30 s y procesamiento acotado a 32 controles por segundo. Desconectar conserva
+la confianza. Los cambios de identidad, sustituciones y callbacks antiguos
+no pueden promover otra sesión. No se agregan pantallas ni controles nuevos;
+no hay GPG, transferencia de claves ni sincronización de secretos.
+
+El propietario sigue siendo el laboratorio debug: cerrar el diálogo o salir
+de la Activity termina el enlace. El servicio Android de segundo plano y la
+reconexión automática quedan para una integración posterior. Las suites y
+revisión independiente de esta extensión siguen pendientes por petición del usuario.
+
+Comprobaciones de esta implementación Desktop:
+
+- `just check-devices`: satisfactorio.
+- `just build`: satisfactorio tras los ajustes finales; incluye check del workspace y binario Desktop.
+- `just fmt-rust fmt-qml`: satisfactorio.
+- `git diff --check`: satisfactorio. No se añadieron ni modificaron tests.
+- Apertura real del binario con el mismo perfil aislado: conserva dos peers autorizados y publica sus estados desconectados; no se cambiaron sus identidades.
+- Ambas copias del plan conservan su SHA-256 original; los esquemas Protobuf actualizados son idénticos.
+
+En la revisión de implementación se corrigieron mutaciones concurrentes del
+directorio y generaciones que podían repetirse tras quitar/reinsertar un peer.
+La sesión conserva de forma inmutable las identidades autenticadas para evitar
+consumir un canal con otro peer esperado. Los envíos fallidos o cancelados
+invalidan su estado; la lectura TCP mantiene fragmentos parciales al cancelar
+una espera por un timer. Se agregaron los límites de hello, envío, cierre y pong
+vencido antes de la compilación final.
+
+Android también compiló e instaló la extensión de sesión; el APK contiene sus
+clases nuevas y abre sin crash en el Samsung. Se conservaron los peers autorizados
+en ambos perfiles. La comprobación manual de sesión sostenida y corte/reconexión
+de esta extensión queda pendiente; no se ejecutaron las suites pausadas.
+
+## Recuperación de conexión y API de pantallas — 2026-10-18
+
+Petición posterior del usuario: continuar punto2 mientras él implementa UI.
+Solo backend/docs y comprobaciones de compilación; suites/tests/security
+siguen pausados. Los cambios concurrentes de pantallas y de preferencia LAN
+del usuario se conservan. No se editan Activity, Compose, QML ni recursos.
+
+Contratos: [recuperación LAN](connection-recovery-v1.md) y
+[API de pantallas / alias](device-backend-api.md). Alias persistentes todavía
+no implementados: el nombre propuesto es una etiqueta opcional local distinta
+de DeviceId y de la confianza criptográfica.
+
+Se añade puerto de recuperación opcional a SessionHello (`reconnect_port=3`,
+0ausente o1..65535); solo se consume tras autenticar el Hello. El esquema
+compartido actualizado tiene SHA-256
+`88758f347c3a1bc77256d4cbcb6a9a1cb1c61a2d03146e20b31ce20327da356f`.
+La señalización resume asigna una sesión aleatoria nueva antes de oferta SDP
+y requiere Noise XX reconnect contra la identidad completa guardada. Las
+identidades privadas y la confianza existente no se regeneran ni se borran.
+
+Android expone propietario de proceso debug y leases de UI; metadata de
+RECONNECTING/attempt/deadline; cinco intentos/5min con jitter. Desktop retiene
+listener por episodio, máximo diez fallos/5min. Cierre explícito o fallo de
+autenticación no causan reintentos. El presupuesto solo se renueva tras una
+conexión estable>=30s; no se convierte un flapping en un bucle ilimitado.
+
+Límites: todavía sin servicio Android en primer plano, persistencia de endpoint,
+recuperación de cambio de IP/reinicio de procesos, sincronización o GPG. El
+laboratorio legacy conserva el cierre al salir de su Activity/diálogo; la
+nueva UI debe usar DebugConnectionOwner y liberar solo su lease.
+
+Compilación Desktop: `cargo check -p kp-devices -p kp-pairing-lab`
+satisfactorio por el agente de implementación; `just build` satisfactorio
+con check del workspace y binario integrado. `just fmt-rust fmt-qml` y
+`git diff --check` satisfactorios. No tests, lint o commits.
+
+La continuación Kotlin también compiló: propietario de proceso, lease de UI,
+recovery y metadata están en el APK preparado. La sesión sostenida y recuperación
+frente a un corte real siguen pendientes de comprobar; no se ejecutaron tests.
+
+## UI/UX Desktop y coordinación Android — 2026-10-18
+
+El usuario asignó Desktop al agente y conserva la implementación Android.
+Se actualiza Dispositivos en Qt/QML sobre datos reales del backend: lista de
+peers autorizados, confianza separada de conexión, alias locales persistentes,
+detalles de ID, reconexión/desconexión, QR del bootstrap exacto y comparación
+SAS en cuadrícula. La entrada vive en Preferencias → Dispositivos.
+
+El controller se aloja a nivel de Main para conservar el enlace al cerrar la
+vista. releaseUi cancela una vinculación no completada y limpia códigos/SAS;
+no desconecta la sesión activa. Cierre explícito conserva la confianza.
+El puente Qt tiene códigos de estado estables y proyecciones de metadata;
+los errores de metadata local no conceden ni eliminan autorización.
+
+Los alias Desktop se guardan en una base SQLite separada privada, versionada
+y ligada al ID local; solo peers confiables pueden recibir un alias. Trim,
+64 puntos de código/256 bytes UTF-8, rechazo de controles y marcadores bidi;
+vacío elimina alias. No se cambia el esquema Protobuf ni se envía el nombre
+por la red. El código QR sigue siendo kplan1/kpdev1/kpdevr1 sin wrapper nuevo.
+
+La selección de interfaces Desktop prioriza nombres Wi-Fi/Ethernet sobre
+VPN/bridges y conserva la IP elegida entre refresh. Es una heurística de
+presentación, no autorización ni una clasificación por prefijo IP.
+
+Contrato para ambos frentes: [UI Desktop ↔ Android](desktop-devices-ui-contract.md).
+El trabajo actual solo modifica producto Desktop y docs Android; no instala
+ni cambia código, recursos o pantallas Android que el usuario está editando.
+Los agentes de tests/seguridad siguen pausados. Un agente de implementación
+se detuvo por límite de uso; el coordinador completó ese backend directamente.
+
+La primera captura offscreen de la app real abrió la lista de dos dispositivos
+confiables del perfil existente sin errores QML. Se ajustaron después márgenes,
+jerarquía, iconos y controles para anchos reducidos; la captura final y el build
+se registran al cerrar esta continuación. Orca no pudo arrancar por su AppImage
+ausente; no se sustituyó por otra automatización de escritorio.
+
+Comprobaciones de esta UI Desktop:
+
+- `cargo check -p kp-pairing-lab -p kp-lan`: satisfactorio para alias y selección de interfaz.
+- `just build`: satisfactorio con el bridge y los QML nuevos; el binario incluye las fuentes editadas.
+- `just fmt-rust fmt-qml` y `git diff --check`: satisfactorios.
+- Captura offscreen de la aplicación real con el perfil aislado anterior: apertura limpia, dos peers autorizados recuperados, sin errores QML. Captura Desktop en `docs/screenshots/devices-desktop.png`.
+- Apertura de la ventana nativa con el mismo perfil; conserva los peers y no cambia identidades.
+- El plan original y el esquema Protobuf conservan sus hashes; no se editan tests ni código Android en esta continuación de UI Desktop.
+
+Queda pendiente la interacción manual completa de cambiar nombres, QR y SAS
+en esta vista, además de corte Wi-Fi/reconexión y suites/revisión pausadas.
+No se declara seguridad de producción ni una bóveda sincronizada por compilar
+y renderizar la pantalla. El fondo del diálogo se hizo explícitamente opaco
+tras detectar un artefacto de la captura entre tarjetas.
+
+## Reparación funcional y limpieza de dispositivos — 2026-10-18
+
+El usuario reasigna prioridad a funcionamiento de ambas UI y autoriza pruebas.
+Se corrigen reconexión con código vacío, selección pair/reconnect, dependencia
+incorrecta de textos traducidos, falta de permiso LAN, estados/snapshots al
+volver a la pantalla, falta de perfil explícito y éxitos simulados sin backend.
+Se añaden lector QR, entrada manual/IP alternativa, olvidar peer y reset del
+perfil de pairing con confirmación. El reset no toca bóveda ni GPG.
+
+Contrato, pruebas, incidente de limpieza automática del runner Android y pasos
+manuales pendientes: [Dispositivos y QA](device-cleanup-and-qa.md).
+El incidente eliminó el perfil Android preview; Desktop conserva los peers.
+No se ejecutaron APIs nuevas de borrado sobre perfiles reales.
+
+Diagnóstico LAN del intento posterior: perfil Android creado; fallo previo a
+Noise en LOCAL_ICE por monitor de interfaces aún sin Wi-Fi. Se espera candidato
+LAN con deadline y estabilización de 250ms; no se afloja la validación del SDP.
+El reset Desktop del usuario dejó cero peers. Requiere nuevo pairing manual.
+La compilación Android pasa; pendiente repetir en el teléfono con el arreglo.
+
+Evidencia posterior: el usuario completó pairing y Desktop registró conectado
+(09:24 Samsung / 13:24 UTC). Ocurrió antes de instalar el ajuste de ICE y demuestra
+el fallo intermitente de primer arranque. APK instalada con perfil conservado y
+PROFILE_READY; se solicita repetir con el ajuste sin declarar validación aún.
+Gates: Desktop fmt/clippy workspace -D warnings/288 tests/build; Android build,
+lintDebug y 35 tests JVM. Parser instrumentado conserva la limitación del runner.
+
+## Simplificación Android solicitada por el usuario
+
+El usuario confirmó que QR → conexión → SAS → confianza funciona, y solicita
+reducir el flujo a Buscar Desktop en red y Manual y QR. Se implementan dos
+formularios: equipo encontrado con IP fija y entrada manual con destino extraído
+automáticamente del QR/código. Se eliminan pasos de perfil, campos alternativos
+y explicaciones de protocolo de la pantalla normal. Auto-init solo en primer
+pairing válido sin identidad/trust residual, con validación estricta existente.
+Ver [Flujo simple Android](android-pairing-ux.md). La reconexión conserva su límite
+de presupuesto/endpoints en RAM; el usuario comprobó reconnect sin SAS.
+
+Entrega del flujo simple instalada en Samsung mediante actualización in situ.
+Android build/lint/35 tests JVM correctos y runner directo del parser con
+`OK (3 tests)`. Checksum de identidad pública/trust idéntico antes y después;
+sin desinstalar ni limpiar datos. Desktop abierto con el mismo perfil.
+Ver [evidencia de entrega](device-cleanup-and-qa.md). La primera identidad
+automática aún requiere una prueba desde ausencia real en perfil aislado;
+no se declara revisión de seguridad independiente ni recuperación ilimitada.
+
+## QR de reconexión después de borrar la vinculación Android — 2026-10-18
+
+El usuario detectó que reiniciar la vinculación Android y escanear un QR de
+Reconectar generado por Desktop no mostraba error. Sus logs confirmaron
+CONNECTING → NO_PROFILE repetido: el formulario oculta ese estado de reposo.
+El controlador devuelve ahora NEEDS_PAIRING cuando recibe Reconnect sin
+identidad, igual que cuando existe identidad pero ya no autoriza a ese peer.
+No crea claves ni abre transporte. La UI mantiene el formulario y muestra
+un error con la acción Vincular dispositivo en Desktop, con color de error
+y anuncio accesible. WRONG_DEVICE conserva su significado independiente.
+
+Verificación: `just build`, `just check` y `just test` correctos;
+`just test-reconnect-trust SERIAL` instalado in situ y runner directo en
+Samsung con `OK (2 tests)`. Regresiones: perfil ausente (incluido reintento)
+y peer autorizado después olvidado; ambas rechazan con NEEDS_PAIRING,
+sin SAS ni sesión; se comprueba ausencia de nueva identidad/trust en el
+primer caso y conservación de identidad en el segundo. Usan perfiles
+únicos instrumented-test-* y limpieza restringida a ellos. No prueban
+visualmente Compose ni la cámara. El estado de trust normal del usuario
+coincidió antes y después. APK actualizada con install -r, sin desinstalar
+ni limpiar el perfil normal; se abrió Dispositivos para comprobar el mensaje.
+
+## Recuperación persistente de conexión — 2026-10-18
+
+Implementada la escucha Desktop durante la vida del proceso, independiente del
+modal y de la invitación. Se anuncia por mDNS como mode=resume con DeviceId
+público y se limita la ruta de señalización al iniciador autorizado. Cada intento
+negocia WebRTC y Noise nuevos y vuelve a comprobar las claves guardadas.
+
+Android conserva únicamente routing público y la intención de reconectar,
+ligados al ID local. Al abrir la app carga la identidad y trust existentes;
+NSD permite localizar el mismo peer tras un cambio de IP/puerto. Un cambio real
+de Wi-Fi permite reintentar un destino ya visto. El destino durable verificado
+se puede intentar sin esperar al descubrimiento. No se regeneran identidades.
+Desconectar desactiva la recuperación; Reconectar la reactiva explícitamente.
+Olvidar/reset drenan las tareas y eliminan sus metadatos antes de borrar trust.
+Los errores de autenticación detienen la recuperación sin promover confianza.
+
+Evidencia automática de esta entrega:
+
+- Desktop: formato Rust/C++/QML y Clippy workspace con -D warnings correctos;
+  check, lint QML y cargo test --workspace correctos: 290 tests, cero fallos
+  ni ignorados. Dos pruebas nuevas cubren la ruta WS, autorización previa,
+  sesiones nuevas y cancelación de accept. No prueban SDP/ICE/mDNS completos.
+- Android: just check test build correcto; lintDebug y 35 tests JVM pasan.
+  La APK actualizada y el APK de tests se instalaron con adb install -r.
+  just test-recovery en el Samsung terminó con OK (6 tests): cuatro de
+  persistencia/aislamiento de routing y dos de confianza ausente/olvidada.
+  Estos seis casos no prueban cámara, UI Compose ni recuperación LAN completa.
+- Se comparó el estado público normal de confianza antes y después del runner:
+  sin cambios. No se desinstaló la app ni se limpiaron sus datos. Cada test
+  usa su propio perfil instrumented-test-*, sin claves OpenPGP reales.
+- Plan original y esquema Protobuf idénticos entre ambos repositorios y con
+  sus hashes anteriores; la ruta durable reutiliza los mensajes existentes.
+
+Prueba real posterior: el usuario completó un nuevo pairing con SAS el
+2026-10-18 a las 17:08:52 UTC; ambos guardaron confianza y Desktop mostró una
+sesión conectada. En la recuperación posterior Android publicó RECONNECTED,
+pero Desktop cerró el canal unos cinco segundos después. El usuario confirmó
+que la prueba de Wi-Fi no pasó. No se considera validada esta recuperación.
+
+Diagnóstico: el supervisor Desktop trataba SessionEvent::Connected publicado
+en lifecycle como SessionEnded. Esperaba cinco segundos a un cierre que no
+había ocurrido y retiraba el handle, provocando AppClosing en el actor de
+sesión. Se corrige para procesar solo Disconnected/Failed como terminales y
+programar una sola comprobación de estabilidad. También se procesa el valor
+watch ya publicado al suscribirse. La vinculación existente se conserva.
+Verificación del arreglo: dos pruebas del watcher real sobre MemoryTransport
+pasan. Cubren Connected antes y después de suscribirse, conservación del handle
+y eliminación tras un cierre terminal real. Pasan formato, Clippy del paquete
+con --all-targets -- -D warnings y just smoke con el binario actualizado.
+No se ejecutó una mutación roja del watcher original en el checkout compartido.
+
+Desktop se relanzó con el mismo perfil y fingerprint público de confianza.
+La nueva reconexión quedó conectada a las 17:17:49 UTC y superó el cierre anterior
+de cinco segundos. Tras otro corte, los logs muestran desconexión a las 17:18:41
+y nueva conexión a las 17:18:49, conservada a las 17:19:48. El usuario confirmó
+que se encontraron al cambiar de Wi-Fi, aunque con demora. Se conserva la
+validación pendiente de todos los escenarios de IP/reinicio/olvidar en conjunto;
+una prueba manual satisfactoria no sustituye esa matriz ni revisión de seguridad.
+
+Ajuste adicional de Android: agrupar anuncios por DeviceId y seleccionar la mayor
+prioridad de dirección, con desempate estable. Antes, el último servicio mDNS
+resuelto podía sustituir IPv4 por ULA aunque tuviera menor prioridad. Se mantiene
+la validación de modo, host y puerto y la comprobación de autorización posterior.
+Cuatro tests nuevos de selección pasan; la suite JVM completa pasa con 39 tests
+(13 app, 18 core-protocol, 8 pairing-lab), sin fallos ni omitidos. compileDebugKotlin,
+lintDebug y just build correctos. La APK se actualizó por USB con install -r;
+el fingerprint público de identidad/trust normal es idéntico y conserva un peer.
+
+Una sesión anterior puede seguir ocupando el peer hasta vencer su liveness;
+los reintentos nuevos aplican backoff y límites. La recuperación no es inmediata
+ni requiere otro pairing por agotarse un intento de transporte. Esta entrega
+sigue limitada a LAN alcanzable; cambiar a otra red sin ruta al Desktop no
+habilita conexión remota por Internet. El USB se usa solo para instalación/logs.
+
+Nota de ejecución: una invocación combinada inicial de Just pasó check/lint/tests
+pero su receta build absorbió smoke como argumento de Cargo; se repitieron build
+y smoke por separado con éxito. No fue un fallo de compilación del producto.
+
+La app debe estar abierta para reanudar; no hay servicio Android de primer
+plano. mDNS puede fallar por red/firewall, y un puerto guardado puede quedar
+obsoleto al reiniciar Desktop. La revisión de seguridad independiente permanece
+pausada. No se habilitan sincronización de bóveda ni transferencia privada GPG.
+Contrato vigente: [recuperación LAN v1](connection-recovery-v1.md).
+
+Confirmación posterior a la actualización Android por USB: la nueva app cargó
+su perfil persistente y publicó RECONNECTED a las 17:23:51 UTC; Desktop abrió
+DataChannel y confirmó una sesión conectada sin otro QR/SAS. El intento esperó
+la expiración del canal anterior y su backoff; la prioridad de direcciones no
+elimina esos plazos. Se conserva la revisión de seguridad pendiente.
+
+Seguimiento a las 17:25 UTC: no hubo otro cierre tras RECONNECTED; Desktop
+mantuvo una sesión conectada y no reapareció la caída a los cinco segundos.
+
+
+## Internet y relay independiente — 2026-10-18
+
+El usuario autorizó adelantar la fase 6 y publicar señalización mediante su
+cuenta Cloudflare. Se creó el proyecto Git local independiente kryptopass-relay
+(sin commits/push), el túnel exclusivo kryptopass-signal y DNS
+signal.kryptopass.org. No se modificaron el dominio principal ni Outline.
+El binario release sirve en loopback, con unidades systemd de usuario separadas
+para origen y túnel, endurecidas y habilitadas. Esto depende del equipo/gestor
+de usuario y no equivale a un host independiente disponible 24/7.
+
+Contrato compartido [Internet v1](internet-transport-v1.md): código kpnet1
+estricto, WSS ready/request/resume/offer/answer, STUN Cloudflare por defecto,
+TURN configurable localmente sin credenciales por QR o señalización. Noise,
+pruebas de identidad y pinning no se delegan al relay. Cada recuperación abre
+transporte y Noise nuevos contra el peer autorizado; routing público ligado
+a IDs local/remoto. Olvidar/reset/desconexión humana conservan sus barreras.
+No hay sincronización ni transferencia GPG en esta entrega.
+
+Auditoría del coordinador corrigió dos casos de cierre: el relay envía cierre
+normal 1000, y Android separa la vida del DataChannel de la señalización,
+permitiendo también cierre normal después de answer antes de su callback OPEN.
+La espera de apertura conserva su deadline. Se admiten los raddr/rport
+redactados de ICE (unspecified con 0/9 para candidatos no host), sin relajar
+la validación de la dirección destino. mDNS no sustituye una ruta Internet
+ya autenticada. Se conserva una sola ruta durable por peer; aún no hay fallback
+automático simultáneo entre LAN e Internet para el mismo peer.
+
+Evidencia a esta altura:
+
+- Desktop: cargo fmt --all --check y cargo clippy --workspace --all-targets
+  -- -D warnings correctos. cargo test --workspace: 301 tests, cero fallos ni
+  ignorados. Incluye seis casos nuevos de transporte Internet y tres de routing;
+  no simulan una conexión ICE real por Internet.
+- Android: just check test build correcto; lintDebug y 44 tests JVM sin fallos.
+  Un fallo interno inicial UAST/FIR de lint no se reprodujo en el gate final.
+- Relay: formato/Clippy y seis tests de contrato satisfactorios; release compilado
+  y desplegado. HTTPS público y WebSocket público con TLS válido comprobados:
+  ready en ambos roles, intercambio sintético completo, cierre 1000 y reutilización
+  de sala. Esto comprueba señalización, no una sesión Noise entre redes.
+- Al crear DNS, el resolver VPN del Desktop conservó NXDOMAIN; Cloudflare y Google
+  ya devolvían el registro. La comprobación pública usó resolución por proceso
+  con SNI/certificado originales. No se alteraron VPN, hosts ni TLS de las apps.
+  Android sí resolvió el dominio normalmente. Se espera expiración de caché local.
+- El plan original y esquema Protobuf mantienen los hashes anteriores y son
+  idénticos entre Desktop y Android.
+
+TURN no está desplegado. Falta prueba real Desktop/Samsung en redes distintas,
+selección ICE y recuperación remota; no declarar aceptada toda fase 6 ni seguridad
+de producción por pasar las suites locales. La revisión independiente continúa
+pausada. [Operación y retirada del relay](../../kryptopass-relay/OPERATIONS.es.md).
+
+
+Cierre de instalación de esta entrega: Desktop pasó `just fmt-qml`, `just lint`
+y `just smoke` con el binario nuevo; se abrió el mismo perfil aislado preservado.
+Android pasó de nuevo `just check test build` después del ajuste de preferencia
+de rutas. `just test-internet R5CW11Z9WVM` instaló APK principal y de pruebas con
+install -r y ejecutó runner filtrado directo: OK (12 tests), seis Internet,
+cuatro recovery y dos trust ausente/olvidado. Los perfiles de test son únicos
+instrumented-test-*; no se usó connectedDebugAndroidTest, uninstall ni pm clear.
+Los hashes del estado público local/trust Android y del trust Desktop coinciden
+antes y después. Se conserva un peer autorizado en cada app. Se abrió Android
+en Dispositivos. Estas pruebas no cubren cámara/Compose ni una conexión WAN real.
+
+
+Prueba manual posterior del 2026-10-18, 14:18–14:23 America/Caracas:
+se creó otra vinculación LAN con SAS y ambos quedaron conectados. Desktop
+registró connected_devices=1 a las 18:18:30 UTC y 0 a las 18:19:22 UTC;
+Android registró fallo del canal y luego búsquedas NSD sin respuesta/reintentos
+agotados. Se comprobó que Desktop no tenía rutas Internet guardadas y Android
+solo tenía routing LAN habilitado. Esta prueba no ejercitó el relay ni prueba
+un fallo ICE por Internet. Hace falta establecer primero la ruta kpnet1 para
+probar el paso Wi-Fi → datos móviles con el contrato actual de ruta única.
+El DNS normal del Desktop ya resolvió signal.kryptopass.org y HTTPS /healthz
+respondió correctamente, sin override, tras caducar la respuesta negativa VPN.
+
+
+Diagnóstico de los intentos Internet 2026-10-18 14:25 y 14:27 America/Caracas:
+la oferta llegó a Desktop por relay WSS, pero falló `offer_sdp` antes de abrir
+WebRTC/Noise. El coordinador identificó que Internet rechazaba el loopback del
+campo de metadatos o= usado por WebRTC nativo; los candidatos seguían teniendo
+su validación independiente. Android también habilitaba candidatos ICE TCP,
+incompatibles con la política UDP del adaptador Rust.
+
+Se corrige en kp-lan admitiendo el placeholder loopback solo en o=, manteniendo
+el rechazo en destinos candidatos Internet y c=. Android deshabilita candidatos
+ICE TCP y los excluye del offer; normaliza solo o=/c= del offer local Internet
+a IN IP4 0.0.0.0 conservando ID/versión y los candidatos permitidos. No normaliza
+answers remotos ni amplía los destinos permitidos. Referencia JSEP RFC9429 §5.2.1.
+TURN con transporte al servidor TCP mantiene su configuración independiente.
+La etiqueta de log compartida cambia a WebRTC negotiation failed para distinguir
+transporte de la política LAN/Internet.
+
+Cinco regresiones privadas nuevas del parser Rust pasan, incluyendo origen
+loopback/unspecified, raddr redactado, rechazo de destinos loopback/TCP/multicast/
+documentación, rechazo audio/video y conservación de LAN privada. También pasan
+las dos pruebas de resume LAN y seis de transporte relay (13 tests kp-lan), fmt
+global y Clippy del paquete con all-targets y warnings denegados. Esto todavía
+no prueba que el enlace entre redes supere ICE; falta repetir en apps actualizadas.
+
+
+Entrega del ajuste SDP: Desktop recompilado y relanzado con el mismo perfil;
+Android pasó just check test build (lint y 44 pruebas JVM) y se actualizó mediante
+install -r. Se añadieron cuatro pruebas instrumentadas sin sockets, identidad
+ni PeerConnection: filtrado TCP/CGNAT/loopback local conservando UDP, campos o=/c=
+normalizados conservando ID/versión, rechazo de ofertas sin candidatos admitidos,
+rechazo de TCP en answer y conservación de política LAN. Se corrigió un fixture
+que usaba un guion bajo en rport; se recompiló y repitió la suite tras el ajuste.
+just test-internet con runner filtrado directo terminó OK (16 tests) en Samsung:
+cuatro SDP, seis bootstrap/migración Internet, cuatro recovery y dos trust.
+Los hashes públicos de identidad/trust Android y trust Desktop se conservaron.
+No se borró la vinculación ni se desactivó TLS o pinning. Prueba WAN real aún
+pendiente de repetir con el nuevo binario y APK. El USB intermitente se recuperó
+tras cambiar puerto/cable para completar instalación y runner.
+
+
+Siguiente intento a las 14:42 America/Caracas: Desktop aceptó offer y envió
+answer, pero Android terminó REMOTE_ANSWER IO. Se identificó otra asimetría:
+Rust podía anunciar host IPv6 ULA y Android rechazaba todo answer al verlo.
+Se añade opt-in explícito allowPrivateIpv6, únicamente para host y metadatos
+raddr; srflx/prflx/relay siguen exigiendo destino global, y loopback/link-local
+siguen rechazados. Se añaden motivos estáticos candidate_policy y fallo de
+setRemoteDescription sin texto SDP/IP/credenciales/errores del SDK.
+
+Lint, 44 pruebas JVM y build Android pasan de nuevo. Se añadió una quinta
+regresión SDP que acepta host ULA y rechaza ULA como destino no host, loopback
+y link-local. just test-internet instalado in situ terminó OK (17 tests).
+Identidad/trust públicos Android coinciden con el snapshot anterior. Se abrió
+la app actualizada. El estado del sistema mostraba default CELLULAR validado
+en el intento anterior; se solicita volver a Wi-Fi para separar prueba inicial
+y cambio posterior a datos. Aún no se declara enlace WAN completo.
+
+
+Primera conexión WAN real verificada el 2026-10-18 a las 14:46:44
+America/Caracas (18:46:44 UTC), después del ajuste ULA. El usuario confirmó
+Conectado en ambas. Desktop aceptó offer, envió answer y abrió DataChannel;
+registró connected_devices=1 desde las 18:46:44 y lo mantuvo al menos hasta
+las 18:47:28 UTC. Android registró ICE local=srflx, remote=prflx, familia IPv4,
+seguido de handshake, verificación de identidad y RECONNECTED. No hubo nuevo SAS.
+
+La comprobación del sistema Android mostró default CELLULAR validado y Wi-Fi
+radio deshabilitado, sin conexión Wi-Fi. Por tanto esta evidencia sí corresponde
+a un enlace con datos móviles, además del relay WSS y el canal Noise. El USB
+se usa para ADB/logs. Desktop tiene una ruta Internet persistida y Android tiene
+la ruta Internet enabled=true. Esto verifica un recorrido directo específico
+con STUN; no demuestra cobertura de todos los NAT ni un TURN operativo.
+Se solicita ahora alternar Wi-Fi/datos para verificar recuperación sin QR.
+
+
+## Confirmación posterior del usuario — registrada el 2026-10-19
+
+El usuario respondió «Se recuperó en ambos» a la prueba solicitada de alternar
+Wi-Fi y datos móviles, manteniendo las apps abiertas y sin otro QR. Se registra
+como prueba manual satisfactoria de recuperación en ambos cambios para estos
+dispositivos y redes. La conexión WAN previa sí contó con evidencia de logs y
+estado CELLULAR/Wi-Fi apagado; esta confirmación posterior no dispone de una
+correlación nueva de logs en la sesión actual (los archivos temporales de la
+sesión anterior ya no están disponibles). No se presenta como matriz completa
+de NAT, reinicios, segundo plano o TURN.
+
+Siguiente cierre propuesto de fase 6: TURN operativo como respaldo con
+credenciales temporales y prueba forzada de candidato relay; verificar reinicios
+de apps/relay y desconexión/olvido; preparar selección LAN/Internet sin pedir al
+usuario conocer el transporte. Cloudflare Tunnel cubre señalización WSS, no
+ese respaldo WebRTC. Después, fase 4: motor de revisiones firmadas y sincronización
+de objetos cifrados con SQLite, idempotencia, conflictos y borrados persistentes.
+La bóveda/OpenPGP real y transferencia de claves privadas conservan sus puertas
+independientes. La revisión de seguridad independiente sigue pausada.
+
+
+## TURN operativo — 2026-10-19
+
+Cierre del respaldo TURN solicitado: emisor HTTPS separado en kryptopass-relay,
+Cloudflare Realtime con credenciales temporales de una hora, petición Ed25519
+firmada por la identidad existente y lista de acceso independiente de trust.
+Se provisionaron administrativamente las dos identidades públicas actuales.
+El token del proveedor permanece fuera de Git en un archivo 0600; no se añade
+a la APK, QR ni señalización. Contrato y vector común:
+[TURN credentials v1](turn-credentials-v1.md).
+
+Cliente Rust y Kotlin integrados en pairing/reconexión Internet y recuperación.
+LAN conserva su flujo sin fetch TURN. Caché en memoria; modo normal conserva
+STUN/directo si falla el emisor. El modo de prueba Relay exige relay y no
+permite fallback. Se corrigió una espera indefinida de gathering del SDK en
+interfaces/servidores sin respuesta mediante snapshot real validado y ventana
+máxima diez segundos; no se cambió Noise, SAS, pinning o trust.
+
+Pruebas finales: fmt global, Clippy workspace/all-targets con warnings denegados,
+319 tests Rust aprobados y un smoke live omitido por defecto, ejecutado aparte
+contra Cloudflare con éxito. La regresión real local envía Allocate a un socket
+silencioso: All abre canal directo con datos en ambos sentidos; Relay falla
+acotado. Pasa con el arreglo (10.42s) y falla al restaurar temporalmente la espera
+anterior (25.01s). Producto corregido repuesto al terminar el control.
+QML lint y arranque offscreen limpios. Relay: fmt, Clippy, 24 tests y build release.
+Android: lint/build, 44 tests JVM, 7 tests TURN instrumentados y 17 regresiones
+Internet/recovery/trust en Samsung, sin borrar datos.
+
+Prueba real Desktop/Samsung a las 20:59 America/Caracas: relay/relay IPv4 bajo
+política forzada, DataChannel, Noise y RECONNECTED sin QR ni SAS nuevos. También
+se observó una recuperación automática después de un corte. A las 21:00 se
+restauró modo normal en ambos; conexión relay/prflx con default CELLULAR validado
+y Wi-Fi apagada, mantenida más de dos minutos. Al volver a Wi-Fi, default WIFI
+validado y conexión mantenida. Trust Android coincide con el snapshot previo a
+la instalación; no se regeneraron identidades.
+
+Apps abiertas en modo normal, TURN disponible como respaldo. El lanzador local
+Desktop de desarrollo quedó configurado con KP_TURN_BROKER_ORIGIN, sin la opción
+relay-only. Android conserva configuración pública privada relay_only=false.
+La receta install-dev-desktop regenera ese lanzador y podría quitar el prefijo:
+se documenta cómo reponer la configuración; la superficie persistente de UI y
+selección LAN/Internet automática son el siguiente paso.
+
+[Evidencia detallada y límites](turn-functional-evidence-2026-10-19.md).
+No se declara terminada toda la fase 6: faltan rotación en vivo para sesiones
+largas, TURN TCP/TLS en Desktop, mayor matriz de NAT/reinicios/segundo plano,
+provisionamiento público y despliegue independiente del PC. La revisión de
+seguridad independiente sigue pausada. Sincronización/OpenPGP siguen pendientes.
+
+
+## Ruta activa en las pantallas — 2026-10-19
+
+Petición del usuario: reflejar el transporte realmente usado, con campos breves
+y separados. Se presentan Transporte (LAN, Directo o TURN) y Red (IPv4, IPv6 o
+IPv4 / IPv6), sin concatenar valores con puntos ni explicaciones en la fila.
+La observación proviene del par ICE seleccionado, no del modo configurado.
+Quitado el texto fijo Red local de las conexiones reales de Android.
+
+Rust expone metadata opcional del transporte, la reenvía por LabTransport y
+la publica solo para la generación conectada. Kotlin consulta getStats de forma
+asíncrona, con caché acotada y entrega para el dispositivo conectado vigente.
+No se leen/escriben frames Noise para observar la ruta. Errores de diagnóstico
+no conceden confianza ni terminan la sesión; los estados no conectados limpian
+los valores anteriores. [Contrato y APIs](connection-path-ui-v1.md).
+
+Evidencia inicial de conexión real: Android mostró el par host/host IPv4;
+Desktop actualizado publicó Local/Ipv4 y Connected el 2026-10-19 a las 21:30:46
+America/Caracas. Se conservó exactamente el archivo trust Android previo a
+la actualización. Ambas apps se instalaron/abrieron sin regenerar identidad. La lectura de UI
+Android confirmó después los campos separados Transporte: LAN y Red: IPv4
+en un dispositivo Connected; Desktop conservó Local/Ipv4 durante más de
+un minuto sin cerrar el canal por las consultas de diagnóstico.
+
+Pruebas: workspace Rust 319 aprobadas, 0 fallidas y 1 smoke live omitido por
+defecto (el smoke TURN real se ejecutó en el hito anterior). Android lint y
+assembleDebug pasan; app/core-protocol suman 36 pruebas JVM satisfactorias.
+La suite completa JVM tuvo ejecuciones previas con 44 aprobadas, pero las
+últimas mostraron intermitencia en authenticatedRemoteCancelCannotCreateTrust
+y localRejectAndLocalCancellationDoNotPersistTrust. El transporte simulado
+LabMemoryLink elimina frames pendientes al cerrar; el diagnóstico inicial
+es una carrera con el Abort/Confirmation y el cierre del emisor. Esa
+ejecución completa no estaba en verde; la corrección posterior se registra
+en el cierre de cancelación y recuperación de este documento.
+No se alteraron ni relajaron esos tests para esta UI. Revisión independiente
+de seguridad todavía pausada.
+
+Cierre de UI: formato Rust/QML, Clippy all-targets con -D warnings, QML lint,
+build y arranque offscreen limpios para los campos finales separados. Apps
+abiertas en modo normal, sin forzar TURN. Sin cambios de formato de protocolo.
+
+
+## Cancelación estable y recuperación comprobada — 2026-10-19
+
+Resuelta la intermitencia JVM: el transporte de tests eliminaba confirmaciones
+aceptadas al cerrar/cancelar. Se corrigió su drenaje y se añadieron siete
+regresiones sin relajar pruebas ni modificar el pairing de producto. Auditoría
+del agente principal: separación de condiciones para barreras y datos, evitando
+despertares mutuos sin progreso. Control negativo satisfactorio al reponer
+temporalmente clear(); fixture correcta restaurada. Diez ejecuciones seguidas
+de pairing pasan; suite completa JVM: 51 sin fallos. Android lint/build pasan.
+
+Comprobado en Desktop y Samsung: corte completo, regreso de Wi-Fi, reinicio de
+Desktop, reinicio rápido Android, parada del relay con canal abierto, desconexión
+humana, persistencia de esa decisión al reabrir/cambiar de red y reconexión
+manual sin QR/SAS nuevos. Seis regresiones Rust de lifecycle/routing/reset y
+seis pruebas Android instrumentadas de metadatos/trust pasan.
+
+Los tiempos de detección pueden llegar a unos 40s; reinicio Android necesitó
+un reintento al seguir activo el canal anterior en Desktop. No se interpreta
+ese retardo como pérdida de confianza ni se vuelve a pedir pairing. Matriz,
+horarios y límites en [evidencia de fiabilidad](connection-reliability-evidence-2026-10-19.md).
+
+Cierre real: Wi-Fi → datos a las 21:49:16 recuperó TURN a las 21:50:03 sin QR;
+ambas apps quedaron conectadas y los dos archivos trust conservaron su hash
+inicial. Se restauraron Wi-Fi apagada y datos activados como al inicio. El
+SDK Android no entregó las dos familias en el último par y la UI mostró Red: —;
+Desktop sí observó IPv4. No se deduce una familia de la configuración ni del peer.
+
+
+## Diagnóstico de recuperaciones lentas — 2026-10-20
+
+La mayor demora medida se concentra antes de abrir el canal: heartbeat de 10s
+y pong de 30s, sesión anterior que bloquea aceptar otra del mismo peer y una
+espera RESUME_READY que puede terminar justo antes de liberar el peer. En el
+cambio Wi-Fi/datos de 47s, aceptar oferta→DataChannel tomó 1.64s y activar la
+sesión autenticada 0.68s. El monitor de red tampoco despierta el backoff del
+runtime que ya está recuperándose. [Análisis, cronología y ajustes](recovery-latency-analysis-2026-10-20.md).
+Diagnóstico por lectura de código y logs existentes; optimización pendiente
+de implementación y medición. No se modificaron tiempos ni criptografía.
+
+
+## Recuperación acelerada y VPN — 2026-10-20
+
+Aplicado ping cada 3s/pong hasta 6s con Hello inicial 30s independiente. Desktop deja de
+notificar ProtocolError por cortes de transporte/heartbeat. Android sondea ante
+cambios de red y despierta backoff mediante revisiones; pausa rutas Internet
+sin red y conserva los límites de 5 intentos/5min y la desconexión humana.
+La observación física adicional permite detectar cortes con VPN presentes sin
+cambiar el enrutamiento de la app ni desactivar esas VPN.
+
+Pruebas Rust workspace, Clippy -D warnings, formato, QML lint y smoke pasan.
+Android lint/test/build pasan; 56 tests JVM y seis instrumentados en perfiles
+separados, sin borrar datos. Cuatro regresiones nuevas Rust usan Noise real y
+reloj pausado; cinco Kotlin cubren la señal concurrente de recuperación.
+
+Mediciones Samsung/Desktop: Wi-Fi→datos 11.6s (antes 47s), reinicio Android 14.9s
+(antes unos 44s), regreso tras corte completo 13.1s. En el corte de 20s no se
+crearon nuevos intentos/configuraciones ICE. Desconectar persiste al reabrir;
+Reconectar manual vuelve sin QR/SAS. Trust conserva los hashes iniciales.
+Son muestras de este entorno; el socket inicial puede seguir esperando 10s si
+la ruta Internet/VPN todavía no está lista. Mayor consumo por heartbeat de 3s,
+segundo plano y revisión independiente siguen pendientes.
+
+[Implementación, cronología, pruebas y límites](fast-recovery-evidence-2026-10-20.md).
+La sincronización real de bóveda/OpenPGP aún no está implementada. WorkManager
+se evaluará después del motor idempotente de revisiones cifradas; no se agregó
+worker ni servicio Android en este hito. El diseño futuro está en
+`docs/background-sync-evaluation.md` del repositorio Android.

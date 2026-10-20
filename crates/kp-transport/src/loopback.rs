@@ -4,19 +4,26 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use kryptopass_protocol::{Channel, MAX_FRAME_SIZE};
+use std::pin::Pin;
+use std::task::Poll;
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{AsyncRead, AsyncWriteExt, ReadBuf},
     net::TcpStream,
     time::timeout,
 };
 
 use crate::{PeerTransport, TransportError, TransportFrame};
 
+const LOOPBACK_HEADER_SIZE: usize = 5;
+const MAX_BUFFERED_FRAME_SIZE: usize = LOOPBACK_HEADER_SIZE + MAX_FRAME_SIZE;
+
 /// A bounded FIFO stream used only by the explicitly enabled pairing laboratory.
 /// Frames are lane (0=control, 1=data), u32 big-endian length, then opaque bytes.
 pub struct LoopbackTransport {
     stream: TcpStream,
     closed: bool,
+    receive_buffer: Vec<u8>,
+    receive_len: usize,
 }
 
 impl LoopbackTransport {
@@ -35,6 +42,8 @@ impl LoopbackTransport {
         Ok(Self {
             stream,
             closed: false,
+            receive_buffer: vec![0; MAX_BUFFERED_FRAME_SIZE],
+            receive_len: 0,
         })
     }
 }
@@ -80,33 +89,64 @@ impl PeerTransport for LoopbackTransport {
             return Err(TransportError::Closed);
         }
         let read = async {
-            let mut header = [0; 5];
-            self.stream
-                .read_exact(&mut header)
-                .await
-                .map_err(|_| TransportError::Closed)?;
-            let channel = match header[0] {
-                0 => Channel::Control,
-                1 => Channel::Data,
-                _ => {
-                    return Err(TransportError::InvalidConfig {
-                        setting: "frame_lane",
+            loop {
+                if self.receive_len >= LOOPBACK_HEADER_SIZE {
+                    let lane = self.receive_buffer[0];
+                    let channel = match lane {
+                        0 => Channel::Control,
+                        1 => Channel::Data,
+                        _ => {
+                            return Err(TransportError::InvalidConfig {
+                                setting: "frame_lane",
+                            });
+                        }
+                    };
+                    let length = u32::from_be_bytes([
+                        self.receive_buffer[1],
+                        self.receive_buffer[2],
+                        self.receive_buffer[3],
+                        self.receive_buffer[4],
+                    ]) as usize;
+                    if length == 0 || length > MAX_FRAME_SIZE {
+                        return Err(TransportError::FrameTooLarge {
+                            actual: length,
+                            maximum: MAX_FRAME_SIZE,
+                        });
+                    }
+                    let frame_end = LOOPBACK_HEADER_SIZE + length;
+                    if self.receive_len >= frame_end {
+                        let data = self.receive_buffer[LOOPBACK_HEADER_SIZE..frame_end].to_vec();
+                        self.receive_buffer
+                            .copy_within(frame_end..self.receive_len, 0);
+                        self.receive_len -= frame_end;
+                        return Ok(TransportFrame { channel, data });
+                    }
+                }
+
+                if self.receive_len >= MAX_BUFFERED_FRAME_SIZE {
+                    return Err(TransportError::FrameTooLarge {
+                        actual: self.receive_len.saturating_sub(LOOPBACK_HEADER_SIZE),
+                        maximum: MAX_FRAME_SIZE,
                     });
                 }
-            };
-            let length = u32::from_be_bytes([header[1], header[2], header[3], header[4]]) as usize;
-            if length == 0 || length > MAX_FRAME_SIZE {
-                return Err(TransportError::FrameTooLarge {
-                    actual: length,
-                    maximum: MAX_FRAME_SIZE,
-                });
-            }
-            let mut data = vec![0; length];
-            self.stream
-                .read_exact(&mut data)
+                let filled = self.receive_len;
+                let stream = &mut self.stream;
+                let buffer = &mut self.receive_buffer;
+                let read = std::future::poll_fn(|cx| {
+                    let mut read_buffer = ReadBuf::new(&mut buffer[filled..]);
+                    match Pin::new(&mut *stream).poll_read(cx, &mut read_buffer) {
+                        Poll::Pending => Poll::Pending,
+                        Poll::Ready(Ok(())) => Poll::Ready(Ok(read_buffer.filled().len())),
+                        Poll::Ready(Err(error)) => Poll::Ready(Err(error)),
+                    }
+                })
                 .await
                 .map_err(|_| TransportError::Closed)?;
-            Ok(TransportFrame { channel, data })
+                if read == 0 {
+                    return Err(TransportError::Closed);
+                }
+                self.receive_len += read;
+            }
         };
         let result = timeout(Duration::from_secs(120), read)
             .await

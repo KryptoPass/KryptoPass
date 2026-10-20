@@ -79,3 +79,55 @@ Mantener pausados los agentes de tests y seguridad hasta que los reactive;
 solo implementación y comprobaciones de compilación/apertura. Esta autorización
 permite avanzar el laboratorio, no declarar aceptada su seguridad o sus suites.
 Consultar `docs/lan-transport-v1.md`; no habilitar transferencia privada GPG.
+
+Petición del usuario (2026-10-18): preparar primitivas observables de dispositivos
+y mantener la sesión autenticada, sin implementar UI nueva. Las futuras pantallas
+se construirán aparte con sus frameworks. Ver `docs/device-session-v1.md`.
+
+Petición posterior del usuario (2026-10-18): el agente implementa UI/UX de
+dispositivos en Desktop; el usuario implementa Android. Los ajustes comunes
+y contratos de UI se registran también en docs Android. Ver
+`docs/desktop-devices-ui-contract.md`. Las pausas de tests/seguridad continúan.
+
+Petición vigente posterior (2026-10-18): reparar la integración funcional de
+dispositivos en ambas apps, lector QR, ingreso de códigos y eliminación/reset
+explícitos del perfil de vinculación. El usuario autoriza pruebas de estos
+flujos al terminar; el agente de seguridad independiente continúa pausado.
+El borrado de vinculación no elimina la bóveda ni claves OpenPGP.
+
+Petición posterior vigente (2026-10-18): simplificar Android a Buscar en red y
+Manual y QR. La identidad inicial se prepara automáticamente al confirmar
+Emparejar una invitación válida si no existe identidad ni trust residual.
+Esta autorización sustituye el paso manual Crear perfil, no permite regenerar
+identidades existentes/corruptas ni reparar trust faltante automáticamente.
+
+Petición posterior vigente (2026-10-18): implementar recuperación de conexión
+tras corte Wi-Fi, cambio de dirección y reinicio de apps sin repetir QR/SAS
+para identidades autorizadas. Escucha local de proceso y metadatos de routing
+persistentes; nunca generar identidades/trust al reanudar. Desconexión humana
+detiene recuperación; olvidar/reset eliminan su estado antes de borrar claves.
+Pruebas funcionales autorizadas; seguridad independiente continúa pausada.
+Ver docs/connection-recovery-v1.md.
+
+Petición vigente posterior (2026-10-18): adelantar fase 6 para comunicación
+por Internet con relay de señalización no confiable, Cloudflare Tunnel y
+subdominio signal.kryptopass.org en proyecto separado. Mantener LAN, Noise/SAS,
+pinning de identidades y limpieza existentes. STUN/TURN configurables; no
+transferencia GPG ni sincronización. No atribuir seguridad de producción a
+compilación o pruebas funcionales. Ver docs/internet-transport-v1.md.
+
+
+Petición vigente posterior (2026-10-19): implementar respaldo TURN real mediante
+Cloudflare Realtime y un emisor HTTPS independiente en el proyecto relay.
+Credenciales temporales por petición firmada con identidad existente; token del
+proveedor solo en configuración privada del servidor. La lista de uso TURN es
+independiente del trust P2P y se provisiona por el operador, sin alta pública.
+No regenerar identidades para habilitar TURN. El modo relay-only es una prueba
+explícita y no admite fallback directo. Ver docs/turn-credentials-v1.md.
+Pruebas funcionales autorizadas; revisión independiente sigue pausada.
+
+
+Despliegue local TURN 2026-10-19: el lanzador de desarrollo instalado incluye
+KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org. install-dev-desktop lo
+regenera: conservar/reponer ese prefijo mientras se integra configuración de UI.
+No incluir KP_TURN_RELAY_ONLY en el lanzador normal ni tokens del proveedor.

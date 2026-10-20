@@ -36,4 +36,16 @@ pub enum LanError {
     /// The remote peer offered an unexpected data channel.
     #[error("WebRTC data channel does not match the required profile")]
     InvalidDataChannel,
+    /// A relay origin or route is malformed or uses an unsupported scheme.
+    #[error("relay route is invalid")]
+    InvalidRelayRoute,
+    /// ICE server configuration is malformed or exceeds its limits.
+    #[error("Internet ICE configuration is invalid")]
+    InvalidIceConfig,
+    /// TURN broker credentials could not be authenticated or validated.
+    #[error("TURN credentials are unavailable")]
+    TurnBroker,
+    /// The remote device selector was rejected by the caller's authorization policy.
+    #[error("remote device is not authorized for this relay session")]
+    UnauthorizedDevice,
 }
