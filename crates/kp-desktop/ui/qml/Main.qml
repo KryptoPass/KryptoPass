@@ -514,6 +514,7 @@ Controls.ApplicationWindow {
             panes.showPane(1);
             Qt.callLater(function () {
                 search.forceActiveFocus(Qt.ShortcutFocusReason);
+                search.selectAll();
             });
         }
     }
@@ -964,6 +965,7 @@ Controls.ApplicationWindow {
             focus: true
             onDetailRequested: panes.showPane(2)
             entryDraggingEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
+            searchEnabled: search.enabled
             keysMode: root.keysMode
             activeStore: root.activeStore
             storeAdapter: store

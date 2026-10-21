@@ -4026,6 +4026,10 @@ Huella(s) detectadas:
   <context>
     <name>EntryListPane</name>
     <message>
+      <source>Resultados: %1</source>
+      <translation>Resultados: %1</translation>
+    </message>
+    <message>
       <source>Z a A</source>
       <translation>Z a A</translation>
     </message>
@@ -4056,6 +4060,10 @@ Huella(s) detectadas:
     <message>
       <source>Reintentar</source>
       <translation>Reintentar</translation>
+    </message>
+    <message>
+      <source>Limpiar búsqueda</source>
+      <translation>Limpiar búsqueda</translation>
     </message>
   </context>
   <context>

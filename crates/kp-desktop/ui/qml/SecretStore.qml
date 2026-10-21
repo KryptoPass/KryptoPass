@@ -21,7 +21,6 @@ QtObject {
     readonly property var detail: parseRecord(controller.detailJson)
     readonly property var historyVersion: parseRecord(controller.versionJson)
     readonly property var visibleEntries: {
-        const needle = query.trim().toLowerCase();
         const filtered = entries.filter(entry => {
             if (scope === "trash" ? !entry.trashed : entry.trashed)
                 return false;
@@ -29,10 +28,7 @@ QtObject {
                 return false;
             if (!["all", "favorites", "trash"].includes(scope) && entry.folder !== scope)
                 return false;
-            if (!needle)
-                return true;
-            const searchText = [entry.title, folderName(entry.folder), kindName(entry.kind)].join(" ").toLowerCase();
-            return searchText.includes(needle);
+            return controller.matchesSearch(query, [entry.title, folderName(entry.folder), kindName(entry.kind)].join(" "));
         });
         return filtered.sort((left, right) => {
             const result = left.title.localeCompare(right.title, undefined, {

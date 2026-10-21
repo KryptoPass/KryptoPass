@@ -36,6 +36,10 @@ pub mod qobject {
         type KeyringController = super::KeyringControllerRust;
 
         #[qinvokable]
+        #[cxx_name = "matchesSearch"]
+        fn matches_search(self: Pin<&mut Self>, query: &QString, metadata: &QString) -> bool;
+
+        #[qinvokable]
         #[cxx_name = "saveOnlineSettings"]
         fn save_online_settings(self: Pin<&mut Self>, json: &QString) -> bool;
 
@@ -80,6 +84,7 @@ pub mod qobject {
 }
 
 pub struct KeyringControllerRust {
+    metadata_search: kryptopass_core::search::MetadataSearch,
     online_settings: QString,
     status: QString,
     busy: bool,
@@ -99,6 +104,7 @@ impl Default for KeyringControllerRust {
             .filter(|settings| settings.validate().is_ok())
             .unwrap_or_default();
         Self {
+            metadata_search: kryptopass_core::search::MetadataSearch::default(),
             online_settings: QString::from(serde_json::to_string(&settings).unwrap_or_default()),
             status: QString::from(crate::i18n::text("Identidades GPG no cargadas")),
             busy: false,
@@ -113,6 +119,12 @@ impl Default for KeyringControllerRust {
 }
 
 impl qobject::KeyringController {
+    pub fn matches_search(self: Pin<&mut Self>, query: &QString, metadata: &QString) -> bool {
+        self.rust_mut()
+            .metadata_search
+            .matches(&query.to_string(), &metadata.to_string())
+    }
+
     pub fn save_online_settings(mut self: Pin<&mut Self>, json: &QString) -> bool {
         let result = serde_json::from_str::<OnlineSettings>(&String::from(json))
             .map_err(|_| "No se pudo leer la configuración de servicios online.".to_owned())

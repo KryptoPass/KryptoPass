@@ -14,6 +14,10 @@ Controls.Pane {
     required property string scopeTitle
     required property real headerHeight
     property bool entryDraggingEnabled: false
+    property bool searchEnabled: true
+    readonly property bool hasSearchQuery: activeStore.query.trim().length > 0
+    readonly property bool loading: keysMode ? keyStore.controller.busy : storeAdapter.controller.busy
+    readonly property bool loadFailed: keysMode ? !!keyStore.controller.loadError : !!storeAdapter.controller.errorMessage
 
     // The shell owns adapter mutations and the editor dialog; this pane reports user intent.
     signal detailRequested
@@ -40,6 +44,11 @@ Controls.Pane {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
+                }
+                Controls.Label {
+                    visible: root.hasSearchQuery && !root.loading && !root.loadFailed
+                    text: qsTr("Resultados: %1").arg(root.activeStore.visibleEntries.length)
+                    color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.ToolButton {
                     visible: !root.keysMode
@@ -216,18 +225,23 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         visible: entryList.count === 0
-        icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.activeStore.query ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.errorMessage ? "dialog-error" : "document-new"
-        text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.keyStore.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.controller.busy ? qsTranslate("Main", "Actualizando elementos…") : root.storeAdapter.controller.errorMessage ? qsTranslate("Main", "No se pudo cargar la bóveda") : root.storeAdapter.query ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
-        explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.keyStore.query ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.controller.errorMessage ? root.storeAdapter.controller.errorMessage : root.storeAdapter.controller.busy ? qsTranslate("Main", "Consultando el almacenamiento local cifrado.") : root.storeAdapter.query ? qsTranslate("Main", "Prueba con otro título, carpeta o tipo.") : qsTranslate("Main", "Crea un elemento para empezar.")
+        icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.hasSearchQuery ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.errorMessage ? "dialog-error" : "document-new"
+        text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.controller.busy ? qsTranslate("Main", "Actualizando elementos…") : root.storeAdapter.controller.errorMessage ? qsTranslate("Main", "No se pudo cargar la bóveda") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
+        explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.controller.errorMessage ? root.storeAdapter.controller.errorMessage : root.storeAdapter.controller.busy ? qsTranslate("Main", "Consultando el almacenamiento local cifrado.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro título, carpeta o tipo.") : qsTranslate("Main", "Crea un elemento para empezar.")
     }
     Controls.Button {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.verticalCenter
         anchors.topMargin: Kirigami.Units.gridUnit * 5
-        visible: entryList.count === 0 && (root.keysMode ? !!root.keyStore.controller.loadError : !!root.storeAdapter.controller.errorMessage)
-        text: qsTr("Reintentar")
-        icon.name: "view-refresh"
-        enabled: root.keysMode ? !root.keyStore.controller.busy : !root.storeAdapter.controller.busy
-        onClicked: root.keysMode ? root.keyStore.controller.refreshKeys() : root.storeAdapter.controller.loadStore()
+        visible: entryList.count === 0 && (root.loadFailed || (root.hasSearchQuery && !root.loading))
+        text: root.loadFailed ? qsTr("Reintentar") : qsTr("Limpiar búsqueda")
+        icon.name: root.loadFailed ? "view-refresh" : "edit-clear"
+        enabled: !root.loading && (root.loadFailed || root.searchEnabled)
+        onClicked: {
+            if (root.loadFailed)
+                root.keysMode ? root.keyStore.controller.refreshKeys() : root.storeAdapter.controller.loadStore();
+            else
+                root.activeStore.query = "";
+        }
     }
 }

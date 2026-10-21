@@ -7,6 +7,7 @@ pub mod navigation;
 pub mod otp;
 pub mod password;
 pub mod ports;
+pub mod search;
 pub mod service;
 
 pub use domain::content::{

@@ -53,7 +53,7 @@ QtObject {
             return false;
         if (scope === "contacts" && key.hasSecret)
             return false;
-        return (key.title + " " + key.email + " " + key.contactName + " " + key.id).toLowerCase().includes(query.replace(/\s+/g, " ").trim().toLowerCase()) || key.id.toLowerCase().includes(query.replace(/\s/g, "").toLowerCase());
+        return controller.matchesSearch(query, [key.title, key.email, key.contactName, key.id].join(" "));
     }).sort((a, b) => a.title.localeCompare(b.title, undefined, {
             sensitivity: "base",
             numeric: true
