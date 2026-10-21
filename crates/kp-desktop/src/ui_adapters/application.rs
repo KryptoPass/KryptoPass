@@ -1,4 +1,4 @@
-use cxx_qt_lib::{QByteArray, QGuiApplication, QVector};
+use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QVector};
 
 #[cxx::bridge(namespace = "kryptopass")]
 mod ffi {
@@ -14,7 +14,16 @@ mod ffi {
         fn newApplication(args: &QVector_QByteArray) -> UniquePtr<QGuiApplication>;
         #[rust_name = "finish_desktop_registration"]
         fn finishDesktopRegistration();
+        include!("cxx-qt-lib/qqmlapplicationengine.h");
+        #[namespace = ""]
+        type QQmlApplicationEngine = cxx_qt_lib::QQmlApplicationEngine;
+        #[rust_name = "install_main_window_state_saver"]
+        fn installMainWindowStateSaver(engine: &QQmlApplicationEngine);
     }
+}
+
+pub fn install_main_window_state_saver(engine: &QQmlApplicationEngine) {
+    ffi::install_main_window_state_saver(engine);
 }
 
 pub fn finish_desktop_registration() {

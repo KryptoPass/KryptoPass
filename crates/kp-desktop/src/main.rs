@@ -8,6 +8,7 @@ mod markdown;
 mod process_security;
 mod qt;
 mod storage;
+mod transport_diagnostics;
 mod ui_adapters;
 
 use app_info::APP;
@@ -15,6 +16,7 @@ use cxx_qt::casting::Upcast;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQmlEngine, QQuickStyle, QString, QUrl};
 use std::pin::Pin;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
 
 const DEFAULT_STYLE: &str = "org.kde.desktop";
 
@@ -78,11 +80,13 @@ fn main() {
         "qrc:/qt/qml/{}/ui/qml/Main.qml",
         APP.desktop_file_id.replace('.', "/")
     );
-    engine.load(&QUrl::from(main_qml.as_str()));
-    if let Some(path) = std::env::args()
-        .skip_while(|arg| arg != "--screenshot")
-        .nth(1)
-    {
+    engine.as_mut().load(&QUrl::from(main_qml.as_str()));
+    let arguments = std::env::args().collect::<Vec<_>>();
+    let screenshot_index = arguments.iter().position(|arg| arg == "--screenshot");
+    if screenshot_index.is_none() {
+        ui_adapters::application::install_main_window_state_saver(engine.as_ref().get_ref());
+    }
+    if let Some(path) = screenshot_index.and_then(|index| arguments.get(index + 1)) {
         ui_adapters::native_ffi::ffi::capture_screenshot(&QString::from(path));
     }
     let exit_code = app.exec();
@@ -94,7 +98,12 @@ fn main() {
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(tracing_subscriber::fmt::layer().with_filter(
+            transport_diagnostics::PacketWarningFilter::new(),
+        ))
+        .init();
 }
 
 fn configure_quick_style() {

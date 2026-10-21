@@ -1,13 +1,16 @@
 #include "application.h"
 
 #include "cxx-qt-lib/qcoreapplication.h"
+#include <KWindowStateSaver>
 #include <QApplication>
 #include <QDBusPendingCallWatcher>
 #include <QDeadlineTimer>
 #include <QEvent>
 #include <QEventLoop>
 #include <QPointer>
+#include <QQmlApplicationEngine>
 #include <QTimer>
+#include <QWindow>
 
 namespace kryptopass
 {
@@ -46,5 +49,21 @@ void finishDesktopRegistration()
         loop.exec(QEventLoop::ExcludeUserInputEvents);
     }
 #endif
+}
+
+void installMainWindowStateSaver(const QQmlApplicationEngine &engine)
+{
+    constexpr auto saverInstalledProperty = "kryptopassMainWindowStateSaverInstalled";
+    for (QObject *rootObject : engine.rootObjects()) {
+        auto *window = qobject_cast<QWindow *>(rootObject);
+        if (!window)
+            continue;
+        if (window->property(saverInstalledProperty).toBool())
+            return;
+
+        new KWindowStateSaver(window, QStringLiteral("MainWindow"));
+        window->setProperty(saverInstalledProperty, true);
+        return;
+    }
 }
 }
