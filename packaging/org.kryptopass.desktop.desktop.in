@@ -12,3 +12,16 @@ Keywords=password;credentials;vault;OpenPGP;
 Keywords[es]=contraseña;credenciales;bóveda;OpenPGP;
 MimeType=application/vnd.kryptopass.backup;
 StartupNotify=true
+Actions=NewEntry;Search;
+
+[Desktop Action NewEntry]
+Name=New item
+Name[es]=Nuevo elemento
+Icon=document-new
+Exec=@APP_BIN@ --new-entry
+
+[Desktop Action Search]
+Name=Search the vault
+Name[es]=Buscar en la bóveda
+Icon=edit-find
+Exec=@APP_BIN@ --search

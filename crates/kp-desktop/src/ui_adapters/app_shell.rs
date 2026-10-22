@@ -30,6 +30,8 @@ pub mod qobject {
         #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
         /// Backup file handed over by the file manager; empty when none was given.
         #[qproperty(QUrl, launch_backup, cxx_name = "launchBackup", READ, CONSTANT)]
+        /// Launcher action requested at startup (`newEntry` or `find`); empty when none.
+        #[qproperty(QString, launch_action, cxx_name = "launchAction", READ, CONSTANT)]
         type ShellController = super::ShellControllerRust;
 
         #[qinvokable]
@@ -79,6 +81,7 @@ pub struct ShellControllerRust {
     actions_json: QString,
     idle_lock_seconds: i32,
     launch_backup: QUrl,
+    launch_action: QString,
 }
 
 impl Default for ShellControllerRust {
@@ -96,8 +99,21 @@ impl Default for ShellControllerRust {
             actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
             launch_backup: launch_backup_url(std::env::args().skip(1)),
+            launch_action: QString::from(launch_action_id(std::env::args().skip(1))),
         }
     }
+}
+
+/// Maps the desktop-entry action flags to the shared `DesktopAction` ids.
+fn launch_action_id(args: impl Iterator<Item = String>) -> &'static str {
+    for argument in args {
+        match argument.as_str() {
+            "--new-entry" => return "newEntry",
+            "--search" => return "find",
+            _ => {}
+        }
+    }
+    ""
 }
 
 /// Picks the first argument naming an existing `.kpb` file; the path is only

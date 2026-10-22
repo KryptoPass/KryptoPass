@@ -284,6 +284,8 @@ Controls.ApplicationWindow {
         deviceController.startResumeOwner();
         store.controller.loadStore();
         keys.controller.refreshKeys();
+        if (shell.launchAction)
+            launchActionTimer.start();
         if (shell.launchBackup.toString())
             Qt.callLater(function () {
                 backupDialog.openForRestoreFile(shell.launchBackup);
@@ -438,6 +440,25 @@ Controls.ApplicationWindow {
         overlayItem: Controls.Overlay.overlay
     }
 
+    // Runs the launcher action once the vault is open; gives up after a minute locked.
+    Timer {
+        id: launchActionTimer
+        property int ticks: 0
+        interval: 250
+        repeat: true
+        onTriggered: {
+            if (store.controller.locked || store.controller.busy) {
+                if (++ticks >= 240)
+                    stop();
+                return;
+            }
+            stop();
+            if (shell.launchAction === "newEntry")
+                newEntry.trigger();
+            else if (shell.launchAction === "find")
+                findAction.trigger();
+        }
+    }
     DesktopAction {
         id: newEntry
         controller: shell
