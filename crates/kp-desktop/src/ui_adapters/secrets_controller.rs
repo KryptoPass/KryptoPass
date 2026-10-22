@@ -56,6 +56,8 @@ pub mod qobject {
         #[qproperty(bool, saving, READ, NOTIFY)]
         #[qproperty(bool, locked, READ, NOTIFY)]
         #[qproperty(bool, unlocking, READ, NOTIFY)]
+        #[qproperty(bool, setup_required, cxx_name = "setupRequired", READ, NOTIFY)]
+        #[qproperty(QString, primary_key, cxx_name = "primaryKey", READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
 
         #[qinvokable]
@@ -98,6 +100,12 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "unlockVault"]
         fn unlock_vault(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "completeSetup"]
+        fn complete_setup(self: Pin<&mut Self>, primary_key: &QString);
+        #[qinvokable]
+        #[cxx_name = "setPrimaryKey"]
+        fn set_primary_key(self: Pin<&mut Self>, primary_key: &QString);
         #[qinvokable]
         #[cxx_name = "clearSensitiveState"]
         fn clear_sensitive_state(self: Pin<&mut Self>);
@@ -281,6 +289,8 @@ pub struct SecretsControllerRust {
     saving: bool,
     locked: bool,
     unlocking: bool,
+    setup_required: bool,
+    primary_key: QString,
     /// Invalidates an in-flight unlock check when the vault is locked again.
     unlock_operation: u64,
     session_blocked: bool,
@@ -329,6 +339,8 @@ impl Default for SecretsControllerRust {
             saving: false,
             locked: true,
             unlocking: false,
+            setup_required: false,
+            primary_key: QString::default(),
             unlock_operation: 0,
             session_blocked: false,
             selected_entry: None,
@@ -467,15 +479,27 @@ impl qobject::SecretsController {
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            load_store_snapshot,
-            move |mut controller, result| {
+            || {
+                let snapshot = load_store_snapshot()?;
+                let setup = resolve_setup_state(&snapshot)?;
+                let primary = open_storage()?.primary_key()?;
+                Ok((snapshot, setup, primary))
+            },
+            move |mut controller,
+                  result: anyhow::Result<(
+                StoreSnapshot,
+                Option<app_paths::SetupState>,
+                Option<KeyFingerprint>,
+            )>| {
                 if controller.as_ref().rust().load_operation != operation {
                     return;
                 }
 
                 controller.as_mut().set_busy(false);
                 match result {
-                    Ok(snapshot) => {
+                    Ok((snapshot, setup, primary)) => {
+                        controller.as_mut().apply_setup_state(setup.is_some());
+                        controller.as_mut().apply_primary_key(primary);
                         controller.as_mut().publish_snapshot(snapshot);
                         controller
                             .as_mut()
@@ -529,7 +553,8 @@ impl qobject::SecretsController {
                 }
                 controller.as_mut().set_busy(false);
                 match result {
-                    Ok((snapshot, durable)) => {
+                    Ok((snapshot, durable, primary)) => {
+                        controller.as_mut().apply_primary_key(primary);
                         controller.as_mut().publish_snapshot(snapshot);
                         let status = if durable {
                             "Bóveda restaurada lista. Desbloquéala para acceder a sus secretos."
@@ -612,6 +637,60 @@ impl qobject::SecretsController {
                 }
             },
         );
+    }
+
+    /// Finishes the first run, recording the chosen key as the vault's primary key.
+    pub fn complete_setup(mut self: Pin<&mut Self>, primary_key: &QString) {
+        if !primary_key.to_string().trim().is_empty()
+            && !self.as_mut().store_primary_key(primary_key)
+        {
+            return;
+        }
+        let state = app_paths::SetupState { version: 1 };
+        if app_paths::save_setup_state(crate::app_info::APP.desktop_file_id, &state).is_err() {
+            self.as_mut()
+                .fail("No se pudo guardar la configuración inicial.");
+            return;
+        }
+        self.apply_setup_state(true);
+    }
+
+    /// Changes the default recipient for new items; existing items keep their keys.
+    pub fn set_primary_key(mut self: Pin<&mut Self>, primary_key: &QString) {
+        self.as_mut().store_primary_key(primary_key);
+    }
+
+    fn store_primary_key(mut self: Pin<&mut Self>, primary_key: &QString) -> bool {
+        let Ok(fingerprint) = KeyFingerprint::parse(&primary_key.to_string()) else {
+            self.as_mut()
+                .fail("La clave elegida para la bóveda no es válida.");
+            return false;
+        };
+        if open_storage()
+            .and_then(|mut storage| storage.set_primary_key(&fingerprint))
+            .is_err()
+        {
+            self.as_mut()
+                .fail("No se pudo guardar la clave principal de la bóveda.");
+            return false;
+        }
+        self.apply_primary_key(Some(fingerprint));
+        true
+    }
+
+    fn apply_setup_state(mut self: Pin<&mut Self>, completed: bool) {
+        if *self.setup_required() == completed {
+            self.as_mut().rust_mut().setup_required = !completed;
+            self.as_mut().setup_required_changed();
+        }
+    }
+
+    fn apply_primary_key(mut self: Pin<&mut Self>, fingerprint: Option<KeyFingerprint>) {
+        let value = QString::from(fingerprint.as_ref().map_or("", KeyFingerprint::as_str));
+        if *self.primary_key() != value {
+            self.as_mut().rust_mut().primary_key = value;
+            self.primary_key_changed();
+        }
     }
 
     fn cancel_unlock(mut self: Pin<&mut Self>) {
@@ -2482,20 +2561,43 @@ fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
     Ok(snapshot)
 }
 
+/// Setup is pending only on a fresh installation; a vault with data predates it.
+fn resolve_setup_state(snapshot: &StoreSnapshot) -> anyhow::Result<Option<app_paths::SetupState>> {
+    let app_id = crate::app_info::APP.desktop_file_id;
+    match app_paths::setup_state(app_id) {
+        Ok(Some(state)) => return Ok(Some(state)),
+        Ok(None) => {}
+        // A damaged preference must not lock the user out of the vault.
+        Err(error) => {
+            tracing::warn!(%error, "ignoring unreadable setup state");
+            return Ok(Some(app_paths::SetupState { version: 1 }));
+        }
+    }
+    if snapshot.entries.is_empty() && snapshot.folders.is_empty() {
+        return Ok(None);
+    }
+    let state = app_paths::SetupState { version: 1 };
+    app_paths::save_setup_state(app_id, &state)?;
+    Ok(Some(state))
+}
+
 fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
     let storage = open_storage()?;
     let (folders, secrets, links) = storage.read_snapshot_with_links()?;
     Ok(store_snapshot_with_links(folders, secrets, links))
 }
 
-fn activate_store_snapshot(path: std::path::PathBuf) -> anyhow::Result<(StoreSnapshot, bool)> {
+fn activate_store_snapshot(
+    path: std::path::PathBuf,
+) -> anyhow::Result<(StoreSnapshot, bool, Option<KeyFingerprint>)> {
     let storage = SqliteStorage::open_existing(&path)?;
     let (folders, secrets, links) = storage.read_snapshot_with_links()?;
+    let primary = storage.primary_key()?;
     let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
     crate::infrastructure::browser::configure(&path)?;
     crate::infrastructure::entry_icons::bind_store(&path);
     let snapshot = store_snapshot_with_links(folders, secrets, links);
-    Ok((snapshot, durable))
+    Ok((snapshot, durable, primary))
 }
 
 fn open_storage() -> anyhow::Result<SqliteStorage> {

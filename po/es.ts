@@ -542,6 +542,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La certificación debe dirigirse a una clave distinta de la firmante.</translation>
     </message>
     <message>
+      <source>La clave elegida para la bóveda no es válida.</source>
+      <translation>La clave elegida para la bóveda no es válida.</translation>
+    </message>
+    <message>
       <source>La clave firmante está caducada.</source>
       <translation>La clave firmante está caducada.</translation>
     </message>
@@ -800,6 +804,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo guardar la carpeta.</source>
       <translation>No se pudo guardar la carpeta.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la configuración inicial.</source>
+      <translation>No se pudo guardar la configuración inicial.</translation>
     </message>
     <message>
       <source>No se pudo guardar la configuración.</source>
@@ -1881,6 +1889,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo guardar el nombre. La identidad y la confianza se conservan.</translation>
     </message>
     <message>
+      <source>No se pudo guardar la clave principal de la bóveda.</source>
+      <translation>No se pudo guardar la clave principal de la bóveda.</translation>
+    </message>
+    <message>
       <source>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</source>
       <translation>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</translation>
     </message>
@@ -1991,6 +2003,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>STUN binding request from</source>
       <translation>STUN binding request from</translation>
+    </message>
+    <message>
+      <source>Se canceló la creación de la clave.</source>
+      <translation>Se canceló la creación de la clave.</translation>
     </message>
     <message>
       <source>Selecciona la dirección de Desktop en tu red local.</source>
@@ -2125,16 +2141,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>active store path must be absolute</translation>
     </message>
     <message>
-      <source>active store setting exceeds the maximum size</source>
-      <translation>active store setting exceeds the maximum size</translation>
-    </message>
-    <message>
       <source>active store setting is invalid</source>
       <translation>active store setting is invalid</translation>
-    </message>
-    <message>
-      <source>active store setting is not a regular file</source>
-      <translation>active store setting is not a regular file</translation>
     </message>
     <message>
       <source>active store setting path has no parent</source>
@@ -2167,6 +2175,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>application identifier is invalid</source>
       <translation>application identifier is invalid</translation>
+    </message>
+    <message>
+      <source>application setting exceeds the maximum size</source>
+      <translation>application setting exceeds the maximum size</translation>
+    </message>
+    <message>
+      <source>application setting is not a regular file</source>
+      <translation>application setting is not a regular file</translation>
     </message>
     <message>
       <source>at least one OpenPGP recipient is required</source>
@@ -2505,6 +2521,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not encode the active store setting</translation>
     </message>
     <message>
+      <source>could not encode the setup state</source>
+      <translation>could not encode the setup state</translation>
+    </message>
+    <message>
       <source>could not finish reading store metadata</source>
       <translation>could not finish reading store metadata</translation>
     </message>
@@ -2525,6 +2545,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not initialize the encrypted store</translation>
     </message>
     <message>
+      <source>could not inspect an application setting</source>
+      <translation>could not inspect an application setting</translation>
+    </message>
+    <message>
       <source>could not inspect backup destination</source>
       <translation>could not inspect backup destination</translation>
     </message>
@@ -2543,10 +2567,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not inspect store directory</source>
       <translation>could not inspect store directory</translation>
-    </message>
-    <message>
-      <source>could not inspect the active store setting</source>
-      <translation>could not inspect the active store setting</translation>
     </message>
     <message>
       <source>could not inspect the application config directory</source>
@@ -2589,6 +2609,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not measure backup size</translation>
     </message>
     <message>
+      <source>could not open an application setting safely</source>
+      <translation>could not open an application setting safely</translation>
+    </message>
+    <message>
       <source>could not open backup file</source>
       <translation>could not open backup file</translation>
     </message>
@@ -2613,10 +2637,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not open store directory without following links</translation>
     </message>
     <message>
-      <source>could not open the active store setting safely</source>
-      <translation>could not open the active store setting safely</translation>
-    </message>
-    <message>
       <source>could not open the encrypted store</source>
       <translation>could not open the encrypted store</translation>
     </message>
@@ -2637,12 +2657,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not prepare the application data root</translation>
     </message>
     <message>
+      <source>could not prepare the setup state directory</source>
+      <translation>could not prepare the setup state directory</translation>
+    </message>
+    <message>
       <source>could not publish encrypted backup</source>
       <translation>could not publish encrypted backup</translation>
     </message>
     <message>
       <source>could not publish the restored vault</source>
       <translation>could not publish the restored vault</translation>
+    </message>
+    <message>
+      <source>could not read an application setting</source>
+      <translation>could not read an application setting</translation>
     </message>
     <message>
       <source>could not read backup file</source>
@@ -2657,16 +2685,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not read import source</translation>
     </message>
     <message>
-      <source>could not read the active store setting</source>
-      <translation>could not read the active store setting</translation>
-    </message>
-    <message>
       <source>could not read the encrypted store</source>
       <translation>could not read the encrypted store</translation>
     </message>
     <message>
       <source>could not read the encrypted store for backup</source>
       <translation>could not read the encrypted store for backup</translation>
+    </message>
+    <message>
+      <source>could not read the vault primary key</source>
+      <translation>could not read the vault primary key</translation>
     </message>
     <message>
       <source>could not reserve a private restore staging directory</source>
@@ -2679,6 +2707,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not save icon resource</source>
       <translation>could not save icon resource</translation>
+    </message>
+    <message>
+      <source>could not save the vault primary key</source>
+      <translation>could not save the vault primary key</translation>
     </message>
     <message>
       <source>could not secure backup file permissions</source>
@@ -2819,6 +2851,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>icons require backup version 3</source>
       <translation>icons require backup version 3</translation>
+    </message>
+    <message>
+      <source>ignoring unreadable setup state</source>
+      <translation>ignoring unreadable setup state</translation>
     </message>
     <message>
       <source>image contains multiple authenticator codes</source>
@@ -3017,6 +3053,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>selected store path is not a regular file</translation>
     </message>
     <message>
+      <source>setup state is invalid</source>
+      <translation>setup state is invalid</translation>
+    </message>
+    <message>
+      <source>setup state path has no parent</source>
+      <translation>setup state path has no parent</translation>
+    </message>
+    <message>
+      <source>setup state version is not supported</source>
+      <translation>setup state version is not supported</translation>
+    </message>
+    <message>
       <source>store contains too many recipient records for a backup</source>
       <translation>store contains too many recipient records for a backup</translation>
     </message>
@@ -3099,6 +3147,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>vault directory is unavailable</source>
       <translation>vault directory is unavailable</translation>
+    </message>
+    <message>
+      <source>vault primary key is invalid</source>
+      <translation>vault primary key is invalid</translation>
     </message>
     <message>
       <source>{date}  {label}
@@ -4191,6 +4243,101 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>FirstRunScreen</name>
+    <message>
+      <source>Te damos la bienvenida a %1</source>
+      <translation>Te damos la bienvenida a %1</translation>
+    </message>
+    <message>
+      <source>Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.</source>
+      <translation>Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.</translation>
+    </message>
+    <message>
+      <source>Empezar</source>
+      <translation>Empezar</translation>
+    </message>
+    <message>
+      <source>Restaurar una copia de seguridad…</source>
+      <translation>Restaurar una copia de seguridad…</translation>
+    </message>
+    <message>
+      <source>Clave de la bóveda</source>
+      <translation>Clave de la bóveda</translation>
+    </message>
+    <message>
+      <source>Creando la clave…</source>
+      <translation>Creando la clave…</translation>
+    </message>
+    <message>
+      <source>Crear una clave para %1</source>
+      <translation>Crear una clave para %1</translation>
+    </message>
+    <message>
+      <source>Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.</source>
+      <translation>Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.</translation>
+    </message>
+    <message>
+      <source>Clave existente</source>
+      <translation>Clave existente</translation>
+    </message>
+    <message>
+      <source>Importar una clave privada…</source>
+      <translation>Importar una clave privada…</translation>
+    </message>
+    <message>
+      <source>Atrás</source>
+      <translation>Atrás</translation>
+    </message>
+    <message>
+      <source>Copia guardada</source>
+      <translation>Copia guardada</translation>
+    </message>
+    <message>
+      <source>Guarda una copia de tu clave</source>
+      <translation>Guarda una copia de tu clave</translation>
+    </message>
+    <message>
+      <source>Sin ella no podrás abrir la bóveda si pierdes este equipo.</source>
+      <translation>Sin ella no podrás abrir la bóveda si pierdes este equipo.</translation>
+    </message>
+    <message>
+      <source>¿Necesitas ayuda?</source>
+      <translation>¿Necesitas ayuda?</translation>
+    </message>
+    <message>
+      <source>Guardar copia de la clave…</source>
+      <translation>Guardar copia de la clave…</translation>
+    </message>
+    <message>
+      <source>Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.</source>
+      <translation>Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.</translation>
+    </message>
+    <message>
+      <source>Recomendada</source>
+      <translation>Recomendada</translation>
+    </message>
+    <message>
+      <source>Usar una de mis claves</source>
+      <translation>Usar una de mis claves</translation>
+    </message>
+    <message>
+      <source>No hay claves privadas en este equipo.</source>
+      <translation>No hay claves privadas en este equipo.</translation>
+    </message>
+    <message>
+      <source>Continuar</source>
+      <translation>Continuar</translation>
+    </message>
+    <message>
+      <source>Abrir la bóveda</source>
+      <translation>Abrir la bóveda</translation>
+    </message>
+    <message>
+      <source>Más tarde</source>
+      <translation>Más tarde</translation>
+    </message>
+  </context>
+  <context>
     <name>FolderAppearancePicker</name>
     <message>
       <source>Carpeta</source>
@@ -4448,6 +4595,13 @@ Huella(s) detectadas:
     <message>
       <source>Seleccionar carpeta</source>
       <translation>Seleccionar carpeta</translation>
+    </message>
+  </context>
+  <context>
+    <name>HelpButton</name>
+    <message>
+      <source>Más información</source>
+      <translation>Más información</translation>
     </message>
   </context>
   <context>
@@ -4963,6 +5117,14 @@ Huella(s) detectadas:
       <translation>Copiar huella completa</translation>
     </message>
     <message>
+      <source>Usar como clave principal</source>
+      <translation>Usar como clave principal</translation>
+    </message>
+    <message>
+      <source>Clave principal de la bóveda</source>
+      <translation>Clave principal de la bóveda</translation>
+    </message>
+    <message>
       <source>Detalles criptográficos</source>
       <translation>Detalles criptográficos</translation>
     </message>
@@ -5056,6 +5218,10 @@ Huella(s) detectadas:
     <message>
       <source>Identidad sin verificar</source>
       <translation>Identidad sin verificar</translation>
+    </message>
+    <message>
+      <source>Principal</source>
+      <translation>Principal</translation>
     </message>
   </context>
   <context>

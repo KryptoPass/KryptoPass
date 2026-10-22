@@ -50,7 +50,7 @@ pub(crate) mod ffi {
         #[namespace = "kryptopass::desktop::native"]
         fn show_about_kde_dialog();
         #[namespace = "kryptopass::desktop::native"]
-        fn show_handbook();
+        fn show_handbook(anchor: &QString);
         #[namespace = "kryptopass::desktop::native"]
         fn open_bug_report() -> bool;
         #[namespace = "kryptopass::desktop::native"]

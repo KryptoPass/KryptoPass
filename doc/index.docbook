@@ -34,6 +34,28 @@
 <note><para>&kryptopass; no guarda copia de tus claves privadas. Si pierdes todas las claves privadas que protegen un elemento, ese elemento no se puede recuperar.</para></note>
 </chapter>
 
+<chapter id="first-run">
+<title>Primer inicio</title>
+<para>La primera vez que abres &kryptopass; en un equipo te guía para elegir la clave que protegerá la bóveda. Si en su lugar quieres recuperar una bóveda anterior, elige <guibutton>Restaurar una copia de seguridad…</guibutton>.</para>
+<sect1 id="vault-key">
+<title>La clave de la bóveda</title>
+<para>Todo lo que guardas se cifra con la clave de la bóveda. Solo quien tiene su parte privada y conoce su frase puede abrirlo.</para>
+<variablelist>
+<varlistentry><term><guibutton>Crear una clave para KryptoPass</guibutton> (recomendado)</term>
+<listitem><para>Crea una clave OpenPGP dedicada, sin caducidad. GnuPG te pide su frase. Al ser solo de &kryptopass;, su frase puede olvidarse al bloquear la bóveda sin obligarte a escribirla de nuevo para firmar con git u otras aplicaciones.</para></listitem></varlistentry>
+<varlistentry><term><guibutton>Usar esta clave</guibutton></term>
+<listitem><para>Usa una clave OpenPGP que ya tienes, con su parte privada en este equipo.</para></listitem></varlistentry>
+<varlistentry><term><guibutton>Importar una clave privada…</guibutton></term>
+<listitem><para>Trae una clave desde un archivo, por ejemplo la copia que guardaste en otro equipo.</para></listitem></varlistentry>
+</variablelist>
+</sect1>
+<sect1 id="key-backup">
+<title>Guardar una copia de la clave</title>
+<para>Si creas una clave nueva, &kryptopass; te ofrece guardar una copia en ese momento. La copia contiene la parte privada protegida por tu frase.</para>
+<important><para>Guárdala fuera de este equipo, por ejemplo en un USB o en tu sistema de copias. Sin la clave privada no se puede abrir la bóveda ni restaurar sus copias de seguridad.</para></important>
+</sect1>
+</chapter>
+
 <chapter id="getting-started">
 <title>Primeros pasos</title>
 <sect1 id="first-key">

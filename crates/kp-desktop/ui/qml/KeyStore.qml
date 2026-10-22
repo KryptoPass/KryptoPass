@@ -10,6 +10,12 @@ QtObject {
     property string query: ""
     property string selectedId: ""
     property bool contactsOverviewVisible: false
+    /// The vault's primary key; the vault controller owns it.
+    property string primaryKey: ""
+    signal primaryKeyRequested(string fingerprint)
+    function isPrimary(fingerprint) {
+        return !!primaryKey && (fingerprint || "").toUpperCase() === primaryKey.toUpperCase();
+    }
     onScopeChanged: {
         if (scope !== "contacts")
             contactsOverviewVisible = false;

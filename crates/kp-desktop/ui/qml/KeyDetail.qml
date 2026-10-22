@@ -319,10 +319,24 @@ ColumnLayout {
                     text: root.groupedFingerprint(root.selectedKey?.id)
                     Accessible.name: qsTr("Huella completa de la clave")
                 }
-                Controls.Button {
-                    text: qsTr("Copiar huella completa")
-                    icon.name: "edit-copy"
-                    onClicked: root.copyFingerprint()
+                RowLayout {
+                    Controls.Button {
+                        text: qsTr("Copiar huella completa")
+                        icon.name: "edit-copy"
+                        onClicked: root.copyFingerprint()
+                    }
+                    // The primary key is only a default for new items; it re-encrypts nothing.
+                    Controls.Button {
+                        visible: !!root.selectedKey?.hasSecret && root.selectedKey?.statusCode === "valid" && root.selectedKey?.canEncrypt && !root.keyStore.isPrimary(root.selectedKey?.id)
+                        text: qsTr("Usar como clave principal")
+                        icon.name: "starred-symbolic"
+                        onClicked: root.keyStore.primaryKeyRequested(root.selectedKey.id)
+                    }
+                    Controls.Label {
+                        visible: root.keyStore.isPrimary(root.selectedKey?.id)
+                        text: qsTr("Clave principal de la bóveda")
+                        color: Kirigami.Theme.positiveTextColor
+                    }
                 }
                 Kirigami.Separator {
                     Layout.fillWidth: true

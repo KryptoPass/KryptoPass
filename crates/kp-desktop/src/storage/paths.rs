@@ -12,12 +12,21 @@ use serde::{Deserialize, Serialize};
 const DATABASE_FILE: &str = "kryptopass.sqlite3";
 const ACTIVE_VAULT_FILE: &str = "active-vault.json";
 const MAX_ACTIVE_VAULT_FILE_BYTES: u64 = 4096;
+const SETUP_FILE: &str = "setup.json";
+const MAX_SETUP_FILE_BYTES: u64 = 4096;
 static ACTIVE_VAULT_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct ActiveVaultConfig {
     path: String,
+}
+
+/// First-run state of this installation, independent of how full the vault is.
+/// The vault's own settings, such as its primary key, live inside the vault.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct SetupState {
+    pub version: u32,
 }
 
 /// Returns the database path under the platform data directory.
@@ -48,37 +57,12 @@ pub fn restored_vault_path(app_id: &str) -> Result<PathBuf> {
 pub fn active_vault_path(app_id: &str) -> Result<Option<PathBuf>> {
     validate_app_id(app_id)?;
 
-    let Some(config_path) = active_vault_config_path(app_id, false)? else {
+    let Some(config_path) = app_config_file(app_id, ACTIVE_VAULT_FILE, false)? else {
         return Ok(None);
     };
-    let metadata = match fs::symlink_metadata(&config_path) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(_) => bail!("could not inspect the active store setting"),
+    let Some(contents) = read_private_config(&config_path, MAX_ACTIVE_VAULT_FILE_BYTES)? else {
+        return Ok(None);
     };
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
-        bail!("active store setting is not a regular file");
-    }
-
-    let file =
-        open_config_file(&config_path).context("could not open the active store setting safely")?;
-    let metadata = file
-        .metadata()
-        .context("could not inspect the active store setting")?;
-    ensure_owned_by_process(&metadata)?;
-    ensure_private_config_file(&metadata)?;
-    if metadata.len() > MAX_ACTIVE_VAULT_FILE_BYTES {
-        bail!("active store setting exceeds the maximum size");
-    }
-
-    let mut contents = Vec::with_capacity(metadata.len() as usize);
-    file.take(MAX_ACTIVE_VAULT_FILE_BYTES + 1)
-        .read_to_end(&mut contents)
-        .context("could not read the active store setting")?;
-    if contents.len() as u64 > MAX_ACTIVE_VAULT_FILE_BYTES {
-        bail!("active store setting exceeds the maximum size");
-    }
-
     let config: ActiveVaultConfig =
         serde_json::from_slice(&contents).context("active store setting is invalid")?;
     let path = PathBuf::from(config.path);
@@ -105,12 +89,38 @@ pub fn set_active_vault_path(app_id: &str, path: &Path) -> Result<bool> {
         path: path.to_owned(),
     })
     .context("could not encode the active store setting")?;
-    let config_path = active_vault_config_path(app_id, true)?
+    let config_path = app_config_file(app_id, ACTIVE_VAULT_FILE, true)?
         .context("could not prepare the active store setting directory")?;
     let directory = config_path
         .parent()
         .context("active store setting path has no parent")?;
     write_config_atomically(&config_path, directory, &contents)
+}
+
+/// Reads the first-run state; `None` means setup has not been completed here.
+pub fn setup_state(app_id: &str) -> Result<Option<SetupState>> {
+    validate_app_id(app_id)?;
+    let Some(path) = app_config_file(app_id, SETUP_FILE, false)? else {
+        return Ok(None);
+    };
+    let Some(contents) = read_private_config(&path, MAX_SETUP_FILE_BYTES)? else {
+        return Ok(None);
+    };
+    let state: SetupState = serde_json::from_slice(&contents).context("setup state is invalid")?;
+    if state.version != 1 {
+        bail!("setup state version is not supported");
+    }
+    Ok(Some(state))
+}
+
+/// Atomically records that setup finished, with the same guarantees as the active vault.
+pub fn save_setup_state(app_id: &str, state: &SetupState) -> Result<bool> {
+    validate_app_id(app_id)?;
+    let contents = serde_json::to_vec(state).context("could not encode the setup state")?;
+    let path = app_config_file(app_id, SETUP_FILE, true)?
+        .context("could not prepare the setup state directory")?;
+    let directory = path.parent().context("setup state path has no parent")?;
+    write_config_atomically(&path, directory, &contents)
 }
 
 /// Private application directory for browser pairing metadata, separate from vault content.
@@ -144,7 +154,36 @@ fn default_database_path(app_id: &str) -> Result<PathBuf> {
     Ok(app_directory.join(DATABASE_FILE))
 }
 
-fn active_vault_config_path(app_id: &str, create: bool) -> Result<Option<PathBuf>> {
+/// Reads a small private config file, refusing symlinks, foreign owners and oversize content.
+fn read_private_config(path: &Path, maximum: u64) -> Result<Option<Vec<u8>>> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => bail!("could not inspect an application setting"),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        bail!("application setting is not a regular file");
+    }
+    let file = open_config_file(path).context("could not open an application setting safely")?;
+    let metadata = file
+        .metadata()
+        .context("could not inspect an application setting")?;
+    ensure_owned_by_process(&metadata)?;
+    ensure_private_config_file(&metadata)?;
+    if metadata.len() > maximum {
+        bail!("application setting exceeds the maximum size");
+    }
+    let mut contents = Vec::with_capacity(metadata.len() as usize);
+    file.take(maximum + 1)
+        .read_to_end(&mut contents)
+        .context("could not read an application setting")?;
+    if contents.len() as u64 > maximum {
+        bail!("application setting exceeds the maximum size");
+    }
+    Ok(Some(contents))
+}
+
+fn app_config_file(app_id: &str, file_name: &str, create: bool) -> Result<Option<PathBuf>> {
     let Some(config_home) = env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .filter(|path| path.is_absolute())
@@ -181,7 +220,7 @@ fn active_vault_config_path(app_id: &str, create: bool) -> Result<Option<PathBuf
         }
     }
     ensure_private_app_directory(&config_home, &app_directory)?;
-    Ok(Some(app_directory.join(ACTIVE_VAULT_FILE)))
+    Ok(Some(app_directory.join(file_name)))
 }
 
 fn validate_existing_database_path(path: &Path) -> Result<()> {

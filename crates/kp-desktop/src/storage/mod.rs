@@ -12,6 +12,7 @@ mod folders;
 mod icons;
 mod links;
 pub(crate) mod paths;
+mod primary_key;
 mod recipients;
 mod records;
 mod repository;

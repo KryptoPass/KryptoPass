@@ -167,6 +167,10 @@ Controls.Pane {
         kindField.currentIndex = kindIndex;
         fieldsHost.loadContent(draft.content);
         recipientChooser.selectedFingerprints = Array.isArray(draft.recipients) ? draft.recipients.slice() : [];
+        // New items start with the vault's primary key unless the folder already set recipients.
+        const primary = (storeAdapter.controller.primaryKey || "").toUpperCase();
+        if (!resultId && recipientChooser.selectedFingerprints.length === 0 && keyStore.entries.some(key => key.id.toUpperCase() === primary && key.statusCode === "valid" && key.canEncrypt))
+            recipientChooser.selectedFingerprints = [primary];
 
         if (relatedPrefill) {
             const customIndex = kindField.model.findIndex(option => option.id === "custom");

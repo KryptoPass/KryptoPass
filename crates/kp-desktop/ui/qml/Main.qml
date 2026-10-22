@@ -71,6 +71,8 @@ Controls.ApplicationWindow {
     KeyStore {
         id: keys
         objectName: "keyStore"
+        primaryKey: store.controller.primaryKey
+        onPrimaryKeyRequested: fingerprint => store.controller.setPrimaryKey(fingerprint)
     }
     property bool keysMode: false
     property bool allowClose: false
@@ -755,7 +757,7 @@ Controls.ApplicationWindow {
         id: helpAction
         controller: shell
         actionId: "help"
-        onTriggered: shell.showHandbook()
+        onTriggered: shell.showHandbook("")
     }
     DesktopAction {
         id: reportBugAction
@@ -983,6 +985,8 @@ Controls.ApplicationWindow {
     AdaptivePanes {
         id: panes
         anchors.fill: parent
+        // Covered by the first-run or lock screen: keep keyboard focus out of it too.
+        enabled: !store.controller.setupRequired && !store.controller.locked
         navigationContent: SidebarPane {
             anchors.fill: parent
             focus: true
@@ -1319,10 +1323,25 @@ Controls.ApplicationWindow {
             }
         }
     }
+    FirstRunScreen {
+        anchors.fill: parent
+        z: 11
+        visible: store.controller.setupRequired
+        keyStore: keys
+        logo: shell.appLogo
+        onRestoreRequested: backupWindow.openForRestore()
+        onHandbookRequested: section => shell.showHandbook(section)
+        onSetupFinished: function (vaultKey) {
+            root.applySection(false);
+            store.controller.completeSetup(vaultKey);
+            if (!store.controller.setupRequired && store.controller.locked)
+                root.requestLock();
+        }
+    }
     LockScreen {
         anchors.fill: parent
         z: 10
-        visible: store.controller.locked
+        visible: store.controller.locked && !store.controller.setupRequired
         unlockEnabled: lockVaultAction.enabled
         unlocking: store.controller.unlocking
         errorMessage: store.controller.errorMessage
@@ -1404,12 +1423,14 @@ Controls.ApplicationWindow {
         transientParent: root
         controller: importController
         keyStore: keys
+        primaryKey: store.controller.primaryKey
         onImported: store.controller.loadStore()
     }
     BackupWindow {
         id: backupWindow
         transientParent: root
         keyStore: keys
+        primaryKey: store.controller.primaryKey
         showInFolderAction: showBackupInFolderAction
         onOpenVaultRequested: function (path) {
             Qt.callLater(function () {

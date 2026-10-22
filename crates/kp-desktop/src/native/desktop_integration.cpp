@@ -137,10 +137,10 @@ void show_about_application_dialog()
     helpMenu()->aboutApplication();
 }
 
-void show_handbook()
+void show_handbook(const QString &anchor)
 {
-    // Opens help:/<component name>, the handbook installed under share/doc/HTML.
-    KHelpClient::invokeHelp();
+    // Opens help:/<component name>, optionally at a section id of the handbook.
+    KHelpClient::invokeHelp(anchor);
 }
 
 void show_about_kde_dialog()

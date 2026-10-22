@@ -24,6 +24,8 @@ pub mod qobject {
         #[qproperty(QString, app_authors, cxx_name = "appAuthors", READ, CONSTANT)]
         #[qproperty(QString, app_copyright, cxx_name = "appCopyright", READ, CONSTANT)]
         #[qproperty(QString, app_homepage, cxx_name = "appHomepage", READ, CONSTANT)]
+        /// Bundled application logo, available even when the icon theme lacks it.
+        #[qproperty(QUrl, app_logo, cxx_name = "appLogo", READ, CONSTANT)]
         #[qproperty(QString, actions_json, cxx_name = "actionsJson", READ, NOTIFY)]
         #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
         /// Backup file handed over by the file manager; empty when none was given.
@@ -42,7 +44,7 @@ pub mod qobject {
 
         #[qinvokable]
         #[cxx_name = "showHandbook"]
-        fn show_handbook(self: Pin<&mut Self>);
+        fn show_handbook(self: Pin<&mut Self>, anchor: &QString);
 
         #[qinvokable]
         #[cxx_name = "showAboutKdeDialog"]
@@ -82,6 +84,7 @@ pub struct ShellControllerRust {
     app_authors: QString,
     app_copyright: QString,
     app_homepage: QString,
+    app_logo: QUrl,
     actions_json: QString,
     idle_lock_seconds: i32,
     launch_backup: QUrl,
@@ -98,6 +101,13 @@ impl Default for ShellControllerRust {
             app_authors: QString::from(crate::app_info::APP.authors),
             app_copyright: QString::from(crate::app_info::APP.copyright),
             app_homepage: QString::from(crate::app_info::APP.homepage),
+            app_logo: QUrl::from(
+                format!(
+                    "qrc:/{}/icon.svg",
+                    crate::app_info::APP.desktop_file_id.replace('.', "/")
+                )
+                .as_str(),
+            ),
             actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
             launch_backup: launch_backup_url(std::env::args().skip(1)),
@@ -152,8 +162,8 @@ impl qobject::ShellController {
         crate::ui_adapters::native_ffi::ffi::show_about_application_dialog();
     }
 
-    pub fn show_handbook(self: Pin<&mut Self>) {
-        crate::ui_adapters::native_ffi::ffi::show_handbook();
+    pub fn show_handbook(self: Pin<&mut Self>, anchor: &QString) {
+        crate::ui_adapters::native_ffi::ffi::show_handbook(anchor);
     }
 
     pub fn show_about_kde_dialog(self: Pin<&mut Self>) {

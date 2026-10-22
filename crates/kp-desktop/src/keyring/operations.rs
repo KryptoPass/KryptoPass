@@ -199,6 +199,10 @@ fn create_key(userid: &str, expires_days: u32) -> Result<OperationOutcome, Strin
     let generated = context
         .create_key_with_flags(userid, "default", expires, primary_flags)
         .map_err(|error| {
+            // Dismissing pinentry is a decision, not a failure worth GnuPG's wording.
+            if error.code() == gpgme::Error::CANCELED.code() {
+                return crate::i18n::text("Se canceló la creación de la clave.");
+            }
             crate::i18n::format(
                 "No se pudo crear la clave primaria: %1",
                 &[error.to_string()],

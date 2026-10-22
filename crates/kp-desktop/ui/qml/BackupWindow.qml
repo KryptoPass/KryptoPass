@@ -10,6 +10,8 @@ import org.kryptopass.desktop as Backend
 Controls.ApplicationWindow {
     id: dialog
     required property KeyStore keyStore
+    /// Vault primary key, preselected when it can still encrypt.
+    property string primaryKey: ""
     property var showInFolderAction: null
     readonly property bool opened: visible
     readonly property bool busy: backend.busy || keyStore.controller.operationBusy
@@ -50,8 +52,9 @@ Controls.ApplicationWindow {
         completedExportPath = "";
         completed = false;
         keysExpanded = false;
+        const primary = availableKeys.find(key => key.id.toUpperCase() === primaryKey.toUpperCase());
         const ownKeys = availableKeys.filter(key => key.hasSecret);
-        selectedFingerprints = ownKeys.length === 1 ? [ownKeys[0].id] : [];
+        selectedFingerprints = primary ? [primary.id] : ownKeys.length === 1 ? [ownKeys[0].id] : [];
         if (exporting && selectedFingerprints.length === 0)
             keysExpanded = true;
         backend.clearError();

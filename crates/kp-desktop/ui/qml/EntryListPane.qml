@@ -232,6 +232,7 @@ Controls.Pane {
                             id: keyDelegate
                             focus: true
                             entry: rowLoader.modelData
+                            primary: root.keyStore.isPrimary(entry.id)
                             highlighted: root.keyStore.selectedId === entry.id
                             onClicked: {
                                 root.selectionRequested(entry.id);

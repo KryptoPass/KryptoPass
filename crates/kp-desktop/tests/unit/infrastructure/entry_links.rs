@@ -197,7 +197,9 @@ fn schema_v4_migration_adds_empty_links_without_changing_secret_data() {
 
     storage
         .connection
-        .execute_batch("DROP TABLE secret_links; PRAGMA user_version = 4;")
+        .execute_batch(
+            "DROP TABLE secret_links; DROP TABLE vault_primary_key; PRAGMA user_version = 4;",
+        )
         .unwrap();
     drop(storage);
 
@@ -215,7 +217,7 @@ fn schema_v4_migration_adds_empty_links_without_changing_secret_data() {
         .connection
         .pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6, "a v4 store migrates to the current schema");
 }
 
 #[test]
@@ -247,4 +249,29 @@ fn additive_import_stores_companion_links_and_rejects_reused_endpoints() {
         "a rejected batch writes nothing"
     );
     assert_eq!(storage.list_secret_links().unwrap(), vec![link]);
+}
+
+#[test]
+fn schema_v5_migration_adds_an_unset_primary_key_that_can_be_changed() {
+    let directory = TestDirectory::new();
+    let path = directory.0.join("primary.sqlite3");
+    let storage = SqliteStorage::open(&path).unwrap();
+    storage
+        .connection
+        .execute_batch("DROP TABLE vault_primary_key; PRAGMA user_version = 5;")
+        .unwrap();
+    drop(storage);
+
+    let mut storage = SqliteStorage::open_existing(&path).unwrap();
+    assert_eq!(storage.primary_key().unwrap(), None);
+
+    let first = KeyFingerprint::parse(RECIPIENT).unwrap();
+    let second = KeyFingerprint::parse("FEDCBA9876543210FEDCBA9876543210FEDCBA98").unwrap();
+    storage.set_primary_key(&first).unwrap();
+    assert_eq!(storage.primary_key().unwrap(), Some(first));
+    storage.set_primary_key(&second).unwrap();
+    drop(storage);
+
+    let storage = SqliteStorage::open_existing(&path).unwrap();
+    assert_eq!(storage.primary_key().unwrap(), Some(second));
 }

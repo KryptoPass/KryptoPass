@@ -7,6 +7,7 @@ import org.kde.kirigami as Kirigami
 Controls.ItemDelegate {
     id: root
     required property var entry
+    property bool primary: false
     readonly property string statusText: entry?.status || ""
     text: entry.title
     icon.name: "user-identity"
@@ -67,6 +68,12 @@ Controls.ItemDelegate {
                     elide: Text.ElideLeft
                     color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
                     Accessible.ignored: true
+                }
+                Controls.Label {
+                    visible: root.primary
+                    text: qsTr("Principal")
+                    font: Kirigami.Theme.smallFont
+                    color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
                 }
                 KeyStatus {
                     Layout.maximumWidth: parent.width / 2

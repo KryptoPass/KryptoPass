@@ -9,6 +9,8 @@ import org.kde.kirigami as Kirigami
 Controls.ApplicationWindow {
     id: dialog
     required property var keyStore
+    /// Vault primary key, preselected when it can still encrypt.
+    property string primaryKey: ""
     required property var controller
     readonly property bool opened: visible
     readonly property bool busy: dialog.controller.busy || keyStore.controller.operationBusy
@@ -50,8 +52,9 @@ Controls.ApplicationWindow {
         }
         clearReview();
         selectedImporterId = "";
+        const primary = availableKeys.find(key => key.id.toUpperCase() === primaryKey.toUpperCase());
         const ownKeys = availableKeys.filter(key => key.hasSecret);
-        selectedFingerprints = ownKeys.length === 1 ? [ownKeys[0].id] : [];
+        selectedFingerprints = primary ? [primary.id] : ownKeys.length === 1 ? [ownKeys[0].id] : [];
         x = screen.virtualX + Math.round((screen.width - width) / 2);
         y = screen.virtualY + Math.round((screen.height - height) / 2);
         show();

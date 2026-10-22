@@ -36,6 +36,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let qml_module = QmlModule::new(fs::read_to_string(generated.join("app_id"))?.trim())
         .qml_file("ui/qml/Main.qml")
         .qml_file("ui/qml/LockScreen.qml")
+        .qml_file("ui/qml/FirstRunScreen.qml")
+        .qml_file("ui/qml/HelpButton.qml")
         .qml_file("ui/qml/DesktopAction.qml")
         .qml_file("ui/qml/AdaptivePanes.qml")
         .qml_file("ui/qml/BrowserPairingDialog.qml")
