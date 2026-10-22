@@ -12,7 +12,8 @@ Controls.ApplicationWindow {
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 24
     visible: true
-    title: Qt.application.name
+    // Qt appends the display name unless the title already is it.
+    title: Application.displayName
     LayoutMirroring.enabled: Qt.locale().textDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
     Backend.ShellController {
@@ -146,9 +147,8 @@ Controls.ApplicationWindow {
         pendingVaultPath = "";
     }
     function unlockVault() {
+        // The selection opens once GnuPG confirms access (onLockedChanged).
         store.controller.unlockVault();
-        if (!keysMode)
-            store.controller.selectEntry(store.selectedId);
     }
     function requestLock() {
         if (store.controller.locked) {
@@ -362,6 +362,10 @@ Controls.ApplicationWindow {
     }
     Connections {
         target: store.controller
+        function onLockedChanged() {
+            if (!store.controller.locked && !root.keysMode)
+                store.controller.selectEntry(store.selectedId);
+        }
         function onClipboardRequested(value) {
             const copied = secureClipboard.copySensitive(value);
             store.controller.confirmCopy(copied);
@@ -726,7 +730,7 @@ Controls.ApplicationWindow {
         id: findAction
         controller: shell
         actionId: "find"
-        enabled: !editor.opened
+        enabled: !editor.opened && !store.controller.locked
         onTriggered: {
             panes.showPane(1);
             Qt.callLater(function () {
@@ -1314,6 +1318,15 @@ Controls.ApplicationWindow {
                 }
             }
         }
+    }
+    LockScreen {
+        anchors.fill: parent
+        z: 10
+        visible: store.controller.locked
+        unlockEnabled: lockVaultAction.enabled
+        unlocking: store.controller.unlocking
+        errorMessage: store.controller.errorMessage
+        onUnlockRequested: root.requestLock()
     }
     SecretEditor {
         id: editor

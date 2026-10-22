@@ -54,6 +54,7 @@ pub mod qobject {
         #[qproperty(bool, icon_busy, cxx_name = "iconBusy", READ, NOTIFY)]
         #[qproperty(bool, saving, READ, NOTIFY)]
         #[qproperty(bool, locked, READ, NOTIFY)]
+        #[qproperty(bool, unlocking, READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
 
         #[qinvokable]
@@ -278,6 +279,9 @@ pub struct SecretsControllerRust {
     staged_icon: Option<kryptopass_core::EntryIconAsset>,
     saving: bool,
     locked: bool,
+    unlocking: bool,
+    /// Invalidates an in-flight unlock check when the vault is locked again.
+    unlock_operation: u64,
     session_blocked: bool,
     selected_entry: Option<SecretId>,
     selected_revision: Option<u64>,
@@ -323,6 +327,8 @@ impl Default for SecretsControllerRust {
             staged_icon: None,
             saving: false,
             locked: true,
+            unlocking: false,
+            unlock_operation: 0,
             session_blocked: false,
             selected_entry: None,
             selected_revision: None,
@@ -546,6 +552,7 @@ impl qobject::SecretsController {
                 .fail("Espera a que termine el guardado antes de bloquear la bóveda.");
             return;
         }
+        self.as_mut().cancel_unlock();
         self.as_mut().clear_sensitive_state_contents();
         self.as_mut().clear_error();
         self.as_mut().set_locked(true);
@@ -564,11 +571,52 @@ impl qobject::SecretsController {
                 .fail("Espera a que termine la operación antes de acceder a la bóveda.");
             return;
         }
+        if !*self.locked() || *self.unlocking() {
+            return;
+        }
         self.as_mut().clear_error();
-        self.as_mut().set_locked(false);
-        self.as_mut().set_status(QString::from(
-            "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
-        ));
+        let operation = {
+            let mut state = self.as_mut().rust_mut();
+            state.unlock_operation = state.unlock_operation.wrapping_add(1);
+            state.unlock_operation
+        };
+        let preferred = self.as_ref().rust().selected_entry;
+        self.as_mut().set_unlocking(true);
+        self.as_mut()
+            .set_status(QString::from("Comprobando tu clave OpenPGP…"));
+        // The vault stays covered until GnuPG proves access; pinentry may ask here.
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || verify_vault_access(preferred),
+            move |mut controller, result| {
+                if controller.as_ref().rust().unlock_operation != operation {
+                    return;
+                }
+                controller.as_mut().set_unlocking(false);
+                if controller.as_ref().rust().session_blocked {
+                    return;
+                }
+                match result {
+                    Ok(()) => {
+                        controller.as_mut().set_locked(false);
+                        controller.as_mut().set_status(QString::from(
+                            "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
+                        ));
+                    }
+                    Err(_) => controller
+                        .as_mut()
+                        .fail("No se pudo verificar tu clave. La bóveda sigue bloqueada."),
+                }
+            },
+        );
+    }
+
+    fn cancel_unlock(mut self: Pin<&mut Self>) {
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.unlock_operation = state.unlock_operation.wrapping_add(1);
+        }
+        self.set_unlocking(false);
     }
 
     pub fn set_session_blocked(mut self: Pin<&mut Self>, blocked: bool) {
@@ -577,6 +625,7 @@ impl qobject::SecretsController {
 
     pub fn lock_for_session(mut self: Pin<&mut Self>) {
         // In-flight writes may finish, but access and read projections expire now.
+        self.as_mut().cancel_unlock();
         self.as_mut().set_locked(true);
         self.as_mut().clear_sensitive_state_contents();
         unsafe { super::native_ffi::ffi::clear_owned() };
@@ -589,6 +638,7 @@ impl qobject::SecretsController {
         if *self.busy() || *self.saving() {
             return;
         }
+        self.as_mut().cancel_unlock();
         self.as_mut().clear_sensitive_state_contents();
         self.as_mut().set_locked(true);
         self.as_mut().vault_locked();
@@ -2249,6 +2299,13 @@ impl qobject::SecretsController {
         }
     }
 
+    fn set_unlocking(mut self: Pin<&mut Self>, value: bool) {
+        if *self.unlocking() != value {
+            self.as_mut().rust_mut().unlocking = value;
+            self.unlocking_changed();
+        }
+    }
+
     fn set_locked(mut self: Pin<&mut Self>, value: bool) {
         if *self.locked() != value {
             kryptopass_browser::set_locked(value, false);
@@ -2279,6 +2336,25 @@ fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
         related_entry: after.related_entry,
         content,
     })
+}
+
+/// Decrypts one entry and drops it at once; an empty vault has nothing to guard.
+fn verify_vault_access(preferred: Option<SecretId>) -> anyhow::Result<()> {
+    let service = open_service()?;
+    let metadata = service.list_secret_metadata()?;
+    let candidate = preferred
+        .filter(|id| metadata.iter().any(|entry| entry.id == *id))
+        .or_else(|| {
+            metadata
+                .iter()
+                .find(|entry| !entry.trashed)
+                .map(|entry| entry.id)
+        })
+        .or_else(|| metadata.first().map(|entry| entry.id));
+    if let Some(id) = candidate {
+        drop(service.read_content(id)?);
+    }
+    Ok(())
 }
 
 fn load_detail_content(id: SecretId) -> anyhow::Result<(SecretContent, u64)> {

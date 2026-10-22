@@ -1649,6 +1649,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Compara los siete emojis con Android y confirma en ambas pantallas.</translation>
     </message>
     <message>
+      <source>Comprobando tu clave OpenPGP…</source>
+      <translation>Comprobando tu clave OpenPGP…</translation>
+    </message>
+    <message>
       <source>Comprobando…</source>
       <translation>Comprobando…</translation>
     </message>
@@ -1919,6 +1923,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</source>
       <translation>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</translation>
+    </message>
+    <message>
+      <source>No se pudo verificar tu clave. La bóveda sigue bloqueada.</source>
+      <translation>No se pudo verificar tu clave. La bóveda sigue bloqueada.</translation>
     </message>
     <message>
       <source>Notas</source>
@@ -5458,6 +5466,21 @@ Huella(s) detectadas:
     <message>
       <source>Fecha de vencimiento</source>
       <translation>Fecha de vencimiento</translation>
+    </message>
+  </context>
+  <context>
+    <name>LockScreen</name>
+    <message>
+      <source>%1 está bloqueado</source>
+      <translation>%1 está bloqueado</translation>
+    </message>
+    <message>
+      <source>Desbloquear</source>
+      <translation>Desbloquear</translation>
+    </message>
+    <message>
+      <source>Desbloqueando…</source>
+      <translation>Desbloqueando…</translation>
     </message>
   </context>
   <context>
