@@ -28,6 +28,12 @@ enum MessageType {
   MESSAGE_TYPE_SESSION_PING = 20;
   MESSAGE_TYPE_SESSION_PONG = 21;
   MESSAGE_TYPE_SESSION_CLOSE = 22;
+  MESSAGE_TYPE_SYNTHETIC_KEY_OFFER = 23;
+  MESSAGE_TYPE_SYNTHETIC_KEY_DECISION = 24;
+  MESSAGE_TYPE_SYNTHETIC_KEY_CHUNK = 25;
+  MESSAGE_TYPE_SYNTHETIC_KEY_COMPLETE = 26;
+  MESSAGE_TYPE_SYNTHETIC_KEY_RECEIPT = 27;
+  MESSAGE_TYPE_SYNTHETIC_KEY_ABORT = 28;
 }
 
 // `payload` is the encoded message selected by `message_type`.
@@ -178,6 +184,7 @@ message SessionHello {
   uint32 session_version = 1;     // required; active-session extension version 1
   bytes device_id = 2;            // 32 bytes; must equal the authenticated peer
   uint32 reconnect_port = 3;      // optional LAN resume endpoint; 0 absent, 1..65535 valid
+  uint32 synthetic_key_transfer_version = 4; // 0 disabled, 1 debug synthetic extension
 }
 
 message SessionPing {
@@ -191,4 +198,43 @@ message SessionPong {
 message SessionClose {
   uint32 reason = 1;              // 1 user, 2 app closing, 3 superseded,
                                  // 4 trust revoked, 5 protocol error; others invalid
+}
+
+// Debug-only synthetic fixture transfer; never enables production key export.
+// Negotiated by SessionHello.synthetic_key_transfer_version == 1 on both sides.
+message SyntheticKeyOffer {
+  bytes transfer_id = 1;           // 16 non-zero random bytes
+  bytes openpgp_fingerprint = 2;   // 20 bytes; fixed synthetic identity
+  uint64 total_size = 3;           // 1..1 MiB
+  bytes sha256_digest = 4;         // 32 bytes; exact fixed fixture digest
+  bytes encrypted_challenge = 5;   // 1..16 KiB; fresh 32-byte challenge encrypted by GnuPG
+}
+
+message SyntheticKeyDecision {
+  bytes transfer_id = 1;
+  bool accepted = 2;               // human approval; false rejects
+}
+
+message SyntheticKeyChunk {
+  bytes transfer_id = 1;
+  uint32 chunk_index = 2;
+  uint32 chunk_count = 3;
+  uint64 total_size = 4;
+  bytes sha256_digest = 5;
+  bytes data = 6;                  // 1..32 KiB; strict sequential assembly
+}
+
+message SyntheticKeyComplete {
+  bytes transfer_id = 1;           // sender finished; does not acknowledge storage
+}
+
+message SyntheticKeyReceipt {
+  bytes transfer_id = 1;
+  bytes openpgp_fingerprint = 2;   // 20 bytes
+  bytes challenge_sha256 = 3;      // 32 bytes; only after persistence and decryption
+}
+
+message SyntheticKeyAbort {
+  bytes transfer_id = 1;
+  AbortCode code = 2;
 }

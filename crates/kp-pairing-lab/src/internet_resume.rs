@@ -7,7 +7,7 @@ use std::{
 };
 
 use kryptopass_devices::ConnectionState;
-use kryptopass_lan::{RelayHost, RelayRoute};
+use kryptopass_lan::{NetworkUse, RelayHost, RelayRoute};
 use tokio::sync::watch;
 
 use super::{AcceptPolicy, OwnerCommand, OwnerRuntime, clear_negotiating, record_failure};
@@ -20,11 +20,19 @@ pub(super) struct RelayWorker {
 
 impl OwnerRuntime {
     pub(super) fn sync_relay_workers(&mut self, policy: &Arc<Mutex<AcceptPolicy>>) {
-        let routes = self
-            .host
-            .as_ref()
-            .and_then(|host| host.internet_routes().ok())
-            .unwrap_or_default();
+        let network_guard = self.network_guard.clone();
+        let internet_allowed = !self.network_settings_error
+            && network_guard
+                .as_ref()
+                .is_some_and(|guard| guard.preflight(NetworkUse::Internet).is_ok());
+        let routes = if internet_allowed {
+            self.host
+                .as_ref()
+                .and_then(|host| host.internet_routes().ok())
+                .unwrap_or_default()
+        } else {
+            std::collections::BTreeMap::new()
+        };
         let allowed: HashMap<_, _> = routes
             .into_iter()
             .filter(|(peer, _)| policy.lock().is_ok_and(|p| !p.suppressed.contains(peer)))
@@ -44,6 +52,9 @@ impl OwnerRuntime {
         let (Some(host), Some(devices)) = (self.host.as_ref(), self.devices.as_ref()) else {
             return;
         };
+        let Some(network_guard) = network_guard.filter(|_| internet_allowed) else {
+            return;
+        };
         for (peer, route) in allowed {
             if self.relay_workers.contains_key(&peer) {
                 continue;
@@ -54,6 +65,7 @@ impl OwnerRuntime {
             let commands = self.command_sender.clone();
             let (cancel, mut cancelled) = watch::channel(false);
             let task_route = route.clone();
+            let task_network_guard = network_guard.clone();
             let task = tokio::spawn(async move {
                 let mut failures = 0_u32;
                 loop {
@@ -89,12 +101,18 @@ impl OwnerRuntime {
                     let authorize_host = Arc::clone(&host);
                     let authorize_devices = devices.clone();
                     let authorize_policy = Arc::clone(&policy);
+                    let operation_guard = task_network_guard.clone();
                     let operation = async {
-                        let (ice_config, ice_policy) = host.internet_ice_configuration().await?;
-                        let relay = RelayHost::connect_with_policy(
+                        operation_guard
+                            .preflight(NetworkUse::Internet)
+                            .map_err(|_| kryptopass_lan::LanError::NetworkPolicy)?;
+                        let (ice_config, ice_policy) =
+                            host.internet_ice_configuration(&operation_guard).await?;
+                        let relay = RelayHost::connect_with_privacy(
                             task_route.clone(),
                             ice_config,
                             ice_policy,
+                            operation_guard.clone(),
                         )
                         .await?;
                         relay
@@ -143,6 +161,10 @@ impl OwnerRuntime {
                             {
                                 break;
                             }
+                            failures = 0;
+                        }
+                        Err(kryptopass_lan::LanError::NetworkPolicy) => {
+                            clear_negotiating(&policy, peer);
                             failures = 0;
                         }
                         Err(_) => {

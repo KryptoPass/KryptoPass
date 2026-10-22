@@ -48,4 +48,7 @@ pub enum LanError {
     /// The remote device selector was rejected by the caller's authorization policy.
     #[error("remote device is not authorized for this relay session")]
     UnauthorizedDevice,
+    /// The local network privacy policy blocked this operation.
+    #[error("the local network privacy policy blocked the connection")]
+    NetworkPolicy,
 }

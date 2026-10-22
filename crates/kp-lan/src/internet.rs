@@ -15,6 +15,7 @@ use crate::{
     LanError,
     address::{internet_udp_bind_addresses, is_supported_internet_address},
     host::{CandidatePolicy, negotiate_offer_answer},
+    privacy::{NetworkPolicyGuard, NetworkPrivacyPolicy, NetworkUse},
     turn::fetch_credentials,
 };
 
@@ -183,30 +184,86 @@ impl InternetIceConfig {
     where
         F: Fn(&[u8]) -> [u8; 64] + Send + Sync,
     {
+        let guard = NetworkPolicyGuard::new(NetworkPrivacyPolicy::default());
+        Self::from_environment_with_policy(local_device_id, false, &guard, signer).await
+    }
+
+    /// Resolve the local privacy policy before broker access or any Internet
+    /// side effect, then return one policy-consistent ICE configuration.
+    pub async fn from_environment_with_policy<F>(
+        local_device_id: [u8; 32],
+        relay_only_requested: bool,
+        guard: &NetworkPolicyGuard,
+        signer: F,
+    ) -> Result<(Self, InternetIceTransportPolicy), LanError>
+    where
+        F: Fn(&[u8]) -> [u8; 64] + Send + Sync,
+    {
+        guard
+            .preflight(NetworkUse::Internet)
+            .map_err(|_| LanError::NetworkPolicy)?;
         let relay_only = match std::env::var_os("KP_TURN_RELAY_ONLY") {
             None => false,
             Some(value) if value == "1" => true,
             Some(_) => return Err(LanError::InvalidIceConfig),
-        };
+        } || relay_only_requested;
         if std::env::var_os("KP_INTERNET_ICE_SERVERS_JSON").is_some() {
             let config = Self::from_environment()?;
-            return config_from_sources(Some(config), relay_only, None);
+            guard
+                .ensure_current()
+                .map_err(|_| LanError::NetworkPolicy)?;
+            let result = config_from_sources(Some(config), relay_only, None);
+            guard
+                .ensure_current()
+                .map_err(|_| LanError::NetworkPolicy)?;
+            return result;
         }
 
+        guard
+            .ensure_current()
+            .map_err(|_| LanError::NetworkPolicy)?;
         let broker_result = match std::env::var_os("KP_TURN_BROKER_ORIGIN") {
             None => None,
-            Some(origin) => Some(match origin.into_string() {
-                Ok(origin) => fetch_credentials(&origin, local_device_id, signer).await,
-                Err(_) => Err(LanError::TurnBroker),
-            }),
+            Some(origin) => {
+                let operation = async {
+                    match origin.into_string() {
+                        Ok(origin) => fetch_credentials(&origin, local_device_id, signer).await,
+                        Err(_) => Err(LanError::TurnBroker),
+                    }
+                };
+                Some(tokio::select! {
+                    result = operation => result,
+                    _ = guard.wait_for_change(Duration::from_millis(250)) => {
+                        return Err(LanError::NetworkPolicy);
+                    }
+                })
+            }
         };
-        config_from_sources(None, relay_only, broker_result)
+        guard
+            .ensure_current()
+            .map_err(|_| LanError::NetworkPolicy)?;
+        let result = config_from_sources(None, relay_only, broker_result);
+        guard
+            .ensure_current()
+            .map_err(|_| LanError::NetworkPolicy)?;
+        result
     }
 
     /// Return the locally configured ICE servers.
     #[must_use]
     pub fn servers(&self) -> &[IceServerConfig] {
         &self.servers
+    }
+
+    fn retain_turn_only(&mut self) {
+        for server in &mut self.servers {
+            server.urls.retain(|url| {
+                url.split_once(':').is_some_and(|(scheme, _)| {
+                    scheme.eq_ignore_ascii_case("turn") || scheme.eq_ignore_ascii_case("turns")
+                })
+            });
+        }
+        self.servers.retain(|server| !server.urls.is_empty());
     }
 
     pub(crate) fn validate_and_convert(&self) -> Result<Vec<RTCIceServer>, LanError> {
@@ -299,7 +356,10 @@ pub(crate) fn config_from_sources(
     } else {
         InternetIceTransportPolicy::All
     };
-    if let Some(config) = manual {
+    if let Some(mut config) = manual {
+        if relay_only {
+            config.retain_turn_only();
+        }
         config.validate_and_convert()?;
         if relay_only && !config.has_supported_udp_turn() {
             return Err(LanError::InvalidIceConfig);
@@ -310,12 +370,14 @@ pub(crate) fn config_from_sources(
     let mut config = InternetIceConfig::default();
     match broker_result {
         Some(Ok(mut servers)) => {
-            let Some(first_server) = servers.first_mut() else {
-                return Err(LanError::TurnBroker);
-            };
-            first_server
-                .urls
-                .insert(0, "stun:stun.cloudflare.com:3478".to_owned());
+            if !relay_only {
+                let Some(first_server) = servers.first_mut() else {
+                    return Err(LanError::TurnBroker);
+                };
+                first_server
+                    .urls
+                    .insert(0, "stun:stun.cloudflare.com:3478".to_owned());
+            }
             config = InternetIceConfig::new(servers);
             config.broker_augmented = true;
         }
@@ -324,6 +386,9 @@ pub(crate) fn config_from_sources(
             tracing::warn!("TURN broker unavailable; using STUN/direct ICE");
         }
         None => {}
+    }
+    if relay_only {
+        config.retain_turn_only();
     }
     if relay_only && !config.has_supported_udp_turn() {
         return Err(LanError::TurnBroker);
@@ -452,6 +517,7 @@ pub struct RelayHost {
     websocket: WebSocketStream<MaybeTlsStream<TcpStream>>,
     ice_servers: Vec<RTCIceServer>,
     ice_policy: InternetIceTransportPolicy,
+    privacy_guard: NetworkPolicyGuard,
 }
 
 impl RelayHost {
@@ -466,22 +532,53 @@ impl RelayHost {
         config: InternetIceConfig,
         ice_policy: InternetIceTransportPolicy,
     ) -> Result<Self, LanError> {
+        let guard = NetworkPolicyGuard::new(NetworkPrivacyPolicy {
+            relay_only: ice_policy == InternetIceTransportPolicy::Relay,
+            ..NetworkPrivacyPolicy::default()
+        });
+        Self::connect_with_privacy(route, config, ice_policy, guard).await
+    }
+
+    /// Open signaling only after the local policy permits Internet use.
+    pub async fn connect_with_privacy(
+        route: RelayRoute,
+        mut config: InternetIceConfig,
+        ice_policy: InternetIceTransportPolicy,
+        privacy_guard: NetworkPolicyGuard,
+    ) -> Result<Self, LanError> {
+        privacy_guard
+            .preflight(NetworkUse::Internet)
+            .map_err(|_| LanError::NetworkPolicy)?;
+        let ice_policy = if privacy_guard.relay_only() {
+            config.retain_turn_only();
+            InternetIceTransportPolicy::Relay
+        } else {
+            ice_policy
+        };
         if ice_policy == InternetIceTransportPolicy::Relay && !config.has_supported_udp_turn() {
             return Err(LanError::InvalidIceConfig);
         }
         let ice_servers = config.validate_and_convert()?;
         let url = route.host_url();
-        let connected = timeout(
+        privacy_guard
+            .ensure_current()
+            .map_err(|_| LanError::NetworkPolicy)?;
+        let operation = timeout(
             RELAY_CONNECT_TIMEOUT,
             connect_async_with_config(url.as_str(), Some(websocket_config()), false),
-        )
-        .await
-        .map_err(|_| LanError::Timeout)?
-        .map_err(|_| LanError::Signaling)?;
+        );
+        let connected = tokio::select! {
+            result = operation => result.map_err(|_| LanError::Timeout)?
+                .map_err(|_| LanError::Signaling)?,
+            _ = privacy_guard.wait_for_change(Duration::from_millis(250)) => {
+                return Err(LanError::NetworkPolicy);
+            }
+        };
         Ok(Self {
             websocket: connected.0,
             ice_servers,
             ice_policy,
+            privacy_guard,
         })
     }
 
@@ -503,15 +600,27 @@ impl RelayHost {
         if session_id.iter().all(|byte| *byte == 0) {
             return Err(LanError::InvalidSession);
         }
-        timeout(RELAY_READY_TIMEOUT, receive_ready(&mut self.websocket))
-            .await
-            .map_err(|_| LanError::Timeout)??;
+        self.privacy_guard
+            .ensure_current()
+            .map_err(|_| LanError::NetworkPolicy)?;
+        let transport_guard = self.privacy_guard.clone();
+        tokio::select! {
+            result = timeout(RELAY_READY_TIMEOUT, receive_ready(&mut self.websocket)) => {
+                result.map_err(|_| LanError::Timeout)??;
+            }
+            _ = self.privacy_guard.wait_for_change(Duration::from_millis(250)) => {
+                return Err(LanError::NetworkPolicy);
+            }
+        }
 
-        timeout(SIGNALING_TIMEOUT, async move {
+        let mut attempt = timeout(SIGNALING_TIMEOUT, async move {
             let initiator_device_id = receive_request(&mut self.websocket).await?;
             if !authorize(initiator_device_id) {
                 return Err(LanError::UnauthorizedDevice);
             }
+            self.privacy_guard
+                .ensure_current()
+                .map_err(|_| LanError::NetworkPolicy)?;
 
             let session = lower_hex(&session_id);
             let resume = ResumeNotice {
@@ -534,8 +643,15 @@ impl RelayHost {
                 return Err(LanError::InvalidAddress);
             }
             let bind_addresses = internet_udp_bind_addresses(route_address)?;
-            let policy = CandidatePolicy::Internet { allow_loopback };
-            let transport = negotiate_offer_answer(
+            self.privacy_guard
+                .ensure_current()
+                .map_err(|_| LanError::NetworkPolicy)?;
+            let policy = if self.ice_policy == InternetIceTransportPolicy::Relay {
+                CandidatePolicy::InternetRelayOnly { allow_loopback }
+            } else {
+                CandidatePolicy::Internet { allow_loopback }
+            };
+            let negotiation = negotiate_offer_answer(
                 &mut self.websocket,
                 bind_addresses,
                 self.ice_servers,
@@ -544,8 +660,13 @@ impl RelayHost {
                     InternetIceTransportPolicy::All => RTCIceTransportPolicy::All,
                     InternetIceTransportPolicy::Relay => RTCIceTransportPolicy::Relay,
                 },
-            )
-            .await?;
+            );
+            let transport = tokio::select! {
+                result = negotiation => result?,
+                _ = self.privacy_guard.wait_for_change(Duration::from_millis(250)) => {
+                    return Err(LanError::NetworkPolicy);
+                }
+            };
             let close = self.websocket.close(Some(CloseFrame {
                 code: CloseCode::Normal,
                 reason: "".into(),
@@ -558,7 +679,12 @@ impl RelayHost {
             })
         })
         .await
-        .map_err(|_| LanError::Timeout)?
+        .map_err(|_| LanError::Timeout)??;
+        attempt
+            .transport
+            .enforce_network_policy(transport_guard)
+            .map_err(|_| LanError::NetworkPolicy)?;
+        Ok(attempt)
     }
 }
 

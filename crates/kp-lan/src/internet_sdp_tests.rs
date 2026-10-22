@@ -1,4 +1,4 @@
-use super::{CandidatePolicy, validate_sdp};
+use super::{CandidatePolicy, data_channel_answer_sdp, remote_offer_policy, validate_sdp};
 
 const DATA_CHANNEL_MEDIA: &str = "m=application 9 UDP/DTLS/SCTP webrtc-datachannel";
 const INTERNET_HOST_CANDIDATE: &str = "a=candidate:1 1 UDP 2130706431 8.8.8.8 5000 typ host";
@@ -132,6 +132,72 @@ fn lan_candidate_policy_still_accepts_private_hosts_and_rejects_public_hosts() {
         INTERNET_HOST_CANDIDATE,
     );
     assert!(validate_sdp(&public_offer, policy).is_err());
+}
+
+#[test]
+fn relay_only_local_answer_accepts_remote_host_and_publishes_only_redacted_relay_candidates()
+-> Result<(), Box<dyn std::error::Error>> {
+    let remote_offer = sdp(
+        "IP4 127.0.0.1",
+        "IP4 0.0.0.0",
+        DATA_CHANNEL_MEDIA,
+        INTERNET_HOST_CANDIDATE,
+    );
+    let relay_only_local_policy = CandidatePolicy::InternetRelayOnly {
+        allow_loopback: false,
+    };
+    assert!(validate_sdp(&remote_offer, relay_only_local_policy).is_err());
+    assert!(validate_sdp(&remote_offer, remote_offer_policy(relay_only_local_policy),).is_ok());
+
+    let local_host = "a=candidate:host1 1 UDP 2130706431 192.168.1.20 5000 typ host";
+    let local_srflx =
+        "a=candidate:srflx1 1 UDP 1686052607 8.8.4.4 5001 typ srflx raddr 192.168.1.20 rport 5000";
+    let local_relay =
+        "a=candidate:relay1 1 UDP 1677734911 1.1.1.1 5002 typ relay raddr 192.168.1.20 rport 5000";
+    let local_description = format!(
+        "v=0\r\no=- 123 2 IN IP4 192.168.1.20\r\ns=-\r\nt=0 0\r\nc=IN IP4 192.168.1.20\r\n{DATA_CHANNEL_MEDIA}\r\n{local_host}\r\n{local_srflx}\r\n{local_relay}\r\n"
+    );
+
+    let answer = data_channel_answer_sdp(
+        &local_description,
+        CandidatePolicy::InternetRelayOnly {
+            allow_loopback: false,
+        },
+    )?;
+
+    assert!(!answer.contains(local_host));
+    assert!(!answer.contains("typ srflx"));
+    assert!(!answer.contains("192.168.1.20"));
+    assert!(answer.contains("o=- 123 2 IN IP4 0.0.0.0\r\n"));
+    assert!(answer.contains("c=IN IP4 0.0.0.0\r\n"));
+    assert!(answer.contains("typ relay raddr 0.0.0.0 rport 9"));
+    assert!(
+        validate_sdp(
+            &answer,
+            CandidatePolicy::InternetRelayOnly {
+                allow_loopback: false,
+            },
+        )
+        .is_ok()
+    );
+    Ok(())
+}
+
+#[test]
+fn relay_only_local_answer_fails_without_relay_and_never_falls_back_to_direct_candidates() {
+    let local_description = format!(
+        "v=0\r\no=- 123 2 IN IP4 192.168.1.20\r\ns=-\r\nt=0 0\r\nc=IN IP4 192.168.1.20\r\n{DATA_CHANNEL_MEDIA}\r\n{PRIVATE_LAN_CANDIDATE}\r\n"
+    );
+
+    assert!(
+        data_channel_answer_sdp(
+            &local_description,
+            CandidatePolicy::InternetRelayOnly {
+                allow_loopback: false,
+            },
+        )
+        .is_err()
+    );
 }
 
 fn sdp(origin: &str, connection: &str, media: &str, candidate: &str) -> String {

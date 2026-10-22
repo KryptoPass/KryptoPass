@@ -1,6 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use crate::LanError;
+use crate::privacy::route_source_address;
 
 /// Interface category for presenting a local network choice, never authorization.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -101,6 +102,38 @@ pub fn local_addresses() -> Result<Vec<IpAddr>, LanError> {
     Ok(addresses)
 }
 
+/// Return one locally assigned address selected by the OS for its default
+/// IPv4/IPv6 route. This never chooses a second interface merely because it
+/// appears physical or private; callers can bind this address for recovery
+/// when the user has not saved an explicit LAN address.
+#[must_use]
+pub fn os_selected_local_address() -> Option<IpAddr> {
+    let interfaces = if_addrs::get_if_addrs().ok()?;
+    let selected = [
+        route_source_address(IpAddr::V4(Ipv4Addr::new(198, 51, 100, 1))).ok(),
+        route_source_address(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1))).ok(),
+    ];
+    selected.into_iter().flatten().find(|address| {
+        is_supported_address(*address)
+            && interfaces
+                .iter()
+                .any(|interface| interface.ip() == *address)
+    })
+}
+
+/// Keep an explicit address while it is assigned; otherwise follow only the
+/// current OS-selected source. Never pick an arbitrary remaining interface.
+#[must_use]
+pub fn select_local_bind_address(
+    configured: Option<IpAddr>,
+    assigned: &[IpAddr],
+    system_selected: Option<IpAddr>,
+) -> Option<IpAddr> {
+    configured
+        .filter(|address| assigned.contains(address))
+        .or_else(|| system_selected.filter(|address| assigned.contains(address)))
+}
+
 pub(crate) fn is_supported_address(address: IpAddr) -> bool {
     match address {
         IpAddr::V4(address) => is_supported_v4(address),
@@ -117,35 +150,13 @@ pub(crate) fn is_supported_internet_address(address: IpAddr) -> bool {
     }
 }
 
-/// Bind WebRTC UDP sockets to the route used by the relay and other eligible
-/// non-virtual local interfaces. The relay route address remains first so the
-/// operating system's selected path is always represented.
-pub(crate) fn internet_udp_bind_addresses(
-    route_address: IpAddr,
-) -> Result<Vec<SocketAddr>, LanError> {
+/// Bind WebRTC UDP sockets only to the local address selected by the OS for
+/// the relay's route. Never add other interfaces as ICE candidates.
+pub fn internet_udp_bind_addresses(route_address: IpAddr) -> Result<Vec<SocketAddr>, LanError> {
     if !is_supported_internet_address(route_address) && !route_address.is_loopback() {
         return Err(LanError::InvalidAddress);
     }
-    let mut addresses = vec![route_address];
-    if let Ok(interfaces) = if_addrs::get_if_addrs() {
-        for interface in interfaces {
-            let address = interface.ip();
-            if address == route_address
-                || address.is_loopback()
-                || is_virtual_interface_name(&interface.name)
-                || !is_supported_internet_address(address)
-            {
-                continue;
-            }
-            addresses.push(address);
-        }
-    }
-    addresses.sort_by_key(|address| (*address != route_address, *address));
-    addresses.dedup();
-    Ok(addresses
-        .into_iter()
-        .map(|address| SocketAddr::new(address, 0))
-        .collect())
+    Ok(vec![SocketAddr::new(route_address, 0)])
 }
 
 fn is_supported_v4(address: Ipv4Addr) -> bool {
@@ -217,23 +228,4 @@ fn is_supported_internet_v6(address: Ipv6Addr) -> bool {
     let six_to_four = segments[0] == 0x2002;
     let newer_documentation = segments[0] == 0x3fff && segments[1] & 0xfff0 == 0;
     !(documentation || protocol_assignment || six_to_four || newer_documentation)
-}
-
-fn is_virtual_interface_name(name: &str) -> bool {
-    let lower = name.to_ascii_lowercase();
-    [
-        "docker",
-        "br-",
-        "veth",
-        "virbr",
-        "tun",
-        "tap",
-        "wg",
-        "tailscale",
-        "zt",
-        "utun",
-        "vpn",
-    ]
-    .iter()
-    .any(|prefix| lower.starts_with(prefix))
 }

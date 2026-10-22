@@ -20,7 +20,9 @@ use kryptopass_devices::{
     SessionHandle, SessionOptions,
 };
 use kryptopass_identity::{DeviceId, PublicIdentity};
-use kryptopass_lan::{ResumeAttempt, ResumeListener};
+use kryptopass_lan::{
+    NetworkPolicyError, NetworkPolicyGuard, NetworkUse, ResumeAttempt, ResumeListener,
+};
 use tokio::{
     runtime::Builder,
     sync::{broadcast, mpsc, oneshot, watch},
@@ -90,6 +92,7 @@ struct AcceptPolicy {
 enum OwnerCommand {
     EnsureReady(oneshot::Sender<Result<ResumeOwnerReady, super::LabError>>),
     RefreshTrust(oneshot::Sender<Result<ResumeOwnerReady, super::LabError>>),
+    RefreshNetworkPolicy,
     Suppress(DeviceId),
     Allow(DeviceId),
     SessionStable(DeviceId, u64),
@@ -132,6 +135,10 @@ struct OwnerRuntime {
     last_listener_bind: Option<Instant>,
     command_sender: mpsc::Sender<OwnerCommand>,
     relay_workers: HashMap<DeviceId, internet::RelayWorker>,
+    network_settings: Option<super::NetworkPrivacySettings>,
+    network_settings_error: bool,
+    network_guard: Option<NetworkPolicyGuard>,
+    route_snapshot_unavailable: bool,
 }
 
 impl ResumeProcessOwner {
@@ -162,6 +169,14 @@ impl ResumeProcessOwner {
             .await
             .map_err(|_| super::LabError::Profile)?;
         response.await.map_err(|_| super::LabError::Profile)?
+    }
+
+    /// Notify the process owner that local privacy settings were persisted.
+    pub fn refresh_network_policy(&self) {
+        let _ = self
+            .inner
+            .commands
+            .try_send(OwnerCommand::RefreshNetworkPolicy);
     }
 
     /// Suppresses future inbound reconnects immediately and drains any
@@ -284,13 +299,20 @@ async fn run_owner(
         last_listener_bind: None,
         command_sender,
         relay_workers: HashMap::new(),
+        network_settings: None,
+        network_settings_error: false,
+        network_guard: None,
+        route_snapshot_unavailable: false,
     };
     let mut interface_refresh = interval(MDNS_REFRESH_INTERVAL);
     let mut listener_retry = interval(LISTENER_RETRY_INTERVAL);
     let mut snapshot_poll = interval(SNAPSHOT_POLL_INTERVAL);
+    let mut network_policy_poll = interval(Duration::from_millis(250));
     interface_refresh.tick().await;
     listener_retry.tick().await;
     snapshot_poll.tick().await;
+    network_policy_poll.tick().await;
+    state.reload_network_policy();
 
     // Startup is read-only. If the directory is missing, wait for an explicit
     // pairing operation to initialize it and then call ensure_ready.
@@ -325,6 +347,10 @@ async fn run_owner(
                 command = commands.recv() => {
                     let Some(command) = command else { break; };
                     if state.handle_command(command, &snapshots, &policy).await {
+                        break;
+                    }
+                    if state.reload_network_policy() || state.network_route_invalidated() {
+                        state.reconfigure_network(&snapshots, &policy, &last_selector).await;
                         break;
                     }
                     state.sync_relay_workers(&policy);
@@ -378,6 +404,12 @@ async fn run_owner(
                                 value.devices = Some(snapshot);
                             });
                         }
+                    }
+                }
+                _ = network_policy_poll.tick() => {
+                    if state.reload_network_policy() || state.network_route_invalidated() {
+                        state.reconfigure_network(&snapshots, &policy, &last_selector).await;
+                        break;
                     }
                 }
             }
@@ -439,6 +471,116 @@ async fn run_owner(
 }
 
 impl OwnerRuntime {
+    fn reload_network_policy(&mut self) -> bool {
+        let loaded = super::load_network_privacy_settings(&self.directory_path);
+        let (settings, load_error) = match loaded {
+            Ok(settings) => (Some(settings), false),
+            Err(_) => (None, true),
+        };
+        let changed =
+            self.network_settings != settings || self.network_settings_error != load_error;
+        if changed {
+            if let Some(previous) = self.network_guard.as_ref() {
+                previous.invalidate();
+            }
+            self.network_settings = settings;
+            self.network_settings_error = load_error;
+            self.network_guard = settings.map(|settings| NetworkPolicyGuard::new(settings.policy));
+            self.route_snapshot_unavailable = false;
+        }
+        changed
+    }
+
+    fn network_route_invalidated(&mut self) -> bool {
+        let error = self
+            .network_guard
+            .as_ref()
+            .and_then(|guard| guard.ensure_current().err());
+        match error {
+            Some(NetworkPolicyError::RouteSnapshotUnavailable) => {
+                let changed = !self.route_snapshot_unavailable;
+                self.route_snapshot_unavailable = true;
+                changed
+            }
+            Some(_) => {
+                self.route_snapshot_unavailable = false;
+                true
+            }
+            None => {
+                let recovered = self.route_snapshot_unavailable;
+                self.route_snapshot_unavailable = false;
+                recovered
+            }
+        }
+    }
+
+    async fn reconfigure_network(
+        &mut self,
+        snapshots: &watch::Sender<ResumeOwnerSnapshot>,
+        policy: &Arc<Mutex<AcceptPolicy>>,
+        last_selector: &Arc<Mutex<Option<DeviceId>>>,
+    ) {
+        // A route change invalidates the prior generation. A settings change
+        // already replaced the guard in reload_network_policy.
+        if self.network_route_invalidated() {
+            if let Some(previous) = self.network_guard.take() {
+                previous.invalidate();
+            }
+            self.network_guard = self
+                .network_settings
+                .map(|settings| NetworkPolicyGuard::new(settings.policy));
+            self.route_snapshot_unavailable = false;
+        }
+        self.listener = None;
+        if let Some(ready) = self.ready.as_mut() {
+            ready.reconnect_port = 0;
+        }
+        self.drain_relay_workers().await;
+
+        let pending = std::mem::take(&mut self.pending_attempts);
+        for attempt in pending.values() {
+            let _ = attempt.cancel.send(true);
+        }
+        let mut pending_drains = tokio::task::JoinSet::new();
+        for (_, attempt) in pending {
+            let mut task = attempt.task;
+            pending_drains.spawn(async move {
+                if timeout(PENDING_ATTEMPT_DRAIN_TIMEOUT, &mut task)
+                    .await
+                    .is_err()
+                {
+                    task.abort();
+                    let _ = task.await;
+                }
+            });
+        }
+        while pending_drains.join_next().await.is_some() {}
+        if let Ok(mut selector) = last_selector.lock() {
+            *selector = None;
+        }
+
+        // Each WebRTC transport shares the invalidated guard and closes
+        // locally without trying to reconnect on another interface.
+        let sessions = std::mem::take(&mut self.sessions);
+        let mut session_drains = tokio::task::JoinSet::new();
+        for (_, mut session) in sessions {
+            session_drains.spawn(async move {
+                let _ = timeout(SESSION_DRAIN_TIMEOUT, session.handle.wait_closed()).await;
+            });
+        }
+        while session_drains.join_next().await.is_some() {}
+        if let Ok(mut current) = policy.lock() {
+            current.active.clear();
+            current.negotiating.clear();
+        }
+
+        if self.host.is_some() {
+            self.bind_listener().await;
+        }
+        self.sync_relay_workers(policy);
+        self.publish_ready(snapshots);
+    }
+
     async fn ensure_ready(
         &mut self,
         snapshots: &watch::Sender<ResumeOwnerSnapshot>,
@@ -517,9 +659,44 @@ impl OwnerRuntime {
         let Some(host) = self.host.as_ref() else {
             return;
         };
+        let Some(settings) = self.network_settings else {
+            self.listener = None;
+            if let Some(ready) = self.ready.as_mut() {
+                ready.reconnect_port = 0;
+            }
+            return;
+        };
+        let Some(guard) = self.network_guard.as_ref().cloned() else {
+            self.listener = None;
+            if let Some(ready) = self.ready.as_mut() {
+                ready.reconnect_port = 0;
+            }
+            return;
+        };
+        if guard.preflight(NetworkUse::Lan).is_err() {
+            self.listener = None;
+            if let Some(ready) = self.ready.as_mut() {
+                ready.reconnect_port = 0;
+            }
+            return;
+        }
+        let assigned = kryptopass_lan::local_addresses().unwrap_or_default();
+        let Some(bind_address) = kryptopass_lan::select_local_bind_address(
+            settings.lan_bind_ip,
+            &assigned,
+            kryptopass_lan::os_selected_local_address(),
+        ) else {
+            self.listener = None;
+            if let Some(ready) = self.ready.as_mut() {
+                ready.reconnect_port = 0;
+            }
+            return;
+        };
         let identity = host.public_identity();
         self.last_listener_bind = Some(Instant::now());
-        match ResumeListener::bind(*identity.device_id.as_bytes()).await {
+        match ResumeListener::bind_with_privacy(*identity.device_id.as_bytes(), bind_address, guard)
+            .await
+        {
             Ok(listener) => {
                 let port = listener.port();
                 self.listener = Some(Arc::new(listener));
@@ -630,6 +807,19 @@ impl OwnerRuntime {
 
     fn start_attempt(&mut self, attempt: ResumeAttempt, policy: &Arc<Mutex<AcceptPolicy>>) {
         let peer_id = DeviceId::from_bytes(attempt.initiator_device_id);
+        if !attempt.transport.network_policy_current()
+            || self
+                .network_guard
+                .as_ref()
+                .is_none_or(|guard| guard.ensure_current().is_err())
+        {
+            clear_negotiating(policy, peer_id);
+            return;
+        }
+        let Some(network_guard) = self.network_guard.as_ref().cloned() else {
+            clear_negotiating(policy, peer_id);
+            return;
+        };
         let Some(host) = self.host.as_ref().cloned() else {
             clear_negotiating(policy, peer_id);
             return;
@@ -662,6 +852,7 @@ impl OwnerRuntime {
                 task_host,
                 task_devices,
                 task_policy,
+                network_guard,
                 peer,
                 attempt,
                 cancel_receiver,
@@ -794,6 +985,7 @@ impl OwnerRuntime {
                 };
                 let _ = reply.send(result);
             }
+            OwnerCommand::RefreshNetworkPolicy => {}
             OwnerCommand::Suppress(peer) => {
                 if let Some(pending) = self.pending_attempts.remove(&peer) {
                     let _ = pending.cancel.send(true);
@@ -934,9 +1126,10 @@ impl OwnerRuntime {
             .and_then(|mut selector| selector.take());
         if let Some(peer) = peer {
             clear_negotiating(policy, peer);
-            record_failure(policy, peer);
+            if !matches!(error, kryptopass_lan::LanError::NetworkPolicy) {
+                record_failure(policy, peer);
+            }
         }
-        let _ = error;
     }
 }
 
@@ -978,12 +1171,17 @@ async fn open_incoming_attempt(
     host: Arc<super::LabHost>,
     devices: DeviceDirectory,
     policy: Arc<Mutex<AcceptPolicy>>,
+    network_guard: NetworkPolicyGuard,
     expected: PublicIdentity,
     attempt: ResumeAttempt,
     mut cancelled: watch::Receiver<bool>,
 ) -> Result<kryptopass_pairing::EstablishedSession<super::LabTransport>, AttemptFailure> {
     let peer = expected.device_id;
-    if *cancelled.borrow() || host.lookup(peer).ok() != Some(expected) {
+    if *cancelled.borrow()
+        || network_guard.ensure_current().is_err()
+        || !attempt.transport.network_policy_current()
+        || host.lookup(peer).ok() != Some(expected)
+    {
         return Err(AttemptFailure::Cancelled);
     }
     let reconnect = host.open_reconnect_session(
@@ -994,6 +1192,7 @@ async fn open_incoming_attempt(
     );
     let outcome = tokio::select! {
         _ = cancelled.changed() => return Err(AttemptFailure::Cancelled),
+        _ = network_guard.wait_for_change(Duration::from_millis(250)) => return Err(AttemptFailure::Cancelled),
         result = timeout(Duration::from_secs(30), reconnect) => match result {
             Ok(Ok(outcome)) => outcome,
             Ok(Err(super::LabError::Cancelled)) => return Err(AttemptFailure::Cancelled),
@@ -1016,6 +1215,7 @@ async fn open_incoming_attempt(
     // Recheck SQLite after Noise: the same complete identity must still be
     // authorized before its new carrier can enter the DeviceDirectory.
     if *cancelled.borrow()
+        || network_guard.ensure_current().is_err()
         || !policy_allows
         || !directory_allows
         || host.lookup(peer).ok() != Some(expected)

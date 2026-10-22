@@ -13,6 +13,8 @@ use webrtc::{
     peer_connection::PeerConnection,
 };
 
+use crate::{NetworkPolicyError, NetworkPolicyGuard};
+
 const DATACHANNEL_MESSAGE_MAX: usize = 16_384;
 const FRAGMENT_HEADER_SIZE: usize = 9;
 const FRAGMENT_DATA_MAX: usize = DATACHANNEL_MESSAGE_MAX - FRAGMENT_HEADER_SIZE;
@@ -62,6 +64,8 @@ pub struct WebRtcTransport {
     state_tx: watch::Sender<TransportState>,
     state_rx: watch::Receiver<TransportState>,
     pump: Option<JoinHandle<()>>,
+    route_guard_task: Option<JoinHandle<()>>,
+    network_guard: Option<NetworkPolicyGuard>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -96,7 +100,41 @@ impl WebRtcTransport {
             state_tx,
             state_rx,
             pump: Some(pump),
+            route_guard_task: None,
+            network_guard: None,
         }
+    }
+
+    /// Cancel this carrier if the guarded OS route generation changes.
+    /// The monitor observes only an opaque route hash and holds no addresses.
+    pub fn enforce_network_policy(
+        &mut self,
+        guard: NetworkPolicyGuard,
+    ) -> Result<(), NetworkPolicyError> {
+        guard.ensure_current()?;
+        if let Some(task) = self.route_guard_task.take() {
+            task.abort();
+        }
+        self.network_guard = Some(guard.clone());
+        let cancel = self.cancel_handle();
+        self.route_guard_task = Some(tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(250)).await;
+                if guard.ensure_current().is_err() {
+                    cancel.cancel();
+                    break;
+                }
+            }
+        }));
+        Ok(())
+    }
+
+    /// Check whether this carrier's captured network generation remains valid.
+    #[must_use]
+    pub fn network_policy_current(&self) -> bool {
+        self.network_guard
+            .as_ref()
+            .is_none_or(|guard| guard.ensure_current().is_ok())
     }
 
     /// Get a clonable handle that closes the full peer connection.
@@ -108,6 +146,9 @@ impl WebRtcTransport {
 
     async fn close_inner(&mut self) {
         self.state_tx.send_replace(TransportState::Aborted);
+        if let Some(route_guard_task) = self.route_guard_task.take() {
+            route_guard_task.abort();
+        }
         if let Some(pump) = self.pump.take() {
             pump.abort();
         }

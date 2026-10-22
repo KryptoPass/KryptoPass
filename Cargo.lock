@@ -2057,6 +2057,7 @@ dependencies = [
  "ssh-key",
  "tokio",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "uuid",
  "zeroize",

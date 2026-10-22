@@ -34,6 +34,7 @@ use webrtc::{
 use crate::{
     LanError,
     address::{is_supported_address, is_supported_internet_address},
+    privacy::{NetworkPolicyGuard, NetworkUse},
     transport::WebRtcTransport,
 };
 
@@ -82,8 +83,9 @@ pub struct ReconnectHost {
 /// the caller's fresh Noise handshake.
 pub struct ResumeListener {
     listener_v4: TcpListener,
-    listener_v6: Option<TcpListener>,
     port: u16,
+    bind_address: IpAddr,
+    network_guard: Option<NetworkPolicyGuard>,
     accept_state: AsyncMutex<ReconnectAcceptState>,
     discovery: Mutex<ResumeDiscovery>,
 }
@@ -105,34 +107,64 @@ pub struct ResumeAttempt {
 }
 
 impl ResumeListener {
-    /// Bind one dual-stack wildcard signaling port and announce it on local
-    /// LAN interfaces. Loopback is never announced through mDNS.
+    /// Bind a loopback-only listener for local callers and tests.
     pub async fn bind(local_device_id: [u8; 32]) -> Result<Self, LanError> {
+        Self::bind_inner(
+            local_device_id,
+            IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
+            None,
+        )
+        .await
+    }
+
+    /// Bind and advertise one explicitly selected local address after the
+    /// persisted local policy allows LAN use.
+    pub async fn bind_with_privacy(
+        local_device_id: [u8; 32],
+        bind_address: IpAddr,
+        guard: NetworkPolicyGuard,
+    ) -> Result<Self, LanError> {
+        guard
+            .preflight(NetworkUse::Lan)
+            .map_err(|_| LanError::NetworkPolicy)?;
+        Self::bind_inner(local_device_id, bind_address, Some(guard)).await
+    }
+
+    async fn bind_inner(
+        local_device_id: [u8; 32],
+        bind_address: IpAddr,
+        network_guard: Option<NetworkPolicyGuard>,
+    ) -> Result<Self, LanError> {
         if local_device_id.iter().all(|byte| *byte == 0) {
             return Err(LanError::InvalidSession);
         }
-        let listener_v4 = TcpListener::bind(SocketAddr::new(
-            IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
-            0,
-        ))
-        .await
-        .map_err(|_| LanError::Bind)?;
-        let port = listener_v4.local_addr().map_err(|_| LanError::Bind)?.port();
-        let listener_v6 = bind_ipv6_listener(port).await;
-        if listener_v6.is_none() {
-            tracing::debug!("IPv6 resume listener unavailable");
+        if !is_supported_address(bind_address) {
+            return Err(LanError::InvalidAddress);
         }
-        let (registrations, addresses) =
-            register_resume_mdns(local_device_id, port, listener_v6.is_some());
+        if let Some(guard) = network_guard.as_ref() {
+            guard
+                .preflight(NetworkUse::Lan)
+                .map_err(|_| LanError::NetworkPolicy)?;
+        }
+        let listener_v4 = TcpListener::bind(SocketAddr::new(bind_address, 0))
+            .await
+            .map_err(|_| LanError::Bind)?;
+        let port = listener_v4.local_addr().map_err(|_| LanError::Bind)?.port();
+        let (registrations, addresses) = register_resume_mdns(local_device_id, port, bind_address);
         tracing::info!(
             mdns_services = addresses.len(),
-            ipv6_listener = listener_v6.is_some(),
+            selected_family = if bind_address.is_ipv4() {
+                "ipv4"
+            } else {
+                "ipv6"
+            },
             "LAN resume listener ready"
         );
         Ok(Self {
             listener_v4,
-            listener_v6,
             port,
+            bind_address,
+            network_guard,
             accept_state: AsyncMutex::new(ReconnectAcceptState {
                 last_accepted_at: None,
             }),
@@ -143,7 +175,7 @@ impl ResumeListener {
         })
     }
 
-    /// Return the shared ephemeral TCP port for IPv4 and IPv6 listeners.
+    /// Return the ephemeral TCP port on the explicitly selected address.
     #[must_use]
     pub const fn port(&self) -> u16 {
         self.port
@@ -151,7 +183,14 @@ impl ResumeListener {
 
     /// Refresh best-effort mDNS advertisements after network interfaces change.
     pub fn refresh_mdns(&self, local_device_id: [u8; 32]) {
-        let addresses = resume_mdns_addresses(self.listener_v6.is_some());
+        let permitted = self.network_guard.as_ref().is_none_or(|guard| {
+            guard.preflight(NetworkUse::Lan).is_ok() && guard.ensure_current().is_ok()
+        });
+        let addresses = if permitted && !self.bind_address.is_loopback() {
+            vec![self.bind_address]
+        } else {
+            Vec::new()
+        };
         let Ok(mut discovery) = self.discovery.lock() else {
             tracing::warn!("LAN resume discovery state is unavailable");
             return;
@@ -164,7 +203,7 @@ impl ResumeListener {
                 };
             } else {
                 let (registrations, registered_addresses) =
-                    register_resume_mdns(local_device_id, self.port, self.listener_v6.is_some());
+                    register_resume_mdns(local_device_id, self.port, self.bind_address);
                 // Replace the prior advertisements only after the new set has
                 // been registered successfully, preserving discovery on errors.
                 if !registered_addresses.is_empty() {
@@ -191,18 +230,34 @@ impl ResumeListener {
     where
         F: Fn([u8; 32]) -> bool + Send + Sync + 'static,
     {
+        let Some(guard) = self.network_guard.as_ref().cloned() else {
+            return self.accept_authorized_inner(authorize).await;
+        };
+        guard
+            .preflight(NetworkUse::Lan)
+            .map_err(|_| LanError::NetworkPolicy)?;
+        let mut attempt = tokio::select! {
+            result = self.accept_authorized_inner(authorize) => result?,
+            _ = guard.wait_for_change(Duration::from_millis(250)) => {
+                return Err(LanError::NetworkPolicy);
+            }
+        };
+        attempt
+            .transport
+            .enforce_network_policy(guard)
+            .map_err(|_| LanError::NetworkPolicy)?;
+        Ok(attempt)
+    }
+
+    async fn accept_authorized_inner<F>(&self, authorize: F) -> Result<ResumeAttempt, LanError>
+    where
+        F: Fn([u8; 32]) -> bool + Send + Sync + 'static,
+    {
         let mut state = self.accept_state.lock().await;
         if let Some(last_accepted_at) = state.last_accepted_at {
             sleep_until(last_accepted_at + RECONNECT_ACCEPT_INTERVAL).await;
         }
-        let accepted = if let Some(listener_v6) = self.listener_v6.as_ref() {
-            tokio::select! {
-                result = self.listener_v4.accept() => result,
-                result = listener_v6.accept() => result,
-            }
-        } else {
-            self.listener_v4.accept().await
-        };
+        let accepted = self.listener_v4.accept().await;
         let (socket, remote) = accepted.map_err(|_| LanError::Signaling)?;
         state.last_accepted_at = Some(Instant::now());
         drop(state);
@@ -234,24 +289,6 @@ impl ResumeListener {
             transport,
         })
     }
-}
-
-async fn bind_ipv6_listener(port: u16) -> Option<TcpListener> {
-    let socket = socket2::Socket::new(
-        socket2::Domain::IPV6,
-        socket2::Type::STREAM,
-        Some(socket2::Protocol::TCP),
-    )
-    .ok()?;
-    socket.set_only_v6(true).ok()?;
-    socket.set_reuse_address(true).ok()?;
-    socket
-        .bind(&SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), port).into())
-        .ok()?;
-    socket.listen(128).ok()?;
-    let listener: std::net::TcpListener = socket.into();
-    listener.set_nonblocking(true).ok()?;
-    TcpListener::from_std(listener).ok()
 }
 
 struct ReconnectAcceptState {
@@ -526,6 +563,7 @@ async fn negotiate_socket(
 pub(crate) enum CandidatePolicy {
     Lan,
     Internet { allow_loopback: bool },
+    InternetRelayOnly { allow_loopback: bool },
 }
 
 pub(crate) async fn negotiate_offer_answer<S>(
@@ -539,7 +577,12 @@ where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
     let offer = at_stage(receive_offer(websocket).await, "receive_offer")?;
-    at_stage(validate_sdp(&offer.sdp, policy), "offer_sdp")?;
+    // Relay-only is our local publication policy. It must not reject a peer's
+    // host candidate: a relay-local/host-remote path is valid and does not
+    // reveal this device's address. Validate the peer under ordinary Internet
+    // signaling rules, then filter only the local SDP sent below.
+    let remote_policy = remote_offer_policy(policy);
+    at_stage(validate_sdp(&offer.sdp, remote_policy), "offer_sdp")?;
     tracing::info!("WebRTC offer accepted");
 
     let turn_configured = has_turn_server(&ice_servers);
@@ -660,6 +703,18 @@ where
     Ok(WebRtcTransport::new(pc_guard.disarm(), data_channel))
 }
 
+/// Apply only the local relay-only candidate policy to outgoing SDP. A local
+/// relay candidate can validly connect to a remote host or server-reflexive
+/// candidate, so remote SDP always uses ordinary Internet validation.
+fn remote_offer_policy(policy: CandidatePolicy) -> CandidatePolicy {
+    match policy {
+        CandidatePolicy::InternetRelayOnly { allow_loopback } => {
+            CandidatePolicy::Internet { allow_loopback }
+        }
+        policy => policy,
+    }
+}
+
 fn at_stage<T>(result: Result<T, LanError>, stage: &'static str) -> Result<T, LanError> {
     result.inspect_err(|error| {
         tracing::warn!(stage, error = %error, "WebRTC negotiation failed");
@@ -711,88 +766,54 @@ fn register_mdns(address: IpAddr, port: u16) -> Option<MdnsRegistration> {
     })
 }
 
-fn resume_mdns_addresses(ipv6_available: bool) -> Vec<IpAddr> {
-    let interfaces = crate::address::local_interfaces().unwrap_or_default();
-    let has_physical = interfaces.iter().any(|interface| {
-        matches!(
-            interface.kind,
-            crate::InterfaceKind::Wifi | crate::InterfaceKind::Ethernet
-        )
-    });
-    interfaces
-        .into_iter()
-        .filter(|interface| {
-            !interface.address.is_loopback()
-                && (interface.address.is_ipv4() || ipv6_available)
-                && if has_physical {
-                    matches!(
-                        interface.kind,
-                        crate::InterfaceKind::Wifi | crate::InterfaceKind::Ethernet
-                    )
-                } else {
-                    matches!(
-                        interface.kind,
-                        crate::InterfaceKind::Other | crate::InterfaceKind::Virtual
-                    )
-                }
-        })
-        .take(8)
-        .map(|interface| interface.address)
-        .collect()
-}
-
 fn register_resume_mdns(
     local_device_id: [u8; 32],
     port: u16,
-    ipv6_available: bool,
+    address: IpAddr,
 ) -> (Vec<MdnsRegistration>, Vec<IpAddr>) {
-    let addresses = resume_mdns_addresses(ipv6_available);
-    if addresses.is_empty() {
-        return (Vec::new(), addresses);
+    if address.is_loopback() {
+        return (Vec::new(), Vec::new());
     }
     let Some(daemon) = ServiceDaemon::new().ok() else {
         return (Vec::new(), Vec::new());
     };
     let device = hex_bytes(&local_device_id);
-    let mut fullnames = Vec::new();
-    let mut registered_addresses = Vec::new();
-    for address in addresses {
-        let mut random = [0_u8; 8];
-        if getrandom::fill(&mut random).is_err() {
-            continue;
-        }
-        let suffix = hex_bytes(&random);
-        let instance = format!("kryptopass-resume-{suffix}");
-        let hostname = format!("kp-resume-{suffix}.local.");
-        let properties = [
-            ("v", "1"),
-            ("transport", "webrtc"),
-            ("mode", "resume"),
-            ("device", device.as_str()),
-        ];
-        let Ok(service) = ServiceInfo::new(
-            SERVICE_TYPE,
-            &instance,
-            &hostname,
-            address,
-            port,
-            &properties[..],
-        ) else {
-            continue;
-        };
-        let fullname = service.get_fullname().to_owned();
-        if daemon.register(service).is_ok() {
-            fullnames.push(fullname);
-            registered_addresses.push(address);
-        }
+    let mut random = [0_u8; 8];
+    if getrandom::fill(&mut random).is_err() {
+        let _ = daemon.shutdown();
+        return (Vec::new(), Vec::new());
     }
-    if fullnames.is_empty() {
+    let suffix = hex_bytes(&random);
+    let instance = format!("kryptopass-resume-{suffix}");
+    let hostname = format!("kp-resume-{suffix}.local.");
+    let properties = [
+        ("v", "1"),
+        ("transport", "webrtc"),
+        ("mode", "resume"),
+        ("device", device.as_str()),
+    ];
+    let Ok(service) = ServiceInfo::new(
+        SERVICE_TYPE,
+        &instance,
+        &hostname,
+        address,
+        port,
+        &properties[..],
+    ) else {
+        let _ = daemon.shutdown();
+        return (Vec::new(), Vec::new());
+    };
+    let fullname = service.get_fullname().to_owned();
+    if daemon.register(service).is_err() {
         let _ = daemon.shutdown();
         return (Vec::new(), Vec::new());
     }
     (
-        vec![MdnsRegistration { daemon, fullnames }],
-        registered_addresses,
+        vec![MdnsRegistration {
+            daemon,
+            fullnames: vec![fullname],
+        }],
+        vec![address],
     )
 }
 
@@ -928,8 +949,13 @@ fn data_channel_answer_sdp(sdp: &str, policy: CandidatePolicy) -> Result<String,
     if sdp.is_empty() || sdp.len() > MAX_SIGNALING_MESSAGE {
         return Err(LanError::InvalidSignaling);
     }
+    let sanitized = if is_relay_only(policy) {
+        sanitize_relay_only_sdp(sdp)?
+    } else {
+        sdp.to_owned()
+    };
     let mut answer = String::with_capacity(sdp.len());
-    for line in sdp.lines() {
+    for line in sanitized.lines() {
         let line = line.trim_end_matches('\r');
         // webrtc 0.21 serializes both ICE components even for application media.
         // SCTP DataChannel uses only component 1; remove the local RTCP duplicate.
@@ -1004,6 +1030,9 @@ fn validate_sdp_address_line(
     // Native WebRTC uses loopback in o= as session metadata. It is not an ICE
     // destination; c= and every candidate still use the transport address policy.
     let origin_placeholder = address_field == 5 && address.is_loopback();
+    if is_relay_only(policy) && !address.is_unspecified() {
+        return Err(LanError::InvalidSignaling);
+    }
     if !address.is_unspecified() && !origin_placeholder && !address_allowed(address, policy) {
         return Err(LanError::InvalidSignaling);
     }
@@ -1014,7 +1043,10 @@ fn validate_candidate(line: &str, policy: CandidatePolicy) -> Result<(), LanErro
     match policy {
         CandidatePolicy::Lan => validate_lan_candidate(line),
         CandidatePolicy::Internet { allow_loopback } => {
-            validate_internet_candidate(line, allow_loopback)
+            validate_internet_candidate(line, allow_loopback, false)
+        }
+        CandidatePolicy::InternetRelayOnly { allow_loopback } => {
+            validate_internet_candidate(line, allow_loopback, true)
         }
     }
 }
@@ -1056,7 +1088,11 @@ fn validate_lan_candidate(line: &str) -> Result<(), LanError> {
     Ok(())
 }
 
-fn validate_internet_candidate(line: &str, allow_loopback: bool) -> Result<(), LanError> {
+fn validate_internet_candidate(
+    line: &str,
+    allow_loopback: bool,
+    relay_only: bool,
+) -> Result<(), LanError> {
     if line.len() > 512 {
         return Err(LanError::InvalidSignaling);
     }
@@ -1084,11 +1120,19 @@ fn validate_internet_candidate(line: &str, allow_loopback: bool) -> Result<(), L
     ) {
         return Err(LanError::InvalidSignaling);
     }
+    if relay_only && candidate_type != "relay" {
+        return Err(LanError::InvalidSignaling);
+    }
     let address: IpAddr = fields[4].parse().map_err(|_| LanError::InvalidSignaling)?;
     let port = fields[5]
         .parse::<u16>()
         .map_err(|_| LanError::InvalidSignaling)?;
-    if !address_allowed(address, CandidatePolicy::Internet { allow_loopback }) || port == 0 {
+    let candidate_policy = if relay_only {
+        CandidatePolicy::InternetRelayOnly { allow_loopback }
+    } else {
+        CandidatePolicy::Internet { allow_loopback }
+    };
+    if !address_allowed(address, candidate_policy) || port == 0 {
         return Err(LanError::InvalidSignaling);
     }
     if fields.len() > 8 && (fields.len() - 8) % 2 != 0 {
@@ -1144,10 +1188,7 @@ fn validate_internet_candidate(line: &str, allow_loopback: bool) -> Result<(), L
             let redacted = candidate_type != "host"
                 && related.is_unspecified()
                 && matches!(related_port, 0 | 9);
-            if !redacted
-                && (related_port == 0
-                    || !address_allowed(related, CandidatePolicy::Internet { allow_loopback }))
-            {
+            if !redacted && (related_port == 0 || !address_allowed(related, candidate_policy)) {
                 return Err(LanError::InvalidSignaling);
             }
         }
@@ -1159,10 +1200,89 @@ fn validate_internet_candidate(line: &str, allow_loopback: bool) -> Result<(), L
 fn address_allowed(address: IpAddr, policy: CandidatePolicy) -> bool {
     match policy {
         CandidatePolicy::Lan => is_supported_address(address),
-        CandidatePolicy::Internet { allow_loopback } => {
+        CandidatePolicy::Internet { allow_loopback }
+        | CandidatePolicy::InternetRelayOnly { allow_loopback } => {
             is_supported_internet_address(address) || (allow_loopback && address.is_loopback())
         }
     }
+}
+
+fn is_relay_only(policy: CandidatePolicy) -> bool {
+    matches!(policy, CandidatePolicy::InternetRelayOnly { .. })
+}
+
+fn sanitize_relay_only_sdp(sdp: &str) -> Result<String, LanError> {
+    if sdp.is_empty() || sdp.len() > MAX_SIGNALING_MESSAGE {
+        return Err(LanError::InvalidSignaling);
+    }
+    let mut sanitized = String::with_capacity(sdp.len());
+    for line in sdp.lines() {
+        let line = line.trim_end_matches('\r');
+        let lower = line.to_ascii_lowercase();
+        if lower.starts_with("o=") {
+            sanitized.push_str(&sanitize_sdp_address_line(line, 5)?);
+        } else if lower.starts_with("c=") {
+            sanitized.push_str(&sanitize_sdp_address_line(line, 2)?);
+        } else if lower.starts_with("a=candidate:") {
+            let fields: Vec<_> = line.split_ascii_whitespace().collect();
+            if fields
+                .get(7)
+                .is_some_and(|kind| kind.eq_ignore_ascii_case("relay"))
+            {
+                sanitized.push_str(&sanitize_relay_candidate(line)?);
+            } else {
+                continue;
+            }
+        } else {
+            sanitized.push_str(line);
+        }
+        sanitized.push_str("\r\n");
+    }
+    validate_sdp(
+        &sanitized,
+        CandidatePolicy::InternetRelayOnly {
+            allow_loopback: true,
+        },
+    )?;
+    Ok(sanitized)
+}
+
+fn sanitize_sdp_address_line(line: &str, address_field: usize) -> Result<String, LanError> {
+    let mut fields: Vec<_> = line.split_ascii_whitespace().map(str::to_owned).collect();
+    if fields.len() <= address_field || address_field == 0 {
+        return Err(LanError::InvalidSignaling);
+    }
+    fields[address_field - 1] = "IP4".to_owned();
+    fields[address_field] = "0.0.0.0".to_owned();
+    Ok(fields.join(" "))
+}
+
+fn sanitize_relay_candidate(line: &str) -> Result<String, LanError> {
+    let candidate = line
+        .strip_prefix("a=candidate:")
+        .ok_or(LanError::InvalidSignaling)?;
+    let fields: Vec<_> = candidate.split_ascii_whitespace().collect();
+    if fields.len() < 8 || !fields[7].eq_ignore_ascii_case("relay") {
+        return Err(LanError::InvalidSignaling);
+    }
+    if (fields.len() - 8) % 2 != 0 {
+        return Err(LanError::InvalidSignaling);
+    }
+    let mut redacted = fields[..8]
+        .iter()
+        .map(|field| (*field).to_owned())
+        .collect::<Vec<_>>();
+    for extension in fields[8..].chunks_exact(2) {
+        let name = extension[0].to_ascii_lowercase();
+        let value = match name.as_str() {
+            "raddr" => "0.0.0.0",
+            "rport" => "9",
+            _ => extension[1],
+        };
+        redacted.push(extension[0].to_owned());
+        redacted.push(value.to_owned());
+    }
+    Ok(format!("a=candidate:{}", redacted.join(" ")))
 }
 
 struct LanPeerConnectionHandler {

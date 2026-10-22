@@ -49,6 +49,112 @@ fn decode_as<M: Message>(
     SessionCodec::new(SESSION).decode(&wire)
 }
 
+fn decode_hex(value: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    if value.len() % 2 != 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "hex vector has an odd length",
+        )
+        .into());
+    }
+    value
+        .as_bytes()
+        .chunks_exact(2)
+        .map(|pair| -> Result<u8, Box<dyn std::error::Error>> {
+            let hex = std::str::from_utf8(pair)?;
+            Ok(u8::from_str_radix(hex, 16)?)
+        })
+        .collect()
+}
+
+fn hex_bytes(value: &[u8]) -> String {
+    value.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn synthetic_transfer_vectors() -> Vec<(proto::MessageType, Vec<u8>, String, Channel)> {
+    use proto::MessageType as Type;
+
+    let transfer_id: Vec<u8> = (1..=16).collect();
+    let fingerprint = bytes(20, 0x41);
+    let digest = bytes(32, 0x42);
+    let challenge_digest = bytes(32, 0x44);
+    let id_hex = hex_bytes(&transfer_id);
+    let fingerprint_hex = hex_bytes(&fingerprint);
+    let digest_hex = hex_bytes(&digest);
+    let challenge_digest_hex = hex_bytes(&challenge_digest);
+
+    let offer = proto::SyntheticKeyOffer {
+        transfer_id: transfer_id.clone(),
+        openpgp_fingerprint: fingerprint.clone(),
+        total_size: 3,
+        sha256_digest: digest.clone(),
+        encrypted_challenge: vec![0x43],
+    };
+    let decision = proto::SyntheticKeyDecision {
+        transfer_id: transfer_id.clone(),
+        accepted: true,
+    };
+    let chunk = proto::SyntheticKeyChunk {
+        transfer_id: transfer_id.clone(),
+        chunk_index: 0,
+        chunk_count: 1,
+        total_size: 1,
+        sha256_digest: digest.clone(),
+        data: vec![0x43],
+    };
+    let complete = proto::SyntheticKeyComplete {
+        transfer_id: transfer_id.clone(),
+    };
+    let receipt = proto::SyntheticKeyReceipt {
+        transfer_id: transfer_id.clone(),
+        openpgp_fingerprint: fingerprint,
+        challenge_sha256: challenge_digest,
+    };
+    let abort = proto::SyntheticKeyAbort {
+        transfer_id,
+        code: proto::AbortCode::UserCancelled as i32,
+    };
+
+    vec![
+        (
+            Type::SyntheticKeyOffer,
+            offer.encode_to_vec(),
+            format!("0a10{id_hex}1214{fingerprint_hex}18032220{digest_hex}2a0143"),
+            Channel::Control,
+        ),
+        (
+            Type::SyntheticKeyDecision,
+            decision.encode_to_vec(),
+            format!("0a10{id_hex}1001"),
+            Channel::Control,
+        ),
+        (
+            Type::SyntheticKeyChunk,
+            chunk.encode_to_vec(),
+            format!("0a10{id_hex}180120012a20{digest_hex}320143"),
+            Channel::Data,
+        ),
+        (
+            Type::SyntheticKeyComplete,
+            complete.encode_to_vec(),
+            format!("0a10{id_hex}"),
+            Channel::Control,
+        ),
+        (
+            Type::SyntheticKeyReceipt,
+            receipt.encode_to_vec(),
+            format!("0a10{id_hex}1214{fingerprint_hex}1a20{challenge_digest_hex}"),
+            Channel::Control,
+        ),
+        (
+            Type::SyntheticKeyAbort,
+            abort.encode_to_vec(),
+            format!("0a10{id_hex}1001"),
+            Channel::Control,
+        ),
+    ]
+}
+
 fn valid_messages() -> Vec<(proto::MessageType, Vec<u8>, Channel)> {
     use proto::MessageType as Type;
 
@@ -841,6 +947,301 @@ fn synchronization_and_key_transfer_field_limits_are_enforced() {
             field: "sha256_digest"
         })
     ));
+}
+
+#[test]
+fn synthetic_transfer_payloads_match_shared_rust_kotlin_vectors()
+-> Result<(), Box<dyn std::error::Error>> {
+    let vectors = synthetic_transfer_vectors();
+    let expected_types = [23, 24, 25, 26, 27, 28];
+    assert_eq!(vectors.len(), expected_types.len());
+
+    for ((message_type, payload, expected_hex, expected_channel), expected_type) in
+        vectors.into_iter().zip(expected_types)
+    {
+        assert_eq!(message_type as i32, expected_type);
+        assert_eq!(payload, decode_hex(&expected_hex)?);
+
+        let wire = frame(&SESSION, 1, message_type as i32, &payload, PROTOCOL_VERSION);
+        let decoded = SessionCodec::new(SESSION).decode_on(expected_channel, &wire)?;
+        assert_eq!(decoded.message_type as i32, message_type as i32);
+        assert_eq!(decoded.channel, expected_channel);
+        assert!(format!("{decoded:?}").contains("[redacted]"));
+    }
+
+    let (message_type, payload, _, _) = synthetic_transfer_vectors()
+        .into_iter()
+        .find(|(message_type, _, _, _)| *message_type == proto::MessageType::SyntheticKeyChunk)
+        .ok_or_else(|| std::io::Error::other("synthetic chunk vector is missing"))?;
+    let data_frame = frame(&SESSION, 1, message_type as i32, &payload, PROTOCOL_VERSION);
+    assert!(matches!(
+        SessionCodec::new(SESSION).decode_on(Channel::Control, &data_frame),
+        Err(ProtocolError::WrongChannel {
+            expected: Channel::Data,
+            actual: Channel::Control,
+        })
+    ));
+    Ok(())
+}
+
+#[test]
+fn synthetic_transfer_field_limits_reject_malformed_ids_chunks_and_challenges() {
+    use proto::MessageType as Type;
+
+    let mut offer = proto::SyntheticKeyOffer {
+        transfer_id: bytes(16, 1),
+        openpgp_fingerprint: bytes(20, 2),
+        total_size: 1,
+        sha256_digest: bytes(32, 3),
+        encrypted_challenge: vec![4],
+    };
+    assert!(decode_as(Type::SyntheticKeyOffer, &offer).is_ok());
+    offer.total_size = 1024 * 1024;
+    offer.encrypted_challenge = bytes(16 * 1024, 4);
+    assert!(decode_as(Type::SyntheticKeyOffer, &offer).is_ok());
+    offer.transfer_id = bytes(16, 0);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+    offer.transfer_id = bytes(15, 1);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+    offer.transfer_id = bytes(16, 1);
+    offer.openpgp_fingerprint = bytes(19, 2);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "openpgp_fingerprint"
+        })
+    ));
+    offer.openpgp_fingerprint = bytes(20, 2);
+    offer.sha256_digest = bytes(31, 3);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "sha256_digest"
+        })
+    ));
+    offer.sha256_digest = bytes(32, 3);
+    offer.total_size = 0;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "total_size"
+        })
+    ));
+    offer.total_size = 1024 * 1024 + 1;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "total_size"
+        })
+    ));
+    offer.total_size = 1;
+    offer.encrypted_challenge.clear();
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "encrypted_challenge"
+        })
+    ));
+    offer.encrypted_challenge = bytes(16 * 1024 + 1, 4);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyOffer, &offer),
+        Err(ProtocolError::InvalidField {
+            field: "encrypted_challenge"
+        })
+    ));
+
+    let mut decision = proto::SyntheticKeyDecision {
+        transfer_id: bytes(16, 1),
+        accepted: false,
+    };
+    assert!(decode_as(Type::SyntheticKeyDecision, &decision).is_ok());
+    decision.transfer_id.clear();
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyDecision, &decision),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+
+    let mut chunk = proto::SyntheticKeyChunk {
+        transfer_id: bytes(16, 1),
+        chunk_index: 0,
+        chunk_count: 1,
+        total_size: 32 * 1024,
+        sha256_digest: bytes(32, 2),
+        data: bytes(32 * 1024, 3),
+    };
+    assert!(decode_as(Type::SyntheticKeyChunk, &chunk).is_ok());
+    chunk.total_size = 1024 * 1024;
+    chunk.chunk_count = 32;
+    assert!(decode_as(Type::SyntheticKeyChunk, &chunk).is_ok());
+    chunk.transfer_id = bytes(15, 1);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+    chunk.transfer_id = bytes(16, 1);
+    chunk.chunk_index = chunk.chunk_count;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "chunk_index"
+        })
+    ));
+    chunk.chunk_index = 0;
+    chunk.chunk_count = 0;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "chunk_index"
+        })
+    ));
+    chunk.chunk_count = 1;
+    chunk.sha256_digest.pop();
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "sha256_digest"
+        })
+    ));
+    chunk.sha256_digest = bytes(32, 2);
+    chunk.total_size = 0;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "total_size"
+        })
+    ));
+    chunk.total_size = 1024 * 1024 + 1;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField {
+            field: "total_size"
+        })
+    ));
+    chunk.total_size = 1;
+    chunk.data.clear();
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField { field: "data" })
+    ));
+    chunk.data = bytes(32 * 1024 + 1, 3);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyChunk, &chunk),
+        Err(ProtocolError::InvalidField { .. })
+    ));
+
+    let mut complete = proto::SyntheticKeyComplete {
+        transfer_id: bytes(16, 1),
+    };
+    assert!(decode_as(Type::SyntheticKeyComplete, &complete).is_ok());
+    complete.transfer_id = bytes(16, 0);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyComplete, &complete),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+
+    let mut receipt = proto::SyntheticKeyReceipt {
+        transfer_id: bytes(16, 1),
+        openpgp_fingerprint: bytes(20, 2),
+        challenge_sha256: bytes(32, 3),
+    };
+    assert!(decode_as(Type::SyntheticKeyReceipt, &receipt).is_ok());
+    receipt.openpgp_fingerprint.pop();
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyReceipt, &receipt),
+        Err(ProtocolError::InvalidField {
+            field: "openpgp_fingerprint"
+        })
+    ));
+    receipt.openpgp_fingerprint = bytes(20, 2);
+    receipt.challenge_sha256 = bytes(31, 3);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyReceipt, &receipt),
+        Err(ProtocolError::InvalidField {
+            field: "challenge_sha256"
+        })
+    ));
+    receipt.transfer_id = bytes(16, 0);
+    receipt.challenge_sha256 = bytes(32, 3);
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyReceipt, &receipt),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+
+    let mut abort = proto::SyntheticKeyAbort {
+        transfer_id: bytes(16, 1),
+        code: proto::AbortCode::UserCancelled as i32,
+    };
+    assert!(decode_as(Type::SyntheticKeyAbort, &abort).is_ok());
+    for code in [0, 99] {
+        abort.code = code;
+        assert!(matches!(
+            decode_as(Type::SyntheticKeyAbort, &abort),
+            Err(ProtocolError::InvalidField { field: "code" })
+        ));
+    }
+    abort.transfer_id = bytes(15, 1);
+    abort.code = proto::AbortCode::Failed as i32;
+    assert!(matches!(
+        decode_as(Type::SyntheticKeyAbort, &abort),
+        Err(ProtocolError::InvalidField {
+            field: "transfer_id"
+        })
+    ));
+}
+
+#[test]
+fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
+-> Result<(), Box<dyn std::error::Error>> {
+    let hello = proto::SessionHello {
+        session_version: 1,
+        device_id: bytes(32, 1),
+        reconnect_port: 0,
+        synthetic_key_transfer_version: 0,
+    };
+    let decoded = decode_as(proto::MessageType::SessionHello, &hello)?;
+    let kryptopass_protocol::MessagePayload::SessionHello(decoded_hello) = decoded.payload else {
+        return Err(
+            std::io::Error::other("session hello decoded as the wrong payload type").into(),
+        );
+    };
+    assert_eq!(decoded_hello.synthetic_key_transfer_version, 0);
+    Ok(())
+}
+
+#[test]
+fn synthetic_transfer_wire_debug_output_redacts_payload_bytes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let marker = b"synthetic-test-payload-marker";
+    let offer = proto::SyntheticKeyOffer {
+        transfer_id: bytes(16, 1),
+        openpgp_fingerprint: bytes(20, 2),
+        total_size: 1,
+        sha256_digest: bytes(32, 3),
+        encrypted_challenge: marker.to_vec(),
+    };
+    let decoded = decode_as(proto::MessageType::SyntheticKeyOffer, &offer)?;
+    let debug = format!("{decoded:?}");
+    assert!(debug.contains("[redacted]"));
+    assert!(!debug.contains(std::str::from_utf8(marker)?));
+    Ok(())
 }
 
 #[test]

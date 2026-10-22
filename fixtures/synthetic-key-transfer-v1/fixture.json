@@ -1,0 +1,8 @@
+{
+  "fixture_id": "kp-synthetic-key-v1",
+  "fingerprint": "242C5340E4489A437FBF254BB7C068CD0A2ECFCF",
+  "sha256": "12aa642bf40debf9b1e0a98e684349d969feafaa53ce6926bb12813e84f6aa6d",
+  "size": 601,
+  "passphrase": "synthetic ART ECC passphrase only",
+  "warning": "PUBLIC SYNTHETIC TEST KEY. NEVER USE FOR REAL SECRETS."
+}

@@ -799,6 +799,7 @@ async fn exchange_session_hello<T: PeerTransport>(
         session_version: ACTIVE_SESSION_VERSION,
         device_id: context.local_device_id.as_bytes().to_vec(),
         reconnect_port: u32::from(context.options.reconnect_port),
+        synthetic_key_transfer_version: 0,
     };
     let send = session.send_message(proto::MessageType::SessionHello, &hello);
     tokio::select! {

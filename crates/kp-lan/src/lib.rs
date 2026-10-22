@@ -16,13 +16,21 @@ mod address;
 mod error;
 mod host;
 mod internet;
+mod privacy;
 mod transport;
 mod turn;
 
-pub use address::{InterfaceKind, LanInterface, local_addresses, local_interfaces};
+pub use address::{
+    InterfaceKind, LanInterface, internet_udp_bind_addresses, local_addresses, local_interfaces,
+    os_selected_local_address, select_local_bind_address,
+};
 pub use error::LanError;
 pub use host::{LanHost, ReconnectHost, ResumeAttempt, ResumeListener};
 pub use internet::{
     IceServerConfig, InternetIceConfig, InternetIceTransportPolicy, RelayHost, RelayRoute,
+};
+pub use privacy::{
+    NetworkPolicyError, NetworkPolicyGuard, NetworkPrivacyPolicy, NetworkRouteSnapshot, NetworkUse,
+    RouteSnapshotSource, RouteStatus, VpnMode, VpnStatus,
 };
 pub use transport::{WebRtcCancelHandle, WebRtcTransport};

@@ -7,9 +7,11 @@ use kryptopass_devices::{
     SessionFailure, SessionOptions,
 };
 use kryptopass_identity::{DeviceId, PublicIdentity};
+use kryptopass_lan::{NetworkPolicyError, NetworkPolicyGuard, NetworkPrivacyPolicy, VpnMode};
 use kryptopass_pairing::LocalDecision;
 use kryptopass_pairing_lab::{
-    HostEvent, LabHost, LabNetwork, ResumeOwnerSnapshot, ResumeProcessOwner,
+    HostEvent, LabHost, LabNetwork, NetworkPrivacySettings, ResumeOwnerSnapshot,
+    ResumeProcessOwner, load_network_privacy_settings, save_network_privacy_settings,
     spawn_resume_process_owner,
 };
 use std::{
@@ -46,6 +48,16 @@ pub mod qobject {
         #[qproperty(i32, selected_index, cxx_name = "selectedIndex", READ, NOTIFY)]
         #[qproperty(bool, lan_enabled, cxx_name = "lanEnabled", READ, NOTIFY)]
         #[qproperty(bool, internet_enabled, cxx_name = "internetEnabled", READ, NOTIFY)]
+        #[qproperty(bool, require_vpn, cxx_name = "requireVpn", READ, NOTIFY)]
+        #[qproperty(
+            bool,
+            allow_lan_exception,
+            cxx_name = "allowLanException",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(bool, relay_only, cxx_name = "relayOnly", READ, NOTIFY)]
+        #[qproperty(i32, vpn_status, cxx_name = "vpnStatus", READ, NOTIFY)]
         #[qproperty(QString, relay_origin, cxx_name = "relayOrigin", READ, NOTIFY)]
         #[qproperty(
             QStringList,
@@ -88,6 +100,14 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "configureNetwork"]
         fn configure_network(self: Pin<&mut Self>, enabled: bool, index: i32);
+        #[qinvokable]
+        #[cxx_name = "configurePrivacy"]
+        fn configure_privacy(
+            self: Pin<&mut Self>,
+            require_vpn: bool,
+            allow_lan_exception: bool,
+            relay_only: bool,
+        );
         #[qinvokable]
         #[cxx_name = "configureInternet"]
         fn configure_internet(self: Pin<&mut Self>, enabled: bool, relay_origin: QString);
@@ -135,6 +155,10 @@ pub struct PairingLabControllerRust {
     selected_index: i32,
     lan_enabled: bool,
     internet_enabled: bool,
+    require_vpn: bool,
+    allow_lan_exception: bool,
+    relay_only: bool,
+    vpn_status: i32,
     relay_origin: QString,
     network_addresses: QStringList,
     network_index: i32,
@@ -161,6 +185,7 @@ pub struct PairingLabControllerRust {
     generation: u64,
     devices_revision: u64,
     resume_owner: Option<ResumeProcessOwner>,
+    active_network_guard: Option<NetworkPolicyGuard>,
     resume_owner_generation: u64,
     resume_owner_cancel: Option<watch::Sender<bool>>,
 }
@@ -176,6 +201,10 @@ impl Default for PairingLabControllerRust {
             selected_index: -1,
             lan_enabled: true,
             internet_enabled: false,
+            require_vpn: false,
+            allow_lan_exception: false,
+            relay_only: false,
+            vpn_status: 0,
             relay_origin: QString::from("wss://signal.kryptopass.org"),
             network_addresses: QStringList::default(),
             network_index: -1,
@@ -202,6 +231,7 @@ impl Default for PairingLabControllerRust {
             generation: 0,
             devices_revision: 0,
             resume_owner: None,
+            active_network_guard: None,
             resume_owner_generation: 0,
             resume_owner_cancel: None,
         }
@@ -361,6 +391,52 @@ impl qobject::PairingLabController {
         if !cfg!(debug_assertions) || *self.busy() {
             return;
         }
+        let settings = match lab_directory()
+            .map_err(|_| ())
+            .and_then(|directory| load_network_privacy_settings(&directory).map_err(|_| ()))
+        {
+            Ok(settings) => settings,
+            Err(()) => {
+                self.as_mut()
+                    .set_status_code(QString::from("network_policy_blocked"));
+                self.as_mut().set_status(QString::from(
+                    "No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.",
+                ));
+                return;
+            }
+        };
+        let loaded_policy_changed = settings.policy
+            != (NetworkPrivacyPolicy {
+                vpn_mode: if self.rust().require_vpn {
+                    VpnMode::RequireVpn
+                } else {
+                    VpnMode::FollowSystem
+                },
+                allow_lan_exception: self.rust().allow_lan_exception,
+                relay_only: self.rust().relay_only,
+            });
+        if loaded_policy_changed {
+            if let Some(guard) = self.as_mut().rust_mut().active_network_guard.as_ref() {
+                guard.invalidate();
+            }
+            if let Some(owner) = self.rust().resume_owner.as_ref() {
+                owner.refresh_network_policy();
+            }
+        }
+        self.as_mut().rust_mut().require_vpn = settings.policy.vpn_mode == VpnMode::RequireVpn;
+        self.as_mut()
+            .set_require_vpn(settings.policy.vpn_mode == VpnMode::RequireVpn);
+        self.as_mut().rust_mut().allow_lan_exception = settings.policy.allow_lan_exception;
+        self.as_mut()
+            .set_allow_lan_exception(settings.policy.allow_lan_exception);
+        self.as_mut().rust_mut().relay_only = settings.policy.relay_only;
+        self.as_mut().set_relay_only(settings.policy.relay_only);
+        self.as_mut()
+            .set_vpn_status(if settings.policy.vpn_mode == VpnMode::RequireVpn {
+                1
+            } else {
+                0
+            });
         let previous = usize::try_from(self.rust().network_index)
             .ok()
             .and_then(|index| self.rust().network_ips.get(index))
@@ -370,14 +446,13 @@ impl qobject::PairingLabController {
             .iter()
             .map(|interface| interface.address)
             .collect();
-        let index = previous
-            .and_then(|previous| addresses.iter().position(|ip| *ip == previous))
-            .or_else(|| {
-                addresses
-                    .iter()
-                    .position(|ip| !ip.is_loopback())
-                    .or_else(|| (!addresses.is_empty()).then_some(0))
-            });
+        let selected = kryptopass_lan::select_local_bind_address(
+            settings.lan_bind_ip,
+            &addresses,
+            kryptopass_lan::os_selected_local_address(),
+        )
+        .or_else(|| previous.filter(|address| addresses.contains(address)));
+        let index = selected.and_then(|selected| addresses.iter().position(|ip| *ip == selected));
         let display = interfaces
             .iter()
             .map(|interface| {
@@ -436,10 +511,105 @@ impl qobject::PairingLabController {
             .ok()
             .is_some_and(|index| index < self.rust().network_ips.len())
         {
+            let Some(bind_ip) = usize::try_from(index)
+                .ok()
+                .and_then(|index| self.rust().network_ips.get(index))
+                .copied()
+            else {
+                return;
+            };
+            if let Err(()) = persist_network_settings(Some(bind_ip)) {
+                self.as_mut()
+                    .set_status_code(QString::from("network_policy_blocked"));
+                self.as_mut().set_status(QString::from(
+                    "No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.",
+                ));
+                return;
+            }
             self.as_mut().set_network_index(index);
             self.as_mut().set_lan_enabled(true);
+            if let Some(owner) = self.rust().resume_owner.as_ref() {
+                owner.refresh_network_policy();
+            }
         } else {
             self.as_mut().set_status(QString::from("No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador."));
+        }
+    }
+
+    pub fn configure_privacy(
+        mut self: Pin<&mut Self>,
+        require_vpn: bool,
+        allow_lan_exception: bool,
+        relay_only: bool,
+    ) {
+        if !cfg!(debug_assertions) || self.rust().maintenance_busy {
+            return;
+        }
+        // Changing privacy settings must not pin an automatically displayed
+        // route address. Only the explicit LAN selection saves such a preference.
+        let bind_ip = lab_directory()
+            .ok()
+            .and_then(|directory| load_network_privacy_settings(&directory).ok())
+            .and_then(|settings| settings.lan_bind_ip);
+        let policy = NetworkPrivacyPolicy {
+            vpn_mode: if require_vpn {
+                VpnMode::RequireVpn
+            } else {
+                VpnMode::FollowSystem
+            },
+            allow_lan_exception,
+            relay_only,
+        };
+        let directory = match lab_directory() {
+            Ok(directory) => directory,
+            Err(()) => {
+                self.as_mut()
+                    .set_status_code(QString::from("network_policy_blocked"));
+                self.as_mut().set_status(QString::from(
+                    "No se pudo localizar el archivo de política de red. No se aplicaron cambios.",
+                ));
+                return;
+            }
+        };
+        if save_network_privacy_settings(
+            &directory,
+            NetworkPrivacySettings {
+                policy,
+                lan_bind_ip: bind_ip,
+            },
+        )
+        .is_err()
+        {
+            self.as_mut()
+                .set_status_code(QString::from("network_policy_blocked"));
+            self.as_mut().set_status(QString::from(
+                "No se pudo guardar la política de red. No se aplicaron cambios.",
+            ));
+            return;
+        }
+
+        // Invalidate the guard shared by the pending pairing and its active
+        // WebRTC transport. Its monitor closes locally without a route fallback.
+        if let Some(guard) = self.as_mut().rust_mut().active_network_guard.take() {
+            guard.invalidate();
+        }
+        self.as_mut().rust_mut().require_vpn = require_vpn;
+        self.as_mut().set_require_vpn(require_vpn);
+        self.as_mut().rust_mut().allow_lan_exception = allow_lan_exception;
+        self.as_mut().set_allow_lan_exception(allow_lan_exception);
+        self.as_mut().rust_mut().relay_only = relay_only;
+        self.as_mut().set_relay_only(relay_only);
+        self.as_mut()
+            .set_vpn_status(if require_vpn { 1 } else { 0 });
+        if let Some(owner) = self.rust().resume_owner.as_ref() {
+            owner.refresh_network_policy();
+        }
+        if self.rust().busy || self.rust().session_active {
+            self.as_mut()
+                .set_status_code(QString::from("network_policy_changed"));
+            self.as_mut().set_status(QString::from(
+                "La política de red cambió. Se está cerrando la operación y no se reutilizará su ruta anterior.",
+            ));
         }
     }
 
@@ -733,6 +903,48 @@ impl qobject::PairingLabController {
         if !cfg!(debug_assertions) || *self.busy() || self.rust().active.is_some() {
             return;
         }
+        let profile_directory = match lab_directory() {
+            Ok(directory) => directory,
+            Err(()) => {
+                self.as_mut()
+                    .set_status_code(QString::from("network_policy_blocked"));
+                self.as_mut().set_status(QString::from(
+                    "No se pudo localizar el archivo de política de red. No se inició una conexión.",
+                ));
+                return;
+            }
+        };
+        let stored_settings = match load_network_privacy_settings(&profile_directory) {
+            Ok(settings) => settings,
+            Err(_) => {
+                self.as_mut()
+                    .set_status_code(QString::from("network_policy_blocked"));
+                self.as_mut().set_status(QString::from(
+                    "No se pudo leer la política de privacidad de red. No se inició una conexión.",
+                ));
+                return;
+            }
+        };
+        let selected_bind_ip = stored_settings.lan_bind_ip;
+        let policy = stored_settings.policy;
+        if save_network_privacy_settings(
+            &profile_directory,
+            NetworkPrivacySettings {
+                policy,
+                lan_bind_ip: selected_bind_ip,
+            },
+        )
+        .is_err()
+        {
+            self.as_mut()
+                .set_status_code(QString::from("network_policy_blocked"));
+            self.as_mut().set_status(QString::from(
+                "No se pudo guardar la política de red. No se inició una conexión.",
+            ));
+            return;
+        }
+        let guard = NetworkPolicyGuard::new(policy);
+        self.as_mut().rust_mut().active_network_guard = Some(guard.clone());
         self.as_mut().start_resume_owner();
         let Some(owner) = self.rust().resume_owner.clone() else {
             self.as_mut()
@@ -742,6 +954,7 @@ impl qobject::PairingLabController {
             ));
             return;
         };
+        owner.refresh_network_policy();
         let expected = if reconnect {
             self.rust().selected_peer()
         } else {
@@ -781,14 +994,7 @@ impl qobject::PairingLabController {
         } else {
             LabNetwork::EmulatorLoopback
         };
-        let directory = match lab_directory() {
-            Ok(path) => path,
-            Err(()) => {
-                self.as_mut()
-                    .set_status(QString::from("No se pudo abrir el perfil de pruebas."));
-                return;
-            }
-        };
+        let directory = profile_directory;
         let (cancel, cancelled) = watch::channel(false);
         let completed = Arc::new(AtomicBool::new(false));
         let worker_completed = completed.clone();
@@ -829,12 +1035,13 @@ impl qobject::PairingLabController {
                     let (events, mut received) = mpsc::channel(8);
                     let mut cancelled = cancelled;
                     let outcome = {
-                        let operation = host.open_session_with_network(
+                        let operation = host.open_session_with_network_guard(
                             expected,
                             events,
                             decisions,
                             cancelled.clone(),
                             network.clone(),
+                            guard.clone(),
                         );
                         tokio::pin!(operation);
                         loop {
@@ -948,6 +1155,7 @@ impl qobject::PairingLabController {
                 object.as_mut().set_bootstrap(QString::default());
                 object.as_mut().rust_mut().pending = None;
                 object.as_mut().rust_mut().active = None;
+                object.as_mut().rust_mut().active_network_guard = None;
                 object.as_mut().set_session_active(false);
                 object.as_mut().set_active_device_id(QString::default());
                 match result {
@@ -1368,6 +1576,23 @@ impl PairingLabControllerRust {
     }
 }
 
+fn persist_network_settings(lan_bind_ip: Option<IpAddr>) -> Result<(), ()> {
+    let directory = lab_directory()?;
+    // Selecting a local address does not authorize changing the saved privacy
+    // policy. An unreadable file must not be replaced with stale UI defaults.
+    let policy = load_network_privacy_settings(&directory)
+        .map_err(|_| ())?
+        .policy;
+    save_network_privacy_settings(
+        &directory,
+        NetworkPrivacySettings {
+            policy,
+            lan_bind_ip,
+        },
+    )
+    .map_err(|_| ())
+}
+
 fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
     use kryptopass_pairing_lab::LabError;
     match error {
@@ -1389,6 +1614,24 @@ fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
         LabError::Authentication => {
             "La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva."
         }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::VpnUnverifiable) => {
+            "Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::LanExceptionRequired) => {
+            "La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RelayRequired) => {
+            "Solo retransmisión está activo y bloquea las conexiones LAN directas."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::PolicyChanged) => {
+            "La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RouteChanged) => {
+            "La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RouteSnapshotUnavailable) => {
+            "No se pudo verificar la ruta del sistema. La conexión quedó bloqueada."
+        }
     }
 }
 
@@ -1402,6 +1645,7 @@ fn error_code(error: &kryptopass_pairing_lab::LabError) -> &'static str {
         LabError::KeyStore => "keystore_error",
         LabError::Authentication => "authentication_error",
         LabError::Link | LabError::Session => "transport_error",
+        LabError::NetworkPrivacyBlocked(_) => "network_policy_blocked",
     }
 }
 
@@ -1469,6 +1713,15 @@ notifying_property!(
     internet_enabled_changed,
     bool
 );
+notifying_property!(set_require_vpn, require_vpn, require_vpn_changed, bool);
+notifying_property!(
+    set_allow_lan_exception,
+    allow_lan_exception,
+    allow_lan_exception_changed,
+    bool
+);
+notifying_property!(set_relay_only, relay_only, relay_only_changed, bool);
+notifying_property!(set_vpn_status, vpn_status, vpn_status_changed, i32);
 notifying_property!(
     set_relay_origin,
     relay_origin,

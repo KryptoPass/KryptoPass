@@ -2,8 +2,12 @@
 
 mod aliases;
 mod internet_routes;
+mod network_privacy;
 mod resume_owner;
 pub use aliases::AliasError;
+pub use network_privacy::{
+    NetworkPrivacySettings, load_network_privacy_settings, save_network_privacy_settings,
+};
 pub use resume_owner::{
     ResumeOwnerReady, ResumeOwnerSnapshot, ResumeProcessOwner, spawn_resume_process_owner,
 };
@@ -23,7 +27,8 @@ use kryptopass_identity::{
     SystemSecretKeyStore, TrustStoreError,
 };
 use kryptopass_lan::{
-    InternetIceConfig, InternetIceTransportPolicy, LanHost, RelayHost, RelayRoute, WebRtcTransport,
+    InternetIceConfig, InternetIceTransportPolicy, LanHost, NetworkPolicyError, NetworkPolicyGuard,
+    NetworkUse, RelayHost, RelayRoute, WebRtcTransport,
 };
 use kryptopass_pairing::{
     LocalApproval, LocalDecision, PairingConfig, PairingEngine, PairingError, PairingInvitation,
@@ -141,6 +146,8 @@ pub enum LabError {
     Authentication,
     #[error("trust was persisted but the active session could not be started")]
     Session,
+    #[error("network privacy policy blocked the operation: {0}")]
+    NetworkPrivacyBlocked(#[from] NetworkPolicyError),
 }
 
 /// A host profile whose secret identity is owned here, never projected into QML.
@@ -152,12 +159,28 @@ pub struct LabHost {
 impl LabHost {
     async fn internet_ice_configuration(
         &self,
+        guard: &NetworkPolicyGuard,
     ) -> Result<(InternetIceConfig, InternetIceTransportPolicy), kryptopass_lan::LanError> {
         let local_device_id = *self.identity.device_id().as_bytes();
-        InternetIceConfig::from_environment_with_turn_broker(local_device_id, |message| {
-            self.identity.sign(message)
-        })
+        InternetIceConfig::from_environment_with_policy(
+            local_device_id,
+            guard.relay_only(),
+            guard,
+            |message| self.identity.sign(message),
+        )
         .await
+    }
+
+    /// Return the persisted local network settings without exposing the
+    /// profile identity or changing any network state.
+    pub fn network_privacy_settings(&self) -> Result<NetworkPrivacySettings, LabError> {
+        load_network_privacy_settings(&self.directory)
+    }
+
+    /// Construct a route guard pinned to this profile's persisted policy.
+    pub fn network_policy_guard(&self) -> Result<NetworkPolicyGuard, LabError> {
+        let settings = self.network_privacy_settings()?;
+        Ok(NetworkPolicyGuard::new(settings.policy))
     }
 
     /// Load public relay routes only for peers still authorized in this profile.
@@ -425,16 +448,51 @@ impl LabHost {
         expected_peer: Option<PublicIdentity>,
         events: mpsc::Sender<HostEvent>,
         decisions: oneshot::Receiver<LocalDecision>,
+        cancelled: watch::Receiver<bool>,
+        network: LabNetwork,
+    ) -> Result<PairingOutcome<LabTransport>, LabError> {
+        let guard = self.network_policy_guard()?;
+        self.open_session_with_network_guard(
+            expected_peer,
+            events,
+            decisions,
+            cancelled,
+            network,
+            guard,
+        )
+        .await
+    }
+
+    /// Same as [`open_session_with_network`](Self::open_session_with_network),
+    /// with a caller-owned guard so policy changes can invalidate pending and
+    /// active carrier work through every clone of that guard.
+    pub async fn open_session_with_network_guard(
+        &self,
+        expected_peer: Option<PublicIdentity>,
+        events: mpsc::Sender<HostEvent>,
+        decisions: oneshot::Receiver<LocalDecision>,
         mut cancelled: watch::Receiver<bool>,
         network: LabNetwork,
+        guard: NetworkPolicyGuard,
     ) -> Result<PairingOutcome<LabTransport>, LabError> {
         if *cancelled.borrow() {
             return Err(LabError::Cancelled);
         }
-        let operation = self.run_inner(expected_peer, events, decisions, network);
+        let network_use = match &network {
+            LabNetwork::EmulatorLoopback => None,
+            LabNetwork::Lan { .. } => Some(NetworkUse::Lan),
+            LabNetwork::Internet { .. } => Some(NetworkUse::Internet),
+        };
+        if let Some(network_use) = network_use {
+            guard.preflight(network_use)?;
+        }
+        let operation = self.run_inner(expected_peer, events, decisions, network, guard.clone());
         tokio::select! {
             result = timeout(Duration::from_secs(300), operation) => result.map_err(|_| LabError::Expired)?,
             _ = cancelled.changed() => Err(LabError::Cancelled),
+            error = guard.wait_for_change(Duration::from_millis(250)), if network_use.is_some() => {
+                Err(LabError::NetworkPrivacyBlocked(error))
+            }
         }
     }
 
@@ -495,6 +553,7 @@ impl LabHost {
         events: mpsc::Sender<HostEvent>,
         decisions: oneshot::Receiver<LocalDecision>,
         network: LabNetwork,
+        guard: NetworkPolicyGuard,
     ) -> Result<PairingOutcome<LabTransport>, LabError> {
         let mut store = SqliteTrustStore::open_existing(&self.directory, self.identity.device_id())
             .map_err(|_| LabError::Profile)?;
@@ -518,20 +577,23 @@ impl LabHost {
                     .await
                     .map_err(|_| LabError::Link)?,
             ),
-            LabNetwork::Lan { bind_ip } => LocalListener::Lan(
-                LanHost::bind(*bind_ip, session_id)
-                    .await
-                    .map_err(|_| LabError::Link)?,
-            ),
-            LabNetwork::Internet { route } => {
-                let (config, policy) = self
-                    .internet_ice_configuration()
-                    .await
-                    .map_err(|_| LabError::Link)?;
-                LocalListener::Internet(Box::new(
-                    RelayHost::connect_with_policy(route.clone(), config, policy)
+            LabNetwork::Lan { bind_ip } => {
+                guard.preflight(NetworkUse::Lan)?;
+                LocalListener::Lan(
+                    LanHost::bind(*bind_ip, session_id)
                         .await
                         .map_err(|_| LabError::Link)?,
+                )
+            }
+            LabNetwork::Internet { route } => {
+                let (config, policy) = self
+                    .internet_ice_configuration(&guard)
+                    .await
+                    .map_err(|error| map_lan_network_error(error, &guard))?;
+                LocalListener::Internet(Box::new(
+                    RelayHost::connect_with_privacy(route.clone(), config, policy, guard.clone())
+                        .await
+                        .map_err(|error| map_lan_network_error(error, &guard))?,
                 ))
             }
         };
@@ -615,7 +677,15 @@ impl LabHost {
                 .await
             }
             LocalListener::Lan(listener) => {
-                let transport = listener.accept().await.map_err(|_| LabError::Link)?;
+                let mut transport = tokio::select! {
+                    result = listener.accept() => result.map_err(|_| LabError::Link)?,
+                    error = guard.wait_for_change(Duration::from_millis(250)) => {
+                        return Err(LabError::NetworkPrivacyBlocked(error));
+                    }
+                };
+                transport
+                    .enforce_network_policy(guard.clone())
+                    .map_err(LabError::NetworkPrivacyBlocked)?;
                 self.run_transport(
                     LabTransport::Lan(transport),
                     store,
@@ -632,7 +702,7 @@ impl LabHost {
                         expected_id.is_none_or(|expected| id == expected)
                     })
                     .await
-                    .map_err(|_| LabError::Link)?;
+                    .map_err(|error| map_lan_network_error(error, &guard))?;
                 let outcome = self
                     .run_transport(
                         LabTransport::Lan(attempt.transport),
@@ -673,6 +743,18 @@ fn map_forget_trust_error(error: TrustStoreError) -> LabError {
             LabError::Authentication
         }
         _ => LabError::Profile,
+    }
+}
+
+fn map_lan_network_error(error: kryptopass_lan::LanError, guard: &NetworkPolicyGuard) -> LabError {
+    match error {
+        kryptopass_lan::LanError::NetworkPolicy => LabError::NetworkPrivacyBlocked(
+            guard
+                .ensure_current()
+                .err()
+                .unwrap_or(NetworkPolicyError::RouteChanged),
+        ),
+        _ => LabError::Link,
     }
 }
 

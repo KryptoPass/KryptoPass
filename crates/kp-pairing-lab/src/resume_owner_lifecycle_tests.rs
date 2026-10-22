@@ -183,6 +183,10 @@ fn start_owner_watcher(
         last_snapshot_revision: directory.snapshot().revision,
         last_listener_bind: None,
         command_sender,
+        network_settings: None,
+        network_settings_error: false,
+        network_guard: None,
+        route_snapshot_unavailable: false,
     };
     let policy = Arc::new(Mutex::new(AcceptPolicy {
         active: HashSet::from([peer_id]),

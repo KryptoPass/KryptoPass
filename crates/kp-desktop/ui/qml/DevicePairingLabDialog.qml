@@ -42,7 +42,7 @@ Controls.Dialog {
     readonly property bool sasReady: sasRows.length === 7
     readonly property bool waitingForPeer: controller.bootstrap.length > 0 && controller.statusCode === "waiting_peer"
     readonly property string statusHint: hintForStatus(controller.statusCode)
-    readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error"].includes(controller.statusCode)
+    readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error", "network_policy_blocked", "network_policy_changed"].includes(controller.statusCode)
 
     function parseSnapshot(value) {
         try {
@@ -466,7 +466,7 @@ Controls.Dialog {
 
             Controls.Frame {
                 Layout.fillWidth: true
-                visible: dialog.networkOptionsVisible && !dialog.waitingForPeer && !dialog.controller.awaiting
+                visible: dialog.networkOptionsVisible
                 padding: 16
 
                 ColumnLayout {
@@ -490,6 +490,47 @@ Controls.Dialog {
                         placeholderText: qsTr("Servidor de conexión (wss://…)")
                         Accessible.name: qsTr("Servidor de conexión por Internet")
                         onEditingFinished: dialog.controller.configureInternet(true, text)
+                    }
+
+                    Controls.CheckBox {
+                        Layout.fillWidth: true
+                        text: qsTr("Exigir VPN para conexiones por Internet")
+                        checked: dialog.controller.requireVpn
+                        enabled: !dialog.controller.maintenanceBusy
+                        onToggled: dialog.controller.configurePrivacy(checked, dialog.controller.allowLanException, dialog.controller.relayOnly)
+                    }
+
+                    Controls.CheckBox {
+                        Layout.fillWidth: true
+                        visible: dialog.controller.requireVpn
+                        text: qsTr("Permitir una excepción explícita para recuperación LAN")
+                        checked: dialog.controller.allowLanException
+                        enabled: !dialog.controller.maintenanceBusy
+                        onToggled: dialog.controller.configurePrivacy(dialog.controller.requireVpn, checked, dialog.controller.relayOnly)
+                    }
+
+                    Controls.CheckBox {
+                        Layout.fillWidth: true
+                        text: qsTr("Usar solo retransmisión TURN")
+                        checked: dialog.controller.relayOnly
+                        enabled: !dialog.controller.maintenanceBusy
+                        onToggled: dialog.controller.configurePrivacy(dialog.controller.requireVpn, dialog.controller.allowLanException, checked)
+                    }
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        visible: dialog.controller.vpnStatus == 1
+                        text: qsTr("Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.")
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        visible: dialog.controller.relayOnly
+                        text: qsTr("Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.")
+                        textFormat: Text.PlainText
+                        wrapMode: Text.WordWrap
                     }
 
                     Controls.CheckBox {

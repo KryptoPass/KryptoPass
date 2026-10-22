@@ -164,6 +164,18 @@ pub enum MessagePayload {
     KeyTransferComplete(proto::KeyTransferComplete),
     /// Reserved key transfer abort; this crate performs no key operation.
     KeyTransferAbort(proto::KeyTransferAbort),
+    /// Synthetic-only key-transfer offer; no production key operations.
+    SyntheticKeyOffer(proto::SyntheticKeyOffer),
+    /// Synthetic-only key-transfer decision; no production key operations.
+    SyntheticKeyDecision(proto::SyntheticKeyDecision),
+    /// Synthetic-only key-transfer chunk; no production key operations.
+    SyntheticKeyChunk(proto::SyntheticKeyChunk),
+    /// Synthetic-only key-transfer complete; no production key operations.
+    SyntheticKeyComplete(proto::SyntheticKeyComplete),
+    /// Synthetic-only key-transfer receipt; no production key operations.
+    SyntheticKeyReceipt(proto::SyntheticKeyReceipt),
+    /// Synthetic-only key-transfer abort; no production key operations.
+    SyntheticKeyAbort(proto::SyntheticKeyAbort),
     /// Authenticated active-session identity exchange.
     SessionHello(proto::SessionHello),
     /// Active-session keepalive request.
@@ -195,6 +207,12 @@ impl fmt::Debug for MessagePayload {
             Self::KeyTransferChunk(_) => "KeyTransferChunk",
             Self::KeyTransferComplete(_) => "KeyTransferComplete",
             Self::KeyTransferAbort(_) => "KeyTransferAbort",
+            Self::SyntheticKeyOffer(_) => "SyntheticKeyOffer",
+            Self::SyntheticKeyDecision(_) => "SyntheticKeyDecision",
+            Self::SyntheticKeyChunk(_) => "SyntheticKeyChunk",
+            Self::SyntheticKeyComplete(_) => "SyntheticKeyComplete",
+            Self::SyntheticKeyReceipt(_) => "SyntheticKeyReceipt",
+            Self::SyntheticKeyAbort(_) => "SyntheticKeyAbort",
             Self::SessionHello(_) => "SessionHello",
             Self::SessionPing(_) => "SessionPing",
             Self::SessionPong(_) => "SessionPong",
@@ -471,7 +489,7 @@ pub fn channel_for_type(type_value: i32) -> Result<Channel, ProtocolError> {
     match Type::try_from(type_value)
         .map_err(|_| ProtocolError::UnknownMessageType { value: type_value })?
     {
-        Type::SyncChunk | Type::KeyTransferChunk => Ok(Channel::Data),
+        Type::SyncChunk | Type::KeyTransferChunk | Type::SyntheticKeyChunk => Ok(Channel::Data),
         Type::Unspecified => Err(ProtocolError::UnknownMessageType { value: type_value }),
         _ => Ok(Channel::Control),
     }
@@ -524,6 +542,12 @@ fn message_type_name(message_type: proto::MessageType) -> &'static str {
         Type::KeyTransferChunk => "KeyTransferChunk",
         Type::KeyTransferComplete => "KeyTransferComplete",
         Type::KeyTransferAbort => "KeyTransferAbort",
+        Type::SyntheticKeyOffer => "SyntheticKeyOffer",
+        Type::SyntheticKeyDecision => "SyntheticKeyDecision",
+        Type::SyntheticKeyChunk => "SyntheticKeyChunk",
+        Type::SyntheticKeyComplete => "SyntheticKeyComplete",
+        Type::SyntheticKeyReceipt => "SyntheticKeyReceipt",
+        Type::SyntheticKeyAbort => "SyntheticKeyAbort",
         Type::SessionHello => "SessionHello",
         Type::SessionPing => "SessionPing",
         Type::SessionPong => "SessionPong",
@@ -606,6 +630,36 @@ fn decode_payload(type_value: i32, bytes: &[u8]) -> Result<MessagePayload, Proto
                 validate_key_transfer_abort
             )
         }
+        Type::SyntheticKeyOffer => decode!(
+            proto::SyntheticKeyOffer,
+            SyntheticKeyOffer,
+            validate_synthetic_key_offer
+        ),
+        Type::SyntheticKeyDecision => decode!(
+            proto::SyntheticKeyDecision,
+            SyntheticKeyDecision,
+            validate_synthetic_key_decision
+        ),
+        Type::SyntheticKeyChunk => decode!(
+            proto::SyntheticKeyChunk,
+            SyntheticKeyChunk,
+            validate_synthetic_key_chunk
+        ),
+        Type::SyntheticKeyComplete => decode!(
+            proto::SyntheticKeyComplete,
+            SyntheticKeyComplete,
+            validate_synthetic_key_complete
+        ),
+        Type::SyntheticKeyReceipt => decode!(
+            proto::SyntheticKeyReceipt,
+            SyntheticKeyReceipt,
+            validate_synthetic_key_receipt
+        ),
+        Type::SyntheticKeyAbort => decode!(
+            proto::SyntheticKeyAbort,
+            SyntheticKeyAbort,
+            validate_synthetic_key_abort
+        ),
         Type::SessionHello => decode!(proto::SessionHello, SessionHello, validate_session_hello),
         Type::SessionPing => decode!(proto::SessionPing, SessionPing, validate_session_ping),
         Type::SessionPong => decode!(proto::SessionPong, SessionPong, validate_session_pong),
@@ -623,7 +677,9 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
     };
     let is_chunk = matches!(
         proto::MessageType::try_from(type_value),
-        Ok(proto::MessageType::SyncChunk | proto::MessageType::KeyTransferChunk)
+        Ok(proto::MessageType::SyncChunk
+            | proto::MessageType::KeyTransferChunk
+            | proto::MessageType::SyntheticKeyChunk)
     );
     let is_conflict = matches!(
         proto::MessageType::try_from(type_value),
@@ -1004,6 +1060,73 @@ fn validate_key_transfer_complete(value: &proto::KeyTransferComplete) -> Result<
 }
 
 fn validate_key_transfer_abort(value: &proto::KeyTransferAbort) -> Result<(), ProtocolError> {
+    require_id(&value.transfer_id, 16, "transfer_id")?;
+    let code = proto::AbortCode::try_from(value.code)
+        .map_err(|_| ProtocolError::InvalidField { field: "code" })?;
+    if code == proto::AbortCode::Unspecified {
+        return Err(ProtocolError::InvalidField { field: "code" });
+    }
+    Ok(())
+}
+
+// Synthetic wire bounds do not grant consent or accept arbitrary keys. The
+// session actor must additionally pin the fixture and enforce the state machine.
+fn validate_synthetic_key_offer(value: &proto::SyntheticKeyOffer) -> Result<(), ProtocolError> {
+    require_id(&value.transfer_id, 16, "transfer_id")?;
+    require_len(&value.openpgp_fingerprint, 20, "openpgp_fingerprint")?;
+    require_len(&value.sha256_digest, 32, "sha256_digest")?;
+    if value.total_size == 0 || value.total_size > 1024 * 1024 {
+        return Err(ProtocolError::InvalidField {
+            field: "total_size",
+        });
+    }
+    if value.encrypted_challenge.is_empty() || value.encrypted_challenge.len() > 16 * 1024 {
+        return Err(ProtocolError::InvalidField {
+            field: "encrypted_challenge",
+        });
+    }
+    Ok(())
+}
+
+fn validate_synthetic_key_decision(
+    value: &proto::SyntheticKeyDecision,
+) -> Result<(), ProtocolError> {
+    require_id(&value.transfer_id, 16, "transfer_id")
+}
+
+fn validate_synthetic_key_chunk(value: &proto::SyntheticKeyChunk) -> Result<(), ProtocolError> {
+    validate_chunk_fields(
+        &value.transfer_id,
+        value.chunk_index,
+        value.chunk_count,
+        value.total_size,
+        &value.sha256_digest,
+        &value.data,
+    )?;
+    if value.total_size > 1024 * 1024
+        || value.data.len() > 32 * 1024
+        || value.total_size > u64::from(value.chunk_count) * 32 * 1024
+    {
+        return Err(ProtocolError::InvalidField {
+            field: "total_size",
+        });
+    }
+    Ok(())
+}
+
+fn validate_synthetic_key_complete(
+    value: &proto::SyntheticKeyComplete,
+) -> Result<(), ProtocolError> {
+    require_id(&value.transfer_id, 16, "transfer_id")
+}
+
+fn validate_synthetic_key_receipt(value: &proto::SyntheticKeyReceipt) -> Result<(), ProtocolError> {
+    require_id(&value.transfer_id, 16, "transfer_id")?;
+    require_len(&value.openpgp_fingerprint, 20, "openpgp_fingerprint")?;
+    require_len(&value.challenge_sha256, 32, "challenge_sha256")
+}
+
+fn validate_synthetic_key_abort(value: &proto::SyntheticKeyAbort) -> Result<(), ProtocolError> {
     require_id(&value.transfer_id, 16, "transfer_id")?;
     let code = proto::AbortCode::try_from(value.code)
         .map_err(|_| ProtocolError::InvalidField { field: "code" })?;

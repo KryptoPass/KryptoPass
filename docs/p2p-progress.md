@@ -38,7 +38,7 @@ el usuario autorizó expresamente el mecanismo integrado de Codex.
 | Primitivas de dispositivos / sesión activa | Integradas en UI Desktop y Android | `kp-devices`, snapshots, sesión retenida y acciones de conexión/limpieza; prueba sostenida pendiente |
 | Recuperación tras Wi-Fi / reinicio / nueva IP | Implementada; pruebas automáticas satisfactorias, LAN real pendiente | Escucha de proceso Desktop, routing persistente Android, nuevo Noise contra claves autorizadas; ver connection-recovery-v1.md |
 | Internet / fase 6 adelantada por el usuario | WAN directa y TURN verificados con Samsung | WSS Cloudflare, broker firmado y credenciales temporales; relay/relay forzado, modo normal con datos móviles y vuelta a Wi-Fi; selección LAN/Internet automática y sesiones largas pendientes |
-| Sincronización / GnuPG | No iniciado | Fases 4 y 5 pendientes |
+| Sincronización / OpenPGP | Sync pendiente; base OpenPGP local Android implementada | Desktop conserva GnuPG; Android PGPainless con seis tests de interoperabilidad y diez instrumentados; envío de claves pendiente |
 | Android Kotlin | Laboratorio integrado | Lógica Kotlin sin Rust; SDK WebRTC nativo C++/JNI autorizado el 2026-10-18, progreso propio |
 
 ## Inspección y ajustes mínimos
@@ -906,3 +906,166 @@ La sincronización real de bóveda/OpenPGP aún no está implementada. WorkManag
 se evaluará después del motor idempotente de revisiones cifradas; no se agregó
 worker ni servicio Android en este hito. El diseño futuro está en
 `docs/background-sync-evaluation.md` del repositorio Android.
+
+
+## Bóveda local Android y PGPainless — 2026-10-21
+
+Petición posterior: conectar la bóveda real Android con OpenPGP y preparar el
+recorrido que reutilizará la sincronización. Implementación Kotlin/JVM con
+PGPainless 2.0.4 y Bouncy Castle 1.86, almacén Keystore/biometría existente,
+SQLite de ciphertext y primeras operaciones reales de accesos/notas.
+Las pantallas de Bóveda/Claves dejan de presentar fixtures como datos guardados.
+No se incorpora transferencia privada por red ni se sustituye GnuPG Desktop.
+
+La interoperabilidad criptográfica con GnuPG 2.4.9 pasó seis tests JVM,
+incluyendo RSA y Ed25519/cv25519 en ambos sentidos. La primera ejecución
+instrumentada Samsung detectó fallos SQLite y un error de normalización
+de excepciones de parsing; la puerta del almacenamiento aún no está cerrada.
+Se registrarán abajo las correcciones y la ejecución final.
+El ledger firmado de revisiones, conflictos y sincronización sigue pendiente;
+compilar mensajes Sync no equivale a implementar ese motor.
+
+Cierre posterior de esta base local: 62 tests JVM satisfactorios y diez
+pruebas instrumentadas satisfactorias en Samsung, incluido cifrado y descifrado
+PGPainless real sobre ART, SQLite/CAS y reapertura. Se corrigieron
+android_metadata, los permisos 0660 que impone SQLiteOpenHelper y las
+excepciones de parsing. El trust store normal conserva su hash.
+Las pruebas del almacén usan proveedor AEAD aislado y no validan biometría
+o hardware Keystore de producción.
+
+Ajuste del usuario: recibir la clave desde Desktop con autorización es el
+flujo principal; importar desde archivo queda en una pantalla Android dedicada.
+Contrato del siguiente hito: [provisionamiento](key-provisioning-flow.md).
+Aún no hay envío de claves por red. Tras reconectar USB, la APK final con
+pantalla dedicada se instaló conservando datos; las diez pruebas instrumentadas
+volvieron a pasar (2,554 s) y el trust store normal conservó su hash.
+`am start -W` abrió `KEY_IMPORT` en frío (697 ms), con título y selector de
+archivo visibles. `just verify-local-vault` finalizó correctamente tras el
+ajuste (1 min 27 s): 62 tests JVM, lint/build debug y compilación Kotlin release.
+No se automatizaron importaciones reales ni biometría. El ledger firmado y el
+intercambio Sync siguen pendientes.
+
+## Prioridad del transporte — 2026-10-21
+
+El usuario pidió analizar ICE/mDNS/VPN antes de continuar el provisionamiento
+sintético. Esa implementación está parcial y sus agentes detenidos; no se ha
+habilitado ni instalado envío de claves. El log acredita una espera de gathering
+de unos 11 s y una caída `PingTimeout` posterior a autenticar. LAN pura ya usa
+cero servidores STUN/TURN; no se aceptan como hechos todas las conclusiones de
+los análisis externos. Se recomienda cerrar fiabilidad/latencia y retomar después
+la transferencia sintética. [Evidencia y orden recomendado](transport-priority-review-2026-10-21.md).
+No se cambió el transporte durante esta revisión; seguridad independiente pausada.
+
+Correlación posterior con log completo y ADB: los dos primeros Answer llegaron
+4,075 s y 2,857 s después del timeout Android. El PingTimeout siguió a la muerte
+del proceso Android por `remove task`, y luego hay al menos 6 min 53 s conectados.
+La prioridad comprobada es la demora de negociación y sus plazos; esta caída no
+demuestra un fallo espontáneo de VPN/Noise. Ver el agregado del mismo análisis.
+
+El usuario aclaró que usar VPN expresa una preferencia de privacidad. La revisión
+local detecta que Internet agrega otras interfaces a ICE y puede anunciar IP
+física en SDP aunque la ruta final use VPN. No se ha medido un bypass de tráfico;
+el transporte actual no debe presentarse como protección contra fugas de IP.
+Se prioriza [política de privacidad de red](network-privacy-policy-v1.md), aún
+propuesta, antes de optimizar Trickle ICE o reanudar provisionamiento.
+
+
+## Recuperación y política de rutas — 2026-10-21
+
+Se revisó el árbol después de los ajustes externos de compilación. Los fallos
+funcionales abordados son la preferencia pegada a una ruta WAN guardada, el
+intento que seguía esperando tras cambiar de red y la invalidación por datos
+transitorios del Wi-Fi. La recuperación debe elegir una LAN disponible y
+permitida, mantener la ruta WAN autenticada como respaldo y crear Noise nuevo.
+Un cambio real de red/política invalida operaciones previas; variar RSSI/ancho de
+banda no cambia por sí solo la generación. La carga local de identidad y las
+operaciones de mantenimiento no se cancelan por notificaciones de red.
+
+Desktop ya restringe ICE de Internet a la dirección seleccionada por el sistema;
+Android captura el Network y enlaza DNS/señalización/broker, con restricción del
+tipo de adaptador nativo. Los controles de privacidad son persistentes y se
+validan en backend. Solo TURN bloquea LAN y restringe únicamente nuestro extremo
+ICE; no exige candidatos relay al remoto. Los avisos de paquetes conocidos se
+resumen en Desktop sin sus direcciones, preservando fallos de autenticación.
+
+Límites: Exigir VPN no está disponible sin cobertura verificable y permanece
+bloqueado; Android también bloquea Internet con VPN efectiva no verificable.
+NSD con excepción LAN no prueba confinamiento a una interfaz. No se implementó
+Trickle ICE ni se certificó ausencia de fugas. No se habilitó sincronización ni
+transferencia OpenPGP. Ver `network-privacy-policy-v1.md` para el contrato y sus
+límites. La revisión de seguridad independiente sigue pendiente.
+
+Verificación reproducible: Desktop `just verify`, `just smoke`; Android
+`just verify-network-privacy` y `just test-network-privacy <serial>`. Este último
+instala sin limpiar datos y usa contextos/perfiles de prueba aislados. Los
+resultados de la ejecución se registran debajo una vez terminada la puerta.
+
+
+### Evidencia Android de esta ejecución
+
+`just verify-network-privacy` terminó correctamente: 33 tests JVM de app,
+22 de core-protocol y 15 de pairing-lab, lint y builds debug/instrumentación,
+además de compilación Kotlin release. `just test-network-privacy R5CW11Z9WVM`
+instaló ambas APK sin limpiar datos y terminó con **19 tests, cero fallos** en el
+Samsung. Los tests de política usan preferencias con un namespace UUID y rutas
+sintéticas; no cambian VPN, Wi-Fi, confianza ni la bóveda del perfil normal.
+El test que construye IpPrefix se limita a API33+, los demás conservan API28.
+El hash del archivo normal de confianza se mantuvo idéntico tras las pruebas.
+
+La recuperación real encontró una marca persistente de desconexión manual y la
+respetó. Se pulsó Reconectar desde la UI para iniciar el ensayo autorizado.
+El primer intento esperó RESUME_READY mientras Desktop no se ejecutaba. Tras
+abrir Desktop, Android completó la reconexión con la confianza existente:
+20:19:45 hora local (2026-10-22 00:19:45 UTC), ruta Internet con candidato local
+relay, seguida de latidos continuos por más de 45 segundos. No hubo QR ni SAS.
+Este ensayo no demuestra todavía el cambio real VPN→LAN: no se modificó la VPN
+del sistema. La comprobación final después de recompilar Desktop sigue abajo.
+
+
+### Puertas finales y reinicio Android
+
+Desktop: **`just verify smoke` terminó con exit 0** antes del último ajuste de preservación de política LAN.
+Formato Rust/C++/QML, check, Clippy con `-D warnings`, lint QML, tests nativos,
+259 pruebas QML, 347 tests Rust (cero fallos, un smoke TURN opt-in ignorado),
+13 pruebas de empaquetado, metadatos, traducciones y licencias pasaron.
+El arranque offscreen del ejecutable final fue limpio. Se actualizó el catálogo
+por las nuevas cadenas y se anotó la licencia de los fixtures sintéticos.
+
+Android: el gate final combinado de verificación e instalación volvió a
+terminar con exit0 y **19/19 tests instrumentados**. Después se cerró el proceso
+Android y se abrió de nuevo sin tocar la vinculación: retomó automáticamente
+la sesión por Internet en ~14.5s (intento ~13.9s), sin QR/SAS ni regenerar claves.
+La negociación ICE consumió ~10.8s de ese intento; Trickle ICE y esa latencia
+siguen pendientes de optimización. Se mantuvo conectado hasta el reinicio
+controlado de Desktop del siguiente ensayo.
+
+Corrección final Desktop: crear una invitación WAN o cambiar privacidad ya no
+fija como LAN la dirección temporal del sistema. Una dirección LAN configurada
+que deja de estar asignada da paso únicamente a la fuente actual elegida por el
+SO, nunca a la primera interfaz disponible. Abrir una operación con un archivo
+de política corrupto bloquea, sin sobrescribirlo con una política de UI obsoleta.
+
+
+### Recuperación real con Desktop definitivo y corte Wi-Fi
+
+El Desktop recompilado se reinició a 2026-10-22 00:24:36 UTC. Android detectó
+la pérdida a 00:24:43 y volvió a RECONNECTED a 00:24:50.896: ~15s desde el
+cierre, con intento de transporte/Noise de ~5.4s. Desktop confirmó Hello
+mutuamente autenticado y `connected_devices=1`, ruta TURN e IPv4.
+
+Se cortó únicamente la Wi-Fi del Samsung durante ocho segundos y se restauró
+su estado anterior. No se modificaron la VPN ni el firewall del PC, el modo
+avión ni los datos móviles del teléfono. Restauración solicitada 00:26:11.543,
+red disponible 00:26:15.491, RECONNECTED 00:26:23.681: ~12.1s desde activar
+Wi-Fi y ~8.2s desde disponibilidad de red. El primer intento corto se canceló
+al cambiar de nuevo la generación durante la configuración de IP/DNS; el
+siguiente usó una captura nueva y se autenticó correctamente. Ambas apps
+permanecieron conectadas más de 50s, con latidos y UI Android «Conectado».
+Los hashes de los archivos normales de confianza de ambas apps permanecieron
+idénticos. No hubo QR, SAS, borrado de perfiles ni transferencia OpenPGP.
+
+Queda pendiente comprobar físicamente VPN apagada→LAN en esta instalación:
+la VPN del sistema se ha dejado intacta. Las pruebas sintéticas sí cubren el
+cambio de generación, elección de IP nueva y rechazo de IP ausente/no asignada.
+La restricción VPN verificable, la captura de tráfico para fugas y la revisión
+independiente siguen pendientes; no se presenta como garantía de producción.
