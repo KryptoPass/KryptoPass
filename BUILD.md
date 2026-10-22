@@ -17,7 +17,8 @@
 
 ```bash
 just format   # aplica formato Rust, C++ KDE y QML
-just verify   # fmt + check + clippy + lint + test
+just quick    # fmt + clippy (ciclo de edición)
+just verify   # puerta completa en paralelo (antes de commitear)
 just build    # binario dev (acepta flags: just build --release)
 just run      # app en ventana (alias: just r)
 just dev      # bacon recompila y relanza al guardar
@@ -80,7 +81,7 @@ usan el mismo manifiesto. La fecha de lanzamiento es explícita, por lo que
 regenerar los archivos no cambia su contenido cada día.
 
 Se necesitan también los headers de KDE Contacts, Akonadi Contact Widgets,
-KCoreAddons, KXmlGui, KConfig y KIdleTime, además del módulo Qt DBus.
+KCoreAddons, KXmlGui, KConfig, KIdleTime y KIO (KIOGui), además del módulo Qt DBus.
 Para las puertas de distribución se utilizan
 Qt Linguist (`lupdate`, `lrelease`), Python 3.11+, `reuse`, `appstreamcli`
 y `desktop-file-validate`. CI declara los paquetes equivalentes de Arch Linux.
@@ -130,6 +131,14 @@ Las secuencias se guardan con KActionCollection y KConfig y se aplican al
 cerrar el diálogo. Se respetan los atajos estándar del usuario y las
 secuencias alternativas. Editar ofrece Subir carpeta, Bajar carpeta y
 Mover carpeta para organizar la jerarquía sin arrastrar.
+
+Los menús contextuales de entradas y claves comparten esas acciones con
+los menús de la ventana y sus botones. Se abren con clic derecho, Menú o
+Mayús+F10. La ventana principal recuerda su tamaño y estado con
+KWindowStateSaver; las capturas usan siempre el tamaño inicial reproducible.
+Al terminar un respaldo, Mostrar en la carpeta utiliza KIO para seleccionar
+el archivo en el gestor de archivos configurado.
+La dirección de esta integración vive en `docs/kde-native-integration.md`.
 
 REUSE.toml proporciona las declaraciones SPDX de los archivos y conserva
 las licencias propias de las skills incluidas. Esta integración no convierte

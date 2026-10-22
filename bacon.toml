@@ -1,9 +1,16 @@
 # Bacon — chequeo continuo en fondo.
 # `bacon` (job check) | `bacon clippy` | `bacon test` | `bacon qmllint`
+# Para el ciclo de edición usa `bacon clippy`; `just verify` es la puerta completa.
 # Sin analyzer dedicado para qmllint: se muestra la salida tal cual
 # y el fallo lo marca el exit code (!= 0 ante cualquier warning).
 
 default_job = "check"
+
+[jobs.test-network-privacy]
+command = ["just", "test-network-privacy"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-lan", "crates/kp-pairing-lab", "crates/kp-devices", "crates/kp-protocol", "crates/kp-desktop/src/transport_diagnostics.rs", "crates/kp-desktop/src/transport_diagnostics_tests.rs"]
 
 [jobs.check]
 command = ["cargo", "check", "--workspace"]

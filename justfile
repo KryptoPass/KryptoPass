@@ -1,6 +1,7 @@
 # KryptoPass Desktop — pipeline local (just + bacon)
 #
-#   just verify   -> fmt + check + clippy + lint + test
+#   just quick    -> fmt + clippy (ciclo de edición, ~1 min)
+#   just verify   -> puerta completa en paralelo (antes de commitear)
 #   just smoke    -> arranque offscreen, falla ante errores QML
 #   just watch    -> bacon en fondo (job check)
 #   bacon qmllint -> vigila crates/ y pasa qmllint en cada cambio
@@ -60,6 +61,10 @@ clippy:
 lint: check
     python3 tools/qml_lint.py
 
+# Lint QML sin compilar: exige que clippy/check ya regeneraron los tipos.
+_lint-qml:
+    python3 tools/qml_lint.py
+
 # Tests Rust (el agente de tests usa los suyos; esto es lo general).
 test:
     cargo test --workspace
@@ -81,6 +86,11 @@ check-lan:
 # Primitivas de dispositivos y sesiones, sin Qt ni una interfaz nueva.
 check-devices:
     cargo check -p kp-devices -p kp-pairing-lab
+
+# Network policy, route-generation, signaling and diagnostic privacy regressions.
+test-network-privacy:
+    cargo test -p kp-lan -p kp-pairing-lab -p kp-devices -p kp-protocol
+    cargo test -p kp-desktop transport_diagnostics
 
 test-p2p:
     cargo test -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
@@ -107,6 +117,10 @@ pairing-lab-profile profile: build
 
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 test-items: check
+    python3 crates/kp-desktop/ui/tests/run_item_types.py
+
+# Igual que test-items sin compilar: exige tipos frescos (clippy/check previo).
+_test-items:
     python3 crates/kp-desktop/ui/tests/run_item_types.py
 
 # Ciclo de favicons con transporte simulado, sin acceso a internet.
@@ -157,8 +171,22 @@ install-dev-desktop:
 uninstall-dev-desktop:
     python3 tools/dev_desktop.py uninstall
 
-# Puerta completa rápida (sin lanzar la app).
-verify: fmt check clippy lint test-icons test-session-lock test-items test test-packaging metadata translations-check licenses
+# Ciclo de edición: formato y clippy (clippy ya compila y regenera .qmltypes).
+quick: fmt clippy
+
+# Puerta completa en paralelo (sin `check`: clippy ya ejecuta build.rs y regenera tipos).
+[parallel]
+verify: fmt _gate-rust _gate-native _gate-meta
+
+_gate-rust: clippy
+    just _gate-rust-tail
+
+[parallel]
+_gate-rust-tail: _lint-qml _test-items test
+
+_gate-native: test-icons test-session-lock
+
+_gate-meta: test-packaging metadata translations-check licenses
 
 # Gate pre-push: todo verde y árbol limpio.
 ready: verify clean
@@ -185,6 +213,7 @@ translations-check:
 metadata:
     python3 packaging/gen_install.py --check
     desktop-file-validate packaging/gen/*.desktop
+    xmllint --noout packaging/gen/*.mime.xml
     appstreamcli validate --no-net --pedantic packaging/gen/*.metainfo.xml
 
 test-packaging:

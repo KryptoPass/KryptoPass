@@ -11,12 +11,19 @@ El contrato completo vive en `docs/SECRET_DATA_CONTRACT.md`.
 ## Puertas: just manda, bacon vigila
 
 ```bash
-just verify   # fmt + check + clippy + lint + test (puerta rápida)
+just quick    # fmt + clippy: ciclo de edición, lo que corres mientras trabajas
+just verify   # puerta completa en paralelo: clippy, lint QML, tests, packaging
 just smoke    # arranque offscreen, falla ante errores QML
 just ready    # verify + árbol limpio (gate pre-push)
 bacon         # check continuo en fondo
 bacon qmllint # o tecla q: lint QML en cada cambio (vigila crates/)
 ```
+
+No corras `check` ni `verify` tras cada edición: usa `quick` mientras
+iteras y `verify` una vez antes de commitear o dar el trabajo por listo.
+`clippy` ya compila y regenera los `.qmltypes`, por eso `verify` no lleva
+`check` aparte. Para un solo tipo de cambio corre solo su receta
+(`just test-packaging`, `just lint`, `just test-items`).
 
 `cargo lint` y `cargo format` existen como alias, pero `just` es la
 referencia. Si agregas un chequeo nuevo, dale receta en el `justfile`
@@ -131,3 +138,23 @@ Despliegue local TURN 2026-10-19: el lanzador de desarrollo instalado incluye
 KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org. install-dev-desktop lo
 regenera: conservar/reponer ese prefijo mientras se integra configuración de UI.
 No incluir KP_TURN_RELAY_ONLY en el lanzador normal ni tokens del proveedor.
+
+
+Petición vigente posterior (2026-10-21): integrar la bóveda local Android real
+con PGPainless en Kotlin/JVM y reutilizar GnuPG Desktop. Pruebas funcionales con
+claves sintéticas autorizadas, revisión independiente todavía pausada.
+La recepción de la clave desde Desktop tras pairing, autorización local del
+emisor y aceptación del teléfono será el flujo principal; importación manual
+en pantalla dedicada como alternativa. El envío privado por red aún está
+pendiente y mantiene su puerta de revisión/autorización por operación. Ver
+docs/key-provisioning-flow.md y documentación local OpenPGP de Android.
+
+Petición vigente posterior (2026-10-21): priorizar privacidad de red antes de
+Sync/provisionamiento. Respetar rutas del sistema y la VPN del usuario; no añadir
+interfaces físicas arbitrarias a ICE. La política «Exigir VPN» debe bloquear si
+no se puede verificar su cumplimiento, con excepción LAN explícita y persistente.
+Probar con perfiles aislados y conservar datos al actualizar las apps. El usuario
+dejó el Samsung por USB para estas comprobaciones. No modificar VPN/firewall del
+sistema ni prometer protección contra fugas por observar solo el par ICE final.
+Ver docs/network-privacy-policy-v1.md. Pruebas funcionales autorizadas;
+revisión independiente y transferencia de claves reales continúan pausadas.
