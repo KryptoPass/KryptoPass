@@ -72,7 +72,8 @@ class DevelopmentDesktopTests(unittest.TestCase):
             entry = desktop["Desktop Entry"]
             self.assertEqual(entry["Type"], "Application")
             self.assertEqual(entry["X-KryptoPass-Development"], "true")
-            self.assertEqual(shlex.split(entry["Exec"]), [str(expected_binary)])
+            self.assertEqual(shlex.split(entry["Exec"]), [str(expected_binary), "%f"])
+            self.assertEqual(entry["X-DocPath"], f"{identity['app-id']}/index.html")
 
             run_cli("uninstall")
 

@@ -116,7 +116,7 @@ class TranslationTests(unittest.TestCase):
                 )
 
     def test_translation_preserves_parameter_placeholder(self):
-        self.assertEqual(self.translate("HelpDialog", "Ayuda de %1"), "Ayuda de %1")
+        self.assertEqual(self.translate("ImportWindow", "Desde %1"), "Desde %1")
 
 
 if __name__ == "__main__":

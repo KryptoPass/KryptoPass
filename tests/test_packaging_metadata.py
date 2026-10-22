@@ -47,7 +47,18 @@ class PackagingMetadataTests(unittest.TestCase):
             entry = desktop["Desktop Entry"]
             self.assertEqual(entry["Name"], self.identity["display-name"])
             self.assertEqual(entry["Icon"], app_id)
-            self.assertEqual(entry["Exec"], self.binary)
+            self.assertEqual(entry["Exec"], f"{self.binary} %f")
+            self.assertEqual(entry["MimeType"], "application/vnd.kryptopass.backup;")
+            self.assertEqual(entry["X-DocPath"], f"{app_id}/index.html")
+            self.assertEqual(entry["Actions"], "NewEntry;Search;")
+            self.assertEqual(desktop["Desktop Action NewEntry"]["Exec"], f"{self.binary} --new-entry")
+            self.assertEqual(desktop["Desktop Action Search"]["Exec"], f"{self.binary} --search")
+
+            mime = ET.parse(output / f"{app_id}.mime.xml").getroot()
+            namespace = {"mime": "http://www.freedesktop.org/standards/shared-mime-info"}
+            backup = mime.find("mime:mime-type[@type='application/vnd.kryptopass.backup']", namespace)
+            self.assertIsNotNone(backup)
+            self.assertEqual(backup.find("mime:glob", namespace).get("pattern"), "*.kpb")
 
             component = ET.parse(output / f"{app_id}.metainfo.xml").getroot()
             self.assertEqual(component.findtext("id"), app_id)
@@ -61,6 +72,9 @@ class PackagingMetadataTests(unittest.TestCase):
                 component.findtext("launchable[@type='desktop-id']"), f"{app_id}.desktop"
             )
             self.assertEqual(component.findtext("provides/binary"), self.binary)
+            self.assertEqual(
+                component.findtext("provides/mediatype"), "application/vnd.kryptopass.backup"
+            )
             release = component.find("releases/release")
             self.assertIsNotNone(release)
             self.assertEqual(release.get("version"), self.package["version"])
