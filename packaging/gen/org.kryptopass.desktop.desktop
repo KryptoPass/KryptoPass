@@ -6,6 +6,7 @@ GenericName[es]=Bóveda de credenciales
 Comment=Organize credentials and secure notes with OpenPGP encryption
 Exec=kryptopass-desktop %f
 Icon=org.kryptopass.desktop
+X-DocPath=org.kryptopass.desktop/index.html
 Terminal=false
 Categories=System;Security;
 Keywords=password;credentials;vault;OpenPGP;

@@ -7,6 +7,9 @@
   `qml6-module-org-kde-kirigami` (o el paquete equivalente de tu distro).
 - Rust reciente (ver `rust-toolchain.toml`; `rustup` lo instala solo).
 - `just` y `bacon` (`cargo install just bacon`).
+- KDocTools (`kdoctools`) para validar el manual con `just handbook`, y
+  KHelpCenter (`khelpcenter`) para abrirlo con F1. `just install-dev-handbook`
+  lo enlaza en el perfil del usuario durante el desarrollo.
 - Locale UTF-8: `just run` hereda los formatos regionales del usuario. Solo
   utiliza `C.UTF-8` como fallback cuando `locale charmap` no devuelve UTF-8.
 - `clang-format` 23 para el C++ propio y `qmlformat` de la instalación Qt elegida.
@@ -108,8 +111,8 @@ Los controles Qt cargan además las traducciones del sistema.
 `just screenshot` genera `packaging/screenshots/vault.png` con una bóveda
 vacía y un perfil temporal. La URL de AppStream apunta a ese archivo en la
 rama principal; estará disponible cuando se publique allí.
-`just screenshot-about` abre el diálogo con los metadatos e icono reales y
-guarda su vista previa en `previews/about.png` dentro del target de Cargo.
+«Acerca de» usa `KAboutApplicationDialog` de KDE con el `KAboutData`
+registrado al arrancar; no tiene captura offscreen propia.
 
 Los mensajes Rust se traducen al publicarlos, antes de llegar a QML. Los
 mensajes con argumentos usan `i18n::format` y marcadores `%1`, `%2`, etc.;

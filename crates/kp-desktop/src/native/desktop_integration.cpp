@@ -3,6 +3,7 @@
 
 #include <KAboutData>
 #include <KActionCollection>
+#include <KHelpClient>
 #include <KHelpMenu>
 #include <KShortcutsDialog>
 #include <KStandardActions>
@@ -124,39 +125,27 @@ void initialize_desktop()
     QApplication::setWindowIcon(icon);
 }
 
-QString about_data()
+KHelpMenu *helpMenu()
 {
-    const auto about = KAboutData::applicationData();
-    QJsonArray authors;
-    for (const auto &author : about.authors()) {
-        authors.append(QJsonObject{{QStringLiteral("name"), author.name()}});
-    }
-    QJsonArray licenses;
-    for (const auto &license : about.licenses()) {
-        licenses.append(QJsonObject{
-            {QStringLiteral("name"), license.name(KAboutLicense::FullName)},
-            {QStringLiteral("text"), license.text()},
-        });
-    }
-    const QJsonObject object{
-        {QStringLiteral("displayName"), about.displayName()},
-        {QStringLiteral("version"), about.version()},
-        {QStringLiteral("shortDescription"), about.shortDescription()},
-        {QStringLiteral("copyrightStatement"), about.copyrightStatement()},
-        {QStringLiteral("homepage"), about.homepage()},
-        {QStringLiteral("bugAddress"), about.bugAddress()},
-        {QStringLiteral("programLogo"),
-         QStringLiteral("qrc:/") + QString(about.desktopFileName()).replace(QLatin1Char('.'), QLatin1Char('/')) + QStringLiteral("/icon.svg")},
-        {QStringLiteral("authors"), authors},
-        {QStringLiteral("licenses"), licenses},
-    };
-    return QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact));
+    static auto *help = new KHelpMenu;
+    return help;
+}
+
+void show_about_application_dialog()
+{
+    // KDE's standard About window, fed by the KAboutData registered at startup.
+    helpMenu()->aboutApplication();
+}
+
+void show_handbook()
+{
+    // Opens help:/<component name>, the handbook installed under share/doc/HTML.
+    KHelpClient::invokeHelp();
 }
 
 void show_about_kde_dialog()
 {
-    static auto *help = new KHelpMenu;
-    help->aboutKDE();
+    helpMenu()->aboutKDE();
 }
 
 bool open_bug_report()

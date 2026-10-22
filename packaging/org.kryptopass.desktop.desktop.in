@@ -6,6 +6,7 @@ GenericName[es]=Bóveda de credenciales
 Comment=@APP_COMMENT@
 Exec=@APP_BIN@ %f
 Icon=@APP_ICON@
+X-DocPath=@APP_ID@/index.html
 Terminal=false
 Categories=System;Security;
 Keywords=password;credentials;vault;OpenPGP;

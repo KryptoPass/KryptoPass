@@ -28,7 +28,7 @@ jobs:
         # Without fonts, Qt's placeholder glyph metrics clip the large-font dialog.
         run: >-
           pacman -Syu --noconfirm --needed
-          git rustup just cmake ninja pkgconf clang lld python reuse extra-cmake-modules breeze-icons ttf-dejavu
+          git rustup just cmake ninja pkgconf clang lld python reuse extra-cmake-modules kdoctools breeze-icons ttf-dejavu
           qt6-base qt6-declarative qt6-tools qt6-svg kirigami qqc2-desktop-style
           kcontacts akonadi-contacts kxmlgui kconfig kidletime kio gpgme sqlite
           appstream desktop-file-utils

@@ -11,6 +11,8 @@ pub struct AppInfo {
     pub authors: &'static str,
     pub copyright: &'static str,
     pub homepage: &'static str,
+    // Only the native side reads it (KAboutData bug address); both mirrors share one generator.
+    #[allow(dead_code)]
     pub repository: &'static str,
 }
 

@@ -66,6 +66,7 @@ def rendered_entry(app_id, template):
         "@APP_COMMENT@": keyfile_escape(description),
         "@APP_BIN@": exec_value(binary),
         "@APP_ICON@": app_id,
+        "@APP_ID@": app_id,
     }
     content = template.read_text(encoding="utf-8")
     for placeholder, value in values.items():

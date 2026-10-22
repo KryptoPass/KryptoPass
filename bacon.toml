@@ -101,6 +101,12 @@ need_stdout = true
 default_watch = false
 watch = ["Cargo.toml", "packaging"]
 
+[jobs.handbook]
+command = ["just", "handbook"]
+need_stdout = true
+default_watch = false
+watch = ["doc"]
+
 [jobs.translations]
 command = ["just", "translations-check"]
 need_stdout = true
@@ -127,12 +133,6 @@ watch = ["crates", "docs", "packaging", "tools", "tests"]
 
 [jobs.screenshot]
 command = ["just", "screenshot"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
-
-[jobs.screenshot-about]
-command = ["just", "screenshot-about"]
 need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]

@@ -12,6 +12,7 @@ set shell := ["bash", "-uc"]
 target_dir := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import cargo_target_directory; print(cargo_target_directory())'`
 qml_local := target_dir / "cxxqt/qml_modules"
 desktop_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import desktop_binary; print(desktop_binary())'`
+app_id := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["app-id"])'`
 qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 
 _default:
@@ -186,7 +187,7 @@ _gate-rust-tail: _lint-qml _test-items test
 
 _gate-native: test-icons test-session-lock
 
-_gate-meta: test-packaging metadata translations-check licenses
+_gate-meta: test-packaging metadata translations-check licenses handbook
 
 # Gate pre-push: todo verde y árbol limpio.
 ready: verify clean
@@ -203,6 +204,15 @@ bacon-job job:
 # Incluye archivos nuevos que todavía no están en el índice.
 clean:
     python3 tools/check_clean.py
+
+# Valida el manual DocBook con el DTD de KDocTools (paquete kdoctools).
+handbook:
+    checkXML6 doc/index.docbook
+
+# Enlaza el manual en el perfil del usuario para que F1 lo abra con `just run`.
+install-dev-handbook:
+    mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}"
+    ln -sfn {{ quote(justfile_directory() / "doc/index.docbook") }} "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}/index.docbook"
 
 translations:
     python3 packaging/translations.py update
@@ -229,10 +239,6 @@ install prefix:
 # Captura con bóveda y configuración temporales, sin datos del usuario.
 screenshot: build
     python3 packaging/capture_screenshot.py
-
-# Vista previa de Acerca de con metadatos e icono reales, en un perfil aislado.
-screenshot-about: build
-    python3 packaging/capture_screenshot.py --about --output {{ quote(target_dir / "previews/about.png") }}
 
 # Construye el proxy de navegador sin enlazar Qt.
 browser-build:

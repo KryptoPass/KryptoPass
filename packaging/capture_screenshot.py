@@ -8,7 +8,6 @@ from tempfile import TemporaryDirectory
 from metadata import ROOT, desktop_binary
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--about", action="store_true", help="Open About before capturing")
 parser.add_argument("--output", type=Path, default=ROOT / "packaging/screenshots/vault.png")
 args = parser.parse_args()
 output = args.output.resolve()
@@ -21,7 +20,5 @@ with TemporaryDirectory(prefix="kryptopass-screenshot-") as temporary:
         path.mkdir(mode=0o700)
         environment[variable] = str(path)
     command = [str(desktop_binary()), "--screenshot", str(output)]
-    if args.about:
-        command.append("--screenshot-about")
     subprocess.run(command, env=environment, check=True, timeout=20)
 print(output)

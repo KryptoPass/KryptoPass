@@ -191,8 +191,6 @@ Controls.ApplicationWindow {
             deleteEntryDialog.close();
         if (deleteFolderDialog.opened)
             deleteFolderDialog.close();
-        if (aboutDialog.opened)
-            aboutDialog.close();
         if (keyErrorDialog.opened)
             keyErrorDialog.close();
         if (importWindow.opened)
@@ -289,10 +287,6 @@ Controls.ApplicationWindow {
         if (shell.launchBackup.toString())
             Qt.callLater(function () {
                 backupWindow.openForRestoreFile(shell.launchBackup);
-            });
-        if (Qt.application.arguments.indexOf("--screenshot-about") !== -1)
-            Qt.callLater(function () {
-                aboutDialog.open();
             });
     }
     onClosing: function (close) {
@@ -756,7 +750,7 @@ Controls.ApplicationWindow {
         id: helpAction
         controller: shell
         actionId: "help"
-        onTriggered: helpDialog.open()
+        onTriggered: shell.showHandbook()
     }
     DesktopAction {
         id: reportBugAction
@@ -771,7 +765,7 @@ Controls.ApplicationWindow {
         id: aboutAppAction
         controller: shell
         actionId: "aboutApp"
-        onTriggered: aboutDialog.open()
+        onTriggered: shell.showAboutApplicationDialog()
     }
     DesktopAction {
         id: aboutKdeAction
@@ -1332,7 +1326,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
+        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }
@@ -1412,17 +1406,6 @@ Controls.ApplicationWindow {
     KeyOperationDialog {
         id: mainKeyOperationDialog
         keyStore: keys
-    }
-    HelpDialog {
-        id: helpDialog
-    }
-    AboutDialog {
-        id: aboutDialog
-        aboutData: JSON.parse(shell.aboutJson)
-        repositoryUrl: shell.appRepository
-        onLinkRequested: function (target) {
-            Qt.openUrlExternally(target);
-        }
     }
     KeyErrorDialog {
         id: keyErrorDialog

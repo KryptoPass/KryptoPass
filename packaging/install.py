@@ -21,6 +21,7 @@ files = {
     ROOT / f"packaging/gen/{meta['app-id']}.desktop": f"share/applications/{meta['app-id']}.desktop",
     ROOT / f"packaging/gen/{meta['app-id']}.metainfo.xml": f"share/metainfo/{meta['app-id']}.metainfo.xml",
     ROOT / f"packaging/gen/{meta['app-id']}.mime.xml": f"share/mime/packages/{meta['app-id']}.xml",
+    ROOT / "doc/index.docbook": f"share/doc/HTML/es/{meta['app-id']}/index.docbook",
     ROOT / f"packaging/icons/{meta['app-id']}.svg": f"share/icons/hicolor/scalable/apps/{meta['app-id']}.svg",
     ROOT / "COPYING": f"share/licenses/{meta['app-id']}/COPYING",
 }

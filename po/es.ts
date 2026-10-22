@@ -1,37 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="es" sourcelanguage="es">
   <context>
-    <name>AboutDialog</name>
-    <message>
-      <source>Acerca de %1</source>
-      <translation>Acerca de %1</translation>
-    </message>
-    <message>
-      <source>Versión %1</source>
-      <translation>Versión %1</translation>
-    </message>
-    <message>
-      <source>Sitio web</source>
-      <translation>Sitio web</translation>
-    </message>
-    <message>
-      <source>Código fuente</source>
-      <translation>Código fuente</translation>
-    </message>
-    <message>
-      <source>Informar de un error</source>
-      <translation>Informar de un error</translation>
-    </message>
-    <message>
-      <source>Creado por</source>
-      <translation>Creado por</translation>
-    </message>
-    <message>
-      <source>Licencia</source>
-      <translation>Licencia</translation>
-    </message>
-  </context>
-  <context>
     <name>Backend</name>
     <message>
       <source> El archivo ya fue publicado, pero no se pudo sincronizar su carpeta; podría no persistir ante un corte de energía.</source>
@@ -4475,61 +4444,6 @@ Huella(s) detectadas:
     <message>
       <source>Seleccionar carpeta</source>
       <translation>Seleccionar carpeta</translation>
-    </message>
-  </context>
-  <context>
-    <name>HelpDialog</name>
-    <message>
-      <source>Ayuda de %1</source>
-      <translation>Ayuda de %1</translation>
-    </message>
-    <message>
-      <source>Organizar la bóveda</source>
-      <translation>Organizar la bóveda</translation>
-    </message>
-    <message>
-      <source>En Carpetas, selecciona una vista o carpeta y usa Archivo → Nuevo elemento para guardar credenciales o notas. Selecciona un elemento para consultar su detalle y usa Editar para cambiarlo. La búsqueda filtra la vista actual.</source>
-      <translation>En Carpetas, selecciona una vista o carpeta y usa Archivo → Nuevo elemento para guardar credenciales o notas. Selecciona un elemento para consultar su detalle y usa Editar para cambiarlo. La búsqueda filtra la vista actual.</translation>
-    </message>
-    <message>
-      <source>Claves OpenPGP</source>
-      <translation>Claves OpenPGP</translation>
-    </message>
-    <message>
-      <source>En Ver → Claves puedes consultar el llavero local de GnuPG, crear o importar claves y copiar su huella. Las operaciones de claves se habilitan en esa sección.</source>
-      <translation>En Ver → Claves puedes consultar el llavero local de GnuPG, crear o importar claves y copiar su huella. Las operaciones de claves se habilitan en esa sección.</translation>
-    </message>
-    <message>
-      <source>Bloqueo y portapapeles</source>
-      <translation>Bloqueo y portapapeles</translation>
-    </message>
-    <message>
-      <source>Usa Ver → Bloquear bóveda para cerrar el acceso al contenido. La aplicación también se bloquea con la sesión, antes de suspender y tras el tiempo de inactividad configurado. En Preferencias puedes ajustar ese tiempo y la limpieza automática del portapapeles.</source>
-      <translation>Usa Ver → Bloquear bóveda para cerrar el acceso al contenido. La aplicación también se bloquea con la sesión, antes de suspender y tras el tiempo de inactividad configurado. En Preferencias puedes ajustar ese tiempo y la limpieza automática del portapapeles.</translation>
-    </message>
-    <message>
-      <source>Copias de seguridad</source>
-      <translation>Copias de seguridad</translation>
-    </message>
-    <message>
-      <source>Archivo → Crear copia de seguridad exporta la bóveda cifrada para los destinatarios que elijas. Conserva las claves privadas necesarias para abrirla. Usa Archivo → Restaurar copia de seguridad para recuperar una copia.</source>
-      <translation>Archivo → Crear copia de seguridad exporta la bóveda cifrada para los destinatarios que elijas. Conserva las claves privadas necesarias para abrirla. Usa Archivo → Restaurar copia de seguridad para recuperar una copia.</translation>
-    </message>
-    <message>
-      <source>Ventanas estrechas y teclado</source>
-      <translation>Ventanas estrechas y teclado</translation>
-    </message>
-    <message>
-      <source>Cuando hay poco espacio, se muestra un panel a la vez. Usa los botones de la barra para cambiar de panel. Puedes recorrer los controles con Tab y activar los botones con Espacio. F1 abre esta ayuda.</source>
-      <translation>Cuando hay poco espacio, se muestra un panel a la vez. Usa los botones de la barra para cambiar de panel. Puedes recorrer los controles con Tab y activar los botones con Espacio. F1 abre esta ayuda.</translation>
-    </message>
-    <message>
-      <source>Informar de un problema</source>
-      <translation>Informar de un problema</translation>
-    </message>
-    <message>
-      <source>Ayuda → Informar de un error abre el gestor de incidencias de KryptoPass. Describe los pasos y la versión de la aplicación. Evita incluir contraseñas, claves privadas o contenido de la bóveda.</source>
-      <translation>Ayuda → Informar de un error abre el gestor de incidencias de KryptoPass. Describe los pasos y la versión de la aplicación. Evita incluir contraseñas, claves privadas o contenido de la bóveda.</translation>
     </message>
   </context>
   <context>

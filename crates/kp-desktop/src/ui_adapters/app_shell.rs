@@ -24,8 +24,6 @@ pub mod qobject {
         #[qproperty(QString, app_authors, cxx_name = "appAuthors", READ, CONSTANT)]
         #[qproperty(QString, app_copyright, cxx_name = "appCopyright", READ, CONSTANT)]
         #[qproperty(QString, app_homepage, cxx_name = "appHomepage", READ, CONSTANT)]
-        #[qproperty(QString, app_repository, cxx_name = "appRepository", READ, CONSTANT)]
-        #[qproperty(QString, about_json, cxx_name = "aboutJson", READ, CONSTANT)]
         #[qproperty(QString, actions_json, cxx_name = "actionsJson", READ, NOTIFY)]
         #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
         /// Backup file handed over by the file manager; empty when none was given.
@@ -37,6 +35,14 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "configureShortcuts"]
         fn configure_shortcuts(self: Pin<&mut Self>);
+
+        #[qinvokable]
+        #[cxx_name = "showAboutApplicationDialog"]
+        fn show_about_application_dialog(self: Pin<&mut Self>);
+
+        #[qinvokable]
+        #[cxx_name = "showHandbook"]
+        fn show_handbook(self: Pin<&mut Self>);
 
         #[qinvokable]
         #[cxx_name = "showAboutKdeDialog"]
@@ -76,8 +82,6 @@ pub struct ShellControllerRust {
     app_authors: QString,
     app_copyright: QString,
     app_homepage: QString,
-    app_repository: QString,
-    about_json: QString,
     actions_json: QString,
     idle_lock_seconds: i32,
     launch_backup: QUrl,
@@ -94,8 +98,6 @@ impl Default for ShellControllerRust {
             app_authors: QString::from(crate::app_info::APP.authors),
             app_copyright: QString::from(crate::app_info::APP.copyright),
             app_homepage: QString::from(crate::app_info::APP.homepage),
-            app_repository: QString::from(crate::app_info::APP.repository),
-            about_json: crate::ui_adapters::native_ffi::ffi::about_data(),
             actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
             launch_backup: launch_backup_url(std::env::args().skip(1)),
@@ -144,6 +146,14 @@ impl qobject::ShellController {
             self.as_mut().rust_mut().idle_lock_seconds = seconds;
             self.idle_lock_seconds_changed();
         }
+    }
+
+    pub fn show_about_application_dialog(self: Pin<&mut Self>) {
+        crate::ui_adapters::native_ffi::ffi::show_about_application_dialog();
+    }
+
+    pub fn show_handbook(self: Pin<&mut Self>) {
+        crate::ui_adapters::native_ffi::ffi::show_handbook();
     }
 
     pub fn show_about_kde_dialog(self: Pin<&mut Self>) {

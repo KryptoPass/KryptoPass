@@ -1,0 +1,173 @@
+<?xml version="1.0" ?>
+<!DOCTYPE book PUBLIC "-//KDE//DTD DocBook XML V4.5-Based Variant V1.1//EN" "dtd/kdedbx45.dtd" [
+  <!ENTITY kryptopass "<application>KryptoPass</application>">
+  <!ENTITY % Spanish "INCLUDE">
+  <!ENTITY % addindex "IGNORE">
+]>
+<book id="kryptopass" lang="&language;">
+
+<bookinfo>
+<title>Manual de &kryptopass;</title>
+<authorgroup>
+<author><othername>KryptoPass contributors</othername></author>
+</authorgroup>
+<copyright><year>2026</year><holder>KryptoPass contributors</holder></copyright>
+<legalnotice><para>Este manual se distribuye bajo la licencia GNU General Public License, versión 3 o posterior, igual que la aplicación.</para></legalnotice>
+<date>2026-10-21</date>
+<releaseinfo>0.1.0</releaseinfo>
+<abstract>
+<para>&kryptopass; es una bóveda de credenciales y notas seguras para &kde;. El contenido sensible se cifra con OpenPGP mediante el llavero de GnuPG que ya usas.</para>
+</abstract>
+<keywordset>
+<keyword>KDE</keyword>
+<keyword>KryptoPass</keyword>
+<keyword>contraseñas</keyword>
+<keyword>OpenPGP</keyword>
+<keyword>GnuPG</keyword>
+</keywordset>
+</bookinfo>
+
+<chapter id="introduction">
+<title>Introducción</title>
+<para>&kryptopass; guarda inicios de sesión, notas, tarjetas, autenticadores TOTP, redes Wi-Fi, licencias, claves SSH y otros secretos en una bóveda local organizada en carpetas.</para>
+<para>Cada elemento se cifra con una o varias claves OpenPGP de tu llavero antes de guardarse. Para leerlo hace falta la clave privada de alguno de sus destinatarios. Los nombres, las carpetas y las huellas de los destinatarios se guardan sin cifrar para poder listar y buscar sin desbloquear cada elemento.</para>
+<note><para>&kryptopass; no guarda copia de tus claves privadas. Si pierdes todas las claves privadas que protegen un elemento, ese elemento no se puede recuperar.</para></note>
+</chapter>
+
+<chapter id="getting-started">
+<title>Primeros pasos</title>
+<sect1 id="first-key">
+<title>Tener una clave OpenPGP</title>
+<para>&kryptopass; usa el llavero de GnuPG del sistema. Si ya tienes una clave con su parte privada, aparece en <menuchoice><guimenu>Ver</guimenu><guimenuitem>Claves</guimenuitem></menuchoice> y puedes usarla directamente.</para>
+<para>Si no tienes ninguna, créala con <menuchoice><shortcut><keycombo action="simul">&Ctrl;&Shift;<keycap>K</keycap></keycombo></shortcut><guimenu>Archivo</guimenu><guimenuitem>Crear clave OpenPGP…</guimenuitem></menuchoice>, o importa una existente con <menuchoice><shortcut><keycombo action="simul">&Ctrl;&Shift;<keycap>I</keycap></keycombo></shortcut><guimenu>Archivo</guimenu><guimenuitem>Importar clave OpenPGP…</guimenuitem></menuchoice>.</para>
+</sect1>
+<sect1 id="first-entry">
+<title>Guardar el primer elemento</title>
+<procedure>
+<step><para>Elige <menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>N</keycap></keycombo></shortcut><guimenu>Archivo</guimenu><guimenuitem>Nuevo elemento…</guimenuitem></menuchoice>.</para></step>
+<step><para>Selecciona el tipo de elemento y rellena sus campos.</para></step>
+<step><para>Comprueba las claves con las que se cifrará y pulsa <guibutton>Guardar</guibutton>.</para></step>
+</procedure>
+</sect1>
+</chapter>
+
+<chapter id="vault">
+<title>La bóveda</title>
+<sect1 id="views">
+<title>Vistas y carpetas</title>
+<para>El panel izquierdo muestra <guilabel>Todos los elementos</guilabel>, <guilabel>Favoritos</guilabel>, <guilabel>Papelera</guilabel> y tus carpetas. El panel central lista los elementos de la vista elegida y el derecho muestra el detalle del elemento seleccionado.</para>
+<para>Crea carpetas con <menuchoice><shortcut><keycombo action="simul">&Ctrl;&Shift;<keycap>N</keycap></keycombo></shortcut><guimenu>Archivo</guimenu><guimenuitem>Nueva carpeta…</guimenuitem></menuchoice>. Cada carpeta puede tener su propio icono y color. Para reordenarlas usa <guimenuitem>Subir carpeta</guimenuitem> y <guimenuitem>Bajar carpeta</guimenuitem> del menú <guimenu>Editar</guimenu>, o arrástralas.</para>
+</sect1>
+<sect1 id="entries">
+<title>Trabajar con elementos</title>
+<variablelist>
+<varlistentry><term><menuchoice><shortcut><keycap>F2</keycap></shortcut><guimenu>Editar</guimenu><guimenuitem>Editar elemento…</guimenuitem></menuchoice></term>
+<listitem><para>Abre el editor del elemento seleccionado. Se conservan las versiones anteriores.</para></listitem></varlistentry>
+<varlistentry><term><menuchoice><guimenu>Editar</guimenu><guimenuitem>Mover a otra carpeta…</guimenuitem></menuchoice></term>
+<listitem><para>Cambia la carpeta del elemento. También puedes arrastrarlo sobre una carpeta.</para></listitem></varlistentry>
+<varlistentry><term><menuchoice><guimenu>Editar</guimenu><guimenuitem>Favorito</guimenuitem></menuchoice></term>
+<listitem><para>Añade o quita el elemento de <guilabel>Favoritos</guilabel>.</para></listitem></varlistentry>
+<varlistentry><term>Papelera</term>
+<listitem><para>Los elementos borrados pasan primero a la <guilabel>Papelera</guilabel>. Desde allí puedes usar <guimenuitem>Restaurar elemento</guimenuitem> o <guimenuitem>Eliminar elemento definitivamente…</guimenuitem>, que pide confirmación.</para></listitem></varlistentry>
+</variablelist>
+</sect1>
+<sect1 id="search">
+<title>Buscar</title>
+<para>Pulsa <keycombo action="simul">&Ctrl;<keycap>F</keycap></keycombo> para ir al campo de búsqueda. La búsqueda filtra la vista actual por nombre y otros metadatos sin descifrar el contenido.</para>
+</sect1>
+<sect1 id="copying">
+<title>Copiar secretos</title>
+<para>Con un elemento seleccionado puedes copiar sin abrir el editor:</para>
+<itemizedlist>
+<listitem><para><keycombo action="simul">&Ctrl;&Shift;<keycap>U</keycap></keycombo>: nombre de usuario.</para></listitem>
+<listitem><para><keycombo action="simul">&Ctrl;&Shift;<keycap>P</keycap></keycombo>: contraseña.</para></listitem>
+<listitem><para><keycombo action="simul">&Ctrl;&Shift;<keycap>T</keycap></keycombo>: código de verificación TOTP.</para></listitem>
+</itemizedlist>
+<para>Lo que copia &kryptopass; se marca como sensible para que el portapapeles de &plasma; no lo guarde en su historial, y se borra solo según la preferencia de autolimpieza (consulta <xref linkend="security"/>).</para>
+</sect1>
+</chapter>
+
+<chapter id="keys">
+<title>Claves OpenPGP</title>
+<para><menuchoice><guimenu>Ver</guimenu><guimenuitem>Claves</guimenuitem></menuchoice> muestra el llavero local de GnuPG: tus claves propias, con parte privada, y las claves de tus contactos.</para>
+<para>Desde esta vista puedes crear e importar claves, copiar su huella, consultar subclaves e identidades, cambiar su caducidad y respaldar o exportar la clave privada. <guimenuitem>Recargar llavero</guimenuitem> (<keycap>F5</keycap>) vuelve a leer GnuPG si lo cambiaste desde otra aplicación.</para>
+<para>Para compartir elementos con otra persona, importa su clave pública y añádela como destinataria al guardar.</para>
+</chapter>
+
+<chapter id="backups">
+<title>Copias de seguridad</title>
+<sect1 id="backup-export">
+<title>Crear una copia</title>
+<para><menuchoice><guimenu>Archivo</guimenu><guimenuitem>Crear copia de seguridad…</guimenuitem></menuchoice> guarda un archivo <filename>.kpb</filename> cifrado con toda la bóveda actual, incluidos nombres y carpetas.</para>
+<procedure>
+<step><para>Elige dónde guardar el archivo, preferiblemente fuera de este equipo.</para></step>
+<step><para>Comprueba en <guilabel>Cifrar con</guilabel> qué claves podrán abrir la copia.</para></step>
+<step><para>Pulsa <guibutton>Crear copia</guibutton>. Al terminar, <guibutton>Mostrar en la carpeta</guibutton> abre el gestor de archivos sobre la copia.</para></step>
+</procedure>
+<important><para>La copia no incluye tus claves privadas. Guárdalas aparte con <guibutton>Respaldar clave privada…</guibutton>; sin ellas no podrás restaurar la copia en otro equipo.</para></important>
+</sect1>
+<sect1 id="backup-restore">
+<title>Restaurar una copia</title>
+<para><menuchoice><guimenu>Archivo</guimenu><guimenuitem>Restaurar copia de seguridad…</guimenuitem></menuchoice> crea una bóveda nueva con el contenido de la copia y la abre al terminar. Tus datos actuales no se mezclan ni se modifican.</para>
+<para>También puedes abrir un archivo <filename>.kpb</filename> desde &dolphin; con doble clic.</para>
+<para>Si cambiaste de equipo, importa primero la clave privada que protege la copia. &kryptopass; la usará automáticamente y GnuPG pedirá su contraseña si hace falta.</para>
+</sect1>
+</chapter>
+
+<chapter id="import">
+<title>Importar desde otro gestor</title>
+<para><menuchoice><guimenu>Archivo</guimenu><guimenuitem>Importar desde otro gestor…</guimenuitem></menuchoice> añade a la bóveda actual los datos exportados por otro gestor de contraseñas.</para>
+<procedure>
+<step><para>Elige el gestor de origen.</para></step>
+<step><para>Suelta el archivo exportado en la ventana o búscalo con <guibutton>Examinar…</guibutton>.</para></step>
+<step><para>Revisa lo que se importará. Los avisos naranjas indican datos que no llegarán a la bóveda; <guilabel>Detalles de la conversión</guilabel> explica cómo se adaptan los demás.</para></step>
+<step><para>Comprueba <guilabel>Cifrar con</guilabel> y pulsa <guibutton>Importar</guibutton>.</para></step>
+</procedure>
+<para>Gestores admitidos actualmente: Proton Pass (exportaciones <filename>.json</filename>, <filename>.zip</filename> y <filename>.pgp</filename>).</para>
+</chapter>
+
+<chapter id="security">
+<title>Bloqueo y portapapeles</title>
+<para><menuchoice><guimenu>Ver</guimenu><guimenuitem>Bloquear bóveda</guimenuitem></menuchoice> cierra el acceso al contenido. &kryptopass; también se bloquea cuando bloqueas la sesión, antes de suspender el equipo y tras el tiempo de inactividad elegido.</para>
+<variablelist>
+<varlistentry><term><menuchoice><guimenu>Preferencias</guimenu><guisubmenu>Bloqueo por inactividad</guisubmenu></menuchoice></term>
+<listitem><para>Desactivado, 1, 5 o 15 minutos.</para></listitem></varlistentry>
+<varlistentry><term><menuchoice><guimenu>Preferencias</guimenu><guisubmenu>Autolimpieza del portapapeles</guisubmenu></menuchoice></term>
+<listitem><para>Desactivada, 15, 30 o 60 segundos. Solo se borra lo que copió &kryptopass; y siga en el portapapeles.</para></listitem></varlistentry>
+</variablelist>
+</chapter>
+
+<chapter id="shortcuts">
+<title>Atajos de teclado</title>
+<para>Puedes cambiar cualquier atajo desde el diálogo estándar de atajos de &kde;, en el menú <guimenu>Preferencias</guimenu>. Estos son los predeterminados:</para>
+<informaltable>
+<tgroup cols="2">
+<thead><row><entry>Atajo</entry><entry>Acción</entry></row></thead>
+<tbody>
+<row><entry><keycombo action="simul">&Ctrl;<keycap>N</keycap></keycombo></entry><entry>Nuevo elemento</entry></row>
+<row><entry><keycap>F2</keycap></entry><entry>Editar elemento</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>N</keycap></keycombo></entry><entry>Nueva carpeta</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;<keycap>F</keycap></keycombo></entry><entry>Buscar</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>U</keycap></keycombo></entry><entry>Copiar nombre de usuario</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>P</keycap></keycombo></entry><entry>Copiar contraseña</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>T</keycap></keycombo></entry><entry>Copiar código de verificación</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Alt;<keycap>Arriba</keycap></keycombo></entry><entry>Subir carpeta</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Alt;<keycap>Abajo</keycap></keycombo></entry><entry>Bajar carpeta</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>K</keycap></keycombo></entry><entry>Crear clave OpenPGP</entry></row>
+<row><entry><keycombo action="simul">&Ctrl;&Shift;<keycap>I</keycap></keycombo></entry><entry>Importar clave OpenPGP</entry></row>
+<row><entry><keycap>F5</keycap></entry><entry>Recargar llavero</entry></row>
+<row><entry><keycap>F1</keycap></entry><entry>Este manual</entry></row>
+</tbody>
+</tgroup>
+</informaltable>
+</chapter>
+
+<chapter id="credits">
+<title>Créditos y licencia</title>
+<para>&kryptopass;</para>
+<para>Copyright 2026 KryptoPass contributors.</para>
+<para>La aplicación y este manual se distribuyen bajo la licencia GNU General Public License, versión 3 o posterior.</para>
+<para>Para informar de un error usa la opción correspondiente del menú <guimenu>Ayuda</guimenu>. No incluyas contraseñas, claves privadas ni contenido de la bóveda.</para>
+</chapter>
+
+</book>
