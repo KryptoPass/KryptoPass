@@ -61,6 +61,10 @@ pub trait Importer: Send + Sync {
     fn decryption_available(&self) -> bool {
         self.info().features.encrypted_exports == EncryptionSupport::BuiltIn
     }
+    /// Public host of the provider, used by hosts for its icon; the library fetches nothing.
+    fn website(&self) -> Option<&'static str> {
+        None
+    }
     fn detect(&self, input: &[u8], limits: &ImportLimits) -> Detection;
     fn import(&self, input: &[u8], limits: &ImportLimits) -> Result<ImportedEntries, ImportError>;
 }

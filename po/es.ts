@@ -62,6 +62,50 @@
       <translation> {unchanged} elemento(s) ya estaban actualizados.</translation>
     </message>
     <message>
+      <source>%1 alias se guardarán como notas.</source>
+      <translation>%1 alias se guardarán como notas.</translation>
+    </message>
+    <message>
+      <source>%1 claves SSH no compatibles no se importarán.</source>
+      <translation>%1 claves SSH no compatibles no se importarán.</translation>
+    </message>
+    <message>
+      <source>%1 claves públicas se guardarán como referencia porque no coinciden con su clave privada.</source>
+      <translation>%1 claves públicas se guardarán como referencia porque no coinciden con su clave privada.</translation>
+    </message>
+    <message>
+      <source>%1 descripciones de carpeta se guardarán como notas.</source>
+      <translation>%1 descripciones de carpeta se guardarán como notas.</translation>
+    </message>
+    <message>
+      <source>%1 elementos conservan datos del origen como campos de referencia.</source>
+      <translation>%1 elementos conservan datos del origen como campos de referencia.</translation>
+    </message>
+    <message>
+      <source>%1 elementos de un tipo no compatible no se importarán.</source>
+      <translation>%1 elementos de un tipo no compatible no se importarán.</translation>
+    </message>
+    <message>
+      <source>%1 elementos guardarán sus fechas originales como campos.</source>
+      <translation>%1 elementos guardarán sus fechas originales como campos.</translation>
+    </message>
+    <message>
+      <source>%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.</source>
+      <translation>%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.</translation>
+    </message>
+    <message>
+      <source>%1 elementos tienen adjuntos que no se importarán.</source>
+      <translation>%1 elementos tienen adjuntos que no se importarán.</translation>
+    </message>
+    <message>
+      <source>%1 passkeys se guardarán solo como referencia; no sirven para iniciar sesión.</source>
+      <translation>%1 passkeys se guardarán solo como referencia; no sirven para iniciar sesión.</translation>
+    </message>
+    <message>
+      <source>%1 reglas de autocompletado se guardarán como referencia.</source>
+      <translation>%1 reglas de autocompletado se guardarán como referencia.</translation>
+    </message>
+    <message>
       <source>-----BEGIN PGP PUBLIC KEY BLOCK-----</source>
       <translation>-----BEGIN PGP PUBLIC KEY BLOCK-----</translation>
     </message>
@@ -120,6 +164,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Actualizando elemento…</source>
       <translation>Actualizando elemento…</translation>
+    </message>
+    <message>
+      <source>Alias (se guardan como notas)</source>
+      <translation>Alias (se guardan como notas)</translation>
     </message>
     <message>
       <source>Archivo guardado correctamente.</source>
@@ -342,10 +390,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Elemento listo para editar</translation>
     </message>
     <message>
-      <source>Elementos con adjuntos que no se importan</source>
-      <translation>Elementos con adjuntos que no se importan</translation>
-    </message>
-    <message>
       <source>Elige una imagen local.</source>
       <translation>Elige una imagen local.</translation>
     </message>
@@ -499,6 +543,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Indica una huella OpenPGP completa de 40 o 64 dígitos hexadecimales.</source>
       <translation>Indica una huella OpenPGP completa de 40 o 64 dígitos hexadecimales.</translation>
+    </message>
+    <message>
+      <source>Inicios de sesión</source>
+      <translation>Inicios de sesión</translation>
     </message>
     <message>
       <source>Inválida</source>
@@ -949,6 +997,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Se bloqueó la interacción de revocación de la subclave.</translation>
     </message>
     <message>
+      <source>Secretos personalizados</source>
+      <translation>Secretos personalizados</translation>
+    </message>
+    <message>
       <source>Selecciona al menos una clave válida para proteger la copia.</source>
       <translation>Selecciona al menos una clave válida para proteger la copia.</translation>
     </message>
@@ -1038,10 +1090,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Alias</source>
       <translation>Alias</translation>
-    </message>
-    <message>
-      <source>Alias que se guardarán como notas</source>
-      <translation>Alias que se guardarán como notas</translation>
     </message>
     <message>
       <source>Apellidos</source>
@@ -1572,6 +1620,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Sí</translation>
     </message>
     <message>
+      <source>Tarjetas de pago</source>
+      <translation>Tarjetas de pago</translation>
+    </message>
+    <message>
       <source>Teléfono</source>
       <translation>Teléfono</translation>
     </message>
@@ -1624,14 +1676,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Claves SSH</translation>
     </message>
     <message>
-      <source>Claves SSH no compatibles omitidas</source>
-      <translation>Claves SSH no compatibles omitidas</translation>
-    </message>
-    <message>
-      <source>Claves públicas de origen conservadas como referencia por diferir de la privada</source>
-      <translation>Claves públicas de origen conservadas como referencia por diferir de la privada</translation>
-    </message>
-    <message>
       <source>Compara los siete emojis con Android y confirma en ambas pantallas.</source>
       <translation>Compara los siete emojis con Android y confirma en ambas pantallas.</translation>
     </message>
@@ -1652,20 +1696,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Could not initialize importer catalog</translation>
     </message>
     <message>
-      <source>Datos de origen conservados como referencias</source>
-      <translation>Datos de origen conservados como referencias</translation>
-    </message>
-    <message>
       <source>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</source>
       <translation>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</translation>
     </message>
     <message>
       <source>Descripciones de carpetas</source>
       <translation>Descripciones de carpetas</translation>
-    </message>
-    <message>
-      <source>Descripciones de carpetas que se guardarán como notas</source>
-      <translation>Descripciones de carpetas que se guardarán como notas</translation>
     </message>
     <message>
       <source>Descripción: {name}</source>
@@ -1720,16 +1756,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</translation>
     </message>
     <message>
-      <source>Elementos con fechas originales conservadas como campos de referencia</source>
-      <translation>Elementos con fechas originales conservadas como campos de referencia</translation>
-    </message>
-    <message>
       <source>Elementos personalizados</source>
       <translation>Elementos personalizados</translation>
-    </message>
-    <message>
-      <source>Elementos personalizados adicionales para conservar campos y su ocultación</source>
-      <translation>Elementos personalizados adicionales para conservar campos y su ocultación</translation>
     </message>
     <message>
       <source>Emparejamiento rechazado. No se concedió confianza.</source>
@@ -1936,10 +1964,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Operación cancelada. La confianza ya guardada se conserva.</translation>
     </message>
     <message>
-      <source>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</source>
-      <translation>Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.</translation>
-    </message>
-    <message>
       <source>Pairing lab: device session state updated</source>
       <translation>Pairing lab: device session state updated</translation>
     </message>
@@ -1950,10 +1974,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Passkeys</source>
       <translation>Passkeys</translation>
-    </message>
-    <message>
-      <source>Passkeys conservadas como referencia; no permiten autenticar</source>
-      <translation>Passkeys conservadas como referencia; no permiten autenticar</translation>
     </message>
     <message>
       <source>Perfil de vinculación eliminado. Crea una invitación para empezar de cero. La bóveda y OpenPGP se conservan.</source>
@@ -1980,20 +2000,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Reglas de autocompletado</translation>
     </message>
     <message>
-      <source>Reglas de autocompletado conservadas como referencia</source>
-      <translation>Reglas de autocompletado conservadas como referencia</translation>
-    </message>
-    <message>
       <source>Repeated transport diagnostics (addresses omitted)</source>
       <translation>Repeated transport diagnostics (addresses omitted)</translation>
     </message>
     <message>
       <source>STUN binding request from</source>
       <translation>STUN binding request from</translation>
-    </message>
-    <message>
-      <source>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</source>
-      <translation>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</translation>
     </message>
     <message>
       <source>Selecciona la dirección de Desktop en tu red local.</source>
@@ -2026,10 +2038,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Tarjetas</source>
       <translation>Tarjetas</translation>
-    </message>
-    <message>
-      <source>Tipos de entrada no compatibles omitidos</source>
-      <translation>Tipos de entrada no compatibles omitidos</translation>
     </message>
     <message>
       <source>Todos los archivos (*)</source>
@@ -3112,10 +3120,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>{} ({patterns})</source>
       <translation>{} ({patterns})</translation>
-    </message>
-    <message>
-      <source>{}: {count}.</source>
-      <translation>{}: {count}.</translation>
     </message>
     <message>
       <source>{}identidad(es) certificada(s) en {fingerprint}.</source>
@@ -4673,20 +4677,87 @@ Huella(s) detectadas:
       <translation>Seleccionar exportación de %1</translation>
     </message>
     <message>
-      <source>Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Primero se revisará el archivo.</source>
-      <translation>Los elementos se añadirán a la bóveda actual y se protegerán con las claves que elijas. Primero se revisará el archivo.</translation>
-    </message>
-    <message>
-      <source>Claves que protegerán los elementos importados</source>
-      <translation>Claves que protegerán los elementos importados</translation>
-    </message>
-    <message>
       <source> (tu clave)</source>
       <translation> (tu clave)</translation>
     </message>
     <message>
-      <source>Elige al menos una clave para continuar.</source>
-      <translation>Elige al menos una clave para continuar.</translation>
+      <source>Elige un gestor para continuar</source>
+      <translation>Elige un gestor para continuar</translation>
+    </message>
+    <message>
+      <source>Elige el archivo exportado para continuar</source>
+      <translation>Elige el archivo exportado para continuar</translation>
+    </message>
+    <message>
+      <source>Elige al menos una clave</source>
+      <translation>Elige al menos una clave</translation>
+    </message>
+    <message numerus="yes">
+      <source>%n elemento</source>
+      <translation>
+        <numerusform>%n elemento</numerusform>
+        <numerusform>%n elementos</numerusform>
+      </translation>
+    </message>
+    <message>
+      <source>Desde %1</source>
+      <translation>Desde %1</translation>
+    </message>
+    <message>
+      <source>¿Desde qué gestor importas?</source>
+      <translation>¿Desde qué gestor importas?</translation>
+    </message>
+    <message>
+      <source>Cambiar gestor</source>
+      <translation>Cambiar gestor</translation>
+    </message>
+    <message>
+      <source>Gestores disponibles</source>
+      <translation>Gestores disponibles</translation>
+    </message>
+    <message>
+      <source>No hay integraciones de importación disponibles.</source>
+      <translation>No hay integraciones de importación disponibles.</translation>
+    </message>
+    <message>
+      <source>Archivo</source>
+      <translation>Archivo</translation>
+    </message>
+    <message>
+      <source>Suelta aquí la exportación de %1</source>
+      <translation>Suelta aquí la exportación de %1</translation>
+    </message>
+    <message>
+      <source>Suelta aquí la exportación</source>
+      <translation>Suelta aquí la exportación</translation>
+    </message>
+    <message>
+      <source>Archivos admitidos: %1</source>
+      <translation>Archivos admitidos: %1</translation>
+    </message>
+    <message>
+      <source>Examinar…</source>
+      <translation>Examinar…</translation>
+    </message>
+    <message>
+      <source>Cambiar…</source>
+      <translation>Cambiar…</translation>
+    </message>
+    <message>
+      <source>Se importará</source>
+      <translation>Se importará</translation>
+    </message>
+    <message>
+      <source>Carpetas</source>
+      <translation>Carpetas</translation>
+    </message>
+    <message>
+      <source>Incluye %1 en la papelera · %2 omitidos</source>
+      <translation>Incluye %1 en la papelera · %2 omitidos</translation>
+    </message>
+    <message>
+      <source>Cifrar con</source>
+      <translation>Cifrar con</translation>
     </message>
     <message>
       <source>No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.</source>
@@ -4697,71 +4768,28 @@ Huella(s) detectadas:
       <translation>Para leer los datos necesitarás la clave privada de alguien con acceso.</translation>
     </message>
     <message>
+      <source>Detalles de la conversión (%1)</source>
+      <translation>Detalles de la conversión (%1)</translation>
+    </message>
+    <message>
+      <source>Importación completada</source>
+      <translation>Importación completada</translation>
+    </message>
+    <message>
+      <source>Los elementos ya están en la bóveda actual.</source>
+      <translation>Los elementos ya están en la bóveda actual.</translation>
+    </message>
+    <message>
       <source>Cerrar</source>
       <translation>Cerrar</translation>
     </message>
     <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
       <source>Importar</source>
       <translation>Importar</translation>
-    </message>
-  </context>
-  <context>
-    <name>ImporterPanel</name>
-    <message>
-      <source>Integraciones</source>
-      <translation>Integraciones</translation>
-    </message>
-    <message>
-      <source>Buscar gestor o formato…</source>
-      <translation>Buscar gestor o formato…</translation>
-    </message>
-    <message>
-      <source>Buscar integraciones de importación</source>
-      <translation>Buscar integraciones de importación</translation>
-    </message>
-    <message>
-      <source>%1 de %2 integraciones</source>
-      <translation>%1 de %2 integraciones</translation>
-    </message>
-    <message>
-      <source>No hay integraciones disponibles.</source>
-      <translation>No hay integraciones disponibles.</translation>
-    </message>
-    <message>
-      <source>No hay coincidencias.</source>
-      <translation>No hay coincidencias.</translation>
-    </message>
-    <message>
-      <source>Elige una integración</source>
-      <translation>Elige una integración</translation>
-    </message>
-    <message>
-      <source>Selecciona el gestor del que exportaste tus datos para consultar sus formatos y capacidades.</source>
-      <translation>Selecciona el gestor del que exportaste tus datos para consultar sus formatos y capacidades.</translation>
-    </message>
-    <message>
-      <source>Formatos: %1</source>
-      <translation>Formatos: %1</translation>
-    </message>
-    <message>
-      <source>Completo</source>
-      <translation>Completo</translation>
-    </message>
-    <message>
-      <source>Solo referencia</source>
-      <translation>Solo referencia</translation>
-    </message>
-    <message>
-      <source>No disponible</source>
-      <translation>No disponible</translation>
-    </message>
-    <message>
-      <source>Si el archivo está cifrado, la integración solicitará el acceso mediante su servicio de descifrado.</source>
-      <translation>Si el archivo está cifrado, la integración solicitará el acceso mediante su servicio de descifrado.</translation>
-    </message>
-    <message>
-      <source>Elegir archivo…</source>
-      <translation>Elegir archivo…</translation>
     </message>
   </context>
   <context>

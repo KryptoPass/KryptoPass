@@ -85,6 +85,10 @@ impl Importer for ProtonPassImporter {
         self.decryptor.is_some()
     }
 
+    fn website(&self) -> Option<&'static str> {
+        Some("pass.proton.me")
+    }
+
     fn detect(&self, input: &[u8], limits: &ImportLimits) -> Detection {
         container::detect(input, limits)
     }

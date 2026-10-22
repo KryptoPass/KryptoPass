@@ -19,8 +19,8 @@ pub mod qobject {
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, reviewed, READ, NOTIFY)]
         #[qproperty(QString, importers_json, cxx_name = "importersJson", READ, NOTIFY)]
-        #[qproperty(QString, summary, READ, NOTIFY)]
-        #[qproperty(QString, warnings, READ, NOTIFY)]
+        #[qproperty(QString, summary_json, cxx_name = "summaryJson", READ, NOTIFY)]
+        #[qproperty(QString, warnings_json, cxx_name = "warningsJson", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
         type ImportController = super::ImportControllerRust;
@@ -46,8 +46,8 @@ pub struct ImportControllerRust {
     busy: bool,
     reviewed: bool,
     importers_json: QString,
-    summary: QString,
-    warnings: QString,
+    summary_json: QString,
+    warnings_json: QString,
     status: QString,
     error_message: QString,
     plan: Option<PreparedImport>,
@@ -65,8 +65,8 @@ impl Default for ImportControllerRust {
             busy: false,
             reviewed: false,
             importers_json: QString::from(importers_json),
-            summary: QString::default(),
-            warnings: QString::default(),
+            summary_json: QString::default(),
+            warnings_json: QString::default(),
             status: QString::default(),
             error_message: QString::default(),
             plan: None,
@@ -92,8 +92,8 @@ impl qobject::ImportController {
             state.destination = None;
         }
         self.as_mut().set_reviewed(false);
-        self.as_mut().set_summary(QString::default());
-        self.as_mut().set_warnings(QString::default());
+        self.as_mut().set_summary_json(QString::default());
+        self.as_mut().set_warnings_json(QString::default());
         self.as_mut().set_status(QString::default());
         self.set_error_message(QString::default());
     }
@@ -136,10 +136,10 @@ impl qobject::ImportController {
                     Ok(plan) => {
                         controller
                             .as_mut()
-                            .set_summary(QString::from(presentation::summary_text(&plan)));
+                            .set_summary_json(QString::from(presentation::summary_json(&plan)));
                         controller
                             .as_mut()
-                            .set_warnings(QString::from(presentation::warning_text(&plan)));
+                            .set_warnings_json(QString::from(presentation::warnings_json(&plan)));
                         let has_items = !plan.batch.items.is_empty();
                         controller.as_mut().rust_mut().plan = Some(plan);
                         controller.as_mut().set_reviewed(has_items);
@@ -226,17 +226,17 @@ impl qobject::ImportController {
         }
     }
 
-    fn set_summary(mut self: Pin<&mut Self>, value: QString) {
-        if self.summary() != &value {
-            self.as_mut().rust_mut().summary = value;
-            self.summary_changed();
+    fn set_summary_json(mut self: Pin<&mut Self>, value: QString) {
+        if self.summary_json() != &value {
+            self.as_mut().rust_mut().summary_json = value;
+            self.summary_json_changed();
         }
     }
 
-    fn set_warnings(mut self: Pin<&mut Self>, value: QString) {
-        if self.warnings() != &value {
-            self.as_mut().rust_mut().warnings = value;
-            self.warnings_changed();
+    fn set_warnings_json(mut self: Pin<&mut Self>, value: QString) {
+        if self.warnings_json() != &value {
+            self.as_mut().rust_mut().warnings_json = value;
+            self.warnings_json_changed();
         }
     }
 

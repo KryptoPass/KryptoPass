@@ -1,65 +1,88 @@
-use super::{PreparedImport, catalog::entry_type_label};
-use kryptopass_import::{EntryWarningKind, ImportError};
+use super::PreparedImport;
+use kryptopass_import::{EntryType, EntryWarningKind, ImportError};
 
-pub(crate) fn summary_text(plan: &PreparedImport) -> String {
+/// Counts per entry type, labelled for display; QML picks the icon from `kind`.
+pub(crate) fn summary_json(plan: &PreparedImport) -> String {
     let source = &plan.source;
-    let mut lines = vec![crate::i18n::format(
-        "Origen: %1 colecciones · %2 carpetas · %3 elementos (%4 compatibles, %5 omitidos) · %6 en la papelera.",
-        &[
-            source.collections.to_string(),
-            source.folders.to_string(),
-            source.source_entries.to_string(),
-            source.imported_entries.to_string(),
-            source.skipped_entries.to_string(),
-            source.trashed_entries.to_string(),
-        ],
-    )];
-    for (kind, count) in &source.entries_by_type {
-        lines.push(format!(
-            "{}: {count}.",
-            crate::i18n::text(entry_type_label(*kind))
-        ));
-    }
-    lines.push(crate::i18n::format(
-        "Se añadirán %1 carpetas y %2 elementos a la bóveda actual.",
-        &[
-            plan.batch.folders.len().to_string(),
-            plan.batch.items.len().to_string(),
-        ],
-    ));
-    lines.join("\n")
+    let types: Vec<_> = source
+        .entries_by_type
+        .iter()
+        .map(|(kind, count)| {
+            let (kind, label) = entry_type_display(*kind);
+            serde_json::json!({ "kind": kind, "label": crate::i18n::text(label), "count": count })
+        })
+        .collect();
+    serde_json::json!({
+        "types": types,
+        "folders": plan.batch.folders.len(),
+        "items": plan.batch.items.len(),
+        "trashed": source.trashed_entries,
+        "skipped": source.skipped_entries,
+    })
+    .to_string()
 }
 
-pub(crate) fn warning_text(plan: &PreparedImport) -> String {
-    let mut lines = Vec::new();
-    for (kind, label) in [
+fn entry_type_display(kind: EntryType) -> (&'static str, &'static str) {
+    match kind {
+        EntryType::Login => ("login", "Inicios de sesión"),
+        EntryType::Note => ("note", "Notas"),
+        EntryType::Alias => ("note", "Alias (se guardan como notas)"),
+        EntryType::Card => ("card", "Tarjetas de pago"),
+        EntryType::Identity => ("identity", "Identidades"),
+        EntryType::Custom => ("custom", "Secretos personalizados"),
+        EntryType::Wifi => ("wifi", "Redes Wi-Fi"),
+        EntryType::SshKey => ("ssh-key", "Claves SSH"),
+        EntryType::Totp => ("totp", "Autenticadores TOTP"),
+        EntryType::License => ("license", "Licencias"),
+    }
+}
+
+/// Conversion notes; `loss` marks data that will not reach the vault.
+pub(crate) fn warnings_json(plan: &PreparedImport) -> String {
+    let mut notes = Vec::new();
+    let mut push = |count: u32, text: &str, loss: bool| {
+        if count > 0 {
+            notes.push(serde_json::json!({
+                "text": crate::i18n::format(text, &[count.to_string()]),
+                "loss": loss,
+            }));
+        }
+    };
+    for (kind, text, loss) in [
         (
             EntryWarningKind::UnsupportedEntryType,
-            "Tipos de entrada no compatibles omitidos",
-        ),
-        (
-            EntryWarningKind::SourceFieldsPreserved,
-            "Datos de origen conservados como referencias",
-        ),
-        (
-            EntryWarningKind::PasskeysAsReferences,
-            "Passkeys conservadas como referencia; no permiten autenticar",
-        ),
-        (
-            EntryWarningKind::AutofillRulesAsReferences,
-            "Reglas de autocompletado conservadas como referencia",
+            "%1 elementos de un tipo no compatible no se importarán.",
+            true,
         ),
         (
             EntryWarningKind::AttachmentsNotImported,
-            "Elementos con adjuntos que no se importan",
-        ),
-        (
-            EntryWarningKind::ConflictingPublicKey,
-            "Claves públicas de origen conservadas como referencia por diferir de la privada",
+            "%1 elementos tienen adjuntos que no se importarán.",
+            true,
         ),
         (
             EntryWarningKind::UnreadableSshKey,
-            "Claves SSH no compatibles omitidas",
+            "%1 claves SSH no compatibles no se importarán.",
+            true,
+        ),
+        (
+            EntryWarningKind::PasskeysAsReferences,
+            "%1 passkeys se guardarán solo como referencia; no sirven para iniciar sesión.",
+            false,
+        ),
+        (
+            EntryWarningKind::ConflictingPublicKey,
+            "%1 claves públicas se guardarán como referencia porque no coinciden con su clave privada.",
+            false,
+        ),
+        (
+            EntryWarningKind::AutofillRulesAsReferences,
+            "%1 reglas de autocompletado se guardarán como referencia.",
+            false,
+        ),
+        (
+            EntryWarningKind::SourceFieldsPreserved,
+            "%1 elementos conservan datos del origen como campos de referencia.",
+            false,
         ),
     ] {
         let count = plan
@@ -67,34 +90,30 @@ pub(crate) fn warning_text(plan: &PreparedImport) -> String {
             .iter()
             .filter(|warning| warning.kind == kind)
             .count();
-        if count > 0 {
-            lines.push(format!("{}: {count}.", crate::i18n::text(label)));
-        }
+        push(u32::try_from(count).unwrap_or(u32::MAX), text, loss);
     }
     let adaptations = &plan.adaptations;
-    for (count, label) in [
-        (
-            adaptations.aliases_as_notes,
-            "Alias que se guardarán como notas",
-        ),
-        (
-            adaptations.additional_entries,
-            "Elementos personalizados adicionales para conservar campos y su ocultación",
-        ),
-        (
-            adaptations.folder_descriptions,
-            "Descripciones de carpetas que se guardarán como notas",
-        ),
-        (
-            adaptations.timestamps_as_fields,
-            "Elementos con fechas originales conservadas como campos de referencia",
-        ),
-    ] {
-        if count > 0 {
-            lines.push(format!("{}: {count}.", crate::i18n::text(label)));
-        }
-    }
-    lines.join("\n")
+    push(
+        adaptations.aliases_as_notes,
+        "%1 alias se guardarán como notas.",
+        false,
+    );
+    push(
+        adaptations.additional_entries,
+        "%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.",
+        false,
+    );
+    push(
+        adaptations.folder_descriptions,
+        "%1 descripciones de carpeta se guardarán como notas.",
+        false,
+    );
+    push(
+        adaptations.timestamps_as_fields,
+        "%1 elementos guardarán sus fechas originales como campos.",
+        false,
+    );
+    serde_json::Value::Array(notes).to_string()
 }
 
 pub(crate) fn review_error(error: &anyhow::Error) -> &'static str {

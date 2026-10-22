@@ -9,6 +9,8 @@ use serde::Serialize;
 struct ImporterDescription {
     id: &'static str,
     name: &'static str,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    icon_source: String,
     formats: Vec<&'static str>,
     file_filters: Vec<String>,
     entry_types: Vec<String>,
@@ -81,9 +83,19 @@ fn json_for_registry(registry: &ImporterRegistry) -> Result<String> {
                     "unsupported"
                 },
             });
+            let icon_source = registry
+                .get(info.id)
+                .and_then(|importer| importer.website())
+                .map(|host| {
+                    crate::infrastructure::entry_icons::source_for(Some(
+                        &kryptopass_core::EntryIcon::Favicon { host: host.into() },
+                    ))
+                })
+                .unwrap_or_default();
             ImporterDescription {
                 id: info.id,
                 name: info.name,
+                icon_source,
                 formats: info.formats.iter().map(|format| format.extension).collect(),
                 file_filters: vec![
                     format!("{} ({patterns})", info.name),
