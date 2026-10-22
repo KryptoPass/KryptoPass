@@ -3603,10 +3603,14 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
-    <name>DevicePairingLabDialog</name>
+    <name>DevicesWindow</name>
     <message>
       <source>Dispositivos</source>
       <translation>Dispositivos</translation>
+    </message>
+    <message>
+      <source>Dispositivo</source>
+      <translation>Dispositivo</translation>
     </message>
     <message>
       <source>Conectado</source>
@@ -3627,6 +3631,10 @@ Huella(s) detectadas:
     <message>
       <source>Desconectado</source>
       <translation>Desconectado</translation>
+    </message>
+    <message>
+      <source>Comprobando ruta…</source>
+      <translation>Comprobando ruta…</translation>
     </message>
     <message>
       <source>Escanea el QR y elige Reconectar en Android. El código de conexión caduca en 5 minutos.</source>
@@ -3697,60 +3705,72 @@ Huella(s) detectadas:
       <translation>La sesión autenticada está activa. Cerrar esta ventana no la desconecta.</translation>
     </message>
     <message>
-      <source>Conecta tus dispositivos</source>
-      <translation>Conecta tus dispositivos</translation>
-    </message>
-    <message>
-      <source>Vincula Android y conserva una conexión segura entre tus dispositivos.</source>
-      <translation>Vincula Android y conserva una conexión segura entre tus dispositivos.</translation>
+      <source>Tus dispositivos</source>
+      <translation>Tus dispositivos</translation>
     </message>
     <message>
       <source>Conexión de pruebas · Sin sincronización de bóveda</source>
       <translation>Conexión de pruebas · Sin sincronización de bóveda</translation>
     </message>
     <message>
-      <source>Hay una sesión activa con %1. Desconecta ese dispositivo antes de vincular o reconectar otro.</source>
-      <translation>Hay una sesión activa con %1. Desconecta ese dispositivo antes de vincular o reconectar otro.</translation>
+      <source>Más opciones</source>
+      <translation>Más opciones</translation>
     </message>
     <message>
-      <source>Código de conexión</source>
-      <translation>Código de conexión</translation>
+      <source>Opciones de conexión</source>
+      <translation>Opciones de conexión</translation>
+    </message>
+    <message>
+      <source>Actualizar dispositivos y redes</source>
+      <translation>Actualizar dispositivos y redes</translation>
+    </message>
+    <message>
+      <source>Reiniciar vinculación…</source>
+      <translation>Reiniciar vinculación…</translation>
+    </message>
+    <message>
+      <source>Hay una sesión activa con %1. Desconéctalo antes de vincular o reconectar otro dispositivo.</source>
+      <translation>Hay una sesión activa con %1. Desconéctalo antes de vincular o reconectar otro dispositivo.</translation>
+    </message>
+    <message>
+      <source>Reconectar dispositivo</source>
+      <translation>Reconectar dispositivo</translation>
+    </message>
+    <message>
+      <source>Vincular dispositivo</source>
+      <translation>Vincular dispositivo</translation>
     </message>
     <message>
       <source>Código QR de vinculación local</source>
       <translation>Código QR de vinculación local</translation>
     </message>
     <message>
-      <source>Escanea este código con KryptoPass Android.</source>
-      <translation>Escanea este código con KryptoPass Android.</translation>
+      <source>Ambos dispositivos necesitan acceso a Internet.</source>
+      <translation>Ambos dispositivos necesitan acceso a Internet.</translation>
     </message>
     <message>
-      <source>Comprueba que ambos dispositivos tengan acceso a Internet.</source>
-      <translation>Comprueba que ambos dispositivos tengan acceso a Internet.</translation>
+      <source>Ambos dispositivos deben estar en la misma red local.</source>
+      <translation>Ambos dispositivos deben estar en la misma red local.</translation>
     </message>
     <message>
-      <source>Asegúrate de que ambos dispositivos estén en la misma red local.</source>
-      <translation>Asegúrate de que ambos dispositivos estén en la misma red local.</translation>
+      <source>Modo emulador: solo para Android en esta computadora.</source>
+      <translation>Modo emulador: solo para Android en esta computadora.</translation>
     </message>
     <message>
-      <source>Usa este modo solo para el emulador en esta computadora.</source>
-      <translation>Usa este modo solo para el emulador en esta computadora.</translation>
+      <source>Ocultar código</source>
+      <translation>Ocultar código</translation>
     </message>
     <message>
-      <source>Ocultar código manual</source>
-      <translation>Ocultar código manual</translation>
-    </message>
-    <message>
-      <source>Mostrar código manual</source>
-      <translation>Mostrar código manual</translation>
+      <source>Usar código en lugar de QR</source>
+      <translation>Usar código en lugar de QR</translation>
     </message>
     <message>
       <source>Código de invitación de un solo uso</source>
       <translation>Código de invitación de un solo uso</translation>
     </message>
     <message>
-      <source>Copiar código</source>
-      <translation>Copiar código</translation>
+      <source>Copiar</source>
+      <translation>Copiar</translation>
     </message>
     <message>
       <source>Compara los siete elementos</source>
@@ -3775,18 +3795,6 @@ Huella(s) detectadas:
     <message>
       <source>Los 7 coinciden</source>
       <translation>Los 7 coinciden</translation>
-    </message>
-    <message>
-      <source>Ocultar opciones de conexión</source>
-      <translation>Ocultar opciones de conexión</translation>
-    </message>
-    <message>
-      <source>Opciones de conexión</source>
-      <translation>Opciones de conexión</translation>
-    </message>
-    <message>
-      <source>Actualizar redes</source>
-      <translation>Actualizar redes</translation>
     </message>
     <message>
       <source>Conectar por Internet</source>
@@ -3829,6 +3837,10 @@ Huella(s) detectadas:
       <translation>Interfaz de red local de Desktop</translation>
     </message>
     <message>
+      <source>Actualizar redes</source>
+      <translation>Actualizar redes</translation>
+    </message>
+    <message>
       <source>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</source>
       <translation>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</translation>
     </message>
@@ -3845,14 +3857,6 @@ Huella(s) detectadas:
       <translation>Cargando dispositivos autorizados…</translation>
     </message>
     <message>
-      <source>Todavía no hay dispositivos autorizados en este perfil. Vincula Android para añadir uno.</source>
-      <translation>Todavía no hay dispositivos autorizados en este perfil. Vincula Android para añadir uno.</translation>
-    </message>
-    <message>
-      <source>Dispositivo</source>
-      <translation>Dispositivo</translation>
-    </message>
-    <message>
       <source>Emparejado</source>
       <translation>Emparejado</translation>
     </message>
@@ -3865,48 +3869,12 @@ Huella(s) detectadas:
       <translation>Estado de confianza: %1</translation>
     </message>
     <message>
-      <source>·</source>
-      <translation>·</translation>
-    </message>
-    <message>
       <source>Estado de conexión: %1</source>
       <translation>Estado de conexión: %1</translation>
     </message>
     <message>
-      <source>Transporte: %1</source>
-      <translation>Transporte: %1</translation>
-    </message>
-    <message>
-      <source>Comprobando…</source>
-      <translation>Comprobando…</translation>
-    </message>
-    <message>
-      <source>Red: %1</source>
-      <translation>Red: %1</translation>
-    </message>
-    <message>
-      <source>ID %1</source>
-      <translation>ID %1</translation>
-    </message>
-    <message>
-      <source>Cambiar nombre</source>
-      <translation>Cambiar nombre</translation>
-    </message>
-    <message>
-      <source>Editar nombre local del dispositivo</source>
-      <translation>Editar nombre local del dispositivo</translation>
-    </message>
-    <message>
-      <source>Ocultar ID</source>
-      <translation>Ocultar ID</translation>
-    </message>
-    <message>
-      <source>Detalles</source>
-      <translation>Detalles</translation>
-    </message>
-    <message>
-      <source>Ver identificador completo del dispositivo</source>
-      <translation>Ver identificador completo del dispositivo</translation>
+      <source>Ruta de conexión: %1</source>
+      <translation>Ruta de conexión: %1</translation>
     </message>
     <message>
       <source>Reconectar</source>
@@ -3917,36 +3885,40 @@ Huella(s) detectadas:
       <translation>Desconectar</translation>
     </message>
     <message>
-      <source>Olvidar</source>
-      <translation>Olvidar</translation>
+      <source>Más acciones para %1</source>
+      <translation>Más acciones para %1</translation>
+    </message>
+    <message>
+      <source>Más acciones</source>
+      <translation>Más acciones</translation>
+    </message>
+    <message>
+      <source>Cambiar nombre…</source>
+      <translation>Cambiar nombre…</translation>
+    </message>
+    <message>
+      <source>Ocultar identificador</source>
+      <translation>Ocultar identificador</translation>
+    </message>
+    <message>
+      <source>Mostrar identificador</source>
+      <translation>Mostrar identificador</translation>
+    </message>
+    <message>
+      <source>Olvidar dispositivo…</source>
+      <translation>Olvidar dispositivo…</translation>
     </message>
     <message>
       <source>Identificador completo del dispositivo</source>
       <translation>Identificador completo del dispositivo</translation>
     </message>
     <message>
-      <source>Copiar ID</source>
-      <translation>Copiar ID</translation>
+      <source>Sin dispositivos vinculados</source>
+      <translation>Sin dispositivos vinculados</translation>
     </message>
     <message>
-      <source>Vincular</source>
-      <translation>Vincular</translation>
-    </message>
-    <message>
-      <source>Vincular dispositivo</source>
-      <translation>Vincular dispositivo</translation>
-    </message>
-    <message>
-      <source>Actualizar</source>
-      <translation>Actualizar</translation>
-    </message>
-    <message>
-      <source>Actualizar dispositivos</source>
-      <translation>Actualizar dispositivos</translation>
-    </message>
-    <message>
-      <source>Reiniciar vinculación</source>
-      <translation>Reiniciar vinculación</translation>
+      <source>Vincula KryptoPass para Android para mantener una conexión segura con este equipo.</source>
+      <translation>Vincula KryptoPass para Android para mantener una conexión segura con este equipo.</translation>
     </message>
     <message>
       <source>Cancelar</source>
@@ -3973,6 +3945,10 @@ Huella(s) detectadas:
       <translation>Se cerrará la conexión y se eliminarán la autorización y el nombre local de «%1» en este equipo. También olvida este equipo en Android antes de volver a emparejarlos. La bóveda y OpenPGP se conservan.</translation>
     </message>
     <message>
+      <source>Reiniciar vinculación</source>
+      <translation>Reiniciar vinculación</translation>
+    </message>
+    <message>
       <source>Olvidar dispositivo</source>
       <translation>Olvidar dispositivo</translation>
     </message>
@@ -3981,12 +3957,12 @@ Huella(s) detectadas:
       <translation>Nombre del dispositivo</translation>
     </message>
     <message>
-      <source>Solo se guarda en este equipo.</source>
-      <translation>Solo se guarda en este equipo.</translation>
-    </message>
-    <message>
       <source>Nombre local del dispositivo</source>
       <translation>Nombre local del dispositivo</translation>
+    </message>
+    <message>
+      <source>Solo se guarda en este equipo.</source>
+      <translation>Solo se guarda en este equipo.</translation>
     </message>
     <message>
       <source>Quitar nombre</source>

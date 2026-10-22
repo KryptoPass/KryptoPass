@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/DesktopAction.qml")
         .qml_file("ui/qml/AdaptivePanes.qml")
         .qml_file("ui/qml/BrowserPairingDialog.qml")
-        .qml_file("ui/qml/DevicePairingLabDialog.qml")
+        .qml_file("ui/qml/DevicesWindow.qml")
         .qml_file("ui/qml/BrowserAccessDialog.qml")
         .qml_file("ui/qml/BrowserAccessWindow.qml")
         .qml_file("ui/qml/AppListView.qml")

@@ -55,8 +55,9 @@ Controls.ApplicationWindow {
             store.controller.decideBrowserPairing(token, approve);
         }
     }
-    DevicePairingLabDialog {
-        id: devicePairingLab
+    DevicesWindow {
+        id: devicesWindow
+        transientParent: root
         controller: deviceController
         Component.onCompleted: {
             if (available && Qt.application.arguments.indexOf("--pairing-lab") !== -1)
@@ -696,8 +697,8 @@ Controls.ApplicationWindow {
         id: showDevicesAction
         controller: shell
         actionId: "showDevices"
-        enabled: devicePairingLab.available
-        onTriggered: devicePairingLab.open()
+        enabled: devicesWindow.available
+        onTriggered: devicesWindow.open()
     }
     readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
     DesktopAction {
@@ -943,7 +944,7 @@ Controls.ApplicationWindow {
             }
             Controls.MenuItem {
                 action: showDevicesAction
-                visible: devicePairingLab.available
+                visible: devicesWindow.available
             }
         }
         Controls.Menu {
@@ -1326,7 +1327,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
+        externalModalOpen: devicesWindow.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }

@@ -8,8 +8,9 @@ editar su UI ni cambiar mensajes de red para acomodar una pantalla.
 
 Nombre de sección en ambas apps: **Dispositivos**. Acciones sugeridas:
 **Vincular dispositivo**, **Reconectar**, **Desconectar**, **Cambiar nombre**.
-Desktop la sitúa en Preferencias; conserva el acceso de desarrollo y
-`--pairing-lab` mientras siga siendo una integración debug.
+Desktop la sitúa en Preferencias y la abre en su propia ventana
+(`DevicesWindow.qml`); conserva el acceso de desarrollo y `--pairing-lab`
+mientras siga siendo una integración debug.
 
 Dos ejes independientes: **Emparejado** indica confianza guardada;
 **Conectado / Desconectado / Conectando / Reconectando / Error de conexión**
