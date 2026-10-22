@@ -1845,6 +1845,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay dispositivos autorizados. Crea una invitación para vincular Android.</translation>
     </message>
     <message>
+      <source>No hay en este equipo una clave privada de esta bóveda. Importa tu clave para desbloquearla.</source>
+      <translation>No hay en este equipo una clave privada de esta bóveda. Importa tu clave para desbloquearla.</translation>
+    </message>
+    <message>
       <source>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</source>
       <translation>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</translation>
     </message>
@@ -2573,6 +2577,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not inspect the store file</translation>
     </message>
     <message>
+      <source>could not list OpenPGP secret keys</source>
+      <translation>could not list OpenPGP secret keys</translation>
+    </message>
+    <message>
       <source>could not measure backup size</source>
       <translation>could not measure backup size</translation>
     </message>
@@ -2905,6 +2913,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no icon store</translation>
     </message>
     <message>
+      <source>no local secret key protects this vault</source>
+      <translation>no local secret key protects this vault</translation>
+    </message>
+    <message>
       <source>no such remote</source>
       <translation>no such remote</translation>
     </message>
@@ -3067,6 +3079,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>unhandled STUN packet</source>
       <translation>unhandled STUN packet</translation>
+    </message>
+    <message>
+      <source>unlock challenge mismatch</source>
+      <translation>unlock challenge mismatch</translation>
     </message>
     <message>
       <source>unreferenced icon resource</source>

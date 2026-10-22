@@ -8,8 +8,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use cxx_qt::{CxxQtType, Threading, casting::Upcast};
 use cxx_qt_lib::{QDateTime, QObjectMutPtr, QString, QStringList, QTimeZone, QUrl};
 use kryptopass_core::{
-    FolderAppearance, FolderId, LoginHistoryEventKind, PasswordOptions, SecretContent, SecretId,
-    SecretsService, generate_password as generate_secure_password, generate_totp,
+    FolderAppearance, FolderId, KeyFingerprint, LoginHistoryEventKind, OpenPgp, PasswordOptions,
+    RecipientSet, SecretContent, SecretId, SecretsService,
+    generate_password as generate_secure_password, generate_totp,
 };
 use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use uuid::Uuid;
@@ -580,14 +581,13 @@ impl qobject::SecretsController {
             state.unlock_operation = state.unlock_operation.wrapping_add(1);
             state.unlock_operation
         };
-        let preferred = self.as_ref().rust().selected_entry;
         self.as_mut().set_unlocking(true);
         self.as_mut()
             .set_status(QString::from("Comprobando tu clave OpenPGP…"));
         // The vault stays covered until GnuPG proves access; pinentry may ask here.
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || verify_vault_access(preferred),
+            verify_vault_access,
             move |mut controller, result| {
                 if controller.as_ref().rust().unlock_operation != operation {
                     return;
@@ -603,6 +603,9 @@ impl qobject::SecretsController {
                             "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
                         ));
                     }
+                    Err(error) if error.is::<NoUnlockKey>() => controller.as_mut().fail(
+                        "No hay en este equipo una clave privada de esta bóveda. Importa tu clave para desbloquearla.",
+                    ),
                     Err(_) => controller
                         .as_mut()
                         .fail("No se pudo verificar tu clave. La bóveda sigue bloqueada."),
@@ -2338,22 +2341,44 @@ fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
     })
 }
 
-/// Decrypts one entry and drops it at once; an empty vault has nothing to guard.
-fn verify_vault_access(preferred: Option<SecretId>) -> anyhow::Result<()> {
-    let service = open_service()?;
-    let metadata = service.list_secret_metadata()?;
-    let candidate = preferred
-        .filter(|id| metadata.iter().any(|entry| entry.id == *id))
-        .or_else(|| {
-            metadata
-                .iter()
-                .find(|entry| !entry.trashed)
-                .map(|entry| entry.id)
-        })
-        .or_else(|| metadata.first().map(|entry| entry.id));
-    if let Some(id) = candidate {
-        drop(service.read_content(id)?);
+#[derive(Debug)]
+struct NoUnlockKey;
+
+impl std::fmt::Display for NoUnlockKey {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("no local secret key protects this vault")
     }
+}
+
+impl std::error::Error for NoUnlockKey {}
+
+/// Proves access with a fresh in-memory challenge for the vault's local secret keys.
+///
+/// No entry is read, so a damaged credential or one encrypted only for an
+/// absent key cannot block the vault. An empty vault has nothing to guard.
+fn verify_vault_access() -> anyhow::Result<()> {
+    let metadata = open_service()?.list_secret_metadata()?;
+    if metadata.is_empty() {
+        return Ok(());
+    }
+    let crypto = GnuPgOpenPgp;
+    let local = crypto.usable_secret_fingerprints()?;
+    let owned: Vec<KeyFingerprint> = metadata
+        .iter()
+        .flat_map(|entry| entry.recipients.as_slice().iter())
+        .filter(|fingerprint| local.contains(fingerprint))
+        .cloned()
+        .collect();
+    let recipients = RecipientSet::new(owned).map_err(|_| NoUnlockKey)?;
+    let mut challenge = Vec::with_capacity(32);
+    challenge.extend_from_slice(Uuid::new_v4().as_bytes());
+    challenge.extend_from_slice(Uuid::new_v4().as_bytes());
+    let ciphertext = crypto.encrypt(&challenge, &recipients)?;
+    let plaintext = crypto.decrypt(&ciphertext)?;
+    anyhow::ensure!(
+        plaintext.as_slice() == challenge.as_slice(),
+        "unlock challenge mismatch"
+    );
     Ok(())
 }
 

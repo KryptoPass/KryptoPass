@@ -47,6 +47,33 @@ impl OpenPgp for GnuPgOpenPgp {
 }
 
 impl GnuPgOpenPgp {
+    /// Local keys with a secret part that can still encrypt; no passphrase is requested.
+    pub(crate) fn usable_secret_fingerprints(&self) -> Result<Vec<KeyFingerprint>> {
+        let mut context = open_context()?;
+        let keys = context
+            .secret_keys()
+            .map_err(|_| anyhow::anyhow!("could not list OpenPGP secret keys"))?;
+        let mut fingerprints = Vec::new();
+        for key in keys.flatten() {
+            if key.is_revoked()
+                || key.is_expired()
+                || key.is_disabled()
+                || key.is_invalid()
+                || !key.can_encrypt()
+            {
+                continue;
+            }
+            if let Some(fingerprint) = key
+                .fingerprint()
+                .ok()
+                .and_then(|value| KeyFingerprint::parse(value).ok())
+            {
+                fingerprints.push(fingerprint);
+            }
+        }
+        Ok(fingerprints)
+    }
+
     pub(crate) fn encrypt_bounded(
         &self,
         plaintext: &[u8],
