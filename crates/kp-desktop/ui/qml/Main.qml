@@ -1344,6 +1344,7 @@ Controls.ApplicationWindow {
     }
     FolderEditor {
         id: folderEditor
+        transientParent: root
         storeAdapter: store
         onSaveRequested: function (folderId, name, parentId, icon, color) {
             store.saveFolder(folderId, name, parentId, icon, color);

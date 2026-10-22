@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-Controls.Dialog {
+Controls.ApplicationWindow {
     id: folderEditor
     objectName: "folderEditor"
 
@@ -17,6 +17,7 @@ Controls.Dialog {
     property string saveError: ""
     property bool pending: false
     property string sensitiveClearAction: ""
+    readonly property bool opened: visible
     readonly property bool dirty: baselineJson !== JSON.stringify({
         id: folderId,
         name: folderNameField.text,
@@ -32,13 +33,12 @@ Controls.Dialog {
     signal vaultSwitchApproved
     signal vaultSwitchCancelled
 
-    anchors.centerIn: parent
-    width: Math.min(340, parent.width - Kirigami.Units.gridUnit * 4)
-    height: Math.min(implicitHeight, parent.height - Kirigami.Units.gridUnit * 4)
-    padding: 0
-    spacing: 0
-    modal: true
-    closePolicy: Controls.Popup.NoAutoClose
+    flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint
+    modality: Qt.WindowModal
+    width: Kirigami.Units.gridUnit * 20
+    height: Kirigami.Units.gridUnit * 28
+    minimumWidth: Kirigami.Units.gridUnit * 18
+    minimumHeight: Kirigami.Units.gridUnit * 20
     title: folderId ? qsTr("Editar carpeta") : qsTr("Nueva carpeta")
 
     function currentFolderDraft() {
@@ -62,7 +62,13 @@ Controls.Dialog {
         folderColor = existing && existing.color ? existing.color : "transparent";
         saveError = "";
         baselineJson = JSON.stringify(currentFolderDraft());
-        open();
+        if (!visible) {
+            x = screen.virtualX + Math.round((screen.width - width) / 2);
+            y = screen.virtualY + Math.round((screen.height - height) / 2);
+        }
+        show();
+        raise();
+        requestActivate();
         Qt.callLater(folderNameField.forceActiveFocus);
     }
 
@@ -81,7 +87,7 @@ Controls.Dialog {
         if (dirty)
             discardDialog.open();
         else
-            close();
+            clearAndClose();
     }
 
     function requestVaultLock() {
@@ -130,6 +136,14 @@ Controls.Dialog {
         close();
     }
 
+    // The window manager's close button follows the same discard rules as Cancel.
+    onClosing: function (event) {
+        if (!baselineJson)
+            return;
+        event.accepted = false;
+        requestClose();
+    }
+
     Shortcut {
         sequences: [StandardKey.Cancel]
         context: Qt.WindowShortcut
@@ -154,34 +168,29 @@ Controls.Dialog {
         }
     }
 
-    header: Controls.Pane {
-        leftPadding: 20
-        rightPadding: 20
-        topPadding: 12
-        bottomPadding: 0
-        background: null
-
-        contentItem: RowLayout {
-            spacing: 8
-
+    header: PanelHeader {
+        headerHeight: Kirigami.Units.gridUnit * 2.5
+        RowLayout {
+            anchors.fill: parent
+            spacing: Kirigami.Units.largeSpacing
+            FolderIcon {
+                Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+                iconName: folderEditor.folderIcon
+                colorValue: folderEditor.folderColor
+            }
             Kirigami.Heading {
                 Layout.fillWidth: true
-                level: 2
-                text: folderEditor.title
+                level: 4
+                text: folderNameField.text.trim() || folderEditor.title
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
-            }
-            Controls.ToolButton {
-                icon.name: "window-close-symbolic"
-                text: qsTr("Cerrar")
-                display: Controls.AbstractButton.IconOnly
-                enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
-                onClicked: folderEditor.requestClose()
             }
         }
     }
 
-    contentItem: ColumnLayout {
+    ColumnLayout {
+        anchors.fill: parent
         spacing: 0
 
         Controls.Pane {
@@ -305,34 +314,29 @@ Controls.Dialog {
         }
     }
 
-    footer: Controls.Pane {
-        leftPadding: 20
-        rightPadding: 20
-        topPadding: 8
-        bottomPadding: 8
-        background: null
-
-        contentItem: RowLayout {
-            spacing: 8
-
-            Item {
-                Layout.fillWidth: true
-            }
+    footer: PanelFooter {
+        headerHeight: Kirigami.Units.gridUnit * 2.5
+        RowLayout {
+            anchors.fill: parent
+            spacing: Kirigami.Units.largeSpacing
             Controls.BusyIndicator {
                 visible: folderEditor.pending
                 running: visible
-                Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                Layout.preferredHeight: width
+                implicitWidth: Kirigami.Units.iconSizes.smallMedium
+                implicitHeight: Kirigami.Units.iconSizes.smallMedium
+            }
+            Item {
+                Layout.fillWidth: true
             }
             Controls.Button {
                 text: qsTr("Cancelar")
+                icon.name: "dialog-cancel"
                 enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                 onClicked: folderEditor.requestClose()
             }
             Controls.Button {
                 text: folderEditor.pending ? qsTr("Guardando…") : qsTr("Guardar")
                 icon.name: "document-save"
-                highlighted: true
                 enabled: folderEditor.canSave
                 onClicked: folderEditor.submit()
             }
@@ -341,6 +345,7 @@ Controls.Dialog {
 
     Controls.Dialog {
         id: discardDialog
+        parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
         title: qsTr("Descartar cambios")
