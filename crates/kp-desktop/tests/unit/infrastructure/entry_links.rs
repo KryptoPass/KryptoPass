@@ -217,7 +217,7 @@ fn schema_v4_migration_adds_empty_links_without_changing_secret_data() {
         .connection
         .pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
         .unwrap();
-    assert_eq!(version, 6, "a v4 store migrates to the current schema");
+    assert_eq!(version, 7, "a v4 store migrates to the current schema");
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn additive_import_stores_companion_links_and_rejects_reused_endpoints() {
 }
 
 #[test]
-fn schema_v5_migration_adds_an_unset_primary_key_that_can_be_changed() {
+fn schema_v5_migration_adds_an_unset_primary_key_with_its_lock_policy() {
     let directory = TestDirectory::new();
     let path = directory.0.join("primary.sqlite3");
     let storage = SqliteStorage::open(&path).unwrap();
@@ -265,8 +265,14 @@ fn schema_v5_migration_adds_an_unset_primary_key_that_can_be_changed() {
     let mut storage = SqliteStorage::open_existing(&path).unwrap();
     assert_eq!(storage.primary_key().unwrap(), None);
 
-    let first = KeyFingerprint::parse(RECIPIENT).unwrap();
-    let second = KeyFingerprint::parse("FEDCBA9876543210FEDCBA9876543210FEDCBA98").unwrap();
+    let first = super::PrimaryKey {
+        fingerprint: KeyFingerprint::parse(RECIPIENT).unwrap(),
+        forget_on_lock: true,
+    };
+    let second = super::PrimaryKey {
+        fingerprint: KeyFingerprint::parse("FEDCBA9876543210FEDCBA9876543210FEDCBA98").unwrap(),
+        forget_on_lock: false,
+    };
     storage.set_primary_key(&first).unwrap();
     assert_eq!(storage.primary_key().unwrap(), Some(first));
     storage.set_primary_key(&second).unwrap();
@@ -274,4 +280,33 @@ fn schema_v5_migration_adds_an_unset_primary_key_that_can_be_changed() {
 
     let storage = SqliteStorage::open_existing(&path).unwrap();
     assert_eq!(storage.primary_key().unwrap(), Some(second));
+}
+
+#[test]
+fn schema_v6_migration_keeps_the_primary_key_and_leaves_forgetting_off() {
+    let directory = TestDirectory::new();
+    let path = directory.0.join("primary-v6.sqlite3");
+    let storage = SqliteStorage::open(&path).unwrap();
+    storage
+        .connection
+        .execute_batch(&format!(
+            "DROP TABLE vault_primary_key;
+             CREATE TABLE vault_primary_key (
+                 singleton INTEGER PRIMARY KEY NOT NULL CHECK(singleton = 1),
+                 fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64))
+             );
+             INSERT INTO vault_primary_key(singleton, fingerprint) VALUES (1, '{RECIPIENT}');
+             PRAGMA user_version = 6;"
+        ))
+        .unwrap();
+    drop(storage);
+
+    let storage = SqliteStorage::open_existing(&path).unwrap();
+    assert_eq!(
+        storage.primary_key().unwrap(),
+        Some(super::PrimaryKey {
+            fingerprint: KeyFingerprint::parse(RECIPIENT).unwrap(),
+            forget_on_lock: false,
+        })
+    );
 }

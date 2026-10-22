@@ -3,12 +3,12 @@
 use anyhow::{Context, Result, bail, ensure};
 use rusqlite::{Connection, OpenFlags, Transaction, TransactionBehavior};
 use std::path::Path;
-pub(super) const SCHEMA_VERSION: i64 = 6;
+pub(super) const SCHEMA_VERSION: i64 = 7;
 pub(super) const APPLICATION_ID: i64 = 0x4b50_5331;
 
 pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
     let version = pragma_i64(connection, "user_version")?;
-    if matches!(version, 0..=5) {
+    if matches!(version, 0..=6) {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not initialize the encrypted store")?;
@@ -52,6 +52,7 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 migrate_schema_v3_to_v4(&transaction)?;
                 migrate_schema_v4_to_v5(&transaction)?;
                 migrate_schema_v5_to_v6(&transaction)?;
+                migrate_schema_v6_to_v7(&transaction)?;
             }
             2 => {
                 ensure!(
@@ -62,6 +63,7 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 migrate_schema_v3_to_v4(&transaction)?;
                 migrate_schema_v4_to_v5(&transaction)?;
                 migrate_schema_v5_to_v6(&transaction)?;
+                migrate_schema_v6_to_v7(&transaction)?;
             }
             3 => {
                 ensure!(
@@ -71,6 +73,7 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 migrate_schema_v3_to_v4(&transaction)?;
                 migrate_schema_v4_to_v5(&transaction)?;
                 migrate_schema_v5_to_v6(&transaction)?;
+                migrate_schema_v6_to_v7(&transaction)?;
             }
             4 => {
                 ensure!(
@@ -79,6 +82,7 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
                 );
                 migrate_schema_v4_to_v5(&transaction)?;
                 migrate_schema_v5_to_v6(&transaction)?;
+                migrate_schema_v6_to_v7(&transaction)?;
             }
             5 => {
                 ensure!(
@@ -86,6 +90,14 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
                     "database file is not a KryptoPass store"
                 );
                 migrate_schema_v5_to_v6(&transaction)?;
+                migrate_schema_v6_to_v7(&transaction)?;
+            }
+            6 => {
+                ensure!(
+                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
+                    "database file is not a KryptoPass store"
+                );
+                migrate_schema_v6_to_v7(&transaction)?;
             }
             SCHEMA_VERSION => {}
             _ => bail!("store schema version is unsupported"),
@@ -192,14 +204,25 @@ const PRIMARY_KEY_TABLE: &str = "CREATE TABLE vault_primary_key (
          singleton INTEGER PRIMARY KEY NOT NULL CHECK(singleton = 1),
          fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64))
      );";
+const FORGET_ON_LOCK_COLUMN: &str = "ALTER TABLE vault_primary_key ADD COLUMN forget_on_lock \
+     INTEGER NOT NULL DEFAULT 0 CHECK(forget_on_lock IN (0, 1));";
 
 fn migrate_schema_v5_to_v6(transaction: &Transaction<'_>) -> Result<()> {
     transaction
         .execute_batch(PRIMARY_KEY_TABLE)
         .context("could not migrate the vault primary key")?;
     transaction
-        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .pragma_update(None, "user_version", 6)
         .context("could not version the vault primary key")
+}
+
+fn migrate_schema_v6_to_v7(transaction: &Transaction<'_>) -> Result<()> {
+    transaction
+        .execute_batch(FORGET_ON_LOCK_COLUMN)
+        .context("could not migrate the primary key lock policy")?;
+    transaction
+        .pragma_update(None, "user_version", SCHEMA_VERSION)
+        .context("could not version the primary key lock policy")
 }
 
 fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
@@ -272,6 +295,7 @@ fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
              CREATE INDEX secret_recipients_by_fingerprint ON secret_recipients(fingerprint);",
         )
         .and_then(|()| transaction.execute_batch(PRIMARY_KEY_TABLE))
+        .and_then(|()| transaction.execute_batch(FORGET_ON_LOCK_COLUMN))
         .map_err(|_| anyhow::anyhow!("could not create the encrypted store schema"))
 }
 
@@ -296,7 +320,7 @@ fn ensure_schema_is_readable(connection: &Connection) -> Result<()> {
 
 fn ensure_primary_key_schema_is_readable(connection: &Connection) -> Result<()> {
     connection
-        .prepare("SELECT singleton, fingerprint FROM vault_primary_key LIMIT 0")
+        .prepare("SELECT singleton, fingerprint, forget_on_lock FROM vault_primary_key LIMIT 0")
         .map_err(|_| anyhow::anyhow!("store schema is corrupt or unsupported"))?;
     Ok(())
 }
@@ -325,7 +349,7 @@ pub(super) fn prevalidate_existing_database(path: &Path) -> Result<()> {
         "existing file is not a KryptoPass store"
     );
     ensure!(
-        matches!(version, 1 | 2 | 3 | 4 | 5 | SCHEMA_VERSION),
+        matches!(version, 1 | 2 | 3 | 4 | 5 | 6 | SCHEMA_VERSION),
         "existing store schema version is unsupported"
     );
 

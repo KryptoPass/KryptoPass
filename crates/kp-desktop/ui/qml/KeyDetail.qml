@@ -338,6 +338,17 @@ ColumnLayout {
                         color: Kirigami.Theme.positiveTextColor
                     }
                 }
+                RowLayout {
+                    visible: root.keyStore.isPrimary(root.selectedKey?.id)
+                    Controls.Switch {
+                        text: qsTr("Olvidar su frase al bloquear")
+                        checked: root.keyStore.forgetOnLock
+                        onToggled: root.keyStore.forgetOnLockRequested(checked)
+                    }
+                    HelpButton {
+                        help: qsTr("Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.")
+                    }
+                }
                 Kirigami.Separator {
                     Layout.fillWidth: true
                     weight: Kirigami.Separator.Weight.Light

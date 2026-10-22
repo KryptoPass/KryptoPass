@@ -13,6 +13,9 @@ QtObject {
     /// The vault's primary key; the vault controller owns it.
     property string primaryKey: ""
     signal primaryKeyRequested(string fingerprint)
+    /// Whether locking the vault makes gpg-agent forget the primary key's passphrase.
+    property bool forgetOnLock: false
+    signal forgetOnLockRequested(bool enabled)
     function isPrimary(fingerprint) {
         return !!primaryKey && (fingerprint || "").toUpperCase() === primaryKey.toUpperCase();
     }

@@ -58,6 +58,7 @@ pub mod qobject {
         #[qproperty(bool, unlocking, READ, NOTIFY)]
         #[qproperty(bool, setup_required, cxx_name = "setupRequired", READ, NOTIFY)]
         #[qproperty(QString, primary_key, cxx_name = "primaryKey", READ, NOTIFY)]
+        #[qproperty(bool, forget_on_lock, cxx_name = "forgetOnLock", READ, NOTIFY)]
         type SecretsController = super::SecretsControllerRust;
 
         #[qinvokable]
@@ -102,10 +103,13 @@ pub mod qobject {
         fn unlock_vault(self: Pin<&mut Self>);
         #[qinvokable]
         #[cxx_name = "completeSetup"]
-        fn complete_setup(self: Pin<&mut Self>, primary_key: &QString);
+        fn complete_setup(self: Pin<&mut Self>, primary_key: &QString, dedicated: bool);
         #[qinvokable]
         #[cxx_name = "setPrimaryKey"]
         fn set_primary_key(self: Pin<&mut Self>, primary_key: &QString);
+        #[qinvokable]
+        #[cxx_name = "setForgetOnLock"]
+        fn set_forget_on_lock(self: Pin<&mut Self>, enabled: bool);
         #[qinvokable]
         #[cxx_name = "clearSensitiveState"]
         fn clear_sensitive_state(self: Pin<&mut Self>);
@@ -291,6 +295,8 @@ pub struct SecretsControllerRust {
     unlocking: bool,
     setup_required: bool,
     primary_key: QString,
+    forget_on_lock: bool,
+    primary: Option<crate::storage::PrimaryKey>,
     /// Invalidates an in-flight unlock check when the vault is locked again.
     unlock_operation: u64,
     session_blocked: bool,
@@ -341,6 +347,8 @@ impl Default for SecretsControllerRust {
             unlocking: false,
             setup_required: false,
             primary_key: QString::default(),
+            forget_on_lock: false,
+            primary: None,
             unlock_operation: 0,
             session_blocked: false,
             selected_entry: None,
@@ -489,7 +497,7 @@ impl qobject::SecretsController {
                   result: anyhow::Result<(
                 StoreSnapshot,
                 Option<app_paths::SetupState>,
-                Option<KeyFingerprint>,
+                Option<crate::storage::PrimaryKey>,
             )>| {
                 if controller.as_ref().rust().load_operation != operation {
                     return;
@@ -582,6 +590,7 @@ impl qobject::SecretsController {
         self.as_mut().clear_sensitive_state_contents();
         self.as_mut().clear_error();
         self.as_mut().set_locked(true);
+        self.as_mut().forget_primary_passphrase();
         self.as_mut().set_status(QString::from("Bóveda bloqueada"));
         self.as_mut().vault_locked();
     }
@@ -609,10 +618,16 @@ impl qobject::SecretsController {
         self.as_mut().set_unlocking(true);
         self.as_mut()
             .set_status(QString::from("Comprobando tu clave OpenPGP…"));
+        let primary = self
+            .as_ref()
+            .rust()
+            .primary
+            .as_ref()
+            .map(|key| key.fingerprint.clone());
         // The vault stays covered until GnuPG proves access; pinentry may ask here.
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            verify_vault_access,
+            move || verify_vault_access(primary.as_ref()),
             move |mut controller, result| {
                 if controller.as_ref().rust().unlock_operation != operation {
                     return;
@@ -640,9 +655,12 @@ impl qobject::SecretsController {
     }
 
     /// Finishes the first run, recording the chosen key as the vault's primary key.
-    pub fn complete_setup(mut self: Pin<&mut Self>, primary_key: &QString) {
+    ///
+    /// A key created only for KryptoPass is forgotten on lock; a personal key is
+    /// left alone until the user opts in, because the cache is shared by its keygrip.
+    pub fn complete_setup(mut self: Pin<&mut Self>, primary_key: &QString, dedicated: bool) {
         if !primary_key.to_string().trim().is_empty()
-            && !self.as_mut().store_primary_key(primary_key)
+            && !self.as_mut().store_primary_key(primary_key, dedicated)
         {
             return;
         }
@@ -657,24 +675,48 @@ impl qobject::SecretsController {
 
     /// Changes the default recipient for new items; existing items keep their keys.
     pub fn set_primary_key(mut self: Pin<&mut Self>, primary_key: &QString) {
-        self.as_mut().store_primary_key(primary_key);
+        self.as_mut().store_primary_key(primary_key, false);
     }
 
-    fn store_primary_key(mut self: Pin<&mut Self>, primary_key: &QString) -> bool {
+    pub fn set_forget_on_lock(mut self: Pin<&mut Self>, enabled: bool) {
+        let Some(mut key) = self.as_ref().rust().primary.clone() else {
+            return;
+        };
+        key.forget_on_lock = enabled;
+        if open_storage()
+            .and_then(|mut storage| storage.set_primary_key(&key))
+            .is_err()
+        {
+            self.as_mut()
+                .fail("No se pudo guardar la preferencia de la clave principal.");
+            return;
+        }
+        self.apply_primary_key(Some(key));
+    }
+
+    fn store_primary_key(
+        mut self: Pin<&mut Self>,
+        primary_key: &QString,
+        forget_on_lock: bool,
+    ) -> bool {
         let Ok(fingerprint) = KeyFingerprint::parse(&primary_key.to_string()) else {
             self.as_mut()
                 .fail("La clave elegida para la bóveda no es válida.");
             return false;
         };
+        let key = crate::storage::PrimaryKey {
+            fingerprint,
+            forget_on_lock,
+        };
         if open_storage()
-            .and_then(|mut storage| storage.set_primary_key(&fingerprint))
+            .and_then(|mut storage| storage.set_primary_key(&key))
             .is_err()
         {
             self.as_mut()
                 .fail("No se pudo guardar la clave principal de la bóveda.");
             return false;
         }
-        self.apply_primary_key(Some(fingerprint));
+        self.apply_primary_key(Some(key));
         true
     }
 
@@ -685,12 +727,36 @@ impl qobject::SecretsController {
         }
     }
 
-    fn apply_primary_key(mut self: Pin<&mut Self>, fingerprint: Option<KeyFingerprint>) {
-        let value = QString::from(fingerprint.as_ref().map_or("", KeyFingerprint::as_str));
+    fn apply_primary_key(mut self: Pin<&mut Self>, key: Option<crate::storage::PrimaryKey>) {
+        let value = QString::from(key.as_ref().map_or("", |key| key.fingerprint.as_str()));
+        let forget = key.as_ref().is_some_and(|key| key.forget_on_lock);
+        self.as_mut().rust_mut().primary = key;
         if *self.primary_key() != value {
             self.as_mut().rust_mut().primary_key = value;
-            self.primary_key_changed();
+            self.as_mut().primary_key_changed();
         }
+        if *self.forget_on_lock() != forget {
+            self.as_mut().rust_mut().forget_on_lock = forget;
+            self.forget_on_lock_changed();
+        }
+    }
+
+    /// Clears gpg-agent's cache for the primary key when the vault asks for it.
+    fn forget_primary_passphrase(self: Pin<&mut Self>) {
+        let Some(key) = self
+            .as_ref()
+            .rust()
+            .primary
+            .clone()
+            .filter(|key| key.forget_on_lock)
+        else {
+            return;
+        };
+        std::thread::spawn(move || {
+            if let Err(error) = GnuPgOpenPgp.forget_cached_passphrase(&key.fingerprint) {
+                tracing::warn!(%error, "could not make gpg-agent forget the primary key");
+            }
+        });
     }
 
     fn cancel_unlock(mut self: Pin<&mut Self>) {
@@ -709,6 +775,7 @@ impl qobject::SecretsController {
         // In-flight writes may finish, but access and read projections expire now.
         self.as_mut().cancel_unlock();
         self.as_mut().set_locked(true);
+        self.as_mut().forget_primary_passphrase();
         self.as_mut().clear_sensitive_state_contents();
         unsafe { super::native_ffi::ffi::clear_owned() };
         self.as_mut().clear_error();
@@ -723,6 +790,7 @@ impl qobject::SecretsController {
         self.as_mut().cancel_unlock();
         self.as_mut().clear_sensitive_state_contents();
         self.as_mut().set_locked(true);
+        self.as_mut().forget_primary_passphrase();
         self.as_mut().vault_locked();
     }
 
@@ -2434,20 +2502,27 @@ impl std::error::Error for NoUnlockKey {}
 /// Proves access with a fresh in-memory challenge for the vault's local secret keys.
 ///
 /// No entry is read, so a damaged credential or one encrypted only for an
-/// absent key cannot block the vault. An empty vault has nothing to guard.
-fn verify_vault_access() -> anyhow::Result<()> {
-    let metadata = open_service()?.list_secret_metadata()?;
-    if metadata.is_empty() {
-        return Ok(());
-    }
+/// absent key cannot block the vault. When the primary key is usable here the
+/// challenge goes to it alone, so another cached key cannot skip a forgotten
+/// passphrase. Without one, an empty vault has nothing to guard.
+fn verify_vault_access(primary: Option<&KeyFingerprint>) -> anyhow::Result<()> {
     let crypto = GnuPgOpenPgp;
     let local = crypto.usable_secret_fingerprints()?;
-    let owned: Vec<KeyFingerprint> = metadata
-        .iter()
-        .flat_map(|entry| entry.recipients.as_slice().iter())
-        .filter(|fingerprint| local.contains(fingerprint))
-        .cloned()
-        .collect();
+    let owned: Vec<KeyFingerprint> = match primary.filter(|key| local.contains(key)) {
+        Some(primary) => vec![primary.clone()],
+        None => {
+            let metadata = open_service()?.list_secret_metadata()?;
+            if metadata.is_empty() {
+                return Ok(());
+            }
+            metadata
+                .iter()
+                .flat_map(|entry| entry.recipients.as_slice().iter())
+                .filter(|fingerprint| local.contains(fingerprint))
+                .cloned()
+                .collect()
+        }
+    };
     let recipients = RecipientSet::new(owned).map_err(|_| NoUnlockKey)?;
     let mut challenge = Vec::with_capacity(32);
     challenge.extend_from_slice(Uuid::new_v4().as_bytes());
@@ -2589,7 +2664,7 @@ fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
 
 fn activate_store_snapshot(
     path: std::path::PathBuf,
-) -> anyhow::Result<(StoreSnapshot, bool, Option<KeyFingerprint>)> {
+) -> anyhow::Result<(StoreSnapshot, bool, Option<crate::storage::PrimaryKey>)> {
     let storage = SqliteStorage::open_existing(&path)?;
     let (folders, secrets, links) = storage.read_snapshot_with_links()?;
     let primary = storage.primary_key()?;

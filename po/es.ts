@@ -1633,6 +1633,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Abriendo identidad protegida por el llavero del sistema…</translation>
     </message>
     <message>
+      <source>CLEAR_PASSPHRASE --mode=normal {keygrip}</source>
+      <translation>CLEAR_PASSPHRASE --mode=normal {keygrip}</translation>
+    </message>
+    <message>
       <source>Cancela la vinculación pendiente antes de borrar dispositivos.</source>
       <translation>Cancela la vinculación pendiente antes de borrar dispositivos.</translation>
     </message>
@@ -1903,6 +1907,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo guardar la política de red. No se inició una conexión.</source>
       <translation>No se pudo guardar la política de red. No se inició una conexión.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la preferencia de la clave principal.</source>
+      <translation>No se pudo guardar la preferencia de la clave principal.</translation>
     </message>
     <message>
       <source>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</source>
@@ -2605,6 +2613,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not list OpenPGP secret keys</translation>
     </message>
     <message>
+      <source>could not make gpg-agent forget the primary key</source>
+      <translation>could not make gpg-agent forget the primary key</translation>
+    </message>
+    <message>
       <source>could not measure backup size</source>
       <translation>could not measure backup size</translation>
     </message>
@@ -2667,6 +2679,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not publish the restored vault</source>
       <translation>could not publish the restored vault</translation>
+    </message>
+    <message>
+      <source>could not reach gpg-agent</source>
+      <translation>could not reach gpg-agent</translation>
     </message>
     <message>
       <source>could not read an application setting</source>
@@ -2815,6 +2831,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>folder order is invalid</source>
       <translation>folder order is invalid</translation>
+    </message>
+    <message>
+      <source>gpg-agent did not accept the request to forget the passphrase</source>
+      <translation>gpg-agent did not accept the request to forget the passphrase</translation>
     </message>
     <message>
       <source>icon belongs to another vault</source>
@@ -3111,6 +3131,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>stored secret recipient metadata is invalid</source>
       <translation>stored secret recipient metadata is invalid</translation>
+    </message>
+    <message>
+      <source>the primary key has no keygrip to forget</source>
+      <translation>the primary key has no keygrip to forget</translation>
+    </message>
+    <message>
+      <source>the primary secret key is not in the keyring</source>
+      <translation>the primary secret key is not in the keyring</translation>
     </message>
     <message>
       <source>timed out</source>
@@ -5123,6 +5151,14 @@ Huella(s) detectadas:
     <message>
       <source>Clave principal de la bóveda</source>
       <translation>Clave principal de la bóveda</translation>
+    </message>
+    <message>
+      <source>Olvidar su frase al bloquear</source>
+      <translation>Olvidar su frase al bloquear</translation>
+    </message>
+    <message>
+      <source>Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.</source>
+      <translation>Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.</translation>
     </message>
     <message>
       <source>Detalles criptográficos</source>

@@ -12,7 +12,8 @@ Rectangle {
     property url logo: ""
     signal restoreRequested
     signal handbookRequested(string section)
-    signal setupFinished(string vaultKey)
+    // `dedicated` marks a key created here, which can be forgotten on lock safely.
+    signal setupFinished(string vaultKey, bool dedicated)
 
     property int step: 0
     property string chosenKey: ""
@@ -43,7 +44,7 @@ Rectangle {
     function useExistingKey() {
         const key = ownKeys[existingKeys.currentIndex];
         if (key)
-            setupFinished(key.id);
+            setupFinished(key.id, false);
     }
 
     Connections {
@@ -326,7 +327,7 @@ Rectangle {
                 highlighted: root.backedUp
                 flat: !root.backedUp
                 enabled: !root.busy
-                onClicked: root.setupFinished(root.chosenKey)
+                onClicked: root.setupFinished(root.chosenKey, true)
             }
         }
     }

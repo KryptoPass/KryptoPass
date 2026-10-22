@@ -72,7 +72,9 @@ Controls.ApplicationWindow {
         id: keys
         objectName: "keyStore"
         primaryKey: store.controller.primaryKey
+        forgetOnLock: store.controller.forgetOnLock
         onPrimaryKeyRequested: fingerprint => store.controller.setPrimaryKey(fingerprint)
+        onForgetOnLockRequested: enabled => store.controller.setForgetOnLock(enabled)
     }
     property bool keysMode: false
     property bool allowClose: false
@@ -1331,9 +1333,9 @@ Controls.ApplicationWindow {
         logo: shell.appLogo
         onRestoreRequested: backupWindow.openForRestore()
         onHandbookRequested: section => shell.showHandbook(section)
-        onSetupFinished: function (vaultKey) {
+        onSetupFinished: function (vaultKey, dedicated) {
             root.applySection(false);
-            store.controller.completeSetup(vaultKey);
+            store.controller.completeSetup(vaultKey, dedicated);
             if (!store.controller.setupRequired && store.controller.locked)
                 root.requestLock();
         }

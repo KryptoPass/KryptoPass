@@ -21,6 +21,7 @@ mod snapshots;
 mod validation;
 
 pub(crate) use icons::read_icon_asset;
+pub(crate) use primary_key::PrimaryKey;
 use rusqlite::Connection;
 pub(crate) use snapshots::EncryptedStoreSnapshot;
 

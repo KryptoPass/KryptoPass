@@ -74,6 +74,41 @@ impl GnuPgOpenPgp {
         Ok(fingerprints)
     }
 
+    /// Asks gpg-agent to forget the cached passphrase of every subkey of `fingerprint`.
+    ///
+    /// The cache is keyed by keygrip, so this affects every application that uses the key.
+    pub(crate) fn forget_cached_passphrase(&self, fingerprint: &KeyFingerprint) -> Result<()> {
+        let mut context = open_context()?;
+        let key = context
+            .get_secret_key(fingerprint.as_str())
+            .map_err(|_| anyhow::anyhow!("the primary secret key is not in the keyring"))?;
+        let keygrips: Vec<String> = key
+            .subkeys()
+            .filter_map(|subkey| subkey.keygrip().ok().map(str::to_owned))
+            .filter(|keygrip| {
+                keygrip.len() == 40 && keygrip.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+            .collect();
+        if keygrips.is_empty() {
+            bail!("the primary key has no keygrip to forget");
+        }
+        let mut command = std::process::Command::new("gpg-connect-agent");
+        for keygrip in &keygrips {
+            command.arg(format!("CLEAR_PASSPHRASE --mode=normal {keygrip}"));
+        }
+        let status = command
+            .arg("/bye")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map_err(|_| anyhow::anyhow!("could not reach gpg-agent"))?;
+        if !status.success() {
+            bail!("gpg-agent did not accept the request to forget the passphrase");
+        }
+        Ok(())
+    }
+
     pub(crate) fn encrypt_bounded(
         &self,
         plaintext: &[u8],
