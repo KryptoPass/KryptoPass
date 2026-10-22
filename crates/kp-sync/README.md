@@ -14,6 +14,10 @@ just sync-demo
 `just test-sync-stress` ejecuta aparte el caso lento de 10000 revisiones.
 Que pase la suite normal no acredita esa prueba de capacidad ni su rendimiento.
 
+`just sync-interop-host` compila el puente sintético que usa la receta
+`verify-sync-interop` del repositorio Android. Intercambia lotes por stdin/stdout
+contra una identidad fija de fixtures; no escucha red ni carga claves de usuario.
+
 La demo usa dos SQLite en memoria, identidades efímeras y datos sintéticos.
 Muestra ediciones offline concurrentes, resolución explícita y un borrado
 que conserva su historial. No abre la bóveda ni utiliza claves OpenPGP.
@@ -36,3 +40,11 @@ campos sensibles de la credencial. El core no detecta que un byte arbitrario
 sea OpenPGP válido. La integración de sesiones Noise, permisos por bóveda,
 progreso por dispositivo y migración de la bóveda actual quedan para el
 adaptador de aplicación. Las claves privadas y su transferencia son otro flujo.
+
+La extensión opt-in `SyncSession` ya implementa una ronda negociada sobre el
+owner Noise de `kp-devices`. Usa manifiestos congelados, ancestros, fragmentos,
+commit y ACK posterior a SQLite. `just test-sync-session` comprueba el motor
+y el owner autenticado; `just verify-sync-session` añade formato y Clippy.
+Ver [contrato de sesión](../../../docs/sync-session-v1.md). La bóveda de usuario,
+la migración, los recibos durables por peer y las rondas automáticas siguen
+pendientes. Las sesiones actuales conservan Sync desactivado por defecto.

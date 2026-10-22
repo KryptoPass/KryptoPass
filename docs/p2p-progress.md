@@ -38,7 +38,7 @@ el usuario autorizó expresamente el mecanismo integrado de Codex.
 | Primitivas de dispositivos / sesión activa | Integradas y retención funcional comprobada | `kp-devices`, snapshots, sesión retenida, conexión/limpieza y observación de ruta real |
 | Recuperación tras Wi-Fi / reinicio / nueva IP | Implementada; ensayos reales y suites satisfactorios | Nuevo Noise contra claves autorizadas, cortes Wi-Fi y reinicios; matriz VPN→LAN física pendiente; ver evidencia al final |
 | Internet / fase 6 adelantada por el usuario | WAN directa y TURN verificados con Samsung | WSS Cloudflare, broker firmado y credenciales temporales; relay/relay forzado, modo normal con datos móviles y vuelta a Wi-Fi; selección LAN/Internet automática y sesiones largas pendientes |
-| Sincronización / OpenPGP | Núcleo Rust de Sync validado; integración apps pendiente | `kp-sync`: 26 tests y demo offline; contrato/vectores preparados para Kotlin. Desktop conserva GnuPG y Android PGPainless local; envío de claves pendiente |
+| Sincronización / OpenPGP | Núcleos Rust y Kotlin validados; integración apps pendiente | `kp-sync`: 26 tests; Kotlin: 21 del núcleo, 3 de interop y 7 SQLite Android. Desktop conserva GnuPG y Android PGPainless local; envío de claves pendiente |
 | Android Kotlin | Laboratorio integrado | Lógica Kotlin sin Rust; SDK WebRTC nativo C++/JNI autorizado el 2026-10-18, progreso propio |
 
 ## Inspección y ajustes mínimos
@@ -1097,3 +1097,53 @@ La transferencia privada sigue separada y la revisión independiente pausada.
 [Contrato](sync-model.md), [evidencia y límites](sync-core-evidence-2026-10-22.md),
 [ejecución local](../crates/kp-sync/README.md). El siguiente recorrido Kotlin
 está en `docs/sync-kotlin-next-step.md` del repositorio Android.
+
+
+## Fase 4 — Kotlin, SQLite e interoperabilidad — 2026-10-22
+
+El modelo causal ya tiene una segunda implementación Kotlin sin runtime Rust:
+`sync-core`, store en memoria, adapter SQLite Android y puertos que reutilizan
+la identidad/trust de pairing existentes. El almacén Android usa una carpeta
+propia 0700, archivos 0600 y filas de ciphertext de hasta 48 KiB; no migra la bóveda.
+
+Android `just verify-sync` terminó correctamente: **101 tests JVM aprobados**,
+lint, APK debug/test y Kotlin release. El core aporta **21 tests**; otros **3
+interop opt-in** pasaron con Rust en ambos sentidos, incluida sustitución de
+firma/clave. `just test-sync-storage emulator-5580` pasó **7/7** sobre Android
+API36, con 2 MiB/CursorWindow, reopen, rollback y CAS entre dos handles concurrentes.
+El emulador temporal/read-only se cerró; no se instaló esta actualización en el
+Samsung. El nuevo puente Rust compila y pasa formato/Clippy all-targets.
+
+Se corrigió una carrera de orden en una prueba antigua Kotlin de rechazo:
+una barrera explícita conserva todas sus aserciones y evita cerrar antes de
+que el peer termine su send. El test focalizado y la clase completa pasaron
+3 ejecuciones seguidas; no cambió el pairing de producto.
+
+Siguen pendientes negociación de bóveda/autores/capacidad, dispatcher Sync en
+la sesión Noise, progreso por dispositivo y adaptación transaccional de las
+bóvedas reales. No se habilitó Sync de credenciales ni WorkManager. Revisión
+independiente y claves privadas reales continúan pausadas.
+El repo Android registra la API y evidencia en `docs/sync-kotlin-api-v1.md` y
+`docs/sync-kotlin-evidence-2026-10-22.md`.
+
+## Fase 4 — ronda Sync sobre sesión autenticada — 2026-10-22
+
+Se implementó `kp-sync::SyncSession` y su equivalente Kotlin, con opt-in explícito
+al owner existente. Negocia capacidad y vault/device/huella, compara snapshots,
+pide ancestros y transfiere lotes fragmentados con commit/ACK después de SQLite.
+Conserva Noise, secuencia única y latidos. Los defaults anteriores mantienen
+Sync apagado; no se configura ni migra una bóveda de usuario desde la red/UI.
+
+Puerta acotada `just verify-sync-session`: formato, Clippy all-targets con
+`-D warnings` y **100 Rust aprobados**, un estrés opt-in ignorado. Incluye diez
+casos del motor y uno nuevo del owner Noise real, bidireccional y con latidos.
+Android: **119 JVM normales + 5 opt-in interop aprobados**, compilación/lint
+(0 errores, 130 advertencias) y **58/58 instrumentados** en emulador temporal.
+La nueva prueba SQLite corta fragmentos, reabre stores y reintenta; conserva
+conflictos y tombstones. El puente de sesión Kotlin ↔ Rust también pasó.
+
+Faltan migración/adaptación atómica de bóvedas, configurar el binding de usuario,
+recibos por peer durables, nuevas rondas automáticas y prueba de ambas apps
+por WebRTC. No hay Worker ni transferencia privada real; revisión independiente
+pausada. La fase 4 completa sigue pendiente. [Contrato y API](sync-session-v1.md),
+[evidencia y límites](sync-session-evidence-2026-10-22.md).

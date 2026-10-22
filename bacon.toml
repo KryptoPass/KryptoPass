@@ -60,6 +60,18 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-sync", "crates/kp-protocol", "crates/kp-identity", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
 
+[jobs.test-sync-session]
+command = ["just", "test-sync-session"]
+need_stdout = true
+allow_warnings = false
+watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
+
+[jobs.verify-sync-session]
+command = ["just", "verify-sync-session"]
+need_stdout = true
+allow_warnings = false
+watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
+
 [jobs.sync-demo]
 command = ["just", "sync-demo"]
 need_stdout = true
@@ -68,6 +80,12 @@ watch = ["crates/kp-sync", "crates/kp-identity", "Cargo.toml", "Cargo.lock"]
 
 [jobs.test-sync-stress]
 command = ["just", "test-sync-stress"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-sync", "Cargo.toml", "Cargo.lock"]
+
+[jobs.sync-interop-host]
+command = ["just", "sync-interop-host"]
 need_stdout = true
 default_watch = false
 watch = ["crates/kp-sync", "Cargo.toml", "Cargo.lock"]

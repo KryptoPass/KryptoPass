@@ -14,6 +14,13 @@ persistence are implemented by `kp-pairing` and documented in
 import/export remain inactive; decoding their reserved messages does not
 perform those operations.
 
+The optional [Sync session extension](sync-session-v1.md) now accepts an explicit
+existing ledger binding. `SessionHello.sync_version` (field 5) defaults to zero;
+both peers must advertise 1 before Sync starts. `SyncHello.openpgp_fingerprint`
+(field 4) must equal the caller's configured 20- or 32-byte fingerprint. An empty
+fingerprint remains parseable for legacy messages, but the negotiated engine
+rejects it. No current user vault is automatically bound or migrated.
+
 Phase 4 adds the standalone ciphertext revision codec and SQLite ledger in
 `kp-sync`. Its signed object format and graph rules are defined in
 [sync-model.md](sync-model.md). These objects are carried inside reassembled

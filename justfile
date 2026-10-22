@@ -102,6 +102,17 @@ test-p2p:
 test-sync:
     cargo test -p kp-sync
 
+# Round Sync negociado y propietario de sesión autenticada; perfiles sintéticos.
+test-sync-session:
+    cargo test -p kp-sync --test session_sync
+    cargo test -p kp-devices
+
+# Puerta acotada a protocolo/Sync/owner; no formatea cambios QML de otros trabajos.
+verify-sync-session:
+    cargo fmt -p kp-protocol -p kp-sync -p kp-devices --check
+    cargo clippy -p kp-protocol -p kp-sync -p kp-devices --all-targets -- -D warnings
+    cargo test -p kp-protocol -p kp-sync -p kp-devices -p kp-pairing -p kp-transport
+
 # Estrés opt-in de capacidad; no forma parte de la suite rápida del ledger.
 test-sync-stress:
     cargo test -p kp-sync --test ledger_limits -- --ignored
@@ -109,6 +120,10 @@ test-sync-stress:
 # Demostración aislada: edición simultánea, merge explícito y borrado persistente.
 sync-demo:
     cargo run -p kp-sync --example offline_sync
+
+# Puente stdin/stdout con identidad sintética fija; no escucha red ni abre bóvedas.
+sync-interop-host:
+    cargo build -p kp-sync --example sync_interop
 
 # Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
 p2p-demo:

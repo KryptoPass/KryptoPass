@@ -97,6 +97,7 @@ message SyncHello {
   bytes vault_id = 1;              // 16 bytes
   bytes device_id = 2;             // 32 bytes
   uint64 known_revision_count = 3;
+  bytes openpgp_fingerprint = 4;   // 20/32 bytes; required by negotiated Sync v1
 }
 
 message RevisionHead {
@@ -211,6 +212,7 @@ message SessionHello {
   bytes device_id = 2;            // 32 bytes; must equal the authenticated peer
   uint32 reconnect_port = 3;      // optional LAN resume endpoint; 0 absent, 1..65535 valid
   uint32 synthetic_key_transfer_version = 4; // 0 disabled, 1 debug synthetic extension
+  uint32 sync_version = 5;        // 0 disabled; 1 explicitly bound revision-sync v1
 }
 
 message SessionPing {

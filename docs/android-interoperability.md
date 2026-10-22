@@ -45,9 +45,11 @@ El contrato normativo es [sync-model.md](sync-model.md). `SyncRevision` y
 El sobre y los mensajes de fragmentación existentes conservan sus números;
 añadir objetos al esquema no habilita el dispatcher de sincronización.
 
-El motor Rust se valida primero con almacenes aislados. La futura implementación
-Kotlin debe reproducir exactamente la codificación canónica, firma, hash de
-objeto, límites, transacciones y reglas del grafo. Comparar IDs de padres como
+El motor Rust se validó primero con almacenes aislados. Kotlin ya reproduce
+la codificación canónica, firma, hash de objeto, límites, transacciones y reglas
+del grafo en `sync-core`. Pasaron 21 tests del núcleo, tres intercambios directos
+con el puente Rust y siete pruebas SQLite Android API36. La integración de
+sesiones y bóvedas reales sigue pendiente. Comparar IDs de padres como
 bytes **sin signo**; ni el orden de `Byte` de Kotlin ni el texto de un UUID
 definen el orden canónico. No firmar `encode()` de Wire o de Protobuf.
 

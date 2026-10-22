@@ -1,6 +1,7 @@
 # Sync v1 — immutable ciphertext revision ledger
 
-Status: isolated Rust core implemented; application synchronization is pending.
+Status: Rust/Kotlin ledgers and an optional authenticated-session round implemented;
+user-vault synchronization is pending.
 This is independent of the GUI,
 the current mutable vault tables, OpenPGP providers and network routing. No
 production database is migrated by this milestone. Existing local CAS counters
@@ -22,12 +23,12 @@ Revoking an author currently causes `open_existing` to fail closed while retaini
 the database; it does not silently remove that author's revisions.
 
 The first milestone exchanges snapshots between isolated Rust ledgers in memory.
-The subsequent application adapter must run over an authenticated Noise session,
-check the remote device and vault binding, and share the existing session message
-sequence. No new socket, pairing mechanism or private-key-transfer permission is
-introduced. The active application sessions remain unchanged until that adapter
-has its own acceptance tests. Android remains Kotlin; protobuf and vectors are
-shared, not the Rust runtime.
+The optional [session adapter](sync-session-v1.md) runs over authenticated Noise,
+checks the remote device/vault/fingerprint binding and shares its existing message
+sequence. It requires an explicitly supplied existing ledger and remains disabled
+for normal application sessions. No new socket, pairing mechanism or private-key
+permission is introduced. Android remains Kotlin; protobuf and vectors are shared,
+not the Rust runtime. Connecting actual vault edits and migration is still pending.
 
 ## Revision identity and canonical signatures
 
@@ -132,13 +133,13 @@ capacity are not certified by the default suite.
 
 ## Remaining application gate
 
-- Implement the same canonical model, ledger rules and vectors in Kotlin.
-- Negotiate one vault ID and authorized authors after authenticated pairing;
-  do not merge unrelated local vaults merely because devices are connected.
-- Add the Sync dispatcher to the existing Noise session owner and its single
-  message sequence. Negotiate capability before sending these objects.
-- Bind manifests, requests, transfer/commit and ACK to that session and snapshot;
-  persist progress by authenticated device ID after each committed batch.
+- The Kotlin model, ledger, SQLite adapter and shared-vector/live-Rust tests
+  are implemented. Keep both implementations within the same canonical contract.
+- The optional dispatcher negotiates one explicit vault/fingerprint and capability
+  in the existing Noise session. It never merges unrelated vaults or grants author
+  trust. Manifests, requests, commits and ACK are scoped to its frozen snapshots.
+- The committed ledger provides restart/retry progress. Persist separate peer
+  receipt journals and schedule new rounds for live edits in the app adapter.
 - Adapt both existing vault stores without exposing plaintext metadata, with a
   reversible migration and transactional consistency between edits and revisions.
 - Exercise real OpenPGP ciphertext, process restart, cancellation, interrupted

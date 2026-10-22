@@ -15,6 +15,7 @@ kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
 kryptopass_pairing = { package = "kp-pairing", path = "../kp-pairing" }
 kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
 kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
+kryptopass_sync = { package = "kp-sync", path = "../kp-sync" }
 prost = "0.14"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }

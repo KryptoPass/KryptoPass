@@ -2071,6 +2071,7 @@ dependencies = [
  "kp-identity",
  "kp-pairing",
  "kp-protocol",
+ "kp-sync",
  "kp-transport",
  "prost",
  "thiserror 2.0.21",

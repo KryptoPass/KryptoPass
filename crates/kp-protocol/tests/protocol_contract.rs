@@ -183,6 +183,7 @@ fn valid_messages() -> Vec<(proto::MessageType, Vec<u8>, Channel)> {
         vault_id: bytes(16, 11),
         device_id: bytes(32, 12),
         known_revision_count: 1,
+        openpgp_fingerprint: vec![],
     };
     let manifest = proto::SyncManifest {
         snapshot_id: bytes(16, 13),
@@ -404,6 +405,7 @@ fn codec_assigns_consecutive_ids_and_round_trips_typed_messages() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     };
     let mut sender = SessionCodec::new(SESSION);
     let first = sender
@@ -537,6 +539,7 @@ fn frame_limit_is_checked_before_malformed_contents_are_parsed() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     };
     let valid_payload = hello.encode_to_vec();
     let valid_at_limit = frame(
@@ -564,6 +567,7 @@ fn payload_limit_accepts_the_boundary_and_rejects_one_byte_over() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     };
     let payload_at_limit = padded_to(hello.encode_to_vec(), MAX_PAYLOAD_SIZE, 100);
     let exact = frame(
@@ -595,6 +599,7 @@ fn version_session_and_message_id_failures_do_not_consume_the_next_id() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     }
     .encode_to_vec();
     let valid = frame(
@@ -650,6 +655,7 @@ fn rejects_zero_or_malformed_session_ids_unknown_types_and_wrong_channels() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     }
     .encode_to_vec();
     let valid = frame(
@@ -713,6 +719,7 @@ fn out_of_order_and_malformed_payloads_do_not_advance_the_sequence() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 0,
+        openpgp_fingerprint: vec![],
     }
     .encode_to_vec();
     let one = frame(
@@ -757,6 +764,7 @@ fn synchronization_and_key_transfer_field_limits_are_enforced() {
         vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
         known_revision_count: 1_000_000,
+        openpgp_fingerprint: vec![],
     };
     assert!(decode_as(Type::SyncHello, &sync_hello).is_ok());
     sync_hello.known_revision_count = 1_000_001;
@@ -1215,6 +1223,7 @@ fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
         device_id: bytes(32, 1),
         reconnect_port: 0,
         synthetic_key_transfer_version: 0,
+        sync_version: 0,
     };
     let decoded = decode_as(proto::MessageType::SessionHello, &hello)?;
     let kryptopass_protocol::MessagePayload::SessionHello(decoded_hello) = decoded.payload else {

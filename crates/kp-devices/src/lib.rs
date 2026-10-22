@@ -6,12 +6,17 @@
 
 use std::collections::{HashSet, VecDeque};
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{SyncSender, TrySendError as StdTrySendError, sync_channel};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use kryptopass_identity::{DeviceId, PublicIdentity};
 use kryptopass_pairing::{EstablishedSession, PairingError};
-use kryptopass_protocol::{MessagePayload, proto};
+use kryptopass_protocol::{Channel, MessagePayload, proto};
+use kryptopass_sync::{
+    Ledger, SyncOutbound, SyncProgress, SyncSession, SyncSessionError, TrustSource,
+};
 use kryptopass_transport::PeerTransport;
 pub use kryptopass_transport::{ConnectionFamily, ConnectionInfo, ConnectionRoute};
 use thiserror::Error;
@@ -32,7 +37,11 @@ pub const SESSION_HELLO_TIMEOUT: Duration = Duration::from_secs(30);
 const SESSION_COMMAND_CAPACITY: usize = 1;
 const SESSION_EVENT_CAPACITY: usize = 16;
 const MAX_CONTROL_MESSAGES_PER_SECOND: usize = 32;
+const MAX_DATA_MESSAGES_PER_SECOND: usize = 4096;
+const MAX_SYNC_CONTROL_MESSAGES_PER_SECOND: usize = 2048;
 const SESSION_CONTROL_SEND_TIMEOUT: Duration = Duration::from_secs(10);
+const SYNC_WORKER_INPUT_CAPACITY: usize = 4;
+const SYNC_WORKER_OUTPUT_CAPACITY: usize = 2;
 
 /// Trust state exposed by the directory. Only persisted trusted peers enter it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,6 +71,41 @@ pub struct SessionOptions {
     /// Local LAN resume port carried inside the authenticated session hello;
     /// zero means that this endpoint does not accept LAN resume connections.
     pub reconnect_port: u16,
+}
+
+/// Explicit opt-in binding for one existing ciphertext ledger and trust source.
+///
+/// Supplying this value is the only way to advertise Sync v1 from a session.
+/// It does not select a vault, create trust, or inspect an OpenPGP key.
+pub struct SyncSessionBinding {
+    ledger: Ledger,
+    trust: Box<dyn TrustSource + Send>,
+    openpgp_fingerprint: Vec<u8>,
+}
+
+impl SyncSessionBinding {
+    /// Binds an existing ledger and trust source to the caller-selected key fingerprint.
+    #[must_use]
+    pub fn new(
+        ledger: Ledger,
+        trust: Box<dyn TrustSource + Send>,
+        openpgp_fingerprint: Vec<u8>,
+    ) -> Self {
+        Self {
+            ledger,
+            trust,
+            openpgp_fingerprint,
+        }
+    }
+}
+
+impl fmt::Debug for SyncSessionBinding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SyncSessionBinding")
+            .field("vault_id", &"[redacted]")
+            .field("fingerprint", &"[redacted]")
+            .finish()
+    }
 }
 
 /// One public device row in the read model.
@@ -111,6 +155,9 @@ pub enum DeviceDirectoryError {
     /// The local device cannot be trusted as its own peer.
     #[error("local device cannot appear in the trusted peer list")]
     SelfTrust,
+    /// An explicitly supplied Sync binding has an invalid fingerprint shape.
+    #[error("sync session binding fingerprint is invalid")]
+    InvalidSyncBinding,
     /// The input list contains the same device more than once.
     #[error("trusted device list contains a duplicate")]
     DuplicateDevice,
@@ -504,6 +551,14 @@ pub enum SessionFailure {
     ControlRate,
     /// A ping or pong nonce was unexpected or exhausted.
     NonceSequence,
+    /// The negotiated Sync round failed a bounded protocol or storage check.
+    Sync,
+    /// A local Sync storage or random-source operation failed.
+    SyncStorage,
+    /// A Sync request or transfer timed out.
+    SyncTimeout,
+    /// The peer sent opaque data frames above the separate local bound.
+    DataRate,
 }
 
 /// Errors returned when submitting a bounded disconnect request.
@@ -528,6 +583,7 @@ pub struct SessionHandle {
     commands: mpsc::Sender<SessionCommand>,
     events: broadcast::Sender<SessionEvent>,
     lifecycle: watch::Receiver<Option<SessionEvent>>,
+    sync_progress: watch::Receiver<Option<SyncProgress>>,
     closed: watch::Receiver<bool>,
     generation: u64,
 }
@@ -579,6 +635,12 @@ impl SessionHandle {
         self.lifecycle.clone()
     }
 
+    /// Returns the latest volatile progress for the explicitly bound Sync round.
+    #[must_use]
+    pub fn sync_progress(&self) -> Option<SyncProgress> {
+        *self.sync_progress.borrow()
+    }
+
     /// Returns the latest shared directory snapshot.
     #[must_use]
     pub fn snapshot(&self) -> Arc<DeviceDirectorySnapshot> {
@@ -603,6 +665,146 @@ impl Drop for SessionHandle {
         let _ = self
             .commands
             .try_send(SessionCommand::Disconnect(SessionCloseReason::AppClosing));
+    }
+}
+
+enum SyncWorkerInput {
+    Message(proto::MessageType, MessagePayload),
+    Cancel,
+}
+
+enum SyncWorkerOutput {
+    Outbound(SyncOutbound),
+    Progress(SyncProgress),
+    Failed(SyncSessionError),
+    Complete,
+}
+
+struct SyncWorker {
+    input: SyncSender<SyncWorkerInput>,
+    outputs: mpsc::Receiver<SyncWorkerOutput>,
+    cancelled: Arc<AtomicBool>,
+}
+
+struct SyncRuntime {
+    worker: Option<SyncWorker>,
+    progress: watch::Sender<Option<SyncProgress>>,
+}
+
+impl Drop for SyncWorker {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Release);
+        let _ = self.input.try_send(SyncWorkerInput::Cancel);
+    }
+}
+
+fn spawn_sync_worker(
+    binding: SyncSessionBinding,
+    local_device_id: DeviceId,
+    expected_peer: PublicIdentity,
+) -> SyncWorker {
+    let (input, input_rx) = sync_channel(SYNC_WORKER_INPUT_CAPACITY);
+    let (output_tx, outputs) = mpsc::channel(SYNC_WORKER_OUTPUT_CAPACITY);
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let worker_cancelled = Arc::clone(&cancelled);
+    tokio::task::spawn_blocking(move || {
+        let mut engine = match SyncSession::new(
+            binding.ledger,
+            binding.trust,
+            local_device_id,
+            expected_peer,
+            binding.openpgp_fingerprint,
+            std::time::Instant::now(),
+        ) {
+            Ok(engine) => engine,
+            Err(error) => {
+                let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
+                return;
+            }
+        };
+        let mut last_progress = engine.progress();
+        if output_tx
+            .blocking_send(SyncWorkerOutput::Progress(last_progress))
+            .is_err()
+        {
+            return;
+        }
+
+        loop {
+            if worker_cancelled.load(Ordering::Acquire) {
+                engine.cancel();
+                return;
+            }
+            let now = std::time::Instant::now();
+            if let Err(error) = engine.check_time(now) {
+                let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
+                return;
+            }
+            match engine.poll_output(now) {
+                Ok(Some(outbound)) => {
+                    if output_tx
+                        .blocking_send(SyncWorkerOutput::Outbound(outbound))
+                        .is_err()
+                    {
+                        return;
+                    }
+                    continue;
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
+                    return;
+                }
+            }
+            if engine.is_complete() {
+                let _ = output_tx.blocking_send(SyncWorkerOutput::Progress(engine.progress()));
+                let _ = output_tx.blocking_send(SyncWorkerOutput::Complete);
+                return;
+            }
+
+            let wait = engine.timeout_after(std::time::Instant::now());
+            let received = input_rx.recv_timeout(wait.max(Duration::from_millis(1)));
+            let input = match received {
+                Ok(input) => input,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    engine.cancel();
+                    return;
+                }
+            };
+            if worker_cancelled.load(Ordering::Acquire) {
+                engine.cancel();
+                return;
+            }
+            let result = match input {
+                SyncWorkerInput::Message(message_type, payload) => {
+                    engine.handle_message(message_type, payload, std::time::Instant::now())
+                }
+                SyncWorkerInput::Cancel => {
+                    engine.cancel();
+                    return;
+                }
+            };
+            if let Err(error) = result {
+                let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
+                return;
+            }
+            let progress = engine.progress();
+            if progress != last_progress {
+                last_progress = progress;
+                if output_tx
+                    .blocking_send(SyncWorkerOutput::Progress(progress))
+                    .is_err()
+                {
+                    return;
+                }
+            }
+        }
+    });
+    SyncWorker {
+        input,
+        outputs,
+        cancelled,
     }
 }
 
@@ -634,11 +836,72 @@ pub fn start_session<T: PeerTransport + 'static>(
 /// surfaced only after the authenticated bilateral session hello succeeds.
 pub fn start_session_with_options<T: PeerTransport + 'static>(
     directory: DeviceDirectory,
-    mut session: EstablishedSession<T>,
+    session: EstablishedSession<T>,
     local_device_id: DeviceId,
     expected_peer: PublicIdentity,
     options: SessionOptions,
 ) -> Result<SessionHandle, DeviceDirectoryError> {
+    start_session_internal(
+        directory,
+        session,
+        local_device_id,
+        expected_peer,
+        options,
+        None,
+    )
+}
+
+/// Starts a session with an explicit ledger binding and default reconnect options.
+pub fn start_session_with_sync<T: PeerTransport + 'static>(
+    directory: DeviceDirectory,
+    session: EstablishedSession<T>,
+    local_device_id: DeviceId,
+    expected_peer: PublicIdentity,
+    sync_binding: SyncSessionBinding,
+) -> Result<SessionHandle, DeviceDirectoryError> {
+    start_session_with_options_and_sync(
+        directory,
+        session,
+        local_device_id,
+        expected_peer,
+        SessionOptions::default(),
+        sync_binding,
+    )
+}
+
+/// Starts a session with an explicit ledger binding and reconnect options.
+pub fn start_session_with_options_and_sync<T: PeerTransport + 'static>(
+    directory: DeviceDirectory,
+    session: EstablishedSession<T>,
+    local_device_id: DeviceId,
+    expected_peer: PublicIdentity,
+    options: SessionOptions,
+    sync_binding: SyncSessionBinding,
+) -> Result<SessionHandle, DeviceDirectoryError> {
+    start_session_internal(
+        directory,
+        session,
+        local_device_id,
+        expected_peer,
+        options,
+        Some(sync_binding),
+    )
+}
+
+fn start_session_internal<T: PeerTransport + 'static>(
+    directory: DeviceDirectory,
+    mut session: EstablishedSession<T>,
+    local_device_id: DeviceId,
+    expected_peer: PublicIdentity,
+    options: SessionOptions,
+    sync_binding: Option<SyncSessionBinding>,
+) -> Result<SessionHandle, DeviceDirectoryError> {
+    if sync_binding.as_ref().is_some_and(|binding| {
+        !matches!(binding.openpgp_fingerprint.len(), 20 | 32)
+            || binding.openpgp_fingerprint.iter().all(|byte| *byte == 0)
+    }) {
+        return Err(DeviceDirectoryError::InvalidSyncBinding);
+    }
     if directory.local_device_id() != local_device_id
         || session.local_device_id() != local_device_id
     {
@@ -661,6 +924,7 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
     let (command_tx, mut command_rx) = mpsc::channel(SESSION_COMMAND_CAPACITY);
     let (event_tx, _event_rx) = broadcast::channel(SESSION_EVENT_CAPACITY);
     let (lifecycle_tx, lifecycle_rx) = watch::channel(None);
+    let (sync_progress_tx, sync_progress_rx) = watch::channel(None);
     let (closed_tx, closed_rx) = watch::channel(false);
     let owner_directory = directory.clone();
     let owner_events = event_tx.clone();
@@ -670,6 +934,7 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
         let hello_context = SessionHelloContext {
             local_device_id,
             options,
+            sync_version: u32::from(sync_binding.is_some()),
             expected_peer,
             generation,
             directory: &owner_directory,
@@ -682,7 +947,7 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
         )
         .await;
         let exit = match initial {
-            Ok(remote_reconnect_port)
+            Ok((remote_reconnect_port, remote_sync_version))
                 if owner_directory.session_is_current(&expected_peer, generation) =>
             {
                 if owner_directory
@@ -711,6 +976,13 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
                         elapsed_ms = session_started.elapsed().as_secs_f64() * 1000.0,
                         "authenticated session hello complete"
                     );
+                    let sync_worker = if remote_sync_version == 1 {
+                        sync_binding.map(|binding| {
+                            spawn_sync_worker(binding, local_device_id, expected_peer)
+                        })
+                    } else {
+                        None
+                    };
                     run_connected_session(
                         &mut session,
                         &owner_directory,
@@ -718,6 +990,10 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
                         &mut command_rx,
                         expected_peer,
                         generation,
+                        SyncRuntime {
+                            worker: sync_worker,
+                            progress: sync_progress_tx.clone(),
+                        },
                     )
                     .await
                 }
@@ -757,6 +1033,7 @@ pub fn start_session_with_options<T: PeerTransport + 'static>(
         commands: command_tx,
         events: event_tx,
         lifecycle: lifecycle_rx,
+        sync_progress: sync_progress_rx,
         closed: closed_rx,
         generation,
     })
@@ -771,6 +1048,7 @@ enum SessionExit {
 struct SessionHelloContext<'a> {
     local_device_id: DeviceId,
     options: SessionOptions,
+    sync_version: u32,
     expected_peer: PublicIdentity,
     generation: u64,
     directory: &'a DeviceDirectory,
@@ -781,7 +1059,7 @@ async fn exchange_session_hello<T: PeerTransport>(
     context: &SessionHelloContext<'_>,
     directory_changes: &mut watch::Receiver<Arc<DeviceDirectorySnapshot>>,
     commands: &mut mpsc::Receiver<SessionCommand>,
-) -> Result<u16, SessionExit> {
+) -> Result<(u16, u32), SessionExit> {
     let hello_deadline = Instant::now() + SESSION_HELLO_TIMEOUT;
     if !context
         .directory
@@ -800,6 +1078,7 @@ async fn exchange_session_hello<T: PeerTransport>(
         device_id: context.local_device_id.as_bytes().to_vec(),
         reconnect_port: u32::from(context.options.reconnect_port),
         synthetic_key_transfer_version: 0,
+        sync_version: context.sync_version,
     };
     let send = session.send_message(proto::MessageType::SessionHello, &hello);
     tokio::select! {
@@ -840,7 +1119,7 @@ async fn exchange_session_hello<T: PeerTransport>(
             {
                 return Err(SessionExit::Failed(SessionFailure::HelloRejected));
             }
-            Ok(hello.reconnect_port as u16)
+            Ok((hello.reconnect_port as u16, hello.sync_version))
         }
         (proto::MessageType::SessionClose, MessagePayload::SessionClose(close)) => {
             let Some(reason) = SessionCloseReason::from_wire(close.reason) else {
@@ -876,15 +1155,38 @@ async fn run_connected_session<T: PeerTransport>(
     commands: &mut mpsc::Receiver<SessionCommand>,
     expected_peer: PublicIdentity,
     generation: u64,
+    sync_runtime: SyncRuntime,
 ) -> SessionExit {
+    let SyncRuntime {
+        worker: mut sync_worker,
+        progress: sync_progress,
+    } = sync_runtime;
     let mut next_observation = Instant::now();
     let mut next_local_nonce = 1_u64;
     let mut last_remote_nonce = 0_u64;
     let mut outstanding: Option<(u64, Instant)> = None;
     let mut next_ping_at = Instant::now() + SESSION_PING_INTERVAL;
     let mut rate_limiter = ControlRateLimiter::default();
+    let mut data_rate_limiter = DataRateLimiter::default();
+    let mut sync_rate_limiter = DataRateLimiter::default();
+    // Retain at most one decoded frame while a bounded storage queue is busy.
+    // Keep draining worker output and observing cancellation instead of treating
+    // an ordinary scheduler/SQLite delay as a malformed peer message.
+    let mut pending_sync_input: Option<(SyncWorkerInput, Instant)> = None;
 
     loop {
+        if let Some((input, deadline)) = pending_sync_input.take() {
+            let Some(worker) = sync_worker.as_ref() else {
+                return SessionExit::Failed(SessionFailure::Sync);
+            };
+            match worker.input.try_send(input) {
+                Ok(()) => {}
+                Err(StdTrySendError::Full(input)) if Instant::now() < deadline => {
+                    pending_sync_input = Some((input, deadline));
+                }
+                Err(_) => return SessionExit::Failed(SessionFailure::Sync),
+            }
+        }
         let ping_deadline = outstanding
             .map(|(_, deadline)| deadline)
             .unwrap_or(next_ping_at);
@@ -892,12 +1194,17 @@ async fn run_connected_session<T: PeerTransport>(
             () = sleep_until(next_observation) => SelectedSessionEvent::ObservePath,
             command = commands.recv() => SelectedSessionEvent::Command(command),
             changed = directory_changes.changed() => SelectedSessionEvent::DirectoryChanged(changed),
-            message = session.receive_message() => SelectedSessionEvent::Message(message),
+            message = session.receive_message(), if pending_sync_input.is_none() => SelectedSessionEvent::Message(message),
+            output = receive_sync_worker_output(&mut sync_worker), if sync_worker.is_some() => {
+                SelectedSessionEvent::SyncOutput(output)
+            },
             () = sleep_until(next_ping_at), if outstanding.is_none() => SelectedSessionEvent::PingDue,
             () = sleep_until(ping_deadline), if outstanding.is_some() => SelectedSessionEvent::PingTimeout,
+            () = tokio::time::sleep(Duration::from_millis(1)), if pending_sync_input.is_some() => SelectedSessionEvent::RetrySyncInput,
         };
 
         match selected {
+            SelectedSessionEvent::RetrySyncInput => {}
             SelectedSessionEvent::ObservePath => {
                 let info =
                     tokio::time::timeout(Duration::from_millis(500), session.connection_info())
@@ -946,12 +1253,54 @@ async fn run_connected_session<T: PeerTransport>(
             SelectedSessionEvent::PingTimeout => {
                 return SessionExit::Failed(SessionFailure::PingTimeout);
             }
+            SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Outbound(outbound))) => {
+                if let Err(failure) = send_sync_outbound_bounded(session, outbound).await {
+                    return SessionExit::Failed(failure);
+                }
+            }
+            SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Progress(progress))) => {
+                sync_progress.send_replace(Some(progress));
+            }
+            SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Failed(error))) => {
+                return match error {
+                    SyncSessionError::TrustRevoked => {
+                        SessionExit::Disconnected(SessionCloseReason::TrustRevoked, true)
+                    }
+                    SyncSessionError::Storage | SyncSessionError::Randomness => {
+                        SessionExit::Failed(SessionFailure::SyncStorage)
+                    }
+                    SyncSessionError::Timeout => SessionExit::Failed(SessionFailure::SyncTimeout),
+                    SyncSessionError::InvalidBinding
+                    | SyncSessionError::Protocol
+                    | SyncSessionError::Capacity
+                    | SyncSessionError::UnknownAuthor => SessionExit::Failed(SessionFailure::Sync),
+                };
+            }
+            SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Complete)) => {
+                sync_worker = None;
+            }
+            SelectedSessionEvent::SyncOutput(None) => {
+                return SessionExit::Failed(SessionFailure::Sync);
+            }
             SelectedSessionEvent::Message(Err(error)) => {
                 return SessionExit::Failed(classify_pairing_error(error));
             }
             SelectedSessionEvent::Message(Ok(message)) => {
-                if !rate_limiter.accept(Instant::now()) {
-                    return SessionExit::Failed(SessionFailure::ControlRate);
+                match message.channel {
+                    Channel::Control
+                        if !(if is_sync_message(message.message_type) {
+                            sync_rate_limiter
+                                .accept_limit(Instant::now(), MAX_SYNC_CONTROL_MESSAGES_PER_SECOND)
+                        } else {
+                            rate_limiter.accept(Instant::now())
+                        }) =>
+                    {
+                        return SessionExit::Failed(SessionFailure::ControlRate);
+                    }
+                    Channel::Data if !data_rate_limiter.accept(Instant::now()) => {
+                        return SessionExit::Failed(SessionFailure::DataRate);
+                    }
+                    Channel::Control | Channel::Data => {}
                 }
                 match (message.message_type, message.payload) {
                     (proto::MessageType::SessionPing, MessagePayload::SessionPing(ping)) => {
@@ -989,6 +1338,46 @@ async fn run_connected_session<T: PeerTransport>(
                         };
                         return SessionExit::Disconnected(reason, false);
                     }
+                    (message_type, payload)
+                        if is_sync_message(message_type) && message.channel == Channel::Control =>
+                    {
+                        let Some(worker) = sync_worker.as_ref() else {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        };
+                        match worker
+                            .input
+                            .try_send(SyncWorkerInput::Message(message_type, payload))
+                        {
+                            Ok(()) => {}
+                            Err(StdTrySendError::Full(input)) => {
+                                pending_sync_input =
+                                    Some((input, Instant::now() + Duration::from_secs(2)));
+                            }
+                            Err(StdTrySendError::Disconnected(_)) => {
+                                return SessionExit::Failed(SessionFailure::Sync);
+                            }
+                        }
+                    }
+                    (proto::MessageType::SyncChunk, payload)
+                        if message.channel == Channel::Data =>
+                    {
+                        let Some(worker) = sync_worker.as_ref() else {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        };
+                        match worker.input.try_send(SyncWorkerInput::Message(
+                            proto::MessageType::SyncChunk,
+                            payload,
+                        )) {
+                            Ok(()) => {}
+                            Err(StdTrySendError::Full(input)) => {
+                                pending_sync_input =
+                                    Some((input, Instant::now() + Duration::from_secs(2)));
+                            }
+                            Err(StdTrySendError::Disconnected(_)) => {
+                                return SessionExit::Failed(SessionFailure::Sync);
+                            }
+                        }
+                    }
                     _ => return SessionExit::Failed(SessionFailure::Protocol),
                 }
             }
@@ -997,12 +1386,60 @@ async fn run_connected_session<T: PeerTransport>(
 }
 
 enum SelectedSessionEvent {
+    RetrySyncInput,
     ObservePath,
     Command(Option<SessionCommand>),
     DirectoryChanged(Result<(), watch::error::RecvError>),
     Message(Result<kryptopass_protocol::DecodedMessage, PairingError>),
+    SyncOutput(Option<SyncWorkerOutput>),
     PingDue,
     PingTimeout,
+}
+
+async fn receive_sync_worker_output(worker: &mut Option<SyncWorker>) -> Option<SyncWorkerOutput> {
+    match worker {
+        Some(worker) => worker.outputs.recv().await,
+        None => std::future::pending().await,
+    }
+}
+
+fn is_sync_message(message_type: proto::MessageType) -> bool {
+    matches!(
+        message_type,
+        proto::MessageType::SyncHello
+            | proto::MessageType::SyncManifest
+            | proto::MessageType::SyncRequest
+            | proto::MessageType::SyncChunk
+            | proto::MessageType::SyncCommit
+            | proto::MessageType::SyncAck
+            | proto::MessageType::SyncConflict
+    )
+}
+
+async fn send_sync_outbound_bounded<T: PeerTransport>(
+    session: &mut EstablishedSession<T>,
+    outbound: SyncOutbound,
+) -> Result<(), SessionFailure> {
+    match outbound {
+        SyncOutbound::Hello(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncHello, &payload).await
+        }
+        SyncOutbound::Manifest(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncManifest, &payload).await
+        }
+        SyncOutbound::Request(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncRequest, &payload).await
+        }
+        SyncOutbound::Chunk(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncChunk, &payload).await
+        }
+        SyncOutbound::Commit(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncCommit, &payload).await
+        }
+        SyncOutbound::Ack(payload) => {
+            send_control_bounded(session, proto::MessageType::SyncAck, &payload).await
+        }
+    }
 }
 
 async fn finish_session<T: PeerTransport>(
@@ -1038,7 +1475,10 @@ async fn finish_session<T: PeerTransport>(
             // A transient carrier failure must not tell the peer to stop recovery.
             if !matches!(
                 failure,
-                SessionFailure::Transport | SessionFailure::PingTimeout
+                SessionFailure::Transport
+                    | SessionFailure::PingTimeout
+                    | SessionFailure::SyncStorage
+                    | SessionFailure::SyncTimeout
             ) {
                 let _ = tokio::time::timeout(
                     Duration::from_secs(2),
@@ -1111,6 +1551,32 @@ async fn send_control_bounded<T: PeerTransport, M: prost::Message>(
 #[derive(Default)]
 struct ControlRateLimiter {
     recent: VecDeque<Instant>,
+}
+
+#[derive(Default)]
+struct DataRateLimiter {
+    recent: VecDeque<Instant>,
+}
+
+impl DataRateLimiter {
+    fn accept(&mut self, now: Instant) -> bool {
+        self.accept_limit(now, MAX_DATA_MESSAGES_PER_SECOND)
+    }
+
+    fn accept_limit(&mut self, now: Instant, maximum: usize) -> bool {
+        while self
+            .recent
+            .front()
+            .is_some_and(|at| now.duration_since(*at) >= Duration::from_secs(1))
+        {
+            let _ = self.recent.pop_front();
+        }
+        if self.recent.len() >= maximum {
+            return false;
+        }
+        self.recent.push_back(now);
+        true
+    }
 }
 
 impl ControlRateLimiter {

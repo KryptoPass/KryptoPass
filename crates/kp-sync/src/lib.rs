@@ -6,9 +6,11 @@
 mod ledger;
 mod model;
 mod reconciliation;
+mod session;
 mod wire;
 
 pub use ledger::*;
 pub use model::*;
 pub use reconciliation::*;
+pub use session::*;
 pub use wire::*;
