@@ -62,7 +62,8 @@ QUrl siteIcon(const QByteArray &html, const QUrl &page)
     static const QRegularExpression tag(QStringLiteral("<link\\b[^>]*>|<base\\b[^>]*>"), QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression whitespace(QStringLiteral("\\s+"));
     QUrl base = page;
-    QUrl fallback;
+    // Touch icons are opaque by design, so they only stand in when no regular icon exists.
+    QUrl touchIcon;
     auto it = tag.globalMatch(QString::fromUtf8(html));
     while (it.hasNext()) {
         const auto element = it.next().captured();
@@ -83,12 +84,12 @@ QUrl siteIcon(const QByteArray &html, const QUrl &page)
         const auto resolved = base.resolved(QUrl(href));
         if (!validUrl(resolved) || resolved.path().endsWith(QStringLiteral(".svg"), Qt::CaseInsensitive))
             continue;
-        if (apple)
+        if (!apple)
             return resolved;
-        if (fallback.isEmpty())
-            fallback = resolved;
+        if (touchIcon.isEmpty())
+            touchIcon = resolved;
     }
-    return fallback;
+    return touchIcon;
 }
 }
 
