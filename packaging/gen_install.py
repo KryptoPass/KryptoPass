@@ -28,7 +28,12 @@ def render():
             content = content.replace(f"@{key}@", encoded)
         if "@APP_" in content or "@DEVELOPER_" in content or "@RELEASE_" in content:
             raise ValueError(f"Unresolved metadata in {template.name}")
-        suffix = ".metainfo.xml" if template.name.endswith("xml.in") else ".desktop"
+        if template.name.endswith(".mime.xml.in"):
+            suffix = ".mime.xml"
+        elif template.name.endswith(".metainfo.xml.in"):
+            suffix = ".metainfo.xml"
+        else:
+            suffix = ".desktop"
         yield meta["app-id"] + suffix, content
 
 

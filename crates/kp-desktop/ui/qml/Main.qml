@@ -102,6 +102,18 @@ Controls.ApplicationWindow {
             panes.showPane(1);
         });
     }
+    function syncFavoriteActionCheck() {
+        favoriteEntryAction.checked = Qt.binding(() => !!store.selected?.favorite);
+    }
+    function syncSectionActionChecks() {
+        showVaultAction.checked = Qt.binding(() => !root.keysMode);
+        showKeysAction.checked = Qt.binding(() => root.keysMode);
+    }
+    function syncScopeActionChecks() {
+        showAllAction.checked = Qt.binding(() => !root.keysMode && store.scope === "all");
+        showFavoritesAction.checked = Qt.binding(() => !root.keysMode && store.scope === "favorites");
+        showTrashAction.checked = Qt.binding(() => !root.keysMode && store.scope === "trash");
+    }
     function applySection(showKeys) {
         if (keysMode === showKeys)
             return;
@@ -264,11 +276,18 @@ Controls.ApplicationWindow {
         close();
     }
     readonly property bool revealed: !!store.detail?.content?.fields?.passwordRevealed
+    readonly property bool selectedEntryActionsEnabled: !root.keysMode && !store.controller.locked && !editor.opened && !editor.waitingForEditor && !root.mutationsBlocked && !store.controller.detailBusy && !!store.selected
+    readonly property var selectedDetailForActions: store.selected && store.detail && store.detail.id === store.selected.id && !store.controller.detailBusy ? store.detail : null
+    readonly property bool selectedDetailCopyActionsEnabled: root.selectedEntryActionsEnabled && !store.controller.detailBusy && !!root.selectedDetailForActions && !store.selected.trashed
     readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Contactos") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
     Component.onCompleted: {
         deviceController.startResumeOwner();
         store.controller.loadStore();
         keys.controller.refreshKeys();
+        if (shell.launchBackup.toString())
+            Qt.callLater(function () {
+                backupDialog.openForRestoreFile(shell.launchBackup);
+            });
         if (Qt.application.arguments.indexOf("--screenshot-about") !== -1)
             Qt.callLater(function () {
                 aboutDialog.open();
@@ -336,6 +355,12 @@ Controls.ApplicationWindow {
         function onQueryChanged() {
             if (root.keysMode && search.text !== keys.query)
                 search.text = keys.query;
+        }
+    }
+    Connections {
+        target: shell
+        function onFileManagerFailed() {
+            root.notify(qsTr("No se pudo abrir la carpeta del respaldo."), "error");
         }
     }
     Connections {
@@ -424,14 +449,14 @@ Controls.ApplicationWindow {
         id: editEntry
         controller: shell
         actionId: "editEntry"
-        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !editor.waitingForEditor && !root.mutationsBlocked && !store.controller.detailBusy && !!store.selected && !store.selected.trashed
         onTriggered: editor.openEntry(store.selected)
     }
     DesktopAction {
         id: trashEntry
         controller: shell
         actionId: "trashEntry"
-        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !root.mutationsBlocked && !!store.selected && !store.selected.trashed
+        enabled: !root.keysMode && !store.controller.locked && !editor.opened && !editor.waitingForEditor && !root.mutationsBlocked && !store.controller.detailBusy && !!store.selected && !store.selected.trashed
         onTriggered: {
             root.beginOperation("trash", store.selectedId);
             store.updateEntry(store.selectedId, {
@@ -468,11 +493,110 @@ Controls.ApplicationWindow {
         onTriggered: mainKeyOperationDialog.openFor("import")
     }
     DesktopAction {
+        id: importVaultAction
+        controller: shell
+        actionId: "importVault"
+        enabled: !root.mutationsBlocked
+        onTriggered: importWindow.prepare()
+    }
+    DesktopAction {
+        id: exportBackupAction
+        controller: shell
+        actionId: "exportBackup"
+        enabled: !root.mutationsBlocked
+        onTriggered: backupDialog.openForExport()
+    }
+    DesktopAction {
+        id: restoreBackupAction
+        controller: shell
+        actionId: "restoreBackup"
+        enabled: !root.mutationsBlocked
+        onTriggered: backupDialog.openForRestore()
+    }
+    DesktopAction {
+        id: showBackupInFolderAction
+        controller: shell
+        actionId: "showBackupInFolder"
+        enabled: backupDialog.opened && !backupDialog.busy && backupDialog.exportMode && !!backupDialog.completedExportPath.toString()
+        onTriggered: shell.showInFolder(backupDialog.completedExportPath)
+    }
+    DesktopAction {
         id: copyFingerprint
         controller: shell
         actionId: "copyFingerprint"
-        enabled: root.keysMode && !!keys.selected
+        enabled: root.keysMode && !!keys.selected && !keys.controller.busy && !keys.controller.operationBusy
         onTriggered: entryDetailPane.copySelectedFingerprint()
+    }
+    DesktopAction {
+        id: moveEntryAction
+        controller: shell
+        actionId: "moveEntry"
+        enabled: editEntry.enabled
+        onTriggered: moveDialog.openMove()
+    }
+    DesktopAction {
+        id: favoriteEntryAction
+        controller: shell
+        actionId: "toggleFavorite"
+        checkable: true
+        checked: !!store.selected?.favorite
+        enabled: root.selectedEntryActionsEnabled && !store.selected.trashed
+        onTriggered: {
+            if (!root.selectedEntryActionsEnabled || !store.selected || store.selected.trashed) {
+                root.syncFavoriteActionCheck();
+                return;
+            }
+            root.beginOperation("favorite", store.selectedId);
+            store.updateEntry(store.selectedId, {
+                favorite: !store.selected.favorite
+            });
+            root.syncFavoriteActionCheck();
+        }
+    }
+    DesktopAction {
+        id: restoreEntryAction
+        controller: shell
+        actionId: "restoreEntry"
+        enabled: root.selectedEntryActionsEnabled && store.selected.trashed
+        onTriggered: {
+            if (!root.selectedEntryActionsEnabled || !store.selected || !store.selected.trashed)
+                return;
+            root.beginOperation("restore", store.selectedId);
+            store.updateEntry(store.selectedId, {
+                trashed: false
+            });
+        }
+    }
+    DesktopAction {
+        id: deleteEntryAction
+        controller: shell
+        actionId: "deleteEntry"
+        enabled: root.selectedEntryActionsEnabled && store.selected.trashed
+        onTriggered: {
+            if (root.selectedEntryActionsEnabled && store.selected?.trashed)
+                deleteEntryDialog.openForSelected();
+        }
+    }
+    DesktopAction {
+        id: copyUsername
+        controller: shell
+        actionId: "copyUsername"
+        enabled: root.selectedDetailCopyActionsEnabled && root.selectedDetailForActions.content?.kind === "login" && !!root.selectedDetailForActions.content?.fields?.username
+        onTriggered: store.controller.copyUsername()
+    }
+    DesktopAction {
+        id: copyPassword
+        controller: shell
+        actionId: "copyPassword"
+        enabled: root.selectedDetailCopyActionsEnabled && root.selectedDetailForActions.content?.kind === "login"
+        onTriggered: store.controller.copyPassword()
+    }
+    DesktopAction {
+        id: copyTotp
+        controller: shell
+        actionId: "copyTotp"
+        enabled: root.selectedDetailCopyActionsEnabled && (root.selectedDetailForActions.content?.kind === "login" || root.selectedDetailForActions.content?.kind === "totp") && !!root.selectedDetailForActions.content?.fields?.totp?.currentCode
+        onTriggered: store.controller.copyTotp(false)
     }
     DesktopAction {
         id: lockVaultAction
@@ -482,6 +606,83 @@ Controls.ApplicationWindow {
         icon.name: store.controller.locked ? "object-unlocked" : "object-locked"
         enabled: !root.sensitiveTransitionBlocked && !passwordGenerator.generating
         onTriggered: root.requestLock()
+    }
+    DesktopAction {
+        id: showVaultAction
+        controller: shell
+        actionId: "showVault"
+        checkable: true
+        checked: !root.keysMode
+        enabled: !root.mutationsBlocked
+        onTriggered: {
+            root.selectSection(false);
+            root.syncSectionActionChecks();
+        }
+    }
+    DesktopAction {
+        id: showKeysAction
+        controller: shell
+        actionId: "showKeys"
+        checkable: true
+        checked: root.keysMode
+        enabled: !root.mutationsBlocked
+        onTriggered: {
+            root.selectSection(true);
+            root.syncSectionActionChecks();
+        }
+    }
+    DesktopAction {
+        id: showAllAction
+        controller: shell
+        actionId: "showAll"
+        checkable: true
+        checked: !root.keysMode && store.scope === "all"
+        enabled: !root.mutationsBlocked
+        onTriggered: {
+            root.selectScope(false, "all");
+            root.syncScopeActionChecks();
+        }
+    }
+    DesktopAction {
+        id: showFavoritesAction
+        controller: shell
+        actionId: "showFavorites"
+        checkable: true
+        checked: !root.keysMode && store.scope === "favorites"
+        enabled: !root.mutationsBlocked
+        onTriggered: {
+            root.selectScope(false, "favorites");
+            root.syncScopeActionChecks();
+        }
+    }
+    DesktopAction {
+        id: showTrashAction
+        controller: shell
+        actionId: "showTrash"
+        checkable: true
+        checked: !root.keysMode && store.scope === "trash"
+        enabled: !root.mutationsBlocked
+        onTriggered: {
+            root.selectScope(false, "trash");
+            root.syncScopeActionChecks();
+        }
+    }
+    Controls.ActionGroup {
+        id: sectionActionGroup
+        exclusive: true
+        actions: [showVaultAction, showKeysAction]
+    }
+    Controls.ActionGroup {
+        id: scopeActionGroup
+        exclusive: true
+        actions: [showAllAction, showFavoritesAction, showTrashAction]
+    }
+    DesktopAction {
+        id: showDevicesAction
+        controller: shell
+        actionId: "showDevices"
+        enabled: devicePairingLab.available
+        onTriggered: devicePairingLab.open()
     }
     readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
     DesktopAction {
@@ -578,19 +779,13 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
-                text: qsTr("Importar desde otro gestor…")
-                enabled: !root.mutationsBlocked
-                onTriggered: importWindow.prepare()
+                action: importVaultAction
             }
             Controls.MenuItem {
-                text: qsTr("Crear copia de seguridad…")
-                enabled: !root.mutationsBlocked
-                onTriggered: backupDialog.openForExport()
+                action: exportBackupAction
             }
             Controls.MenuItem {
-                text: qsTr("Restaurar copia de seguridad…")
-                enabled: !root.mutationsBlocked
-                onTriggered: backupDialog.openForRestore()
+                action: restoreBackupAction
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
@@ -607,12 +802,29 @@ Controls.ApplicationWindow {
                 action: editEntry
             }
             Controls.MenuItem {
-                text: qsTr("Mover a otra carpeta…")
-                enabled: editEntry.enabled
-                onTriggered: moveDialog.openMove()
+                action: moveEntryAction
             }
             Controls.MenuItem {
                 action: trashEntry
+            }
+            Controls.MenuItem {
+                action: favoriteEntryAction
+            }
+            Controls.MenuItem {
+                action: restoreEntryAction
+            }
+            Controls.MenuItem {
+                action: deleteEntryAction
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
+                action: copyUsername
+            }
+            Controls.MenuItem {
+                action: copyPassword
+            }
+            Controls.MenuItem {
+                action: copyTotp
             }
             Controls.MenuItem {
                 action: copyFingerprint
@@ -631,35 +843,20 @@ Controls.ApplicationWindow {
         Controls.Menu {
             title: qsTr("&Ver")
             Controls.MenuItem {
-                text: qsTr("Carpetas")
-                checkable: true
-                checked: !root.keysMode
-                onTriggered: root.selectSection(false)
+                action: showVaultAction
             }
             Controls.MenuItem {
-                text: qsTr("Claves")
-                checkable: true
-                checked: root.keysMode
-                onTriggered: root.selectSection(true)
+                action: showKeysAction
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
-                text: qsTr("Todos los elementos")
-                onTriggered: {
-                    root.selectScope(false, "all");
-                }
+                action: showAllAction
             }
             Controls.MenuItem {
-                text: qsTr("Favoritos")
-                onTriggered: {
-                    root.selectScope(false, "favorites");
-                }
+                action: showFavoritesAction
             }
             Controls.MenuItem {
-                text: qsTr("Papelera")
-                onTriggered: {
-                    root.selectScope(false, "trash");
-                }
+                action: showTrashAction
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
@@ -730,9 +927,8 @@ Controls.ApplicationWindow {
                 action: configureShortcutsAction
             }
             Controls.MenuItem {
-                text: qsTr("Dispositivos")
+                action: showDevicesAction
                 visible: devicePairingLab.available
-                onTriggered: devicePairingLab.open()
             }
         }
         Controls.Menu {
@@ -961,9 +1157,11 @@ Controls.ApplicationWindow {
             }
         }
         listContent: EntryListPane {
+            id: entryListPane
             anchors.fill: parent
             focus: true
             onDetailRequested: panes.showPane(2)
+            contextMenuEnabled: !editor.opened && !root.mutationsBlocked
             entryDraggingEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !editor.waitingForEditor
             searchEnabled: search.enabled
             keysMode: root.keysMode
@@ -972,11 +1170,38 @@ Controls.ApplicationWindow {
             keyStore: keys
             scopeTitle: root.scopeTitle
             headerHeight: root.panelHeaderHeight
+            editAction: editEntry
+            moveAction: moveEntryAction
+            trashAction: trashEntry
+            favoriteAction: favoriteEntryAction
+            restoreAction: restoreEntryAction
+            deleteAction: deleteEntryAction
+            copyUsernameAction: copyUsername
+            copyPasswordAction: copyPassword
+            copyTotpAction: copyTotp
+            copyFingerprintAction: copyFingerprint
             onSelectionRequested: function (entryId) {
                 if (root.activeStore.selectedId === entryId)
                     return;
                 editor.guardNavigation(function () {
                     root.activeStore.selectedId = entryId;
+                });
+            }
+            onContextMenuRequested: function (entryId, x, y) {
+                const requestKeysMode = root.keysMode;
+                const requestStore = root.activeStore;
+                if (root.mutationsBlocked || editor.opened || editor.waitingForEditor)
+                    return;
+                if (requestKeysMode ? (keys.controller.busy || keys.controller.operationBusy) : store.controller.locked)
+                    return;
+                editor.guardNavigation(function () {
+                    if (root.mutationsBlocked || editor.opened || editor.waitingForEditor || root.keysMode !== requestKeysMode || root.activeStore !== requestStore)
+                        return;
+                    if (requestKeysMode ? (keys.controller.busy || keys.controller.operationBusy) : store.controller.locked)
+                        return;
+                    requestStore.selectedId = entryId;
+                    if (requestStore.selectedId === entryId)
+                        entryListPane.openContextMenu(entryId, x, y);
                 });
             }
             onEntryOpenRequested: function (entry) {
@@ -1000,37 +1225,26 @@ Controls.ApplicationWindow {
             headerHeight: root.panelHeaderHeight
             editAction: editEntry
             trashAction: trashEntry
+            favoriteAction: favoriteEntryAction
+            restoreAction: restoreEntryAction
+            deleteAction: deleteEntryAction
             copyFingerprintAction: copyFingerprint
             onNotificationRequested: function (message) {
                 root.notify(message, "success");
             }
-            onFavoriteToggleRequested: {
-                if (root.mutationsBlocked || store.controller.locked)
-                    return;
-                root.beginOperation("favorite", store.selectedId);
-                store.updateEntry(store.selectedId, {
-                    favorite: !store.selected.favorite
-                });
-            }
-            onRestoreRequested: {
-                if (root.mutationsBlocked || store.controller.locked)
-                    return;
-                root.beginOperation("restore", store.selectedId);
-                store.updateEntry(store.selectedId, {
-                    trashed: false
-                });
-            }
-            onPermanentDeleteRequested: {
-                if (!root.mutationsBlocked && !store.controller.locked)
-                    deleteEntryDialog.openForSelected();
-            }
+            onFavoriteToggleRequested: favoriteEntryAction.trigger()
+            onRestoreRequested: restoreEntryAction.trigger()
+            onPermanentDeleteRequested: deleteEntryAction.trigger()
             onRevealToggleRequested: {
                 store.controller.togglePassword();
             }
-            onCopyUsernameRequested: store.controller.copyUsername()
-            onCopyPasswordRequested: store.controller.copyPassword()
+            onCopyUsernameRequested: copyUsername.trigger()
+            onCopyPasswordRequested: copyPassword.trigger()
             onCopyTotpRequested: function (next) {
-                store.controller.copyTotp(next);
+                if (next)
+                    store.controller.copyTotp(true);
+                else
+                    copyTotp.trigger();
             }
             onRetryDetailRequested: store.controller.selectEntry(store.selectedId)
             onRelatedEntryOpenRequested: function (entry) {
@@ -1165,6 +1379,7 @@ Controls.ApplicationWindow {
     BackupDialog {
         id: backupDialog
         keyStore: keys
+        showInFolderAction: showBackupInFolderAction
         onOpenVaultRequested: function (path) {
             Qt.callLater(function () {
                 root.requestActiveVault(path);

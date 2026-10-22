@@ -1,13 +1,15 @@
-use cxx_qt::CxxQtType;
-use cxx_qt_lib::QString;
+use cxx_qt::{CxxQtType, casting::Upcast};
+use cxx_qt_lib::{QObjectMutPtr, QString, QUrl};
 use std::pin::Pin;
 
 #[cxx_qt::bridge]
 pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
+        include!("cxx-qt-lib/qurl.h");
 
         type QString = cxx_qt_lib::QString;
+        type QUrl = cxx_qt_lib::QUrl;
     }
 
     extern "RustQt" {
@@ -26,6 +28,8 @@ pub mod qobject {
         #[qproperty(QString, about_json, cxx_name = "aboutJson", READ, CONSTANT)]
         #[qproperty(QString, actions_json, cxx_name = "actionsJson", READ, NOTIFY)]
         #[qproperty(i32, idle_lock_seconds, cxx_name = "idleLockSeconds", READ, NOTIFY)]
+        /// Backup file handed over by the file manager; empty when none was given.
+        #[qproperty(QUrl, launch_backup, cxx_name = "launchBackup", READ, CONSTANT)]
         type ShellController = super::ShellControllerRust;
 
         #[qinvokable]
@@ -39,6 +43,18 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "openBugReport"]
         fn open_bug_report(self: Pin<&mut Self>) -> bool;
+
+        #[qinvokable]
+        #[cxx_name = "showInFolder"]
+        fn show_in_folder(self: Pin<&mut Self>, url: &QUrl);
+
+        #[qinvokable]
+        #[cxx_name = "receiveFileManagerError"]
+        fn receive_file_manager_error(self: Pin<&mut Self>);
+
+        #[qsignal]
+        #[cxx_name = "fileManagerFailed"]
+        fn file_manager_failed(self: Pin<&mut Self>);
 
         #[qinvokable]
         #[cxx_name = "setActionEnabled"]
@@ -62,6 +78,7 @@ pub struct ShellControllerRust {
     about_json: QString,
     actions_json: QString,
     idle_lock_seconds: i32,
+    launch_backup: QUrl,
 }
 
 impl Default for ShellControllerRust {
@@ -78,8 +95,29 @@ impl Default for ShellControllerRust {
             about_json: crate::ui_adapters::native_ffi::ffi::about_data(),
             actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
+            launch_backup: launch_backup_url(std::env::args().skip(1)),
         }
     }
+}
+
+/// Picks the first argument naming an existing `.kpb` file; the path is only
+/// preselected for restore, never opened or executed.
+fn launch_backup_url(args: impl Iterator<Item = String>) -> QUrl {
+    for argument in args {
+        let path = std::path::Path::new(&argument);
+        let is_backup = path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("kpb"));
+        if !is_backup {
+            continue;
+        }
+        if let Ok(canonical) = path.canonicalize()
+            && canonical.is_file()
+        {
+            return QUrl::from_local_file(&QString::from(canonical.to_string_lossy().as_ref()));
+        }
+    }
+    QUrl::default()
 }
 
 impl qobject::ShellController {
@@ -98,6 +136,20 @@ impl qobject::ShellController {
 
     pub fn open_bug_report(self: Pin<&mut Self>) -> bool {
         crate::ui_adapters::native_ffi::ffi::open_bug_report()
+    }
+
+    pub fn show_in_folder(self: Pin<&mut Self>, url: &QUrl) {
+        let base: Pin<&mut cxx_qt::QObject> = self.upcast_pin();
+        // The native job is parented to this QObject and its callbacks use the receiver context.
+        unsafe {
+            let receiver =
+                QObjectMutPtr::from_raw(std::ptr::from_mut(Pin::get_unchecked_mut(base)));
+            crate::ui_adapters::native_ffi::ffi::show_in_folder(receiver, url);
+        }
+    }
+
+    pub fn receive_file_manager_error(self: Pin<&mut Self>) {
+        self.file_manager_failed();
     }
 
     pub fn set_action_enabled(self: Pin<&mut Self>, id: QString, enabled: bool) {

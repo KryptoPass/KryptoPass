@@ -31,6 +31,7 @@ kryptopass-core = { package = "kp-core", path = "../kp-core" }
 kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
 kryptopass-import = { package = "kp-import", path = "../kp-import" }
 tracing = "0.1"
+tracing-log = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 base64 = "0.22"

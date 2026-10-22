@@ -15,6 +15,9 @@ Controls.Pane {
     required property real headerHeight
     required property Controls.Action editAction
     required property Controls.Action trashAction
+    required property Controls.Action favoriteAction
+    required property Controls.Action restoreAction
+    required property Controls.Action deleteAction
     required property Controls.Action copyFingerprintAction
 
     property bool editing: false
@@ -83,13 +86,8 @@ Controls.Pane {
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
+                    action: root.favoriteAction
                     visible: !root.keysMode && !!root.selected && !root.selected.trashed
-                    text: qsTr("Favorito")
-                    icon.name: "rating"
-                    checkable: true
-                    checked: root.selected?.favorite || false
-                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
-                    onClicked: root.favoriteToggleRequested()
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
@@ -105,22 +103,16 @@ Controls.Pane {
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
+                    action: root.restoreAction
                     visible: !root.keysMode && !!root.selected && root.selected.trashed
-                    text: qsTr("Restaurar")
-                    icon.name: "edit-undo"
-                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                     display: Controls.AbstractButton.IconOnly
-                    onClicked: root.restoreRequested()
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
                 Controls.ToolButton {
+                    action: root.deleteAction
                     visible: !root.keysMode && !!root.selected && root.selected.trashed
-                    text: qsTr("Eliminar definitivamente…")
-                    icon.name: "edit-delete"
-                    enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                     display: Controls.AbstractButton.IconOnly
-                    onClicked: root.permanentDeleteRequested()
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }

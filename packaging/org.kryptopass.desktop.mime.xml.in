@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.kryptopass.backup">
+    <comment>KryptoPass encrypted backup</comment>
+    <comment xml:lang="es">Copia cifrada de KryptoPass</comment>
+    <generic-icon name="package-x-generic"/>
+    <glob pattern="*.kpb"/>
+  </mime-type>
+</mime-info>

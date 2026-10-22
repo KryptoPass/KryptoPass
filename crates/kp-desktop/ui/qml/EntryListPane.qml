@@ -15,14 +15,142 @@ Controls.Pane {
     required property real headerHeight
     property bool entryDraggingEnabled: false
     property bool searchEnabled: true
+    property bool contextMenuEnabled: true
+    property var editAction: null
+    property var moveAction: null
+    property var trashAction: null
+    property var favoriteAction: null
+    property var restoreAction: null
+    property var deleteAction: null
+    property var copyUsernameAction: null
+    property var copyPasswordAction: null
+    property var copyTotpAction: null
+    property var copyFingerprintAction: null
     readonly property bool hasSearchQuery: activeStore.query.trim().length > 0
     readonly property bool loading: keysMode ? keyStore.controller.busy : storeAdapter.controller.busy
     readonly property bool loadFailed: keysMode ? !!keyStore.controller.loadError : !!storeAdapter.controller.errorMessage
+    readonly property bool trashView: !keysMode && activeStore.scope === "trash"
+    readonly property bool hasCopyActions: !!copyUsernameAction || !!copyPasswordAction || !!copyTotpAction
+    readonly property bool hasVaultEntryActions: !!editAction || !!moveAction || !!favoriteAction || !!trashAction
+    readonly property bool hasTrashActions: !!restoreAction || !!deleteAction
+    readonly property bool hasContextMenuActions: keysMode ? !!copyFingerprintAction : trashView ? hasTrashActions : hasCopyActions || hasVaultEntryActions
 
     // The shell owns adapter mutations and the editor dialog; this pane reports user intent.
     signal detailRequested
     signal selectionRequested(string entryId)
     signal entryOpenRequested(var entry)
+    signal contextMenuRequested(string entryId, real x, real y)
+
+    function isContextMenuKey(event) {
+        return event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier));
+    }
+
+    function requestContextMenuAtItem(entryId, item, x, y) {
+        if (!contextMenuEnabled)
+            return;
+        const point = item.mapToItem(root, x, y);
+        contextMenuRequested(entryId, point.x, point.y);
+    }
+
+    function requestContextMenuForRow(entryId, item) {
+        requestContextMenuAtItem(entryId, item, item.width / 2, item.height / 2);
+    }
+
+    function openContextMenu(entryId, x, y) {
+        if (!contextMenuEnabled || !hasContextMenuActions || activeStore.selectedId !== entryId || !activeStore.visibleEntries.some(entry => entry.id === entryId))
+            return;
+        const point = root.mapToItem(contextMenu.parent, x, y);
+        contextMenu.popup(point.x, point.y);
+    }
+
+    onActiveStoreChanged: contextMenu.close()
+    onKeysModeChanged: contextMenu.close()
+    onStoreAdapterChanged: contextMenu.close()
+    onContextMenuEnabledChanged: {
+        if (!contextMenuEnabled)
+            contextMenu.close();
+    }
+
+    Connections {
+        target: root.activeStore
+        ignoreUnknownSignals: true
+        function onSelectedIdChanged() {
+            contextMenu.close();
+        }
+        function onVisibleEntriesChanged() {
+            contextMenu.close();
+        }
+        function onScopeChanged() {
+            contextMenu.close();
+        }
+        function onQueryChanged() {
+            contextMenu.close();
+        }
+    }
+
+    Connections {
+        target: root.storeAdapter.controller
+        ignoreUnknownSignals: true
+        function onLockedChanged() {
+            if (root.storeAdapter.controller.locked)
+                contextMenu.close();
+        }
+    }
+
+    Controls.Menu {
+        id: contextMenu
+        parent: Controls.Overlay.overlay
+
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.copyUsernameAction
+            action: root.copyUsernameAction
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.copyPasswordAction
+            action: root.copyPasswordAction
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.copyTotpAction
+            action: root.copyTotpAction
+        }
+        Controls.MenuSeparator {
+            visible: !root.keysMode && !root.trashView && root.hasCopyActions && root.hasVaultEntryActions
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.editAction
+            action: root.editAction
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.moveAction
+            action: root.moveAction
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.favoriteAction
+            action: root.favoriteAction
+        }
+        Controls.MenuSeparator {
+            visible: !root.keysMode && !root.trashView && !!root.trashAction && (!!root.editAction || !!root.moveAction || !!root.favoriteAction)
+        }
+        Controls.MenuItem {
+            visible: !root.keysMode && !root.trashView && !!root.trashAction
+            action: root.trashAction
+        }
+        Controls.MenuItem {
+            visible: root.trashView && !!root.restoreAction
+            action: root.restoreAction
+        }
+        Controls.MenuSeparator {
+            visible: root.trashView && !!root.restoreAction && !!root.deleteAction
+        }
+        Controls.MenuItem {
+            visible: root.trashView && !!root.deleteAction
+            action: root.deleteAction
+        }
+        Controls.MenuItem {
+            visible: root.keysMode && !!root.copyFingerprintAction
+            action: root.copyFingerprintAction
+        }
+    }
 
     Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 18
     Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 13
@@ -79,6 +207,20 @@ Controls.Pane {
                     if (activeFocus && currentIndex >= 0 && currentIndex < root.activeStore.visibleEntries.length)
                         root.selectionRequested(root.activeStore.visibleEntries[currentIndex].id);
                 }
+                Keys.onPressed: function (event) {
+                    if (!root.contextMenuEnabled || !root.isContextMenuKey(event))
+                        return;
+                    const entries = root.activeStore.visibleEntries;
+                    const index = entryList.currentIndex;
+                    if (index < 0 || index >= entries.length)
+                        return;
+                    const row = entryList.itemAtIndex(index);
+                    if (row)
+                        root.requestContextMenuForRow(entries[index].id, row);
+                    else
+                        root.requestContextMenuAtItem(entries[index].id, entryList, entryList.width / 2, entryList.height / 2);
+                    event.accepted = true;
+                }
                 delegate: Loader {
                     id: rowLoader
                     required property var modelData
@@ -87,6 +229,7 @@ Controls.Pane {
                     Component {
                         id: keyRow
                         KeyListDelegate {
+                            id: keyDelegate
                             focus: true
                             entry: rowLoader.modelData
                             highlighted: root.keyStore.selectedId === entry.id
@@ -94,6 +237,19 @@ Controls.Pane {
                                 root.selectionRequested(entry.id);
                                 entryList.forceActiveFocus();
                                 root.detailRequested();
+                            }
+                            Keys.onPressed: function (event) {
+                                if (root.contextMenuEnabled && root.isContextMenuKey(event)) {
+                                    root.requestContextMenuForRow(entry.id, keyDelegate);
+                                    event.accepted = true;
+                                }
+                            }
+                            TapHandler {
+                                acceptedButtons: Qt.RightButton
+                                enabled: root.contextMenuEnabled
+                                onTapped: function (eventPoint, button) {
+                                    root.requestContextMenuAtItem(keyDelegate.entry.id, keyDelegate, eventPoint.position.x, eventPoint.position.y);
+                                }
                             }
                         }
                     }
@@ -124,6 +280,19 @@ Controls.Pane {
                             onDoubleClicked: {
                                 if (!root.keysMode && !modelData.trashed && !root.storeAdapter.controller.busy)
                                     root.entryOpenRequested(modelData);
+                            }
+                            Keys.onPressed: function (event) {
+                                if (root.contextMenuEnabled && root.isContextMenuKey(event)) {
+                                    root.requestContextMenuForRow(modelData.id, entryDelegate);
+                                    event.accepted = true;
+                                }
+                            }
+                            TapHandler {
+                                acceptedButtons: Qt.RightButton
+                                enabled: root.contextMenuEnabled
+                                onTapped: function (eventPoint, button) {
+                                    root.requestContextMenuAtItem(entryDelegate.modelData.id, entryDelegate, eventPoint.position.x, eventPoint.position.y);
+                                }
                             }
                             DragHandler {
                                 id: entryDrag

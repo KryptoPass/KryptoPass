@@ -378,6 +378,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Esperando al agente GPG…</translation>
     </message>
     <message>
+      <source>Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red.</source>
+      <translation>Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red.</translation>
+    </message>
+    <message>
       <source>Failed to initialize QApplication</source>
       <translation>Failed to initialize QApplication</translation>
     </message>
@@ -599,6 +603,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La plantilla contiene un marcador desconocido.</source>
       <translation>La plantilla contiene un marcador desconocido.</translation>
+    </message>
+    <message>
+      <source>La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior.</source>
+      <translation>La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior.</translation>
+    </message>
+    <message>
+      <source>La política de red cambió. Se está cerrando la operación y no se reutilizará su ruta anterior.</source>
+      <translation>La política de red cambió. Se está cerrando la operación y no se reutilizará su ruta anterior.</translation>
+    </message>
+    <message>
+      <source>La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida.</source>
+      <translation>La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida.</translation>
+    </message>
+    <message>
+      <source>La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz.</source>
+      <translation>La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz.</translation>
     </message>
     <message>
       <source>La ruta de salida debe señalar un archivo.</source>
@@ -1836,10 +1856,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudieron cargar los nombres locales. La confianza se conserva.</translation>
     </message>
     <message>
-      <source>No se pudo abrir el perfil de pruebas.</source>
-      <translation>No se pudo abrir el perfil de pruebas.</translation>
-    </message>
-    <message>
       <source>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</source>
       <translation>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</translation>
     </message>
@@ -1856,12 +1872,40 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo guardar el nombre. La identidad y la confianza se conservan.</translation>
     </message>
     <message>
+      <source>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</source>
+      <translation>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la política de red. No se aplicaron cambios.</source>
+      <translation>No se pudo guardar la política de red. No se aplicaron cambios.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la política de red. No se inició una conexión.</source>
+      <translation>No se pudo guardar la política de red. No se inició una conexión.</translation>
+    </message>
+    <message>
       <source>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</source>
       <translation>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</translation>
     </message>
     <message>
       <source>No se pudo iniciar el listener de recuperación local.</source>
       <translation>No se pudo iniciar el listener de recuperación local.</translation>
+    </message>
+    <message>
+      <source>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</source>
+      <translation>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</translation>
+    </message>
+    <message>
+      <source>No se pudo leer la política de privacidad de red. No se inició una conexión.</source>
+      <translation>No se pudo leer la política de privacidad de red. No se inició una conexión.</translation>
+    </message>
+    <message>
+      <source>No se pudo localizar el archivo de política de red. No se aplicaron cambios.</source>
+      <translation>No se pudo localizar el archivo de política de red. No se aplicaron cambios.</translation>
+    </message>
+    <message>
+      <source>No se pudo localizar el archivo de política de red. No se inició una conexión.</source>
+      <translation>No se pudo localizar el archivo de política de red. No se inició una conexión.</translation>
     </message>
     <message>
       <source>No se pudo localizar el perfil de dispositivos.</source>
@@ -1874,6 +1918,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo preparar el servidor de conexión por Internet.</source>
       <translation>No se pudo preparar el servidor de conexión por Internet.</translation>
+    </message>
+    <message>
+      <source>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</source>
+      <translation>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</translation>
     </message>
     <message>
       <source>Notas</source>
@@ -1936,6 +1984,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Reglas de autocompletado conservadas como referencia</translation>
     </message>
     <message>
+      <source>Repeated transport diagnostics (addresses omitted)</source>
+      <translation>Repeated transport diagnostics (addresses omitted)</translation>
+    </message>
+    <message>
+      <source>STUN binding request from</source>
+      <translation>STUN binding request from</translation>
+    </message>
+    <message>
       <source>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</source>
       <translation>Se añadirán %1 carpetas y %2 elementos a la bóveda actual.</translation>
     </message>
@@ -1958,6 +2014,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Sin carpeta</source>
       <translation>Sin carpeta</translation>
+    </message>
+    <message>
+      <source>Solo retransmisión está activo y bloquea las conexiones LAN directas.</source>
+      <translation>Solo retransmisión está activo y bloquea las conexiones LAN directas.</translation>
     </message>
     <message>
       <source>TURN</source>
@@ -2676,6 +2736,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>destination folder does not exist</translation>
     </message>
     <message>
+      <source>discard success message</source>
+      <translation>discard success message</translation>
+    </message>
+    <message>
       <source>duplicate icon resource</source>
       <translation>duplicate icon resource</translation>
     </message>
@@ -2828,6 +2892,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>local time zone unavailable</translation>
     </message>
     <message>
+      <source>mDNS answers with different local ip</source>
+      <translation>mDNS answers with different local ip</translation>
+    </message>
+    <message>
+      <source>mDNS answers without AResource</source>
+      <translation>mDNS answers without AResource</translation>
+    </message>
+    <message>
       <source>missing icon resource</source>
       <translation>missing icon resource</translation>
     </message>
@@ -2846,6 +2918,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>no icon store</source>
       <translation>no icon store</translation>
+    </message>
+    <message>
+      <source>no such remote</source>
+      <translation>no such remote</translation>
     </message>
     <message>
       <source>not a login</source>
@@ -2988,6 +3064,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>stored secret recipient metadata is invalid</translation>
     </message>
     <message>
+      <source>timed out</source>
+      <translation>timed out</translation>
+    </message>
+    <message>
       <source>too many backup recipients were selected</source>
       <translation>too many backup recipients were selected</translation>
     </message>
@@ -2998,6 +3078,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>too many linked pairs</source>
       <translation>too many linked pairs</translation>
+    </message>
+    <message>
+      <source>unhandled STUN packet</source>
+      <translation>unhandled STUN packet</translation>
     </message>
     <message>
       <source>unreferenced icon resource</source>
@@ -3740,6 +3824,26 @@ Huella(s) detectadas:
       <translation>Servidor de conexión por Internet</translation>
     </message>
     <message>
+      <source>Exigir VPN para conexiones por Internet</source>
+      <translation>Exigir VPN para conexiones por Internet</translation>
+    </message>
+    <message>
+      <source>Permitir una excepción explícita para recuperación LAN</source>
+      <translation>Permitir una excepción explícita para recuperación LAN</translation>
+    </message>
+    <message>
+      <source>Usar solo retransmisión TURN</source>
+      <translation>Usar solo retransmisión TURN</translation>
+    </message>
+    <message>
+      <source>Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.</source>
+      <translation>Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.</translation>
+    </message>
+    <message>
+      <source>Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.</source>
+      <translation>Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.</translation>
+    </message>
+    <message>
       <source>Usar conexión por red local</source>
       <translation>Usar conexión por red local</translation>
     </message>
@@ -3949,18 +4053,6 @@ Huella(s) detectadas:
     <message>
       <source>Volver a los detalles de la clave</source>
       <translation>Volver a los detalles de la clave</translation>
-    </message>
-    <message>
-      <source>Favorito</source>
-      <translation>Favorito</translation>
-    </message>
-    <message>
-      <source>Restaurar</source>
-      <translation>Restaurar</translation>
-    </message>
-    <message>
-      <source>Eliminar definitivamente…</source>
-      <translation>Eliminar definitivamente…</translation>
     </message>
     <message>
       <source>%1 · %2</source>
@@ -5646,6 +5738,10 @@ https://cuenta.ejemplo.test</translation>
       <translation>Guarda o descarta los cambios de carpeta antes de salir.</translation>
     </message>
     <message>
+      <source>No se pudo abrir la carpeta del respaldo.</source>
+      <translation>No se pudo abrir la carpeta del respaldo.</translation>
+    </message>
+    <message>
       <source>Copiado al portapapeles</source>
       <translation>Copiado al portapapeles</translation>
     </message>
@@ -5668,18 +5764,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>&amp;Archivo</source>
       <translation>&amp;Archivo</translation>
-    </message>
-    <message>
-      <source>Importar desde otro gestor…</source>
-      <translation>Importar desde otro gestor…</translation>
-    </message>
-    <message>
-      <source>Crear copia de seguridad…</source>
-      <translation>Crear copia de seguridad…</translation>
-    </message>
-    <message>
-      <source>Restaurar copia de seguridad…</source>
-      <translation>Restaurar copia de seguridad…</translation>
     </message>
     <message>
       <source>&amp;Editar</source>
@@ -5748,10 +5832,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>15 minutos</source>
       <translation>15 minutos</translation>
-    </message>
-    <message>
-      <source>Dispositivos</source>
-      <translation>Dispositivos</translation>
     </message>
     <message>
       <source>A&amp;yuda</source>
@@ -6940,6 +7020,74 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Importar clave OpenPGP…</source>
       <translation>Importar clave OpenPGP…</translation>
+    </message>
+    <message>
+      <source>Importar desde otro gestor…</source>
+      <translation>Importar desde otro gestor…</translation>
+    </message>
+    <message>
+      <source>Crear copia de seguridad…</source>
+      <translation>Crear copia de seguridad…</translation>
+    </message>
+    <message>
+      <source>Restaurar copia de seguridad…</source>
+      <translation>Restaurar copia de seguridad…</translation>
+    </message>
+    <message>
+      <source>Mover a otra carpeta…</source>
+      <translation>Mover a otra carpeta…</translation>
+    </message>
+    <message>
+      <source>Dispositivos</source>
+      <translation>Dispositivos</translation>
+    </message>
+    <message>
+      <source>Carpetas</source>
+      <translation>Carpetas</translation>
+    </message>
+    <message>
+      <source>Claves</source>
+      <translation>Claves</translation>
+    </message>
+    <message>
+      <source>Todos los elementos</source>
+      <translation>Todos los elementos</translation>
+    </message>
+    <message>
+      <source>Favoritos</source>
+      <translation>Favoritos</translation>
+    </message>
+    <message>
+      <source>Papelera</source>
+      <translation>Papelera</translation>
+    </message>
+    <message>
+      <source>Favorito</source>
+      <translation>Favorito</translation>
+    </message>
+    <message>
+      <source>Restaurar elemento</source>
+      <translation>Restaurar elemento</translation>
+    </message>
+    <message>
+      <source>Eliminar elemento definitivamente…</source>
+      <translation>Eliminar elemento definitivamente…</translation>
+    </message>
+    <message>
+      <source>Copiar nombre de usuario</source>
+      <translation>Copiar nombre de usuario</translation>
+    </message>
+    <message>
+      <source>Copiar contraseña</source>
+      <translation>Copiar contraseña</translation>
+    </message>
+    <message>
+      <source>Copiar código de verificación</source>
+      <translation>Copiar código de verificación</translation>
+    </message>
+    <message>
+      <source>Mostrar en la carpeta</source>
+      <translation>Mostrar en la carpeta</translation>
     </message>
     <message>
       <source>Bloquear o desbloquear bóveda</source>

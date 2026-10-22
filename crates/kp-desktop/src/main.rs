@@ -100,9 +100,10 @@ fn init_tracing() {
 
     tracing_subscriber::registry()
         .with(filter)
-        .with(tracing_subscriber::fmt::layer().with_filter(
-            transport_diagnostics::PacketWarningFilter::new(),
-        ))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_filter(transport_diagnostics::PacketWarningFilter::new()),
+        )
         .init();
 }
 

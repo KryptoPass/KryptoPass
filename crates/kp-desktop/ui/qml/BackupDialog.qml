@@ -15,6 +15,8 @@ Controls.Dialog {
     property url inputPath: ""
     property url outputPath: ""
     property string completionMessage: ""
+    property url completedExportPath: ""
+    property var showInFolderAction: null
     signal openVaultRequested(url path)
 
     anchors.centerIn: parent
@@ -35,6 +37,7 @@ Controls.Dialog {
         inputPath = "";
         outputPath = "";
         completionMessage = "";
+        completedExportPath = "";
         const ownKeys = recipients.availableKeys.filter(key => key.hasSecret);
         recipients.selectedFingerprints = ownKeys.length === 1 ? [ownKeys[0].id] : [];
         backend.clearError();
@@ -46,10 +49,16 @@ Controls.Dialog {
     function openForRestore() {
         prepare(false);
     }
+    function openForRestoreFile(path) {
+        prepare(false);
+        if (opened)
+            inputPath = path;
+    }
 
     Backend.BackupController {
         id: backend
         onBackupExported: function (path) {
+            dialog.completedExportPath = path;
             dialog.completionMessage = qsTr("Copia de seguridad guardada en %1.").arg(dialog.displayPath(path));
         }
         onBackupRestored: function (path) {
@@ -57,6 +66,8 @@ Controls.Dialog {
             dialog.openVaultRequested(path);
         }
     }
+
+    onClosed: completedExportPath = ""
 
     KeyOperationDialog {
         id: keyRecovery
@@ -252,6 +263,10 @@ Controls.Dialog {
     }
 
     footer: Controls.DialogButtonBox {
+        Controls.Button {
+            visible: dialog.exportMode && !!dialog.completedExportPath.toString() && !!dialog.showInFolderAction
+            action: dialog.showInFolderAction
+        }
         Controls.Button {
             text: qsTr("Cerrar")
             enabled: !dialog.busy

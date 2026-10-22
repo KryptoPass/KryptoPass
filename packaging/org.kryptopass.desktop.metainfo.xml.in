@@ -27,6 +27,7 @@
   <launchable type="desktop-id">@APP_ID@.desktop</launchable>
   <provides>
     <binary>@APP_BIN@</binary>
+    <mediatype>application/vnd.kryptopass.backup</mediatype>
   </provides>
   <releases>
     <release version="@APP_VERSION@" date="@RELEASE_DATE@"/>

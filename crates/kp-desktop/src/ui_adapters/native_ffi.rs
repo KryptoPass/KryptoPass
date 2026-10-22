@@ -11,6 +11,7 @@ pub(crate) mod ffi {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("cxx-qt-lib/qstringlist.h");
+        include!("cxx-qt-lib/qurl.h");
         include!("cxx-qt-lib/core/qobjectmutptr.h");
         include!("native/sensitive_clipboard.h");
         include!("native/kde_contacts.h");
@@ -18,6 +19,7 @@ pub(crate) mod ffi {
         include!("native/entry_icons.h");
         include!("native/desktop_integration.h");
         include!("native/session_lock.h");
+        include!("native/file_manager.h");
         include!("cxx-qt-lib/qqmlengine.h");
         type QQmlEngine = cxx_qt_lib::QQmlEngine;
 
@@ -53,6 +55,10 @@ pub(crate) mod ffi {
         fn configure_shortcuts() -> QString;
         type QStringList = cxx_qt_lib::QStringList;
         type QObjectMutPtr = cxx_qt_lib::QObjectMutPtr;
+        type QUrl = cxx_qt_lib::QUrl;
+
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn show_in_folder(receiver: QObjectMutPtr, url: &QUrl);
 
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn install_session_lock_monitor(receiver: QObjectMutPtr);
