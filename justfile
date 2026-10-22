@@ -13,6 +13,8 @@ target_dir := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from met
 qml_local := target_dir / "cxxqt/qml_modules"
 desktop_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import desktop_binary; print(desktop_binary())'`
 app_id := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["app-id"])'`
+app_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["binary"])'`
+app_org := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["organization"])'`
 qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 
 _default:
@@ -225,6 +227,39 @@ handbook:
 install-dev-handbook:
     mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}"
     ln -sfn {{ quote(justfile_directory() / "doc/index.docbook") }} "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}/index.docbook"
+
+# Aparta los datos de la app para arrancarla como recién instalada; no borra nada.
+# No toca GnuPG, el llavero del sistema, kryptopass-signal ni el toolchain Qt.
+dev-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Match the executable only: the repository directory shares the binary's name.
+    if pgrep -f "^([^ ]*/)?{{ app_binary }}( |$)" >/dev/null; then
+        echo "Cierra KryptoPass antes de restablecerlo." >&2
+        exit 1
+    fi
+    data="${XDG_DATA_HOME:-$HOME/.local/share}"
+    config="${XDG_CONFIG_HOME:-$HOME/.config}"
+    state="${XDG_STATE_HOME:-$HOME/.local/state}"
+    cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+    backup="$data/{{ app_org }}-reset-$(date +%Y%m%d-%H%M%S)"
+    moved=0
+    for path in "$data/{{ app_id }}" "$config/{{ app_id }}" "$config/{{ app_org }}" "$state/{{ app_id }}staterc" "$cache/{{ app_org }}"; do
+        [ -e "$path" ] || continue
+        target="$backup${path#"$HOME"}"
+        mkdir -p "$(dirname "$target")"
+        mv "$path" "$target"
+        echo "movido: $path"
+        moved=1
+    done
+    if [ "$moved" -eq 0 ]; then
+        echo "No había datos de KryptoPass que apartar."
+        exit 0
+    fi
+    echo
+    echo "Respaldo en: $backup"
+    echo "Para volver atrás, con la app cerrada: just dev-reset (aparta lo nuevo) y luego"
+    echo "  cp -a \"$backup/.\" \"$HOME/\""
 
 translations:
     python3 packaging/translations.py update
