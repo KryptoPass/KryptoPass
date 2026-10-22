@@ -3127,7 +3127,19 @@ No incluye contraseñas ni valores de credenciales.
     </message>
   </context>
   <context>
-    <name>BackupDialog</name>
+    <name>BackupWindow</name>
+    <message>
+      <source>Elige dónde guardar la copia</source>
+      <translation>Elige dónde guardar la copia</translation>
+    </message>
+    <message>
+      <source>Elige al menos una clave</source>
+      <translation>Elige al menos una clave</translation>
+    </message>
+    <message>
+      <source>Elige la copia que quieres restaurar</source>
+      <translation>Elige la copia que quieres restaurar</translation>
+    </message>
     <message>
       <source>Crear copia de seguridad</source>
       <translation>Crear copia de seguridad</translation>
@@ -3137,120 +3149,112 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Restaurar copia de seguridad</translation>
     </message>
     <message>
-      <source>Copia de seguridad guardada en %1.</source>
-      <translation>Copia de seguridad guardada en %1.</translation>
-    </message>
-    <message>
-      <source>Guarda una copia cifrada de los datos de la bóveda actual, incluidos nombres y carpetas.</source>
-      <translation>Guarda una copia cifrada de los datos de la bóveda actual, incluidos nombres y carpetas.</translation>
-    </message>
-    <message>
-      <source>Crearemos y abriremos una bóveda nueva con los datos de la copia. No se mezclan con los datos que estás viendo ahora.</source>
-      <translation>Crearemos y abriremos una bóveda nueva con los datos de la copia. No se mezclan con los datos que estás viendo ahora.</translation>
-    </message>
-    <message>
-      <source>Para restaurar en otra PC también necesitas tus claves privadas. La copia de datos no las incluye: guárdalas por separado.</source>
-      <translation>Para restaurar en otra PC también necesitas tus claves privadas. La copia de datos no las incluye: guárdalas por separado.</translation>
-    </message>
-    <message>
-      <source>Usaremos automáticamente una de las claves con las que protegiste la copia. Su parte privada debe estar en tu llavero; no necesitas elegirla otra vez.</source>
-      <translation>Usaremos automáticamente una de las claves con las que protegiste la copia. Su parte privada debe estar en tu llavero; no necesitas elegirla otra vez.</translation>
-    </message>
-    <message>
-      <source>¿Cambiaste de PC? Importa tu clave privada antes de restaurar. La clave pública no basta. Si perdiste todas las claves privadas que abren la copia, no se puede recuperar.</source>
-      <translation>¿Cambiaste de PC? Importa tu clave privada antes de restaurar. La clave pública no basta. Si perdiste todas las claves privadas que abren la copia, no se puede recuperar.</translation>
-    </message>
-    <message>
-      <source>Importar clave privada…</source>
-      <translation>Importar clave privada…</translation>
-    </message>
-    <message>
-      <source>1. Dónde guardar la copia</source>
-      <translation>1. Dónde guardar la copia</translation>
-    </message>
-    <message>
-      <source>1. Qué copia restaurar</source>
-      <translation>1. Qué copia restaurar</translation>
-    </message>
-    <message>
-      <source>Cambiar copia…</source>
-      <translation>Cambiar copia…</translation>
-    </message>
-    <message>
-      <source>Seleccionar copia…</source>
-      <translation>Seleccionar copia…</translation>
-    </message>
-    <message>
-      <source>Cambiar destino…</source>
-      <translation>Cambiar destino…</translation>
-    </message>
-    <message>
-      <source>Elegir dónde guardar…</source>
-      <translation>Elegir dónde guardar…</translation>
-    </message>
-    <message>
-      <source>2. Quién podrá abrir la copia</source>
-      <translation>2. Quién podrá abrir la copia</translation>
-    </message>
-    <message>
-      <source>2. Dónde aparecerán tus datos</source>
-      <translation>2. Dónde aparecerán tus datos</translation>
-    </message>
-    <message>
-      <source>Al terminar verás los datos restaurados automáticamente. GnuPG pedirá la contraseña de la clave solo si necesita desbloquearla. Para leer tus secretos también necesitas sus claves originales.</source>
-      <translation>Al terminar verás los datos restaurados automáticamente. GnuPG pedirá la contraseña de la clave solo si necesita desbloquearla. Para leer tus secretos también necesitas sus claves originales.</translation>
-    </message>
-    <message>
-      <source>Selecciona al menos una clave. Asegúrate de conservar su clave privada para poder restaurar la copia.</source>
-      <translation>Selecciona al menos una clave. Asegúrate de conservar su clave privada para poder restaurar la copia.</translation>
-    </message>
-    <message>
       <source> (tu clave)</source>
       <translation> (tu clave)</translation>
     </message>
     <message>
-      <source>No tienes aquí la clave privada de las claves seleccionadas. Para restaurar esta copia tendrás que importarla o usar la PC donde la conservas.</source>
-      <translation>No tienes aquí la clave privada de las claves seleccionadas. Para restaurar esta copia tendrás que importarla o usar la PC donde la conservas.</translation>
+      <source>Copia cifrada de la bóveda actual</source>
+      <translation>Copia cifrada de la bóveda actual</translation>
     </message>
     <message>
-      <source>Respaldar clave privada…</source>
-      <translation>Respaldar clave privada…</translation>
+      <source>Restaurar en una bóveda nueva</source>
+      <translation>Restaurar en una bóveda nueva</translation>
     </message>
     <message>
-      <source>Respaldar la clave privada de %1</source>
-      <translation>Respaldar la clave privada de %1</translation>
+      <source>Destino</source>
+      <translation>Destino</translation>
+    </message>
+    <message>
+      <source>Sin destino</source>
+      <translation>Sin destino</translation>
+    </message>
+    <message>
+      <source>Elige una carpeta fuera de este equipo si puedes</source>
+      <translation>Elige una carpeta fuera de este equipo si puedes</translation>
+    </message>
+    <message>
+      <source>Elegir…</source>
+      <translation>Elegir…</translation>
+    </message>
+    <message>
+      <source>Cambiar…</source>
+      <translation>Cambiar…</translation>
+    </message>
+    <message>
+      <source>Cifrar con</source>
+      <translation>Cifrar con</translation>
     </message>
     <message>
       <source>Buscando tus claves…</source>
       <translation>Buscando tus claves…</translation>
     </message>
     <message>
-      <source>No hay claves disponibles para proteger la copia. Importa o crea una clave desde Claves y vuelve a intentarlo.</source>
-      <translation>No hay claves disponibles para proteger la copia. Importa o crea una clave desde Claves y vuelve a intentarlo.</translation>
+      <source>No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.</source>
+      <translation>No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.</translation>
     </message>
     <message>
-      <source>Elige dónde guardar la copia para continuar.</source>
-      <translation>Elige dónde guardar la copia para continuar.</translation>
+      <source>La copia no incluye tus claves privadas. Guárdalas aparte para poder restaurarla en otro equipo.</source>
+      <translation>La copia no incluye tus claves privadas. Guárdalas aparte para poder restaurarla en otro equipo.</translation>
     </message>
     <message>
-      <source>Selecciona una clave válida para continuar.</source>
-      <translation>Selecciona una clave válida para continuar.</translation>
+      <source>No tienes aquí la clave privada de las claves elegidas. Para restaurar necesitarás importarla o usar el equipo donde está.</source>
+      <translation>No tienes aquí la clave privada de las claves elegidas. Para restaurar necesitarás importarla o usar el equipo donde está.</translation>
     </message>
     <message>
-      <source>Todo listo para crear la copia.</source>
-      <translation>Todo listo para crear la copia.</translation>
+      <source>Respaldar clave privada…</source>
+      <translation>Respaldar clave privada…</translation>
     </message>
     <message>
-      <source>Selecciona una copia para continuar.</source>
-      <translation>Selecciona una copia para continuar.</translation>
+      <source>Copia</source>
+      <translation>Copia</translation>
     </message>
     <message>
-      <source>Todo listo para restaurar en una bóveda nueva.</source>
-      <translation>Todo listo para restaurar en una bóveda nueva.</translation>
+      <source>Suelta aquí una copia de KryptoPass</source>
+      <translation>Suelta aquí una copia de KryptoPass</translation>
+    </message>
+    <message>
+      <source>Archivos admitidos: .kpb, .gpg, .pgp</source>
+      <translation>Archivos admitidos: .kpb, .gpg, .pgp</translation>
+    </message>
+    <message>
+      <source>Examinar…</source>
+      <translation>Examinar…</translation>
+    </message>
+    <message>
+      <source>Qué pasará</source>
+      <translation>Qué pasará</translation>
+    </message>
+    <message>
+      <source>Se crea una bóveda nueva y se abre al terminar.</source>
+      <translation>Se crea una bóveda nueva y se abre al terminar.</translation>
+    </message>
+    <message>
+      <source>Tus datos actuales no se mezclan ni se modifican.</source>
+      <translation>Tus datos actuales no se mezclan ni se modifican.</translation>
+    </message>
+    <message>
+      <source>Se usa tu clave privada automáticamente; GnuPG pedirá su contraseña si hace falta.</source>
+      <translation>Se usa tu clave privada automáticamente; GnuPG pedirá su contraseña si hace falta.</translation>
+    </message>
+    <message>
+      <source>¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.</source>
+      <translation>¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.</translation>
+    </message>
+    <message>
+      <source>Importar clave privada…</source>
+      <translation>Importar clave privada…</translation>
+    </message>
+    <message>
+      <source>Copia guardada</source>
+      <translation>Copia guardada</translation>
     </message>
     <message>
       <source>Cerrar</source>
       <translation>Cerrar</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <source>Crear copia</source>
@@ -4349,10 +4353,6 @@ Huella(s) detectadas:
     <message>
       <source>No se pudo guardar la carpeta.</source>
       <translation>No se pudo guardar la carpeta.</translation>
-    </message>
-    <message>
-      <source>Cerrar</source>
-      <translation>Cerrar</translation>
     </message>
     <message>
       <source>Nombre</source>

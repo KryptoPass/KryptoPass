@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/StructuredSecretDetail.qml")
         .qml_file("ui/qml/SecretTextSection.qml")
         .qml_file("ui/qml/RecipientsChooser.qml")
-        .qml_file("ui/qml/BackupDialog.qml")
+        .qml_file("ui/qml/BackupWindow.qml")
         .qml_file("ui/qml/ImportWindow.qml")
         .qml_file("ui/qml/PasswordGenerator.qml")
         .qml_file("ui/qml/FolderEditor.qml")

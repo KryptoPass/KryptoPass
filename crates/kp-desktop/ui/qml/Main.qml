@@ -78,8 +78,8 @@ Controls.ApplicationWindow {
     property url pendingVaultPath: ""
     property string closeMessage: ""
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
-    readonly property bool mutationsBlocked: storeOperationBusy || backupDialog.busy || importWindow.busy || editor.savePending || folderEditor.pending
-    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupDialog.busy || importWindow.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
+    readonly property bool mutationsBlocked: storeOperationBusy || backupWindow.busy || importWindow.busy || editor.savePending || folderEditor.pending
+    readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupWindow.busy || importWindow.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
     readonly property bool localStoreErrorVisible: (editor.opened && !!editor.saveError) || (folderEditor.opened && !!folderEditor.saveError) || (moveDialog.opened && !!moveDialog.operationError) || (folderMoveDialog.opened && !!folderMoveDialog.operationError) || (deleteEntryDialog.opened && !!deleteEntryDialog.operationError) || (deleteFolderDialog.opened && !!deleteFolderDialog.operationError) || (passwordGenerator.opened && !!passwordGenerator.operationError)
     readonly property var activeStore: keysMode ? keys : store
     function selectSection(showKeys) {
@@ -197,8 +197,8 @@ Controls.ApplicationWindow {
             keyErrorDialog.close();
         if (importWindow.opened)
             importWindow.close();
-        if (backupDialog.opened)
-            backupDialog.close();
+        if (backupWindow.opened)
+            backupWindow.close();
         if (mainKeyOperationDialog.opened)
             mainKeyOperationDialog.close();
 
@@ -288,7 +288,7 @@ Controls.ApplicationWindow {
             launchActionTimer.start();
         if (shell.launchBackup.toString())
             Qt.callLater(function () {
-                backupDialog.openForRestoreFile(shell.launchBackup);
+                backupWindow.openForRestoreFile(shell.launchBackup);
             });
         if (Qt.application.arguments.indexOf("--screenshot-about") !== -1)
             Qt.callLater(function () {
@@ -525,21 +525,21 @@ Controls.ApplicationWindow {
         controller: shell
         actionId: "exportBackup"
         enabled: !root.mutationsBlocked
-        onTriggered: backupDialog.openForExport()
+        onTriggered: backupWindow.openForExport()
     }
     DesktopAction {
         id: restoreBackupAction
         controller: shell
         actionId: "restoreBackup"
         enabled: !root.mutationsBlocked
-        onTriggered: backupDialog.openForRestore()
+        onTriggered: backupWindow.openForRestore()
     }
     DesktopAction {
         id: showBackupInFolderAction
         controller: shell
         actionId: "showBackupInFolder"
-        enabled: backupDialog.opened && !backupDialog.busy && backupDialog.exportMode && !!backupDialog.completedExportPath.toString()
-        onTriggered: shell.showInFolder(backupDialog.completedExportPath)
+        enabled: backupWindow.opened && !backupWindow.busy && backupWindow.exportMode && !!backupWindow.completedExportPath.toString()
+        onTriggered: shell.showInFolder(backupWindow.completedExportPath)
     }
     DesktopAction {
         id: copyFingerprint
@@ -1311,7 +1311,7 @@ Controls.ApplicationWindow {
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.BusyIndicator {
-                    visible: !root.keysMode && (root.storeOperationBusy || backupDialog.busy || importWindow.busy)
+                    visible: !root.keysMode && (root.storeOperationBusy || backupWindow.busy || importWindow.busy)
                     running: visible
                     Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                     Layout.preferredHeight: width
@@ -1332,7 +1332,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupDialog.opened || importWindow.opened
+        externalModalOpen: devicePairingLab.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || helpDialog.opened || aboutDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }
@@ -1397,8 +1397,9 @@ Controls.ApplicationWindow {
         keyStore: keys
         onImported: store.controller.loadStore()
     }
-    BackupDialog {
-        id: backupDialog
+    BackupWindow {
+        id: backupWindow
+        transientParent: root
         keyStore: keys
         showInFolderAction: showBackupInFolderAction
         onOpenVaultRequested: function (path) {
