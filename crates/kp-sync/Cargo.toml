@@ -1,0 +1,29 @@
+[package]
+name = "kp-sync"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Signed offline revision ledger and reconciliation for KryptoPass"
+publish = false
+
+[lib]
+name = "kryptopass_sync"
+
+[dependencies]
+kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
+getrandom = "0.3"
+prost = "0.14.4"
+rusqlite = { version = "0.40.2", default-features = false }
+sha2 = "0.10"
+
+[dev-dependencies]
+kryptopass_identity = { package = "kp-identity", path = "../kp-identity", features = ["test-support"] }
+kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "macros", "sync", "time"] }
+
+[lints]
+workspace = true

@@ -1,10 +1,12 @@
-# Interoperabilidad futura con Android
+# Interoperabilidad con Android
 
 Android quedó fuera del primer hito Rust. Posteriormente el usuario autorizó
-comenzar la base Android y exigió implementación 100% Kotlin, sin Rust ni JNI.
-El repositorio `kryptopass-android` registra esa entrega y sus pruebas en
-`docs/android-security-progress.md`. Esto aún no supone un cliente de pairing
-operativo. El contrato compartido nace en Rust. Consultar el
+la implementación Kotlin, con el SDK nativo WebRTC como dependencia permitida.
+La lógica Android no incorpora el runtime Rust. Pairing, reconexión y transporte
+LAN/Internet ya cuentan con pruebas funcionales entre Desktop y Samsung; la
+bóveda local usa PGPainless y tiene pruebas de interoperabilidad con GnuPG.
+El repositorio `kryptopass-android` registra la evidencia y límites en
+`docs/android-security-progress.md`. Consultar el
 [plan completo](p2p-implementation-plan.md) y el [progreso](p2p-progress.md).
 
 ## Contrato a compartir
@@ -31,13 +33,33 @@ hash final, contexto canónico, firma, HKDF e índices SAS. El
 [catálogo completo](../crates/kp-pairing/tests/fixtures/matrix_sas_emoji_v1_16.json)
 fija los 64 IDs, emojis y nombres. La derivación exacta está en
 [pairing-security.md](pairing-security.md). Estas claves de fixtures no deben
-usarse en una aplicación. La base Android ya ejecuta estos vectores en Kotlin
-JVM: Torann reproduce los tres mensajes XX y el hash de Snow, y los helpers
-reproducen contexto, prueba y SAS. Esa dependencia es solo de tests; aún falta
-validar el proveedor real en Android, las pruebas adversariales del motor
-completo y la persistencia de confianza.
+usarse en una aplicación. Android ejecuta estos vectores en Kotlin JVM:
+Torann reproduce los tres mensajes XX y el hash de Snow, y los helpers
+reproducen contexto, prueba y SAS. El progreso de cada hito distingue las
+pruebas JVM, las instrumentadas y la revisión independiente pendiente.
 
-## Decisiones pendientes de la fase Android
+## Revisiones de sincronización v1
+
+El contrato normativo es [sync-model.md](sync-model.md). `SyncRevision` y
+`SyncRevisionBatch` se generan desde el mismo `.proto` en ambos repositorios.
+El sobre y los mensajes de fragmentación existentes conservan sus números;
+añadir objetos al esquema no habilita el dispatcher de sincronización.
+
+El motor Rust se valida primero con almacenes aislados. La futura implementación
+Kotlin debe reproducir exactamente la codificación canónica, firma, hash de
+objeto, límites, transacciones y reglas del grafo. Comparar IDs de padres como
+bytes **sin signo**; ni el orden de `Byte` de Kotlin ni el texto de un UUID
+definen el orden canónico. No firmar `encode()` de Wire o de Protobuf.
+
+Una revisión puede recibirse cifrada con la bóveda bloqueada, pero solo después
+de verificar autor autorizado, firma, hash y parentesco. El emisor debe cifrar
+también título, usuario y dominio dentro del contenido. SQLite confirma la
+escritura antes de emitir `SyncAck`; repetir tras un corte no duplica revisiones.
+Un borrado conserva su revisión y una edición concurrente conserva ambas ramas.
+La migración de las tablas locales actuales y el dispatcher de sesión siguen
+siendo trabajo posterior a esta puerta del núcleo.
+
+## Dependencias y límites
 
 Antes de elegir una biblioteca Noise JVM/Android hay que comprobar la suite
 `Noise_XX_25519_AESGCM_SHA256`, sus proveedores criptográficos, mantenimiento,
@@ -47,12 +69,11 @@ biblioteca compatible evaluada. La petición posterior del usuario excluye
 JNI/UniFFI y un runtime Rust en Android. No reimplementar manualmente Noise,
 AES-GCM, HKDF ni Ed25519.
 
-La generación Protobuf Kotlin y los adapters Keystore/BiometricPrompt ya tienen
-una base de implementación con tests JVM; el hardware real queda pendiente.
-La fase posterior evaluará WebRTC Native SDK, NsdManager y Room/SQLite.
-PGPainless necesita
-pruebas reales con las claves RSA y subclaves generadas por GnuPG antes de
-adoptarse para importar o descifrar una identidad OpenPGP.
+WebRTC Native SDK, NsdManager y SQLite están integrados; las pruebas de
+PGPainless con claves sintéticas GnuPG incluyen RSA y subclaves de cifrado.
+Pasar tests con proveedores simulados no valida Keystore/biometría de hardware.
+La política de red y sus restricciones verificables están documentadas aparte
+en [network-privacy-policy-v1.md](network-privacy-policy-v1.md).
 
 La copia autorizada de la clave privada OpenPGP debe permitir descifrado local
 con la PC apagada. La biometría restringe el acceso local a secretos y material

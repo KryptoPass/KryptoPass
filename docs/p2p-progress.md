@@ -9,8 +9,8 @@ mDNS; descubrimiento, pairing y reconexión LAN se comprobaron manualmente entre
 Desktop y Samsung el 2026-10-18. Reutiliza Noise/pairing/trust
 y no habilita sincronización ni GPG. El usuario reactivó las pruebas funcionales
 para reparar estos flujos; solo la revisión de seguridad independiente sigue
-pausada. La recuperación tras cortes y reinicios tiene código y pruebas nuevas,
-pero su comprobación completa en LAN real sigue pendiente.
+pausada. La recuperación tras cortes y reinicios ya tiene ensayos reales y
+pruebas automáticas; quedan matrices adicionales de VPN/LAN y segundo plano.
 Contrato e instrucciones: [transporte LAN](lan-transport-v1.md).
 Desktop: `just pairing-lab`.
 La copia conserva exactamente el archivo entregado por el usuario, incluida
@@ -19,7 +19,7 @@ el plan no debe marcarse como implementado por la mera existencia de interfaces.
 
 ## Estado acumulado — núcleo, pairing y laboratorio LAN
 
-Actualizado: 2026-10-19. Coordinación y auditoría: agente principal;
+Actualizado: 2026-10-22. Coordinación y auditoría de integración: agente principal;
 implementación y pruebas: agentes integrados `gpt-6-luna`, esfuerzo `max`.
 Orca no está disponible porque su registro apunta a una AppImage ausente;
 el usuario autorizó expresamente el mecanismo integrado de Codex.
@@ -34,11 +34,11 @@ el usuario autorizó expresamente el mecanismo integrado de Codex.
 | Noise XX, firmas y SAS | Implementado; demo satisfactoria | `just p2p-demo`: siete emojis iguales, dos aprobaciones simuladas, confianza reabierta y reconexión sin SAS |
 | Pruebas adversariales y vectores | Suite específica satisfactoria | 29 tests: 17 adversariales, 3 de flujo, 4 propiedades y 5 vectores; 128 casos por propiedad |
 | Auditoría y verificaciones del workspace | Aceptadas | Formato y Clippy globales pasan; 286 tests del workspace pasan, sin fallos ni ignorados |
-| WebRTC / descubrimiento LAN | Implementado en laboratorio debug, prueba manual satisfactoria | Desktop ↔ Samsung: descubrimiento, pairing con confianza recíproca y reconexión confirmados; suites y revisión pendientes |
-| Primitivas de dispositivos / sesión activa | Integradas en UI Desktop y Android | `kp-devices`, snapshots, sesión retenida y acciones de conexión/limpieza; prueba sostenida pendiente |
-| Recuperación tras Wi-Fi / reinicio / nueva IP | Implementada; pruebas automáticas satisfactorias, LAN real pendiente | Escucha de proceso Desktop, routing persistente Android, nuevo Noise contra claves autorizadas; ver connection-recovery-v1.md |
+| WebRTC / descubrimiento LAN | Implementado; pruebas funcionales satisfactorias | Desktop ↔ Samsung: descubrimiento, pairing, confianza recíproca y reconexión; revisión independiente pendiente |
+| Primitivas de dispositivos / sesión activa | Integradas y retención funcional comprobada | `kp-devices`, snapshots, sesión retenida, conexión/limpieza y observación de ruta real |
+| Recuperación tras Wi-Fi / reinicio / nueva IP | Implementada; ensayos reales y suites satisfactorios | Nuevo Noise contra claves autorizadas, cortes Wi-Fi y reinicios; matriz VPN→LAN física pendiente; ver evidencia al final |
 | Internet / fase 6 adelantada por el usuario | WAN directa y TURN verificados con Samsung | WSS Cloudflare, broker firmado y credenciales temporales; relay/relay forzado, modo normal con datos móviles y vuelta a Wi-Fi; selección LAN/Internet automática y sesiones largas pendientes |
-| Sincronización / OpenPGP | Sync pendiente; base OpenPGP local Android implementada | Desktop conserva GnuPG; Android PGPainless con seis tests de interoperabilidad y diez instrumentados; envío de claves pendiente |
+| Sincronización / OpenPGP | Núcleo Rust de Sync validado; integración apps pendiente | `kp-sync`: 26 tests y demo offline; contrato/vectores preparados para Kotlin. Desktop conserva GnuPG y Android PGPainless local; envío de claves pendiente |
 | Android Kotlin | Laboratorio integrado | Lógica Kotlin sin Rust; SDK WebRTC nativo C++/JNI autorizado el 2026-10-18, progreso propio |
 
 ## Inspección y ajustes mínimos
@@ -1069,3 +1069,31 @@ la VPN del sistema se ha dejado intacta. Las pruebas sintéticas sí cubren el
 cambio de generación, elección de IP nueva y rechazo de IP ausente/no asignada.
 La restricción VPN verificable, la captura de tráfico para fugas y la revisión
 independiente siguen pendientes; no se presenta como garantía de producción.
+
+
+## Fase 4 — núcleo causal Rust — 2026-10-22
+
+Se retoma el plan original con `kp-sync`, independiente de Qt, OpenPGP y red.
+Incluye revisiones firmadas Ed25519 con bytes canónicos, ledger SQLite privado,
+CAS de cabezas, grafo de conflictos, tombstones, validación transaccional y
+reconciliación idempotente por lotes Protobuf. Reutiliza identidades/trust,
+fragmentación y transporte en memoria existentes. No migra la bóveda actual.
+
+`just test-sync`: **26 aprobadas, cero fallos**, un estrés de 10000 revisiones
+opt-in ignorado. `just sync-demo` conserva dos ramas offline, las une solo
+con un merge explícito y mantiene el borrado tras repetir un ancestro.
+`just verify`: **exit 0**, formato/Clippy y todas sus puertas; **374 tests Rust**
+y **233 QML** aprobados. El workspace tiene dos opt-in ignorados: TURN en vivo
+y el estrés de Sync. La prueba de capacidad de 64 MiB tomó 46,17 s en debug;
+no se da por medido el rendimiento de producción.
+
+Android recibió esquema idéntico, contrato y dos vectores independientes.
+`just check-protocol` pasa con **22 tests**, generación y hash final compartido.
+El ledger Kotlin, negociación de bóveda/autores, dispatcher Noise, progreso
+por dispositivo y adaptación transaccional de ambas bóvedas siguen pendientes.
+**No se declara completa la fase 4 ni se habilita Sync sobre datos reales.**
+La transferencia privada sigue separada y la revisión independiente pausada.
+
+[Contrato](sync-model.md), [evidencia y límites](sync-core-evidence-2026-10-22.md),
+[ejecución local](../crates/kp-sync/README.md). El siguiente recorrido Kotlin
+está en `docs/sync-kotlin-next-step.md` del repositorio Android.

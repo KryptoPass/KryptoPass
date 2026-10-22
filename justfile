@@ -96,6 +96,18 @@ test-network-privacy:
 test-p2p:
     cargo test -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
 
+# Ledger causal firmado, codecs y convergencia offline; sin bóveda real ni red.
+test-sync:
+    cargo test -p kp-sync
+
+# Estrés opt-in de capacidad; no forma parte de la suite rápida del ledger.
+test-sync-stress:
+    cargo test -p kp-sync --test ledger_limits -- --ignored
+
+# Demostración aislada: edición simultánea, merge explícito y borrado persistente.
+sync-demo:
+    cargo run -p kp-sync --example offline_sync
+
 # Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
 p2p-demo:
     cargo run -p kp-pairing --example pairing_demo

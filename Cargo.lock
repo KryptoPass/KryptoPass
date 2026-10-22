@@ -2198,6 +2198,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kp-sync"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "kp-identity",
+ "kp-protocol",
+ "kp-transport",
+ "proptest",
+ "prost",
+ "rusqlite",
+ "serde_json",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "kp-transport"
 version = "0.1.0"
 dependencies = [

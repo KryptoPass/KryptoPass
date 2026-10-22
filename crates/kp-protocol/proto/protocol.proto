@@ -151,6 +151,32 @@ message SyncConflict {
   repeated bytes revision_ids = 2; // 2 through 16 unique 16-byte IDs
 }
 
+enum SyncOperation {
+  SYNC_OPERATION_UNSPECIFIED = 0;
+  SYNC_OPERATION_WRITE = 1;
+  SYNC_OPERATION_DELETE = 2;
+}
+
+// Immutable signed ciphertext object. Signature bytes use the canonical
+// representation documented in docs/sync-model.md; protobuf bytes are not signed.
+message SyncRevision {
+  bytes vault_id = 1;                       // 16-byte ID; must not be all zero
+  bytes record_id = 2;                      // 16-byte ID; must not be all zero
+  bytes revision_id = 3;                    // 16-byte ID; must not be all zero
+  repeated bytes parent_revision_ids = 4;   // 0..16 unique sorted 16-byte IDs
+  bytes author_device_id = 5;               // 32 bytes
+  SyncOperation operation = 6;              // WRITE or DELETE
+  bytes ciphertext = 7;                     // opaque; <= 2 MiB for WRITE, empty for DELETE
+  bytes content_hash = 8;                   // SHA-256(ciphertext), 32 bytes
+  bytes signature = 9;                      // strict Ed25519 signature, 64 bytes
+}
+
+// One bounded transfer unit; every revision's vault_id must match this field.
+message SyncRevisionBatch {
+  bytes vault_id = 1;                 // 16-byte ID; must not be all zero
+  repeated SyncRevision revisions = 2; // 0..32 revisions; encoded batch <= 8 MiB
+}
+
 // These messages reserve the future key-provisioning wire format. Fase 1
 // exposes no handler that reads, exports, imports, or persists private keys.
 message KeyTransferOffer {

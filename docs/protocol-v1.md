@@ -14,6 +14,13 @@ persistence are implemented by `kp-pairing` and documented in
 import/export remain inactive; decoding their reserved messages does not
 perform those operations.
 
+Phase 4 adds the standalone ciphertext revision codec and SQLite ledger in
+`kp-sync`. Its signed object format and graph rules are defined in
+[sync-model.md](sync-model.md). These objects are carried inside reassembled
+`SyncChunk` bytes; they do not add envelope message types or enable live
+application synchronization. A parsed object must still pass author, signature,
+vault and graph checks before it is committed.
+
 ## Envelope and framing
 
 Every in-session frame is one protobuf Envelope:

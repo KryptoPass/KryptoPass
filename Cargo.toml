@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/kp-desktop", "crates/kp-core", "crates/kp-import", "crates/kp-browser", "crates/kp-memsec", "crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "crates/kp-devices", "crates/kp-pairing-lab", "crates/kp-lan"]
+members = ["crates/kp-desktop", "crates/kp-core", "crates/kp-import", "crates/kp-browser", "crates/kp-memsec", "crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "crates/kp-devices", "crates/kp-pairing-lab", "crates/kp-lan", "crates/kp-sync"]
 # Por defecto solo la app; el resto con --workspace / -p.
 default-members = ["crates/kp-desktop"]
 
