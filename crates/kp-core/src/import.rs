@@ -41,6 +41,8 @@ pub struct ImportItem {
 pub struct ImportBatch {
     pub folders: Vec<ImportFolder>,
     pub items: Vec<ImportItem>,
+    /// Companion pairs as item indexes; each item takes part in at most one link.
+    pub links: Vec<(usize, usize)>,
 }
 
 /// The application chooses placement; providers cannot select a destination.
@@ -97,6 +99,17 @@ impl ImportBatch {
                 return Err(ImportValidationError::Content);
             }
             encode_content(&item.content).map_err(|_| ImportValidationError::Content)?;
+        }
+        let mut linked = vec![false; self.items.len()];
+        for &(first, second) in &self.links {
+            if first >= self.items.len() || second >= self.items.len() || first == second {
+                return Err(ImportValidationError::Content);
+            }
+            for index in [first, second] {
+                if std::mem::replace(&mut linked[index], true) {
+                    return Err(ImportValidationError::Content);
+                }
+            }
         }
         Ok(())
     }

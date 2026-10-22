@@ -55,14 +55,6 @@
       <translation>%1 elementos de un tipo no compatible no se importarán.</translation>
     </message>
     <message>
-      <source>%1 elementos guardarán sus fechas originales como campos.</source>
-      <translation>%1 elementos guardarán sus fechas originales como campos.</translation>
-    </message>
-    <message>
-      <source>%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.</source>
-      <translation>%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.</translation>
-    </message>
-    <message>
       <source>%1 elementos tienen adjuntos que no se importarán.</source>
       <translation>%1 elementos tienen adjuntos que no se importarán.</translation>
     </message>
@@ -217,6 +209,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Copia privada guardada con permisos 0600 en {}.{}</source>
       <translation>Copia privada guardada con permisos 0600 en {}.{}</translation>
+    </message>
+    <message>
+      <source>Creado el %1</source>
+      <translation>Creado el %1</translation>
     </message>
     <message>
       <source>Credencial creada</source>
@@ -1034,6 +1030,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>%1 debe ser un archivo local regular.</translation>
     </message>
     <message>
+      <source>%1 elementos guardarán sus fechas originales en las notas.</source>
+      <translation>%1 elementos guardarán sus fechas originales en las notas.</translation>
+    </message>
+    <message>
+      <source>%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.</source>
+      <translation>%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.</translation>
+    </message>
+    <message>
       <source>%1 supera el tamaño permitido.</source>
       <translation>%1 supera el tamaño permitido.</translation>
     </message>
@@ -1769,16 +1773,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Favoritos</translation>
     </message>
     <message>
-      <source>Fecha de creación (Unix)</source>
-      <translation>Fecha de creación (Unix)</translation>
-    </message>
-    <message>
-      <source>Fecha de modificación (Unix)</source>
-      <translation>Fecha de modificación (Unix)</translation>
-    </message>
-    <message>
       <source>Fechas originales</source>
       <translation>Fechas originales</translation>
+    </message>
+    <message>
+      <source>Fechas originales: %1</source>
+      <translation>Fechas originales: %1</translation>
     </message>
     <message>
       <source>Identidades</source>
@@ -1839,6 +1839,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Logins</source>
       <translation>Logins</translation>
+    </message>
+    <message>
+      <source>Modificado el %1</source>
+      <translation>Modificado el %1</translation>
     </message>
     <message>
       <source>No hay dispositivos autorizados. Crea una invitación para vincular Android.</source>

@@ -104,23 +104,7 @@ fn append_entry(
         mut additional_fields,
         ..
     } = entry;
-    if created_at.is_some() || modified_at.is_some() {
-        adaptations.timestamps_as_fields += 1;
-        for (label, value) in [
-            ("Fecha de creación (Unix)", created_at),
-            ("Fecha de modificación (Unix)", modified_at),
-        ] {
-            if let Some(value) = value {
-                additional_fields.push(EntryField {
-                    label: label.into(),
-                    value: value.to_string().into(),
-                    concealed: false,
-                    multiline: false,
-                });
-            }
-        }
-    }
-    let content = match content {
+    let mut content = match content {
         EntryContent::Login(login) => {
             let username = if login.username.is_empty() {
                 login.email.clone()
@@ -190,6 +174,7 @@ fn append_entry(
             notes: identity.notes,
         }),
         EntryContent::Custom(mut custom) => {
+            // A custom secret already holds fields, so extras need no companion.
             custom.fields.append(&mut additional_fields);
             SecretContent::Custom(core::CustomContent {
                 records: records(custom.fields),
@@ -233,8 +218,26 @@ fn append_entry(
             notes: license.notes,
         }),
     };
-    // Extra concealed fields remain independently concealed in a custom entry.
+    // Original dates are plain context, so they go to the notes instead of a companion.
+    if let Some(line) = original_dates_line(created_at, modified_at) {
+        let notes = notes_mut(&mut content);
+        if !notes.is_empty() {
+            notes.push_str("\n\n");
+        }
+        notes.push_str(&line);
+        adaptations.timestamps_as_fields += 1;
+    }
+    let main = batch.items.len();
+    batch.items.push(ImportItem {
+        title: title.to_string(),
+        content,
+        folder,
+        favorite,
+        trashed,
+    });
+    // Extra fields keep their concealment in a custom secret linked to the entry.
     if !additional_fields.is_empty() {
+        let companion = batch.items.len();
         batch.items.push(ImportItem {
             title: title.to_string(),
             folder,
@@ -245,16 +248,56 @@ fn append_entry(
                 notes: SensitiveText::new(),
             }),
         });
+        batch.links.push((main, companion));
         adaptations.additional_entries += 1;
     }
-    batch.items.push(ImportItem {
-        title: title.to_string(),
-        content,
-        folder,
-        favorite,
-        trashed,
-    });
     Ok(())
+}
+
+fn notes_mut(content: &mut SecretContent) -> &mut SensitiveText {
+    match content {
+        SecretContent::Login(content) => &mut content.notes,
+        SecretContent::Note(content) => &mut content.notes,
+        SecretContent::Custom(content) => &mut content.notes,
+        SecretContent::Card(content) => &mut content.notes,
+        SecretContent::Totp(content) => &mut content.notes,
+        SecretContent::Identity(content) => &mut content.notes,
+        SecretContent::Wifi(content) => &mut content.notes,
+        SecretContent::License(content) => &mut content.notes,
+        SecretContent::SshKey(content) => &mut content.notes,
+    }
+}
+
+fn original_dates_line(created_at: Option<u64>, modified_at: Option<u64>) -> Option<String> {
+    let parts: Vec<_> = [
+        ("Creado el %1", created_at),
+        ("Modificado el %1", modified_at),
+    ]
+    .into_iter()
+    .filter_map(|(label, value)| {
+        value.map(|seconds| crate::i18n::format(label, &[utc_date(seconds)]))
+    })
+    .collect();
+    (!parts.is_empty()).then(|| crate::i18n::format("Fechas originales: %1", &[parts.join(" · ")]))
+}
+
+/// Calendar date (UTC) for Unix seconds, using the proleptic Gregorian calendar.
+fn utc_date(seconds: u64) -> String {
+    let days = i64::try_from(seconds / 86_400).unwrap_or(i64::MAX / 2) + 719_468;
+    let era = days.div_euclid(146_097);
+    let day_of_era = days.rem_euclid(146_097);
+    let year_of_era =
+        (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_index = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * month_index + 2) / 5 + 1;
+    let month = if month_index < 10 {
+        month_index + 3
+    } else {
+        month_index - 9
+    };
+    let year = year_of_era + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}")
 }
 
 fn otp(value: OneTimePassword) -> Result<Option<core::TotpConfig>, ImportError> {

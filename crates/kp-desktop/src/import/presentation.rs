@@ -100,7 +100,7 @@ pub(crate) fn warnings_json(plan: &PreparedImport) -> String {
     );
     push(
         adaptations.additional_entries,
-        "%1 elementos tendrán un secreto personalizado aparte con sus campos adicionales.",
+        "%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.",
         false,
     );
     push(
@@ -110,7 +110,7 @@ pub(crate) fn warnings_json(plan: &PreparedImport) -> String {
     );
     push(
         adaptations.timestamps_as_fields,
-        "%1 elementos guardarán sus fechas originales como campos.",
+        "%1 elementos guardarán sus fechas originales en las notas.",
         false,
     );
     serde_json::Value::Array(notes).to_string()

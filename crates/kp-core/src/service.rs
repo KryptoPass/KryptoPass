@@ -661,7 +661,23 @@ impl<S: crate::ports::ImportStorage, G: OpenPgp> crate::import::ImportReceiver
                 revision: 0,
             });
         }
-        self.storage.append_import(&folders, &secrets)?;
+        let links: Vec<_> = batch
+            .links
+            .iter()
+            .map(|&(first, second)| {
+                let (first, second) = (secrets[first].id, secrets[second].id);
+                // Links are stored with endpoints in UUID order.
+                if first.0 < second.0 {
+                    crate::SecretLink { first, second }
+                } else {
+                    crate::SecretLink {
+                        first: second,
+                        second: first,
+                    }
+                }
+            })
+            .collect();
+        self.storage.append_import(&folders, &secrets, &links)?;
         Ok(ImportReceipt {
             folders_added: folders.len(),
             items_added: secrets.len(),

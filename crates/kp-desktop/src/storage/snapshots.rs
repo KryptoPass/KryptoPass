@@ -218,8 +218,14 @@ fn insert_encrypted_batch(
 }
 
 impl ImportStorage for SqliteStorage {
-    fn append_import(&mut self, folders: &[Folder], secrets: &[Secret]) -> Result<()> {
+    fn append_import(
+        &mut self,
+        folders: &[Folder],
+        secrets: &[Secret],
+        links: &[SecretLink],
+    ) -> Result<()> {
         validate_encrypted_batch(folders, secrets, true)?;
+        validate_backup_links(links, secrets)?;
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -241,6 +247,7 @@ impl ImportStorage for SqliteStorage {
             *next = next.checked_add(1).context("folder order overflow")?;
         }
         insert_encrypted_batch(&transaction, &ordered, secrets)?;
+        insert_imported_secret_links(&transaction, links)?;
         transaction
             .commit()
             .context("could not commit additive import")

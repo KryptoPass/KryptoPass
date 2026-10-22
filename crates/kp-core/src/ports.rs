@@ -129,5 +129,10 @@ pub trait OpenPgp {
 /// Must reject ID collisions, missing parents, and cycles; preserve sibling
 /// order by appending new folders. Any failure leaves the existing store intact.
 pub trait ImportStorage: Storage {
-    fn append_import(&mut self, folders: &[Folder], secrets: &[Secret]) -> Result<()>;
+    fn append_import(
+        &mut self,
+        folders: &[Folder],
+        secrets: &[Secret],
+        links: &[SecretLink],
+    ) -> Result<()>;
 }

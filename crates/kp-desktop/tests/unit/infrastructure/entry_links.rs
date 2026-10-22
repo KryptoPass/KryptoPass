@@ -217,3 +217,34 @@ fn schema_v4_migration_adds_empty_links_without_changing_secret_data() {
         .unwrap();
     assert_eq!(version, 5);
 }
+
+#[test]
+fn additive_import_stores_companion_links_and_rejects_reused_endpoints() {
+    use kryptopass_core::{ImportStorage, Storage};
+
+    let directory = TestDirectory::new();
+    let mut storage = directory.store("import-links.sqlite3");
+    let login = secret(SecretId::new(), "Imported login");
+    let companion = secret(SecretId::new(), "Imported login");
+    let link = pair(login.id, companion.id);
+    storage
+        .append_import(&[], &[login, companion], &[link])
+        .unwrap();
+    assert_eq!(storage.list_secret_links().unwrap(), vec![link]);
+
+    let first = secret(SecretId::new(), "First");
+    let second = secret(SecretId::new(), "Second");
+    let third = secret(SecretId::new(), "Third");
+    let reused = [pair(first.id, second.id), pair(first.id, third.id)];
+    assert!(
+        storage
+            .append_import(&[], &[first, second, third], &reused)
+            .is_err()
+    );
+    assert_eq!(
+        storage.list_secrets().unwrap().len(),
+        2,
+        "a rejected batch writes nothing"
+    );
+    assert_eq!(storage.list_secret_links().unwrap(), vec![link]);
+}

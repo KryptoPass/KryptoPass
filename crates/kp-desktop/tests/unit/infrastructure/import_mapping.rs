@@ -51,7 +51,7 @@ fn assert_records(custom: &CustomContent, expected: &[(&str, &str, bool, bool)])
 }
 
 #[test]
-fn login_preserves_concealed_fields_and_timestamps_in_a_companion_without_exposing_notes() {
+fn login_keeps_concealed_fields_in_a_linked_companion_and_dates_in_notes() {
     let hidden_value = "\n  synthetic-recovery-α  \nsecond code\n";
     let opaque_value = "synthetic-opaque-secret";
     let warning = EntryWarning {
@@ -147,7 +147,10 @@ fn login_preserves_concealed_fields_and_timestamps_in_a_companion_without_exposi
             "https://example.invalid/other"
         ]
     );
-    assert_eq!(login.notes.as_str(), "Original login notes");
+    assert_eq!(
+        login.notes.as_str(),
+        "Original login notes\n\nFechas originales: Creado el 2023-11-14 · Modificado el 2023-11-14"
+    );
     assert!(!login.notes.contains(hidden_value));
     assert!(!login.notes.contains(opaque_value));
 
@@ -160,8 +163,6 @@ fn login_preserves_concealed_fields_and_timestamps_in_a_companion_without_exposi
         &[
             ("Recovery code", hidden_value, true, true),
             ("Recovery code", opaque_value, true, false),
-            ("Fecha de creación (Unix)", "1700000000", false, false),
-            ("Fecha de modificación (Unix)", "1700000123", false, false),
             (
                 "Correo electrónico",
                 "synthetic@example.invalid",
@@ -184,6 +185,14 @@ fn login_preserves_concealed_fields_and_timestamps_in_a_companion_without_exposi
         }
     );
     assert_eq!(prepared.warnings, vec![warning]);
+    let primary_index = prepared
+        .batch
+        .items
+        .iter()
+        .position(|item| matches!(&item.content, SecretContent::Login(_)))
+        .unwrap();
+    let companion_index = 1 - primary_index;
+    assert_eq!(prepared.batch.links, vec![(primary_index, companion_index)]);
     assert_eq!(prepared.adaptations.additional_entries, 1);
     assert_eq!(prepared.adaptations.timestamps_as_fields, 1);
     assert_eq!(prepared.adaptations.aliases_as_notes, 0);
@@ -192,7 +201,7 @@ fn login_preserves_concealed_fields_and_timestamps_in_a_companion_without_exposi
 }
 
 #[test]
-fn custom_merges_concealed_additional_fields_and_dates_without_creating_a_companion() {
+fn custom_merges_concealed_additional_fields_and_keeps_dates_in_notes() {
     let hidden_value = "synthetic-custom-secret\nsecond line";
     let source = ImportedEntries::new(
         folders(),
@@ -237,14 +246,17 @@ fn custom_merges_concealed_additional_fields_and_dates_without_creating_a_compan
     let SecretContent::Custom(custom) = &item.content else {
         panic!("a custom entry must retain its content type");
     };
-    assert_eq!(custom.notes.as_str(), "Original custom notes");
+    assert_eq!(
+        custom.notes.as_str(),
+        "Original custom notes\n\nFechas originales: Creado el 1970-01-01"
+    );
     assert!(!custom.notes.contains(hidden_value));
+    assert!(prepared.batch.links.is_empty());
     assert_records(
         custom,
         &[
             ("Existing field", "original value", false, false),
             ("Hidden extra", hidden_value, true, true),
-            ("Fecha de creación (Unix)", "0", false, false),
         ],
     );
     assert_eq!(
@@ -296,4 +308,48 @@ fn prepare_rejects_extra_fields_that_exceed_core_custom_record_capacity() {
     assert_eq!(source.entries()[0].additional_fields.len(), 101);
 
     assert!(matches!(super::prepare(source), Err(ImportError::Content)));
+}
+
+#[test]
+fn login_with_only_dates_stays_a_single_item() {
+    let source = ImportedEntries::new(
+        folders(),
+        vec![Entry {
+            title: "Synthetic dated login".into(),
+            folder: Some(FolderId(42)),
+            content: EntryContent::Login(LoginEntry {
+                username: "synthetic-user".into(),
+                password: "synthetic-login-password".into(),
+                ..LoginEntry::default()
+            }),
+            favorite: false,
+            trashed: false,
+            created_at: Some(1_700_000_000),
+            modified_at: Some(1_709_251_200),
+            additional_fields: vec![],
+        }],
+        vec![],
+        1,
+        1,
+        &ImportLimits::default(),
+    )
+    .unwrap();
+
+    let prepared = super::prepare(source).unwrap();
+
+    assert_eq!(
+        prepared.batch.items.len(),
+        1,
+        "dates must not create a companion"
+    );
+    assert!(prepared.batch.links.is_empty());
+    assert_eq!(prepared.adaptations.additional_entries, 0);
+    assert_eq!(prepared.adaptations.timestamps_as_fields, 1);
+    let SecretContent::Login(login) = &prepared.batch.items[0].content else {
+        panic!("the entry must remain a login");
+    };
+    assert_eq!(
+        login.notes.as_str(),
+        "Fechas originales: Creado el 2023-11-14 · Modificado el 2024-03-01"
+    );
 }
