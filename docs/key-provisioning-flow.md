@@ -5,10 +5,12 @@ Android será recibir la identidad OpenPGP seleccionada desde un Desktop ya
 emparejado. Importar una copia protegida desde archivo es una alternativa con
 pantalla dedicada (`Page.KEY_IMPORT`), no un requisito previo al pairing.
 
-Estado: **flujo a implementar**, no habilitado. Ya están implementados el
-canal Noise autenticado y el importador OpenPGP local, pero no el transporte
-de claves entre ellos. Los mensajes KeyTransfer existentes solo reservan
-formatos; por sí solos no conceden permiso ni demuestran transferencia.
+Estado de producción: **pendiente**, no habilitado para claves reales. El
+laboratorio DEBUG integra ahora la extensión SyntheticKey sobre la sesión Noise
+existente, con aprobación en ambos extremos y almacén biométrico aislado. Su
+contrato/API está en [synthetic-key-transfer-api-v1.md](synthetic-key-transfer-api-v1.md).
+Los mensajes genéricos KeyTransfer siguen reservados; el éxito de pruebas
+sintéticas no concede permiso para exportar la identidad real del usuario.
 
 ## Flujo esperado
 

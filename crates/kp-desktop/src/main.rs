@@ -10,6 +10,7 @@ mod qt;
 mod storage;
 mod transport_diagnostics;
 mod ui_adapters;
+mod vault_sync;
 
 use app_info::APP;
 use cxx_qt::casting::Upcast;
@@ -23,6 +24,9 @@ const DEFAULT_STYLE: &str = "org.kde.desktop";
 fn main() {
     init_tracing();
     process_security::prepare();
+    if run_synthetic_sync_cli() {
+        return;
+    }
 
     let mut application = ui_adapters::application::new();
     let Some(mut app) = application.as_mut() else {
@@ -93,6 +97,70 @@ fn main() {
     if exit_code != 0 {
         std::process::exit(exit_code);
     }
+}
+
+/// Local debug control for the same fixed public-fixture actions exposed by Devices.
+/// Output contains counts/public device IDs only, never decrypted fields or key material.
+fn run_synthetic_sync_cli() -> bool {
+    let arguments = std::env::args().collect::<Vec<_>>();
+    let Some(index) = arguments
+        .iter()
+        .position(|arg| arg == "--synthetic-sync-cli")
+    else {
+        return false;
+    };
+    if !cfg!(debug_assertions) {
+        std::process::exit(2);
+    }
+    let result = (|| -> anyhow::Result<serde_json::Value> {
+        use ui_adapters::synthetic_sync::{self, SyntheticSyncAction};
+        let action = arguments
+            .get(index + 1)
+            .map(String::as_str)
+            .ok_or_else(|| anyhow::anyhow!("missing action"))?;
+        let directory = storage::paths::browser_state_directory(APP.desktop_file_id)?
+            .join("emulator-pairing-lab-v1");
+        if action == "peers" {
+            let host = kryptopass_pairing_lab::LabHost::open_existing_system_profile(&directory)?;
+            return Ok(
+                serde_json::json!({"devices":host.trusted_peers()?.iter().map(|peer| peer.device_id.to_string()).collect::<Vec<_>>()}),
+            );
+        }
+        let encoded = arguments
+            .get(index + 2)
+            .ok_or_else(|| anyhow::anyhow!("missing device"))?;
+        anyhow::ensure!(
+            encoded.len() == 64 && encoded.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "invalid device"
+        );
+        let mut bytes = [0; 32];
+        for (offset, byte) in bytes.iter_mut().enumerate() {
+            *byte = u8::from_str_radix(&encoded[offset * 2..offset * 2 + 2], 16)?;
+        }
+        let peer = kryptopass_identity::DeviceId::from_bytes(bytes);
+        let action = match action {
+            "activate" => SyntheticSyncAction::Activate,
+            "create" => SyntheticSyncAction::CreateCredential,
+            "read" => SyntheticSyncAction::Refresh,
+            _ => anyhow::bail!("invalid fixture action"),
+        };
+        let snapshot = synthetic_sync::run(&directory, peer, action).map_err(|error| {
+            // Fixed, payload-free diagnostics from the same error mapping as the UI.
+            eprintln!("{}", error.message());
+            anyhow::anyhow!("synthetic fixture operation failed")
+        })?;
+        Ok(
+            serde_json::json!({"revisions":snapshot.local_revision_count,"heads":snapshot.rows.len()}),
+        )
+    })();
+    match result {
+        Ok(value) => println!("{value}"),
+        Err(_) => {
+            eprintln!("Synthetic Sync action failed; existing vaults were preserved.");
+            std::process::exit(1);
+        }
+    }
+    true
 }
 
 fn init_tracing() {

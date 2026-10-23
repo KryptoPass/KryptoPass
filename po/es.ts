@@ -1625,6 +1625,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Campos adicionales</translation>
     </message>
     <message>
+      <source> · conflicto, varias ramas</source>
+      <translation> · conflicto, varias ramas</translation>
+    </message>
+    <message>
       <source>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</source>
       <translation>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</translation>
     </message>
@@ -1683,6 +1687,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Could not initialize importer catalog</source>
       <translation>Could not initialize importer catalog</translation>
+    </message>
+    <message>
+      <source>Credencial de prueba</source>
+      <translation>Credencial de prueba</translation>
+    </message>
+    <message>
+      <source>Credencial de prueba guardada. Pulsa Sincronizar en Android.</source>
+      <translation>Credencial de prueba guardada. Pulsa Sincronizar en Android.</translation>
+    </message>
+    <message>
+      <source>Dato sintético. No contiene una contraseña real.</source>
+      <translation>Dato sintético. No contiene una contraseña real.</translation>
     </message>
     <message>
       <source>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</source>
@@ -1745,6 +1761,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</translation>
     </message>
     <message>
+      <source>El teléfono o la sesión no admite la transferencia sintética.</source>
+      <translation>El teléfono o la sesión no admite la transferencia sintética.</translation>
+    </message>
+    <message>
+      <source>El teléfono ya no está conectado con la sesión preparada para la prueba.</source>
+      <translation>El teléfono ya no está conectado con la sesión preparada para la prueba.</translation>
+    </message>
+    <message>
       <source>Elementos personalizados</source>
       <translation>Elementos personalizados</translation>
     </message>
@@ -1761,6 +1785,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Espera a que termine la operación de conexión antes de cambiar el nombre.</translation>
     </message>
     <message>
+      <source>Espera a que termine la operación de la bóveda sintética antes de cambiar el perfil.</source>
+      <translation>Espera a que termine la operación de la bóveda sintética antes de cambiar el perfil.</translation>
+    </message>
+    <message>
       <source>Esperando la confirmación del teléfono…</source>
       <translation>Esperando la confirmación del teléfono…</translation>
     </message>
@@ -1775,6 +1803,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Este dispositivo ya no está autorizado en este equipo.</source>
       <translation>Este dispositivo ya no está autorizado en este equipo.</translation>
+    </message>
+    <message>
+      <source>Este teléfono ya no está autorizado en el perfil de pruebas.</source>
+      <translation>Este teléfono ya no está autorizado en el perfil de pruebas.</translation>
+    </message>
+    <message>
+      <source>Este teléfono ya tiene otra bóveda de Sync seleccionada. No se reemplazó.</source>
+      <translation>Este teléfono ya tiene otra bóveda de Sync seleccionada. No se reemplazó.</translation>
     </message>
     <message>
       <source>Ethernet</source>
@@ -1801,8 +1837,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Introduce un servidor WSS válido, sin credenciales ni parámetros.</translation>
     </message>
     <message>
+      <source>KryptoPass synthetic test password</source>
+      <translation>KryptoPass synthetic test password</translation>
+    </message>
+    <message>
       <source>LAN</source>
       <translation>LAN</translation>
+    </message>
+    <message>
+      <source>La bóveda cambió durante la operación. Actualiza la prueba e inténtalo otra vez.</source>
+      <translation>La bóveda cambió durante la operación. Actualiza la prueba e inténtalo otra vez.</translation>
     </message>
     <message>
       <source>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</source>
@@ -1813,16 +1857,48 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</translation>
     </message>
     <message>
+      <source>La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.</source>
+      <translation>La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.</translation>
+    </message>
+    <message>
       <source>La invitación o conexión caducó. Genera otro código.</source>
       <translation>La invitación o conexión caducó. Genera otro código.</translation>
+    </message>
+    <message>
+      <source>La operación superó un límite seguro de Sync.</source>
+      <translation>La operación superó un límite seguro de Sync.</translation>
+    </message>
+    <message>
+      <source>La prueba sintética solo está disponible en Desktop debug.</source>
+      <translation>La prueba sintética solo está disponible en Desktop debug.</translation>
+    </message>
+    <message>
+      <source>La sesión cambió antes de activar la transferencia. No se enviará material privado.</source>
+      <translation>La sesión cambió antes de activar la transferencia. No se enviará material privado.</translation>
+    </message>
+    <message>
+      <source>La sesión cambió. Vuelve a abrir la confirmación.</source>
+      <translation>La sesión cambió. Vuelve a abrir la confirmación.</translation>
     </message>
     <message>
       <source>La sesión no superó la comprobación de seguridad. La confianza guardada se conserva, pero la conexión se detuvo.</source>
       <translation>La sesión no superó la comprobación de seguridad. La confianza guardada se conserva, pero la conexión se detuvo.</translation>
     </message>
     <message>
+      <source>La sesión o la generación cambió. Vuelve a conectar antes de intentarlo.</source>
+      <translation>La sesión o la generación cambió. Vuelve a conectar antes de intentarlo.</translation>
+    </message>
+    <message>
       <source>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</source>
       <translation>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</translation>
+    </message>
+    <message>
+      <source>La transferencia caducó. Vuelve a iniciar la prueba.</source>
+      <translation>La transferencia caducó. Vuelve a iniciar la prueba.</translation>
+    </message>
+    <message>
+      <source>La transferencia sintética solo está disponible en Desktop debug.</source>
+      <translation>La transferencia sintética solo está disponible en Desktop debug.</translation>
     </message>
     <message>
       <source>La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva.</source>
@@ -1857,6 +1933,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Modificado el %1</translation>
     </message>
     <message>
+      <source>NEVER USE</source>
+      <translation>NEVER USE</translation>
+    </message>
+    <message>
       <source>No hay dispositivos autorizados. Crea una invitación para vincular Android.</source>
       <translation>No hay dispositivos autorizados. Crea una invitación para vincular Android.</translation>
     </message>
@@ -1877,6 +1957,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudieron cargar los nombres locales. La confianza se conserva.</translation>
     </message>
     <message>
+      <source>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</source>
+      <translation>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</translation>
+    </message>
+    <message>
       <source>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</source>
       <translation>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</translation>
     </message>
@@ -1885,8 +1969,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo abrir el perfil existente. No se creó una identidad nueva.</translation>
     </message>
     <message>
+      <source>No se pudo abrir la clave sintética en el llavero aislado. No se usó el llavero normal.</source>
+      <translation>No se pudo abrir la clave sintética en el llavero aislado. No se usó el llavero normal.</translation>
+    </message>
+    <message>
+      <source>No se pudo acceder al dueño de la sesión activa.</source>
+      <translation>No se pudo acceder al dueño de la sesión activa.</translation>
+    </message>
+    <message>
       <source>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</source>
       <translation>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</source>
+      <translation>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</translation>
     </message>
     <message>
       <source>No se pudo guardar el nombre. La identidad y la confianza se conservan.</source>
@@ -1921,6 +2017,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo iniciar el listener de recuperación local.</translation>
     </message>
     <message>
+      <source>No se pudo leer la bóveda sintética ni guardar la revisión local.</source>
+      <translation>No se pudo leer la bóveda sintética ni guardar la revisión local.</translation>
+    </message>
+    <message>
       <source>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</source>
       <translation>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</translation>
     </message>
@@ -1949,6 +2049,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo preparar el servidor de conexión por Internet.</translation>
     </message>
     <message>
+      <source>No se pudo preparar la clave sintética local. No se envió material privado.</source>
+      <translation>No se pudo preparar la clave sintética local. No se envió material privado.</translation>
+    </message>
+    <message>
       <source>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</source>
       <translation>No se pudo verificar la ruta del sistema. La conexión quedó bloqueada.</translation>
     </message>
@@ -1967,6 +2071,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Operación cancelada. La confianza ya guardada se conserva.</source>
       <translation>Operación cancelada. La confianza ya guardada se conserva.</translation>
+    </message>
+    <message>
+      <source>PUBLIC SYNTHETIC</source>
+      <translation>PUBLIC SYNTHETIC</translation>
     </message>
     <message>
       <source>Pairing lab: device session state updated</source>
@@ -1989,6 +2097,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Preparando la reconexión LAN con este dispositivo…</translation>
     </message>
     <message>
+      <source>Prueba Desktop</source>
+      <translation>Prueba Desktop</translation>
+    </message>
+    <message>
+      <source>Prueba activada y credencial guardada. Pulsa Sincronizar en Android.</source>
+      <translation>Prueba activada y credencial guardada. Pulsa Sincronizar en Android.</translation>
+    </message>
+    <message>
+      <source>Prueba activada. Pulsa Sincronizar en Android.</source>
+      <translation>Prueba activada. Pulsa Sincronizar en Android.</translation>
+    </message>
+    <message>
       <source>Rechazando…</source>
       <translation>Rechazando…</translation>
     </message>
@@ -2001,12 +2121,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Redes Wi-Fi</translation>
     </message>
     <message>
+      <source>Registro eliminado · {short_id}{marker}</source>
+      <translation>Registro eliminado · {short_id}{marker}</translation>
+    </message>
+    <message>
       <source>Reglas de autocompletado</source>
       <translation>Reglas de autocompletado</translation>
     </message>
     <message>
       <source>Repeated transport diagnostics (addresses omitted)</source>
       <translation>Repeated transport diagnostics (addresses omitted)</translation>
+    </message>
+    <message>
+      <source>Revisión sintética no proyectable</source>
+      <translation>Revisión sintética no proyectable</translation>
     </message>
     <message>
       <source>STUN binding request from</source>
@@ -2029,6 +2157,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Selecciona un dispositivo emparejado.</translation>
     </message>
     <message>
+      <source>Selecciona un teléfono autorizado antes de usar la prueba sintética de Sync.</source>
+      <translation>Selecciona un teléfono autorizado antes de usar la prueba sintética de Sync.</translation>
+    </message>
+    <message>
+      <source>Selecciona un teléfono autorizado y conectado.</source>
+      <translation>Selecciona un teléfono autorizado y conectado.</translation>
+    </message>
+    <message>
       <source>Selecciona una integración de importación.</source>
       <translation>Selecciona una integración de importación.</translation>
     </message>
@@ -2039,6 +2175,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Solo retransmisión está activo y bloquea las conexiones LAN directas.</source>
       <translation>Solo retransmisión está activo y bloquea las conexiones LAN directas.</translation>
+    </message>
+    <message>
+      <source>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</source>
+      <translation>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</translation>
+    </message>
+    <message>
+      <source>Synthetic Sync action failed; existing vaults were preserved.</source>
+      <translation>Synthetic Sync action failed; existing vaults were preserved.</translation>
     </message>
     <message>
       <source>TURN</source>
@@ -2101,12 +2245,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vigente</translation>
     </message>
     <message>
+      <source>Vista local actualizada. Para intercambiar cambios, pulsa Sincronizar en Android.</source>
+      <translation>Vista local actualizada. Para intercambiar cambios, pulsa Sincronizar en Android.</translation>
+    </message>
+    <message>
       <source>WAL</source>
       <translation>WAL</translation>
     </message>
     <message>
       <source>WEP</source>
       <translation>WEP</translation>
+    </message>
+    <message>
+      <source>Ya se inició una transferencia en esta sesión.</source>
+      <translation>Ya se inició una transferencia en esta sesión.</translation>
     </message>
     <message>
       <source>[GNUPG:] </source>
@@ -2493,6 +2645,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not configure durable store journaling</translation>
     </message>
     <message>
+      <source>could not configure isolated OpenPGP</source>
+      <translation>could not configure isolated OpenPGP</translation>
+    </message>
+    <message>
       <source>could not configure the encrypted store</source>
       <translation>could not configure the encrypted store</translation>
     </message>
@@ -2501,8 +2657,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not create a private backup file</translation>
     </message>
     <message>
+      <source>could not create isolated OpenPGP home</source>
+      <translation>could not create isolated OpenPGP home</translation>
+    </message>
+    <message>
       <source>could not create private restore staging directory</source>
       <translation>could not create private restore staging directory</translation>
+    </message>
+    <message>
+      <source>could not create synthetic OpenPGP challenge</source>
+      <translation>could not create synthetic OpenPGP challenge</translation>
     </message>
     <message>
       <source>could not create the active store setting safely</source>
@@ -2545,8 +2709,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not flush the active store setting</translation>
     </message>
     <message>
+      <source>could not import synthetic OpenPGP fixture</source>
+      <translation>could not import synthetic OpenPGP fixture</translation>
+    </message>
+    <message>
       <source>could not initialize OpenPGP</source>
       <translation>could not initialize OpenPGP</translation>
+    </message>
+    <message>
+      <source>could not initialize isolated OpenPGP</source>
+      <translation>could not initialize isolated OpenPGP</translation>
     </message>
     <message>
       <source>could not initialize the encrypted store</source>
@@ -2609,8 +2781,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not inspect the store file</translation>
     </message>
     <message>
+      <source>could not isolate OpenPGP keyring</source>
+      <translation>could not isolate OpenPGP keyring</translation>
+    </message>
+    <message>
       <source>could not list OpenPGP secret keys</source>
       <translation>could not list OpenPGP secret keys</translation>
+    </message>
+    <message>
+      <source>could not load synthetic OpenPGP fixture</source>
+      <translation>could not load synthetic OpenPGP fixture</translation>
     </message>
     <message>
       <source>could not make gpg-agent forget the primary key</source>
@@ -2699,6 +2879,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not read import source</source>
       <translation>could not read import source</translation>
+    </message>
+    <message>
+      <source>could not read synthetic OpenPGP fixture file</source>
+      <translation>could not read synthetic OpenPGP fixture file</translation>
     </message>
     <message>
       <source>could not read the encrypted store</source>
@@ -2897,6 +3081,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>import destination has no parent</translation>
     </message>
     <message>
+      <source>invalid device</source>
+      <translation>invalid device</translation>
+    </message>
+    <message>
+      <source>invalid fixture action</source>
+      <translation>invalid fixture action</translation>
+    </message>
+    <message>
       <source>invalid folder</source>
       <translation>invalid folder</translation>
     </message>
@@ -2915,6 +3107,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>invalid icon source</source>
       <translation>invalid icon source</translation>
+    </message>
+    <message>
+      <source>isolated OpenPGP home is not a real directory</source>
+      <translation>isolated OpenPGP home is not a real directory</translation>
+    </message>
+    <message>
+      <source>isolated OpenPGP home is unavailable</source>
+      <translation>isolated OpenPGP home is unavailable</translation>
+    </message>
+    <message>
+      <source>isolated OpenPGP home permissions are not private</source>
+      <translation>isolated OpenPGP home permissions are not private</translation>
+    </message>
+    <message>
+      <source>isolated OpenPGP path is not valid UTF-8</source>
+      <translation>isolated OpenPGP path is not valid UTF-8</translation>
     </message>
     <message>
       <source>key {}</source>
@@ -2951,6 +3159,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>mDNS answers without AResource</source>
       <translation>mDNS answers without AResource</translation>
+    </message>
+    <message>
+      <source>missing action</source>
+      <translation>missing action</translation>
+    </message>
+    <message>
+      <source>missing device</source>
+      <translation>missing device</translation>
     </message>
     <message>
       <source>missing icon resource</source>
@@ -3133,6 +3349,74 @@ No incluye contraseñas ni valores de credenciales.
       <translation>stored secret recipient metadata is invalid</translation>
     </message>
     <message>
+      <source>synthetic OpenPGP fixture cache is not a real directory</source>
+      <translation>synthetic OpenPGP fixture cache is not a real directory</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture cache is not private</source>
+      <translation>synthetic OpenPGP fixture cache is not private</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture cache is unavailable</source>
+      <translation>synthetic OpenPGP fixture cache is unavailable</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture changed after local approval</source>
+      <translation>synthetic OpenPGP fixture changed after local approval</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture file is not a regular file</source>
+      <translation>synthetic OpenPGP fixture file is not a regular file</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture file is not private</source>
+      <translation>synthetic OpenPGP fixture file is not private</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture file is unavailable</source>
+      <translation>synthetic OpenPGP fixture file is unavailable</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture file size is invalid</source>
+      <translation>synthetic OpenPGP fixture file size is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture filename is invalid</source>
+      <translation>synthetic OpenPGP fixture filename is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture fingerprint is invalid</source>
+      <translation>synthetic OpenPGP fixture fingerprint is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture metadata does not match its key</source>
+      <translation>synthetic OpenPGP fixture metadata does not match its key</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP fixture metadata is invalid</source>
+      <translation>synthetic OpenPGP fixture metadata is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP key does not match the public fixture</source>
+      <translation>synthetic OpenPGP key does not match the public fixture</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP key identity is invalid</source>
+      <translation>synthetic OpenPGP key identity is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP key is unavailable</source>
+      <translation>synthetic OpenPGP key is unavailable</translation>
+    </message>
+    <message>
+      <source>synthetic OpenPGP recipient is invalid</source>
+      <translation>synthetic OpenPGP recipient is invalid</translation>
+    </message>
+    <message>
+      <source>synthetic fixture operation failed</source>
+      <translation>synthetic fixture operation failed</translation>
+    </message>
+    <message>
       <source>the primary key has no keygrip to forget</source>
       <translation>the primary key has no keygrip to forget</translation>
     </message>
@@ -3197,6 +3481,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>{} ({patterns})</source>
       <translation>{} ({patterns})</translation>
+    </message>
+    <message>
+      <source>{} · {}{marker}</source>
+      <translation>{} · {}{marker}</translation>
     </message>
     <message>
       <source>{}identidad(es) certificada(s) en {fingerprint}.</source>
@@ -3741,6 +4029,50 @@ Huella(s) detectadas:
       <translation>Desconectado</translation>
     </message>
     <message>
+      <source>Prueba de transferencia disponible</source>
+      <translation>Prueba de transferencia disponible</translation>
+    </message>
+    <message>
+      <source>Esperando que Android acepte</source>
+      <translation>Esperando que Android acepte</translation>
+    </message>
+    <message>
+      <source>Enviando clave de prueba</source>
+      <translation>Enviando clave de prueba</translation>
+    </message>
+    <message>
+      <source>Esperando confirmación de guardado</source>
+      <translation>Esperando confirmación de guardado</translation>
+    </message>
+    <message>
+      <source>Android confirmó el guardado y el desafío</source>
+      <translation>Android confirmó el guardado y el desafío</translation>
+    </message>
+    <message>
+      <source>Android rechazó la oferta</source>
+      <translation>Android rechazó la oferta</translation>
+    </message>
+    <message>
+      <source>Transferencia cancelada</source>
+      <translation>Transferencia cancelada</translation>
+    </message>
+    <message>
+      <source>La transferencia caducó</source>
+      <translation>La transferencia caducó</translation>
+    </message>
+    <message>
+      <source>Conexión perdida; el resultado es incierto</source>
+      <translation>Conexión perdida; el resultado es incierto</translation>
+    </message>
+    <message>
+      <source>La transferencia falló</source>
+      <translation>La transferencia falló</translation>
+    </message>
+    <message>
+      <source>Esta sesión no admite la prueba</source>
+      <translation>Esta sesión no admite la prueba</translation>
+    </message>
+    <message>
       <source>Comprobando ruta…</source>
       <translation>Comprobando ruta…</translation>
     </message>
@@ -4017,6 +4349,46 @@ Huella(s) detectadas:
       <translation>Olvidar dispositivo…</translation>
     </message>
     <message>
+      <source>Ocultar prueba de Sync</source>
+      <translation>Ocultar prueba de Sync</translation>
+    </message>
+    <message>
+      <source>Prueba sintética de Sync</source>
+      <translation>Prueba sintética de Sync</translation>
+    </message>
+    <message>
+      <source>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</source>
+      <translation>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</translation>
+    </message>
+    <message>
+      <source>Enviar clave de prueba</source>
+      <translation>Enviar clave de prueba</translation>
+    </message>
+    <message>
+      <source>Cancelar transferencia</source>
+      <translation>Cancelar transferencia</translation>
+    </message>
+    <message>
+      <source>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</source>
+      <translation>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</translation>
+    </message>
+    <message>
+      <source>Activar prueba de Sync</source>
+      <translation>Activar prueba de Sync</translation>
+    </message>
+    <message>
+      <source>Actualizar prueba</source>
+      <translation>Actualizar prueba</translation>
+    </message>
+    <message>
+      <source>Crear credencial de prueba</source>
+      <translation>Crear credencial de prueba</translation>
+    </message>
+    <message>
+      <source>Revisiones guardadas en este equipo: %1</source>
+      <translation>Revisiones guardadas en este equipo: %1</translation>
+    </message>
+    <message>
       <source>Identificador completo del dispositivo</source>
       <translation>Identificador completo del dispositivo</translation>
     </message>
@@ -4059,6 +4431,34 @@ Huella(s) detectadas:
     <message>
       <source>Olvidar dispositivo</source>
       <translation>Olvidar dispositivo</translation>
+    </message>
+    <message>
+      <source>Confirmar envío de clave de prueba</source>
+      <translation>Confirmar envío de clave de prueba</translation>
+    </message>
+    <message>
+      <source>Destinatario: %1</source>
+      <translation>Destinatario: %1</translation>
+    </message>
+    <message>
+      <source>Fingerprint completo de la identidad OpenPGP sintética:</source>
+      <translation>Fingerprint completo de la identidad OpenPGP sintética:</translation>
+    </message>
+    <message>
+      <source>Fingerprint completo de la clave de prueba</source>
+      <translation>Fingerprint completo de la clave de prueba</translation>
+    </message>
+    <message>
+      <source>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</source>
+      <translation>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</translation>
+    </message>
+    <message>
+      <source>Preparando la clave de prueba en GnuPG…</source>
+      <translation>Preparando la clave de prueba en GnuPG…</translation>
+    </message>
+    <message>
+      <source>Confirmar y enviar</source>
+      <translation>Confirmar y enviar</translation>
     </message>
     <message>
       <source>Nombre del dispositivo</source>

@@ -1147,3 +1147,107 @@ recibos por peer durables, nuevas rondas automáticas y prueba de ambas apps
 por WebRTC. No hay Worker ni transferencia privada real; revisión independiente
 pausada. La fase 4 completa sigue pendiente. [Contrato y API](sync-session-v1.md),
 [evidencia y límites](sync-session-evidence-2026-10-22.md).
+
+## Fases 4/5 — adaptadores de bóveda e intercambio sintético — 2026-10-22
+
+`kp-core` y Kotlin comparten ahora el wrapper cifrado
+`org.kryptopass.vault-object.v1`. El nuevo crate `kp-vault` separa el servicio
+de bóveda de Qt y del runtime GnuPG; Android usa `SyncedVaultRepository` con
+PGPainless. Guardar crea ciphertext y una revisión firmada atómicamente con
+CAS de heads. La migración es explícita y conserva el origen, con destino
+vacío comprobado dentro del commit; rechaza metadatos o destinatarios que no
+pueda conservar. Conflictos y tombstones permanecen visibles.
+
+Los dos extremos pueden activar una bóveda DEBUG aislada para un peer ya
+autorizado. La selección local persiste y cada ronda manual usa Noise nuevo;
+ni el descubrimiento ni los mensajes remotos activan o crean una bóveda.
+Linux ↔ emulador intercambiaron dos credenciales, descifraron GnuPG/PGPainless
+en ambas direcciones, conservaron una edición con Desktop apagado y Android
+reiniciado, y propagaron un borrado sin duplicados al repetir la ronda.
+
+Puerta completa Desktop aprobada: 233 tests QML y comprobaciones nativas/meta.
+Tras el último ajuste GnuPG: formato/Clippy y 399 tests Rust aprobados,
+dos opt-in ignorados. Android: `verify-sync` aprobado y 67/67 instrumentados
+en el emulador existente, conservando sus datos. La suite acotada de este
+bloque también pasó 20/20. Se añadió regresión GnuPG para la fixture sin
+ownertrust previo y límite agregado de proyección de 8 MiB en Rust/Kotlin.
+
+La fase 4 de producto sigue abierta: selección durable/migración de la bóveda
+habitual, rondas automáticas, recibos por peer y resolución de conflictos.
+La fase 5 sólo usa la clave sintética públicamente conocida preinstalada; no se habilitó
+transferencia privada real ni se aprobó la revisión independiente. Tampoco
+hay Worker. [Evidencia detallada](vault-sync-evidence-2026-10-22.md),
+[API](vault-sync-adapter-v1.md) y [cómo probar](synthetic-vault-sync-v1.md).
+
+## Fase 4 — rondas automáticas en la conexión activa — 2026-10-23
+
+Se añadió la capacidad bilateral opcional `SessionHello.sync_rounds_version=1`.
+Los bindings seleccionados pueden ejecutar varias rondas con snapshots nuevos
+en la misma Noise, DataChannel, secuencia y único receive owner. Los defaults
+del motor siguen siendo de una ronda. El watcher acotado detecta cambios del
+ledger cada 500 ms, agrupa solicitudes y distingue revisiones recibidas de
+ediciones locales para evitar eco. El presupuesto es 128 inicios/60 s y el
+debounce de inicios locales es 1 s. Android muestra «Modo: automático» sólo
+cuando lo negoció la sesión actual. La petición manual usa el mismo canal.
+
+La prueba Desktop ↔ emulador conservó el perfil y entregó automáticamente
+creación, edición y borrado sin reconectar. Una edición con Desktop apagado se
+entregó al reabrirlo, sin QR/SAS ni botón Sync. Ambos terminaron en 12 revisiones
+y 5 heads. Se corrigieron un snapshot Rust inconsistente ante escritores
+concurrentes y una carrera en el cierre del owner que perdía SessionClose.
+
+`just verify` pasó: formato/Clippy, 406 tests Rust, 233 QML y puertas nativas/meta;
+dos opt-in ignorados. Puerta acotada del núcleo: 107 aprobados. Android pasó
+125 JVM normales, 19 del motor, 4 interop Rust/Kotlin, compilación/lint y 67/67
+instrumentados en el emulador conservando sus datos. No se transfirió una clave
+real ni se tocó la bóveda habitual. Revisión independiente aún pendiente.
+
+El siguiente trabajo de producto es la selección/migración explícita de la
+bóveda habitual, recibos por peer y resolución de conflictos. WorkManager y
+autores históricos revocados siguen pendientes. [Contrato](sync-rounds-v1.md)
+y [evidencia detallada](sync-rounds-evidence-2026-10-23.md).
+
+## Fixture OpenPGP local, sin material privado en Git — 2026-10-23
+
+Por petición del usuario se retiraron el bloque privado sintético versionado en
+Desktop y sus copias de assets y constantes Base64 en Android. La retirada del
+archivo en el índice no limpia commits históricos: el bloque estuvo publicado
+en Desktop (`8e261c0`). No se reescribieron ramas ni se realizó force-push.
+El incidente de GitGuardian puede seguir señalando ese commit anterior.
+
+Las builds debug preparan una fixture aleatoria GnuPG ed25519/cv25519 fuera del
+repositorio, en `~/.cache/kryptopass/synthetic-sync-v1/` (override
+`KP_SYNTHETIC_FIXTURE_DIR`). El manifiesto local fija fingerprint, SHA-256,
+tamaño y contraseña de laboratorio; ambos extremos consumen esos metadatos en
+vez de constantes privadas. Las herramientas idénticas de ambos repos permiten
+compilar Android por separado. Caché 0700, archivos 0600, sin fallback ni
+regeneración de una fixture corrupta. La fixture anterior fue migrada a ese
+caché antes de retirarla, para conservar las revisiones del emulador.
+
+`just prepare-synthetic-sync-fixture` prepara explícitamente la prueba. Android
+empaqueta sus assets generados sólo en debug; se comprobó el resultado de
+`mergeReleaseAssets`, sin clave ni manifiesto de la fixture. Los tests ahora
+leen los assets generados o el manifiesto local. El escaneo de fuentes
+versionables no encontró el bloque anterior ni su codificación Base64, y las
+rutas antiguas quedan ignoradas en Git. No se alteraron claves reales,
+identidades de pairing ni la bóveda habitual.
+
+Verificación: `just verify-sync` Android aprobado (125 JVM normales, 3 opt-in
+omitidos, compilación debug/release Kotlin y lint). `just test-emulator
+emulator-5554` pasó 67/67, instalando con `-r` sin borrar datos. El emulador
+se cerró durante el primer intento; se reabrió el mismo AVD sin wipe y el
+segundo completó la suite. El generador pasó en `just test-packaging` (14
+pruebas): generación independiente, staging idéntico, permisos, reutilización
+y rechazo de corrupción sin sobrescritura. Desktop: formato/Clippy aprobados,
+406 tests Rust y 233 QML aprobados, dos opt-in omitidos, puertas nativas aprobadas.
+`just verify` terminó con error en translations-check por catálogo desactualizado;
+se ejecutó `just translations` y la rama de metadatos repetida pasó. REUSE detectó
+un bytecode Python local generado durante el desarrollo; se retiró ese artefacto
+ignorado y `just licenses handbook` pasó. Ninguno de esos fallos afectó al
+resultado de las suites Rust/QML. Las comprobaciones finales y registros están
+en `/tmp/kryptopass-local-fixture-{desktop-gate,meta-gate,android-gate,emulator}.log`.
+
+El intercambio de claves por red sigue pendiente de implementación: esta
+limpieza no es una transferencia. Claves privadas reales y revisión
+independiente mantienen sus puertas anteriores. Ver [preparación y prueba de
+Sync](synthetic-vault-sync-v1.md) y [contrato de transferencia](synthetic-key-transfer-v1.md).

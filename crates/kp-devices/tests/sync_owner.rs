@@ -10,8 +10,8 @@ use std::{
 
 use async_trait::async_trait;
 use kryptopass_devices::{
-    ConnectionState, DeviceDirectory, SessionEvent, SessionHandle, SyncSessionBinding,
-    start_session_with_sync,
+    ConnectionState, DeviceDirectory, SessionCloseReason, SessionEvent, SessionHandle,
+    SyncSessionBinding, start_session_with_sync,
 };
 use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity, SqliteTrustStore};
 use kryptopass_pairing::{
@@ -112,6 +112,13 @@ impl SentChannels {
             .iter()
             .filter(|(sent, _)| *sent == channel)
             .count()
+    }
+
+    fn clear(&self) {
+        self.0
+            .lock()
+            .expect("test channel trace is not poisoned")
+            .clear();
     }
 }
 
@@ -285,6 +292,32 @@ async fn wait_for_more_control_frames(owner: &SentChannels, peer: &SentChannels)
     })
     .await
     .expect("post-sync keepalive control frames should continue on both owners");
+}
+
+async fn wait_for_received_revision(handle: &SessionHandle, ledger: &Ledger, expected: usize) {
+    timeout(Duration::from_secs(10), async {
+        loop {
+            let progress = handle.sync_progress();
+            assert_ne!(
+                progress.map(|value| value.state),
+                Some(SyncProgressState::Failed),
+                "continuous owner must not fail while starting its follow-up round"
+            );
+            if ledger
+                .revision_count()
+                .expect("read the isolated observer ledger")
+                == expected
+                && progress.is_some_and(|value| {
+                    value.state == SyncProgressState::Complete && value.received_revisions > 0
+                })
+            {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the same authenticated owner should commit the follow-up revision");
 }
 
 #[tokio::test]
@@ -485,4 +518,152 @@ async fn authenticated_owner_commits_bidirectional_sync_on_data_while_keepalive_
             .map(|device| device.connection),
         Some(ConnectionState::Connected)
     ));
+}
+
+#[tokio::test]
+async fn automatic_rounds_reuse_noise_session_without_echo_and_close_gracefully() {
+    let paired = pair_ephemeral_devices().await;
+    let PairedDevices {
+        owner_profile,
+        peer_profile,
+        owner_identity,
+        peer_identity,
+        owner_session,
+        peer_session,
+        owner_sent,
+        peer_sent,
+    } = paired;
+    let owner_id = owner_identity.device_id();
+    let peer_id = peer_identity.device_id();
+    let owner_public = owner_identity.public_identity();
+    let peer_public = peer_identity.public_identity();
+    let owner_trust =
+        TestTrust::from_persisted_pairing(&owner_profile, &owner_identity, &peer_identity);
+    let peer_trust =
+        TestTrust::from_persisted_pairing(&peer_profile, &peer_identity, &owner_identity);
+    let owner_ledger_path = owner_profile.path().join("continuous-ledger.sqlite");
+    let peer_ledger_path = peer_profile.path().join("continuous-ledger.sqlite");
+    let owner_ledger = Ledger::create(&owner_ledger_path, VAULT)
+        .expect("create the isolated owner ciphertext ledger");
+    let peer_ledger = Ledger::create(&peer_ledger_path, VAULT)
+        .expect("create the isolated peer ciphertext ledger");
+    let mut owner_writer = Ledger::open_existing(&owner_ledger_path, VAULT, &owner_trust)
+        .expect("open a separate local writer handle");
+    let peer_observer = Ledger::open_existing(&peer_ledger_path, VAULT, &peer_trust)
+        .expect("open a separate peer observer handle");
+
+    let owner_directory = DeviceDirectory::new(owner_id);
+    owner_directory
+        .replace_trusted(vec![peer_public])
+        .expect("owner read model contains only paired peer");
+    let peer_directory = DeviceDirectory::new(peer_id);
+    peer_directory
+        .replace_trusted(vec![owner_public])
+        .expect("peer read model contains only paired owner");
+    let mut owner_handle = start_session_with_sync(
+        owner_directory.clone(),
+        owner_session,
+        owner_id,
+        peer_public,
+        SyncSessionBinding::new(
+            owner_ledger,
+            Box::new(owner_trust.clone()),
+            OPENPGP_FINGERPRINT.to_vec(),
+        )
+        .with_automatic_rounds(),
+    )
+    .expect("start owner with explicitly enabled automatic rounds");
+    let mut peer_handle = start_session_with_sync(
+        peer_directory.clone(),
+        peer_session,
+        peer_id,
+        owner_public,
+        SyncSessionBinding::new(
+            peer_ledger,
+            Box::new(peer_trust.clone()),
+            OPENPGP_FINGERPRINT.to_vec(),
+        )
+        .with_automatic_rounds(),
+    )
+    .expect("start peer with explicitly enabled automatic rounds");
+
+    wait_until_connected(&owner_handle).await;
+    wait_until_connected(&peer_handle).await;
+    wait_for_sync_complete(&owner_handle, &peer_handle).await;
+    wait_for_more_control_frames(&owner_sent, &peer_sent).await;
+
+    owner_writer
+        .append_local(
+            &owner_identity,
+            [0x63; 16],
+            &[],
+            Operation::Write,
+            b"synthetic ciphertext committed after the first round".to_vec(),
+            &owner_trust,
+        )
+        .expect("append through the second handle while the Noise owner remains active");
+    wait_for_received_revision(&peer_handle, &peer_observer, 1).await;
+    assert_eq!(
+        owner_handle
+            .sync_progress()
+            .expect("owner follow-up progress")
+            .acknowledged_revisions,
+        1
+    );
+
+    owner_sent.clear();
+    peer_sent.clear();
+    tokio::time::sleep(Duration::from_millis(700)).await;
+    assert_eq!(
+        owner_handle.sync_progress().map(|progress| progress.state),
+        Some(SyncProgressState::Complete),
+        "the sender remains complete without another local write"
+    );
+    assert_eq!(
+        peer_handle.sync_progress().map(|progress| progress.state),
+        Some(SyncProgressState::Complete),
+        "a received revision must not ping-pong into an empty next round"
+    );
+    assert_eq!(owner_sent.count(Channel::Control), 0);
+    assert_eq!(peer_sent.count(Channel::Control), 0);
+    assert_eq!(
+        peer_observer
+            .revision_count()
+            .expect("durable peer revision count"),
+        1
+    );
+
+    wait_for_more_control_frames(&owner_sent, &peer_sent).await;
+    assert_eq!(
+        owner_handle.sync_progress().map(|progress| progress.state),
+        Some(SyncProgressState::Complete)
+    );
+    assert_eq!(
+        peer_handle.sync_progress().map(|progress| progress.state),
+        Some(SyncProgressState::Complete)
+    );
+
+    owner_handle
+        .disconnect(SessionCloseReason::UserRequested)
+        .expect("request a graceful authenticated close");
+    timeout(Duration::from_secs(5), owner_handle.wait_closed())
+        .await
+        .expect("owner finishes graceful close");
+    timeout(Duration::from_secs(5), peer_handle.wait_closed())
+        .await
+        .expect("peer observes graceful close");
+    assert_eq!(
+        owner_directory
+            .snapshot()
+            .get(&peer_id)
+            .map(|device| device.connection),
+        Some(ConnectionState::Disconnected)
+    );
+    assert_eq!(
+        peer_directory
+            .snapshot()
+            .get(&owner_id)
+            .map(|device| device.connection),
+        Some(ConnectionState::Disconnected)
+    );
 }

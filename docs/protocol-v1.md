@@ -204,3 +204,22 @@ transfer remain reserved and have no active handlers.
 La recuperación LAN usa el puerto anunciado solo dentro de Noise y una nueva
 sesión por intento; ver [connection-recovery-v1.md](connection-recovery-v1.md).
 El alias de UI no forma parte del esquema ni del material de identidad.
+
+## Encrypted vault object integration
+
+The signed Sync revision ciphertext can contain the versioned OpenPGP vault
+object documented in [vault-sync-adapter-v1.md](vault-sync-adapter-v1.md).
+Its JSON bytes are encrypted as a complete object; revision signatures still
+cover the canonical binary revision representation, never reserialized JSON
+or Protobuf. Normal vault migration remains opt-in and pending product wiring;
+the [debug exercise](synthetic-vault-sync-v1.md) uses only public synthetic
+key material and fixed synthetic values.
+
+## Continuous Sync rounds
+
+`SessionHello.sync_rounds_version` is optional uint32 field 6: absent/0 keeps
+one round; 1 enables repeats only when both authenticated peers also agree
+on Sync v1 and locally supplied bindings. Other values disable the extension.
+Capability tags 4–6 reject duplicate fields, non-varint encodings and values
+over uint32 before decoding. See [the round contract](sync-rounds-v1.md) for
+fresh snapshots, scheduling, resource limits and single-session ownership.

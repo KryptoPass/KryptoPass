@@ -687,6 +687,8 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
     );
     let mut offset = 0usize;
     let mut repeated_count = 0usize;
+    let is_session_hello = type_value == proto::MessageType::SessionHello as i32;
+    let mut capabilities_seen = [false; 3];
     while offset < payload.len() {
         let key = read_varint(payload, &mut offset, type_value)?;
         let field = key >> 3;
@@ -696,9 +698,24 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
                 message_type: type_value,
             });
         }
+        let session_capability = is_session_hello && (4..=6).contains(&field);
+        if session_capability {
+            let seen = &mut capabilities_seen[(field - 4) as usize];
+            if wire != 0 || *seen {
+                return Err(ProtocolError::MalformedPayload {
+                    message_type: type_value,
+                });
+            }
+            *seen = true;
+        }
         match wire {
             0 => {
-                let _ = read_varint(payload, &mut offset, type_value)?;
+                let value = read_varint(payload, &mut offset, type_value)?;
+                if session_capability && value > u64::from(u32::MAX) {
+                    return Err(ProtocolError::InvalidField {
+                        field: "session_capability",
+                    });
+                }
             }
             1 => skip(payload, &mut offset, 8, type_value)?,
             2 => {

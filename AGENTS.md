@@ -158,3 +158,11 @@ dejó el Samsung por USB para estas comprobaciones. No modificar VPN/firewall de
 sistema ni prometer protección contra fugas por observar solo el par ICE final.
 Ver docs/network-privacy-policy-v1.md. Pruebas funcionales autorizadas;
 revisión independiente y transferencia de claves reales continúan pausadas.
+
+Petición del usuario (2026-10-23): retirar de Git el material privado OpenPGP
+sintético y continuar las pruebas con claves generadas localmente. No versionar
+claves privadas OpenPGP de prueba en binarios, assets ni constantes Base64. Compartir la
+fixture local entre builds debug mediante `KP_SYNTHETIC_FIXTURE_DIR`; release
+no incorpora las claves de laboratorio. No regenerar silenciosamente una
+fixture existente ni borrar ledgers para cambiarla. La revisión independiente
+y la habilitación de claves privadas reales siguen pendientes.

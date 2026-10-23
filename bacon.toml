@@ -66,6 +66,12 @@ need_stdout = true
 allow_warnings = false
 watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
 
+[jobs.test-vault-sync]
+command = ["just", "test-vault-sync"]
+need_stdout = true
+allow_warnings = false
+watch = ["crates/kp-core", "crates/kp-sync", "crates/kp-vault", "crates/kp-desktop/src/vault_sync", "crates/kp-desktop/tests/unit/vault_sync.rs", "Cargo.toml", "Cargo.lock"]
+
 [jobs.verify-sync-session]
 command = ["just", "verify-sync-session"]
 need_stdout = true
@@ -219,3 +225,15 @@ watch = ["crates/kp-lan", "crates/kp-pairing-lab", "crates/kp-transport", "Cargo
 command = ["just", "check-devices"]
 need_stdout = false
 watch = ["crates/kp-devices", "crates/kp-pairing", "crates/kp-pairing-lab", "crates/kp-protocol", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
+
+[jobs.prepare-synthetic-sync-fixture]
+command = ["just", "prepare-synthetic-sync-fixture"]
+need_stdout = true
+default_watch = false
+watch = ["scripts/prepare_synthetic_sync_fixture.py"]
+
+[jobs.test-synthetic-key-transfer]
+command = ["just", "test-synthetic-key-transfer"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-devices", "crates/kp-protocol"]

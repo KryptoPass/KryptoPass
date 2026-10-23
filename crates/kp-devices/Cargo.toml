@@ -17,6 +17,8 @@ kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
 kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
 kryptopass_sync = { package = "kp-sync", path = "../kp-sync" }
 prost = "0.14"
+sha2 = "0.10"
+zeroize = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
 tracing = "0.1"

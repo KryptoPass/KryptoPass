@@ -20,6 +20,10 @@ qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 _default:
     @just --list
 
+# Prepara o valida la clave pública sintética de Sync en la caché privada local.
+prepare-synthetic-sync-fixture:
+    python3 scripts/prepare_synthetic_sync_fixture.py --legacy-dir fixtures/synthetic-key-transfer-v1
+
 alias r := run
 
 # Corre la app en ventana (pásale args: `just run -- --help`).
@@ -101,6 +105,12 @@ test-p2p:
 # Ledger causal firmado, codecs y convergencia offline; sin bóveda real ni red.
 test-sync:
     cargo test -p kp-sync
+
+# Shared encrypted object and explicit migration into the signed ledger.
+test-vault-sync:
+    cargo test -p kp-core --test vault_object
+    cargo test -p kp-sync
+    cargo test -p kp-desktop vault_sync
 
 # Round Sync negociado y propietario de sesión autenticada; perfiles sintéticos.
 test-sync-session:
@@ -317,3 +327,8 @@ browser-install-dev *args: browser-build
 # Servidor QML con la ubicación del build que informa Cargo.
 qmlls: check
     {{ quote(qml_tools / "qmlls") }} --no-cmake-calls --build-dir {{ quote(qml_local) }}
+
+# Synthetic provisioning sender/state regressions; no production key export.
+test-synthetic-key-transfer:
+    cargo test -p kp-devices --test synthetic_key_transfer
+    cargo test -p kp-protocol --test protocol_contract

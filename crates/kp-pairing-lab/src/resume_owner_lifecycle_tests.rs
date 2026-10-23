@@ -187,6 +187,8 @@ fn start_owner_watcher(
         network_settings_error: false,
         network_guard: None,
         route_snapshot_unavailable: false,
+        synthetic_controls: HashMap::new(),
+        synthetic_transfers: std::collections::BTreeMap::new(),
     };
     let policy = Arc::new(Mutex::new(AcceptPolicy {
         active: HashSet::from([peer_id]),

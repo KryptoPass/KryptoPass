@@ -1,10 +1,18 @@
 //! OpenPGP operations backed by the user's GnuPG keyring.
 
 use anyhow::{Result, bail};
-use gpgme::{Context, Data, EncryptFlags, Key, PinentryMode, Protocol};
+use gpgme::{Context, Data, EncryptFlags, Key, PassphraseRequest, PinentryMode, Protocol};
 use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, OpenPgp, RecipientSet};
 use kryptopass_secure_memory::SensitiveBytes;
+#[cfg(debug_assertions)]
+use serde::Deserialize;
+#[cfg(debug_assertions)]
+use sha2::{Digest, Sha256};
 use std::io::{self, Write};
+#[cfg(debug_assertions)]
+use std::{fs, path::PathBuf};
+#[cfg(debug_assertions)]
+use zeroize::Zeroize;
 
 use super::MAX_CIPHERTEXT_BYTES;
 
@@ -33,16 +41,291 @@ impl OpenPgp for GnuPgOpenPgp {
     }
 
     fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
-        self.encrypt_bounded(
+        encrypt_bounded_in_context(
+            &mut open_context()?,
             plaintext,
             recipients,
             MAX_CONTENT_BYTES,
             MAX_CIPHERTEXT_BYTES,
+            EncryptFlags::NO_ENCRYPT_TO,
         )
     }
 
     fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
-        self.decrypt_bounded(ciphertext, MAX_CIPHERTEXT_BYTES, MAX_CONTENT_BYTES)
+        decrypt_bounded_in_context(
+            &mut open_context()?,
+            ciphertext,
+            MAX_CIPHERTEXT_BYTES,
+            MAX_CONTENT_BYTES,
+            None,
+        )
+    }
+}
+
+/// OpenPGP adapter pinned to one private, isolated keyring directory.
+/// Used only by the public synthetic Sync fixture; never points at the user's
+/// normal GnuPG home.
+#[cfg(debug_assertions)]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SyntheticFixtureManifest {
+    fixture_id: String,
+    fingerprint: String,
+    sha256: String,
+    size: usize,
+    passphrase: String,
+    warning: String,
+}
+
+#[cfg(debug_assertions)]
+pub(crate) struct SyntheticFixture {
+    fingerprint: KeyFingerprint,
+    fingerprint_bytes: Vec<u8>,
+    secret_key_bytes: Vec<u8>,
+    passphrase: Vec<u8>,
+}
+
+/// Backend-only, debug-build material for the explicitly synthetic transfer.
+/// This type intentionally has no `Debug` implementation and is never exposed
+/// through a CXX/QML property.
+#[cfg(debug_assertions)]
+pub(crate) struct SyntheticTransferMaterial {
+    pub(crate) fingerprint: Vec<u8>,
+    pub(crate) protected_secret_key: zeroize::Zeroizing<Vec<u8>>,
+    pub(crate) encrypted_challenge: Vec<u8>,
+    pub(crate) challenge_sha256: [u8; 32],
+}
+
+/// Returns the validated public identity of the local debug fixture.
+/// The private fixture bytes are checked and zeroized before returning.
+#[cfg(debug_assertions)]
+pub(crate) fn synthetic_transfer_fingerprint() -> Result<String> {
+    let fixture = SyntheticFixture::load()?;
+    Ok(fixture.fingerprint().as_str().to_owned())
+}
+
+/// Loads the private synthetic fixture, prepares a protected-key export, and
+/// encrypts a fresh challenge to that exact key in its isolated GnuPG home.
+/// The secret key stays in zeroizing backend memory until the transfer owner
+/// takes it; no temporary export file is created.
+#[cfg(debug_assertions)]
+pub(crate) fn prepare_synthetic_transfer(
+    expected_fingerprint: &str,
+) -> Result<SyntheticTransferMaterial> {
+    let fixture = SyntheticFixture::load()?;
+    if !fixture
+        .fingerprint()
+        .as_str()
+        .eq_ignore_ascii_case(expected_fingerprint)
+    {
+        bail!("synthetic OpenPGP fixture changed after local approval");
+    }
+    let fingerprint = fixture.fingerprint_bytes().to_vec();
+    let engine_home =
+        PathBuf::from(env!("KP_SYNTHETIC_FIXTURE_DIR")).join("synthetic-transfer-openpgp-v1");
+    let fingerprint_key = fixture.fingerprint().clone();
+    let (crypto, protected_secret_key) =
+        IsolatedGnuPgOpenPgp::open_synthetic_fixture_for_transfer(engine_home, fixture)?;
+
+    let mut challenge = zeroize::Zeroizing::new([0_u8; 32]);
+    getrandom::fill(&mut challenge[..])
+        .map_err(|_| anyhow::anyhow!("could not create synthetic OpenPGP challenge"))?;
+    let recipients = RecipientSet::new(vec![fingerprint_key])
+        .map_err(|_| anyhow::anyhow!("synthetic OpenPGP recipient is invalid"))?;
+    let encrypted_challenge = crypto.encrypt(&challenge[..], &recipients)?;
+    let challenge_sha256 = Sha256::digest(&challenge[..]).into();
+
+    Ok(SyntheticTransferMaterial {
+        fingerprint,
+        protected_secret_key,
+        encrypted_challenge,
+        challenge_sha256,
+    })
+}
+
+#[cfg(debug_assertions)]
+impl SyntheticFixture {
+    pub(crate) fn load() -> Result<Self> {
+        let directory = PathBuf::from(env!("KP_SYNTHETIC_FIXTURE_DIR"));
+        ensure_private_fixture_directory(&directory)?;
+        let manifest_path = PathBuf::from(env!("KP_SYNTHETIC_FIXTURE_MANIFEST"));
+        let key_path = directory.join("secret-key.pgp");
+        let manifest_bytes = zeroize::Zeroizing::new(read_private_fixture_file(&manifest_path)?);
+        let mut key_bytes = read_private_fixture_file(&key_path)?;
+        let mut manifest: SyntheticFixtureManifest = match serde_json::from_slice(&manifest_bytes) {
+            Ok(manifest) => manifest,
+            Err(_) => {
+                key_bytes.zeroize();
+                bail!("synthetic OpenPGP fixture metadata is invalid");
+            }
+        };
+        if manifest.fixture_id != "kp-synthetic-key-v1"
+            || !manifest
+                .warning
+                .to_ascii_uppercase()
+                .contains("PUBLIC SYNTHETIC")
+            || !manifest.warning.to_ascii_uppercase().contains("NEVER USE")
+            || manifest.size != key_bytes.len()
+            || manifest.sha256.len() != 64
+            || !manifest.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || format!("{:x}", Sha256::digest(&key_bytes)) != manifest.sha256.to_ascii_lowercase()
+            || manifest.passphrase.is_empty()
+        {
+            key_bytes.zeroize();
+            manifest.passphrase.zeroize();
+            bail!("synthetic OpenPGP fixture metadata does not match its key");
+        }
+        let fingerprint = match KeyFingerprint::parse(&manifest.fingerprint) {
+            Ok(fingerprint) => fingerprint,
+            Err(_) => {
+                key_bytes.zeroize();
+                manifest.passphrase.zeroize();
+                bail!("synthetic OpenPGP fixture fingerprint is invalid");
+            }
+        };
+        let fingerprint_bytes = match decode_fingerprint(fingerprint.as_str()) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                key_bytes.zeroize();
+                manifest.passphrase.zeroize();
+                return Err(error);
+            }
+        };
+        Ok(Self {
+            fingerprint,
+            fingerprint_bytes,
+            secret_key_bytes: key_bytes,
+            passphrase: manifest.passphrase.into_bytes(),
+        })
+    }
+
+    pub(crate) fn fingerprint(&self) -> &KeyFingerprint {
+        &self.fingerprint
+    }
+
+    pub(crate) fn fingerprint_bytes(&self) -> &[u8] {
+        &self.fingerprint_bytes
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Drop for SyntheticFixture {
+    fn drop(&mut self) {
+        self.secret_key_bytes.zeroize();
+        self.passphrase.zeroize();
+    }
+}
+
+#[cfg(debug_assertions)]
+pub(crate) struct IsolatedGnuPgOpenPgp {
+    engine_home: PathBuf,
+    passphrase: Vec<u8>,
+}
+
+#[cfg(debug_assertions)]
+impl IsolatedGnuPgOpenPgp {
+    pub(crate) fn open_synthetic_fixture(
+        engine_home: PathBuf,
+        fixture: SyntheticFixture,
+    ) -> Result<Self> {
+        let (crypto, protected_secret_key) =
+            Self::open_synthetic_fixture_for_transfer(engine_home, fixture)?;
+        drop(protected_secret_key);
+        Ok(crypto)
+    }
+
+    fn open_synthetic_fixture_for_transfer(
+        engine_home: PathBuf,
+        mut fixture: SyntheticFixture,
+    ) -> Result<(Self, zeroize::Zeroizing<Vec<u8>>)> {
+        ensure_private_engine_home(&engine_home)?;
+        let mut context = open_context_at(&engine_home, PinentryMode::Loopback)?;
+        let protected_secret_key =
+            zeroize::Zeroizing::new(std::mem::take(&mut fixture.secret_key_bytes));
+        let key = match context.get_secret_key(fixture.fingerprint.as_str()) {
+            Ok(key) => key,
+            Err(_) => {
+                let mut key_data = Data::from_bytes(protected_secret_key.as_slice())
+                    .map_err(|_| anyhow::anyhow!("could not load synthetic OpenPGP fixture"))?;
+                context
+                    .import(&mut key_data)
+                    .map_err(|_| anyhow::anyhow!("could not import synthetic OpenPGP fixture"))?;
+                context
+                    .get_secret_key(fixture.fingerprint.as_str())
+                    .map_err(|_| anyhow::anyhow!("synthetic OpenPGP key is unavailable"))?
+            }
+        };
+        let fingerprint = key
+            .fingerprint()
+            .map_err(|_| anyhow::anyhow!("synthetic OpenPGP key identity is invalid"))?;
+        if !fingerprint.eq_ignore_ascii_case(fixture.fingerprint.as_str())
+            || key.protocol() != Protocol::OpenPgp
+            || key.is_bad()
+            || key.is_revoked()
+            || key.is_expired()
+            || key.is_disabled()
+            || !key.can_encrypt()
+            || !key
+                .subkeys()
+                .any(|subkey| subkey.can_encrypt() && !subkey.is_bad())
+        {
+            bail!("synthetic OpenPGP key does not match the public fixture");
+        }
+        Ok((
+            Self {
+                engine_home,
+                passphrase: std::mem::take(&mut fixture.passphrase),
+            },
+            protected_secret_key,
+        ))
+    }
+
+    fn open_context(&self) -> Result<Context> {
+        open_context_at(&self.engine_home, PinentryMode::Loopback)
+    }
+}
+
+#[cfg(debug_assertions)]
+impl OpenPgp for IsolatedGnuPgOpenPgp {
+    fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
+        if recipients.as_slice().is_empty() {
+            bail!("at least one OpenPGP recipient is required");
+        }
+        let mut context = self.open_context()?;
+        for fingerprint in recipients.as_slice() {
+            load_encryption_key(&mut context, fingerprint)?;
+        }
+        Ok(())
+    }
+
+    fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
+        encrypt_bounded_in_context(
+            &mut self.open_context()?,
+            plaintext,
+            recipients,
+            MAX_CONTENT_BYTES,
+            MAX_CIPHERTEXT_BYTES,
+            // This isolated home contains only the exact public fixture pinned above.
+            // Its imported certificate has no ownertrust; normal keyrings keep their policy.
+            EncryptFlags::NO_ENCRYPT_TO | EncryptFlags::ALWAYS_TRUST,
+        )
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
+        decrypt_bounded_in_context(
+            &mut self.open_context()?,
+            ciphertext,
+            MAX_CIPHERTEXT_BYTES,
+            MAX_CONTENT_BYTES,
+            Some(&self.passphrase),
+        )
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Drop for IsolatedGnuPgOpenPgp {
+    fn drop(&mut self) {
+        self.passphrase.zeroize();
     }
 }
 
@@ -116,35 +399,14 @@ impl GnuPgOpenPgp {
         maximum_plaintext: usize,
         maximum_ciphertext: usize,
     ) -> Result<Vec<u8>> {
-        ensure_payload_size(plaintext.len(), maximum_plaintext, "secret content")?;
-        if recipients.as_slice().is_empty() {
-            bail!("at least one OpenPGP recipient is required");
-        }
-
-        let mut context = open_context()?;
-        let keys = recipients
-            .as_slice()
-            .iter()
-            .map(|fingerprint| load_encryption_key(&mut context, fingerprint))
-            .collect::<Result<Vec<_>>>()?;
-
-        let mut ciphertext = BoundedWriter::new(maximum_ciphertext);
-        let mut output = Data::from_writer(&mut ciphertext)
-            .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
-        let encryption_result = context.encrypt_with_flags(
-            keys.iter(),
+        encrypt_bounded_in_context(
+            &mut open_context()?,
             plaintext,
-            &mut output,
+            recipients,
+            maximum_plaintext,
+            maximum_ciphertext,
             EncryptFlags::NO_ENCRYPT_TO,
-        );
-        drop(output);
-        let result = encryption_result.map_err(|_| anyhow::anyhow!("OpenPGP encryption failed"))?;
-
-        if result.invalid_recipients().next().is_some() || ciphertext.is_empty() {
-            bail!("OpenPGP encryption did not accept every selected recipient");
-        }
-
-        Ok(ciphertext.into_bytes())
+        )
     }
 
     pub(crate) fn decrypt_bounded(
@@ -153,34 +415,13 @@ impl GnuPgOpenPgp {
         maximum_ciphertext: usize,
         maximum_plaintext: usize,
     ) -> Result<SensitiveBytes> {
-        if ciphertext.is_empty() {
-            bail!("OpenPGP ciphertext is empty");
-        }
-
-        ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
-
-        let mut context = open_context()?;
-        let mut plaintext = SensitiveOutput {
-            bytes: SensitiveBytes::try_with_capacity(
-                maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
-            )?,
-            maximum: maximum_plaintext,
-        };
-        let mut output = Data::from_writer(&mut plaintext)
-            .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
-        let result = context
-            .decrypt(ciphertext, &mut output)
-            .map_err(|_| anyhow::anyhow!("OpenPGP decryption failed"))?;
-        drop(output);
-
-        if result.is_legacy_cipher_no_mdc() {
-            bail!("legacy OpenPGP ciphertext without integrity protection is not accepted");
-        }
-        if result.unsupported_algorithm_raw().is_some() {
-            bail!("OpenPGP ciphertext uses an unsupported algorithm");
-        }
-
-        Ok(plaintext.bytes)
+        decrypt_bounded_in_context(
+            &mut open_context()?,
+            ciphertext,
+            maximum_ciphertext,
+            maximum_plaintext,
+            None,
+        )
     }
 }
 
@@ -282,6 +523,182 @@ fn open_context() -> Result<Context> {
         .map_err(|_| anyhow::anyhow!("could not configure OpenPGP pinentry"))?;
 
     Ok(context)
+}
+
+#[cfg(debug_assertions)]
+fn open_context_at(home: &std::path::Path, pinentry: PinentryMode) -> Result<Context> {
+    let home = home
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("isolated OpenPGP path is not valid UTF-8"))?;
+    let mut context = Context::from_protocol(Protocol::OpenPgp)
+        .map_err(|_| anyhow::anyhow!("could not initialize isolated OpenPGP"))?;
+    context
+        .set_engine_home_dir(home)
+        .map_err(|_| anyhow::anyhow!("could not isolate OpenPGP keyring"))?;
+    context
+        .set_pinentry_mode(pinentry)
+        .map_err(|_| anyhow::anyhow!("could not configure isolated OpenPGP"))?;
+    Ok(context)
+}
+
+#[cfg(debug_assertions)]
+fn ensure_private_engine_home(path: &std::path::Path) -> Result<()> {
+    use std::fs;
+
+    if fs::symlink_metadata(path).is_err() {
+        let mut builder = fs::DirBuilder::new();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        builder
+            .create(path)
+            .map_err(|_| anyhow::anyhow!("could not create isolated OpenPGP home"))?;
+    }
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|_| anyhow::anyhow!("isolated OpenPGP home is unavailable"))?;
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        bail!("isolated OpenPGP home is not a real directory");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.mode() & 0o077 != 0 {
+            bail!("isolated OpenPGP home permissions are not private");
+        }
+    }
+    Ok(())
+}
+
+fn encrypt_bounded_in_context(
+    context: &mut Context,
+    plaintext: &[u8],
+    recipients: &RecipientSet,
+    maximum_plaintext: usize,
+    maximum_ciphertext: usize,
+    flags: EncryptFlags,
+) -> Result<Vec<u8>> {
+    ensure_payload_size(plaintext.len(), maximum_plaintext, "secret content")?;
+    if recipients.as_slice().is_empty() {
+        bail!("at least one OpenPGP recipient is required");
+    }
+    let keys = recipients
+        .as_slice()
+        .iter()
+        .map(|fingerprint| load_encryption_key(context, fingerprint))
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut ciphertext = BoundedWriter::new(maximum_ciphertext);
+    let mut output = Data::from_writer(&mut ciphertext)
+        .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
+    let encryption_result = context.encrypt_with_flags(keys.iter(), plaintext, &mut output, flags);
+    drop(output);
+    let result = encryption_result.map_err(|_| anyhow::anyhow!("OpenPGP encryption failed"))?;
+
+    if result.invalid_recipients().next().is_some() || ciphertext.is_empty() {
+        bail!("OpenPGP encryption did not accept every selected recipient");
+    }
+    Ok(ciphertext.into_bytes())
+}
+
+fn decrypt_bounded_in_context(
+    context: &mut Context,
+    ciphertext: &[u8],
+    maximum_ciphertext: usize,
+    maximum_plaintext: usize,
+    passphrase: Option<&[u8]>,
+) -> Result<SensitiveBytes> {
+    if ciphertext.is_empty() {
+        bail!("OpenPGP ciphertext is empty");
+    }
+    ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
+
+    let mut plaintext = SensitiveOutput {
+        bytes: SensitiveBytes::try_with_capacity(
+            maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
+        )?,
+        maximum: maximum_plaintext,
+    };
+    let mut output = Data::from_writer(&mut plaintext)
+        .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
+    let decrypted = if let Some(passphrase) = passphrase {
+        context.with_passphrase_provider(
+            move |_: PassphraseRequest<'_>, target: &mut dyn Write| {
+                target.write_all(passphrase)?;
+                Ok(())
+            },
+            |context| context.decrypt(ciphertext, &mut output),
+        )
+    } else {
+        context.decrypt(ciphertext, &mut output)
+    };
+    let result = decrypted.map_err(|_| anyhow::anyhow!("OpenPGP decryption failed"))?;
+    drop(output);
+
+    if result.is_legacy_cipher_no_mdc() {
+        bail!("legacy OpenPGP ciphertext without integrity protection is not accepted");
+    }
+    if result.unsupported_algorithm_raw().is_some() {
+        bail!("OpenPGP ciphertext uses an unsupported algorithm");
+    }
+    Ok(plaintext.bytes)
+}
+
+#[cfg(debug_assertions)]
+fn ensure_private_fixture_directory(path: &std::path::Path) -> Result<()> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture cache is unavailable"))?;
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        bail!("synthetic OpenPGP fixture cache is not a real directory");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.mode() & 0o777 != 0o700 {
+            bail!("synthetic OpenPGP fixture cache is not private");
+        }
+    }
+    Ok(())
+}
+
+#[cfg(debug_assertions)]
+fn read_private_fixture_file(path: &std::path::Path) -> Result<Vec<u8>> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture file is unavailable"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        bail!("synthetic OpenPGP fixture file is not a regular file");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.mode() & 0o777 != 0o600 {
+            bail!("synthetic OpenPGP fixture file is not private");
+        }
+    }
+    let maximum = match path.file_name().and_then(|name| name.to_str()) {
+        Some("fixture.json") => 8 * 1024,
+        Some("secret-key.pgp") => 1024 * 1024,
+        _ => bail!("synthetic OpenPGP fixture filename is invalid"),
+    };
+    if metadata.len() == 0 || metadata.len() > maximum {
+        bail!("synthetic OpenPGP fixture file size is invalid");
+    }
+    fs::read(path).map_err(|_| anyhow::anyhow!("could not read synthetic OpenPGP fixture file"))
+}
+
+#[cfg(debug_assertions)]
+fn decode_fingerprint(fingerprint: &str) -> Result<Vec<u8>> {
+    fingerprint
+        .as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let byte = std::str::from_utf8(pair)
+                .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture fingerprint is invalid"))?;
+            u8::from_str_radix(byte, 16)
+                .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture fingerprint is invalid"))
+        })
+        .collect()
 }
 
 fn load_encryption_key(context: &mut Context, fingerprint: &KeyFingerprint) -> Result<Key> {

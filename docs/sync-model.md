@@ -28,7 +28,10 @@ checks the remote device/vault/fingerprint binding and shares its existing messa
 sequence. It requires an explicitly supplied existing ledger and remains disabled
 for normal application sessions. No new socket, pairing mechanism or private-key
 permission is introduced. Android remains Kotlin; protobuf and vectors are shared,
-not the Rust runtime. Connecting actual vault edits and migration is still pending.
+not the Rust runtime. The [vault adapters](vault-sync-adapter-v1.md) now connect
+local edits and explicit migration to that ledger. The opt-in DEBUG exercise
+passed [Desktop/emulator checks](vault-sync-evidence-2026-10-22.md); durable
+selection and migration of normal user vaults remain pending.
 
 ## Revision identity and canonical signatures
 

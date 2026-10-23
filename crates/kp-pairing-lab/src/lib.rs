@@ -4,6 +4,7 @@ mod aliases;
 mod internet_routes;
 mod network_privacy;
 mod resume_owner;
+mod vault_binding;
 pub use aliases::AliasError;
 pub use network_privacy::{
     NetworkPrivacySettings, load_network_privacy_settings, save_network_privacy_settings,
@@ -11,6 +12,7 @@ pub use network_privacy::{
 pub use resume_owner::{
     ResumeOwnerReady, ResumeOwnerSnapshot, ResumeProcessOwner, spawn_resume_process_owner,
 };
+pub use vault_binding::VaultBindingInfo;
 
 use std::{
     fs,

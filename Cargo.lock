@@ -2037,6 +2037,7 @@ dependencies = [
  "cxx-qt",
  "cxx-qt-build",
  "cxx-qt-lib",
+ "getrandom 0.3.4",
  "gpgme",
  "image",
  "kp-browser",
@@ -2048,12 +2049,15 @@ dependencies = [
  "kp-memsec",
  "kp-pairing",
  "kp-pairing-lab",
+ "kp-sync",
+ "kp-vault",
  "libc",
  "qrcode",
  "rqrr",
  "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
  "ssh-key",
  "tokio",
  "tracing",
@@ -2074,9 +2078,11 @@ dependencies = [
  "kp-sync",
  "kp-transport",
  "prost",
+ "sha2",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "zeroize",
 ]
 
 [[package]]
@@ -2178,6 +2184,7 @@ dependencies = [
  "kp-lan",
  "kp-pairing",
  "kp-protocol",
+ "kp-sync",
  "kp-transport",
  "rusqlite",
  "rustix",
@@ -2222,6 +2229,16 @@ dependencies = [
  "kp-protocol",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "kp-vault"
+version = "0.1.0"
+dependencies = [
+ "kp-core",
+ "kp-identity",
+ "kp-sync",
+ "uuid",
 ]
 
 [[package]]

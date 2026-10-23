@@ -5,7 +5,7 @@
 //! Noise XX reconnect. The owner is independent of the Qt dialog lifecycle.
 
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     path::PathBuf,
     sync::{
         Arc, Mutex,
@@ -17,7 +17,8 @@ use std::{
 
 use kryptopass_devices::{
     ConnectionState, DeviceDirectory, DeviceDirectorySnapshot, SessionCloseReason, SessionEvent,
-    SessionHandle, SessionOptions,
+    SessionHandle, SessionOptions, SyntheticKeyTransferSend, SyntheticTransferControl,
+    SyntheticTransferError, SyntheticTransferProgress,
 };
 use kryptopass_identity::{DeviceId, PublicIdentity};
 use kryptopass_lan::{
@@ -64,6 +65,8 @@ pub struct ResumeOwnerSnapshot {
     pub devices: Option<Arc<DeviceDirectorySnapshot>>,
     /// Set when the existing profile could not be read; no replacement is made.
     pub profile_error: bool,
+    /// Coalesced, secret-free synthetic transfer progress by trusted peer.
+    pub synthetic_transfers: BTreeMap<DeviceId, (u64, SyntheticTransferProgress)>,
 }
 
 /// Handle to the process-owned listener and inbound session supervisor.
@@ -97,6 +100,24 @@ enum OwnerCommand {
     Allow(DeviceId),
     SessionStable(DeviceId, u64),
     SessionEnded(DeviceId, u64),
+    RegisterSyntheticTransfer(
+        SyntheticTransferControl,
+        oneshot::Sender<Result<(), SyntheticTransferError>>,
+    ),
+    StartSyntheticTransfer(
+        DeviceId,
+        u64,
+        Box<SyntheticKeyTransferSend>,
+        oneshot::Sender<Result<(), SyntheticTransferError>>,
+    ),
+    CancelSyntheticTransfer(
+        DeviceId,
+        u64,
+        [u8; 16],
+        oneshot::Sender<Result<(), SyntheticTransferError>>,
+    ),
+    SyntheticTransferProgressChanged(DeviceId, u64, SyntheticTransferProgress),
+    UnregisterSyntheticTransfer(DeviceId, u64),
     IncomingFinished(
         DeviceId,
         u64,
@@ -129,6 +150,8 @@ struct OwnerRuntime {
     ready: Option<ResumeOwnerReady>,
     listener: Option<Arc<ResumeListener>>,
     sessions: HashMap<DeviceId, OwnedSession>,
+    synthetic_controls: HashMap<DeviceId, SyntheticTransferControl>,
+    synthetic_transfers: BTreeMap<DeviceId, (u64, SyntheticTransferProgress)>,
     pending_attempts: HashMap<DeviceId, PendingAttempt>,
     next_attempt_id: u64,
     last_snapshot_revision: u64,
@@ -169,6 +192,79 @@ impl ResumeProcessOwner {
             .await
             .map_err(|_| super::LabError::Profile)?;
         response.await.map_err(|_| super::LabError::Profile)?
+    }
+
+    /// Registers the cloneable capability for an outgoing session, leaving
+    /// transport ownership with the original session worker.
+    pub async fn register_synthetic_transfer_control(
+        &self,
+        control: SyntheticTransferControl,
+    ) -> Result<(), SyntheticTransferError> {
+        let (reply, response) = oneshot::channel();
+        self.inner
+            .commands
+            .send(OwnerCommand::RegisterSyntheticTransfer(control, reply))
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?;
+        response
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?
+    }
+
+    /// Routes an approved preparation to the exact active peer generation.
+    pub async fn start_synthetic_key_transfer(
+        &self,
+        peer: DeviceId,
+        expected_generation: u64,
+        prepared: SyntheticKeyTransferSend,
+    ) -> Result<(), SyntheticTransferError> {
+        let (reply, response) = oneshot::channel();
+        self.inner
+            .commands
+            .send(OwnerCommand::StartSyntheticTransfer(
+                peer,
+                expected_generation,
+                Box::new(prepared),
+                reply,
+            ))
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?;
+        response
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?
+    }
+
+    /// Queues cancellation before disconnect/forget commands when called by
+    /// the local UI. The actor still checks peer, generation and transfer ID.
+    pub async fn cancel_synthetic_key_transfer(
+        &self,
+        peer: DeviceId,
+        expected_generation: u64,
+        transfer_id: [u8; 16],
+    ) -> Result<(), SyntheticTransferError> {
+        let (reply, response) = oneshot::channel();
+        self.inner
+            .commands
+            .send(OwnerCommand::CancelSyntheticTransfer(
+                peer,
+                expected_generation,
+                transfer_id,
+                reply,
+            ))
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?;
+        response
+            .await
+            .map_err(|_| SyntheticTransferError::WrongSession)?
+    }
+
+    /// Drops a closed outgoing session's route while retaining its last
+    /// coalesced progress for the UI until a new generation replaces it.
+    pub fn unregister_synthetic_transfer_control(&self, peer: DeviceId, generation: u64) {
+        let _ = self
+            .inner
+            .commands
+            .try_send(OwnerCommand::UnregisterSyntheticTransfer(peer, generation));
     }
 
     /// Notify the process owner that local privacy settings were persisted.
@@ -293,6 +389,8 @@ async fn run_owner(
         ready: None,
         listener: None,
         sessions: HashMap::new(),
+        synthetic_controls: HashMap::new(),
+        synthetic_transfers: BTreeMap::new(),
         pending_attempts: HashMap::new(),
         next_attempt_id: 1,
         last_snapshot_revision: 0,
@@ -402,6 +500,7 @@ async fn run_owner(
                             snapshots.send_modify(|value| {
                                 value.ready = state.ready.clone();
                                 value.devices = Some(snapshot);
+                                value.synthetic_transfers = state.synthetic_transfers.clone();
                             });
                         }
                     }
@@ -615,6 +714,7 @@ impl OwnerRuntime {
             ready: Some(ready.clone()),
             devices: Some(ready.devices.snapshot()),
             profile_error: false,
+            synthetic_transfers: self.synthetic_transfers.clone(),
         });
         Ok(ready)
     }
@@ -651,6 +751,7 @@ impl OwnerRuntime {
             ready: Some(ready.clone()),
             devices: Some(ready.devices.snapshot()),
             profile_error: false,
+            synthetic_transfers: self.synthetic_transfers.clone(),
         });
         Ok(ready)
     }
@@ -732,8 +833,60 @@ impl OwnerRuntime {
             snapshots.send_modify(|value| {
                 value.ready = Some(ready.clone());
                 value.devices = Some(snapshot);
+                value.synthetic_transfers = self.synthetic_transfers.clone();
             });
         }
+    }
+
+    fn register_synthetic_transfer(
+        &mut self,
+        control: SyntheticTransferControl,
+        snapshots: &watch::Sender<ResumeOwnerSnapshot>,
+    ) -> Result<(), SyntheticTransferError> {
+        let peer = control.peer_id();
+        let generation = control.generation();
+        let device = self
+            .devices
+            .as_ref()
+            .and_then(|devices| devices.snapshot().get(&peer).copied())
+            .ok_or(SyntheticTransferError::WrongSession)?;
+        if device.connection_generation != generation
+            || !matches!(
+                device.connection,
+                ConnectionState::Connecting | ConnectionState::Connected
+            )
+        {
+            return Err(SyntheticTransferError::WrongSession);
+        }
+
+        let progress = control.synthetic_key_transfer_progress();
+        self.synthetic_controls.insert(peer, control.clone());
+        self.synthetic_transfers
+            .insert(peer, (generation, progress));
+        snapshots.send_modify(|snapshot| {
+            snapshot.synthetic_transfers = self.synthetic_transfers.clone();
+        });
+
+        let mut updates = control.subscribe_synthetic_key_transfer();
+        let commands = self.command_sender.clone();
+        tokio::spawn(async move {
+            loop {
+                if updates.changed().await.is_err() {
+                    return;
+                }
+                let progress = *updates.borrow_and_update();
+                if commands
+                    .send(OwnerCommand::SyntheticTransferProgressChanged(
+                        peer, generation, progress,
+                    ))
+                    .await
+                    .is_err()
+                {
+                    return;
+                }
+            }
+        });
+        Ok(())
     }
 
     fn accept_future(
@@ -1039,6 +1192,54 @@ impl OwnerRuntime {
                     self.publish_ready(snapshots);
                 }
             }
+            OwnerCommand::RegisterSyntheticTransfer(control, reply) => {
+                let result = self.register_synthetic_transfer(control, snapshots);
+                let _ = reply.send(result);
+            }
+            OwnerCommand::StartSyntheticTransfer(peer, generation, prepared, reply) => {
+                let result = self
+                    .synthetic_controls
+                    .get(&peer)
+                    .filter(|control| control.generation() == generation)
+                    .ok_or(SyntheticTransferError::WrongSession)
+                    .and_then(|control| {
+                        control.start_synthetic_key_transfer(generation, *prepared)
+                    });
+                let _ = reply.send(result);
+            }
+            OwnerCommand::CancelSyntheticTransfer(peer, generation, transfer_id, reply) => {
+                let result = self
+                    .synthetic_controls
+                    .get(&peer)
+                    .filter(|control| control.generation() == generation)
+                    .ok_or(SyntheticTransferError::WrongSession)
+                    .and_then(|control| {
+                        control.cancel_synthetic_key_transfer(generation, transfer_id)
+                    });
+                let _ = reply.send(result);
+            }
+            OwnerCommand::SyntheticTransferProgressChanged(peer, generation, progress) => {
+                if self
+                    .synthetic_controls
+                    .get(&peer)
+                    .is_some_and(|control| control.generation() == generation)
+                {
+                    self.synthetic_transfers
+                        .insert(peer, (generation, progress));
+                    snapshots.send_modify(|snapshot| {
+                        snapshot.synthetic_transfers = self.synthetic_transfers.clone();
+                    });
+                }
+            }
+            OwnerCommand::UnregisterSyntheticTransfer(peer, generation) => {
+                if self
+                    .synthetic_controls
+                    .get(&peer)
+                    .is_some_and(|control| control.generation() == generation)
+                {
+                    self.synthetic_controls.remove(&peer);
+                }
+            }
             OwnerCommand::IncomingFinished(peer, attempt_id, result) => {
                 let matches_pending = self
                     .pending_attempts
@@ -1080,24 +1281,23 @@ impl OwnerRuntime {
                             let _ = session.close().await;
                             return false;
                         }
-                        let local_id = host.public_identity().device_id;
                         let options = SessionOptions {
                             reconnect_port: self
                                 .listener
                                 .as_ref()
                                 .map_or(0, |listener| listener.port()),
                         };
-                        match kryptopass_devices::start_session_with_options(
-                            devices, session, local_id, expected, options,
-                        ) {
+                        match host.start_device_session(devices, session, expected, options) {
                             Ok(handle) => {
                                 let generation = handle.generation();
+                                let control = handle.synthetic_key_transfer_control();
                                 if let Ok(mut current) = policy.lock() {
                                     current.active.insert(peer);
                                     current.failures.remove(&peer);
                                     current.cooling_until.remove(&peer);
                                 }
                                 self.watch_session(peer, generation, &handle);
+                                let _ = self.register_synthetic_transfer(control, snapshots);
                                 self.sessions.insert(peer, OwnedSession { handle });
                                 self.publish_ready(snapshots);
                             }

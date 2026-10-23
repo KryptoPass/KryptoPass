@@ -24,6 +24,11 @@ the locally configured exact fingerprint. Fingerprints identify a key; they do
 not prove possession of the private key. Opaque encrypted changes may be stored
 while a vault is locked. Author trust is explicit and non-transitive.
 
+The optional [continuous-round extension](sync-rounds-v1.md) adds the bilateral
+`SessionHello.sync_rounds_version = 1` capability. Single-round defaults remain;
+configured application bindings can repeat bounded rounds on the same Noise
+state and sequence after both peers negotiate that extension.
+
 ## One bounded round
 
 At local start or on valid SyncHello, freeze a metadata index (max 10000), its
@@ -92,9 +97,10 @@ A lost ACK is safe: the already committed objects are discovered/idempotently
 accepted on retry. No plaintext payload or private GPG key enters this engine.
 
 This round's progress is observable in memory under the authenticated peer.
-The ledger provides durable revision progress. A separate durable per-peer
-receipt journal and automatic new rounds for live edits remain application
-integration work; do not pretend volatile counts are persistent peer receipts.
+The ledger provides durable revision progress. Automatic new rounds for live edits are available only through the negotiated
+[continuous-round extension](sync-rounds-v1.md). A separate durable per-peer
+receipt journal remains application integration work; do not pretend volatile
+counts are persistent peer receipts.
 Existing local vault adapters need an explicit reversible migration and atomic
 edit/revision storage before configuring this extension for user credentials.
 
@@ -132,7 +138,9 @@ configures only an already authorized peer with no active session. Keep its
 ledger/trust open while bound. Disconnect, wait for that session to stop, then
 `unbindSyncLedger` before releasing the store. Binding/unbinding during an
 active session returns false. Forget/reset/shutdown clear these opt-ins, while
-preserving vault data. A new round requires a new engine, usually on reconnect.
+preserving vault data. In single-round mode, a new round requires a new engine, usually on reconnect.
+The negotiated continuous extension retains the binding and resets only round
+state; see [sync-rounds-v1.md](sync-rounds-v1.md).
 
 A manifest must also fit one protocol payload (65472 bytes). The structural
 1024-head cap is not a promise that 1024 heads fit one frame. Oversized encoded

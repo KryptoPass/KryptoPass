@@ -1,5 +1,6 @@
 //! Explicit emulator pairing UI. Private identities remain in the worker/OS store.
 
+use super::synthetic_sync::{SyntheticSyncAction, SyntheticSyncError, SyntheticSyncSnapshot};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use kryptopass_devices::{
@@ -80,6 +81,40 @@ pub mod qobject {
         #[qproperty(bool, alias_busy, cxx_name = "aliasBusy", READ, NOTIFY)]
         #[qproperty(QString, alias_error, cxx_name = "aliasError", READ, NOTIFY)]
         #[qproperty(bool, maintenance_busy, cxx_name = "maintenanceBusy", READ, NOTIFY)]
+        #[qproperty(bool, sync_busy, cxx_name = "syncBusy", READ, NOTIFY)]
+        #[qproperty(QString, sync_peer_id, cxx_name = "syncPeerId", READ, NOTIFY)]
+        #[qproperty(QString, sync_status, cxx_name = "syncStatus", READ, NOTIFY)]
+        #[qproperty(QString, sync_error, cxx_name = "syncError", READ, NOTIFY)]
+        #[qproperty(
+            i32,
+            sync_local_revision_count,
+            cxx_name = "syncLocalRevisionCount",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(QStringList, sync_entries, cxx_name = "syncEntries", READ, NOTIFY)]
+        #[qproperty(bool, sync_configured, cxx_name = "syncConfigured", READ, NOTIFY)]
+        #[qproperty(
+            QString,
+            synthetic_transfer_fingerprint,
+            cxx_name = "syntheticTransferFingerprint",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            bool,
+            synthetic_transfer_preparing,
+            cxx_name = "syntheticTransferPreparing",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            QString,
+            synthetic_transfer_error,
+            cxx_name = "syntheticTransferError",
+            READ,
+            NOTIFY
+        )]
         type PairingLabController = super::PairingLabControllerRust;
 
         #[qinvokable]
@@ -139,6 +174,26 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "resetPairingProfile"]
         fn reset_pairing_profile(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "activateSyntheticSync"]
+        fn activate_synthetic_sync(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "refreshSyntheticSync"]
+        fn refresh_synthetic_sync(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "createSyntheticCredential"]
+        fn create_synthetic_credential(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "startSyntheticKeyTransfer"]
+        fn start_synthetic_key_transfer(
+            self: Pin<&mut Self>,
+            device_id: QString,
+            connection_generation: QString,
+            approved_fingerprint: QString,
+        );
+        #[qinvokable]
+        #[cxx_name = "cancelSyntheticKeyTransfer"]
+        fn cancel_synthetic_key_transfer(self: Pin<&mut Self>);
         #[qsignal]
         #[cxx_name = "aliasSaved"]
         fn alias_saved(self: Pin<&mut Self>, device_id: &QString);
@@ -176,6 +231,22 @@ pub struct PairingLabControllerRust {
     alias_busy: bool,
     alias_error: QString,
     maintenance_busy: bool,
+    sync_busy: bool,
+    sync_peer_id: QString,
+    sync_status: QString,
+    sync_error: QString,
+    sync_local_revision_count: i32,
+    sync_entries: QStringList,
+    sync_configured: bool,
+    synthetic_transfer_fingerprint: QString,
+    synthetic_transfer_preparing: bool,
+    synthetic_transfer_error: QString,
+    synthetic_transfer_progress:
+        BTreeMap<DeviceId, (u64, kryptopass_devices::SyntheticTransferProgress)>,
+    synthetic_transfer_cancel: Option<watch::Sender<bool>>,
+    synthetic_transfer_generation: u64,
+    synthetic_transfer_preparing_peer: Option<(DeviceId, u64)>,
+    synthetic_transfer_target: Option<(DeviceId, u64, [u8; 16])>,
     aliases: BTreeMap<DeviceId, String>,
     pending: Option<PendingOperation>,
     active: Option<PendingOperation>,
@@ -188,6 +259,7 @@ pub struct PairingLabControllerRust {
     active_network_guard: Option<NetworkPolicyGuard>,
     resume_owner_generation: u64,
     resume_owner_cancel: Option<watch::Sender<bool>>,
+    sync_generation: u64,
 }
 
 impl Default for PairingLabControllerRust {
@@ -222,6 +294,21 @@ impl Default for PairingLabControllerRust {
             alias_busy: false,
             alias_error: QString::default(),
             maintenance_busy: false,
+            sync_busy: false,
+            sync_peer_id: QString::default(),
+            sync_status: QString::default(),
+            sync_error: QString::default(),
+            sync_local_revision_count: 0,
+            sync_entries: QStringList::default(),
+            sync_configured: false,
+            synthetic_transfer_fingerprint: QString::default(),
+            synthetic_transfer_preparing: false,
+            synthetic_transfer_error: QString::default(),
+            synthetic_transfer_progress: BTreeMap::new(),
+            synthetic_transfer_cancel: None,
+            synthetic_transfer_generation: 0,
+            synthetic_transfer_preparing_peer: None,
+            synthetic_transfer_target: None,
             aliases: BTreeMap::new(),
             pending: None,
             active: None,
@@ -234,6 +321,7 @@ impl Default for PairingLabControllerRust {
             active_network_guard: None,
             resume_owner_generation: 0,
             resume_owner_cancel: None,
+            sync_generation: 0,
         }
     }
 }
@@ -249,6 +337,72 @@ impl Drop for WorkerCompletion {
     fn drop(&mut self) {
         self.0.store(true, Ordering::Release);
     }
+}
+
+/// Cancels a start that reached the session owner but could not be committed
+/// into the Qt controller state. The guard remains armed while queued work is
+/// waiting, so navigation or a dropped Qt callback cannot leave a hidden send.
+struct SyntheticTransferCancelOnDrop {
+    owner: ResumeProcessOwner,
+    peer: DeviceId,
+    generation: u64,
+    transfer_id: [u8; 16],
+    armed: bool,
+}
+
+impl SyntheticTransferCancelOnDrop {
+    fn new(
+        owner: ResumeProcessOwner,
+        peer: DeviceId,
+        generation: u64,
+        transfer_id: [u8; 16],
+    ) -> Self {
+        Self {
+            owner,
+            peer,
+            generation,
+            transfer_id,
+            armed: true,
+        }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for SyntheticTransferCancelOnDrop {
+    fn drop(&mut self) {
+        if self.armed {
+            spawn_synthetic_transfer_cancel(
+                self.owner.clone(),
+                self.peer,
+                self.generation,
+                self.transfer_id,
+            );
+        }
+    }
+}
+
+fn spawn_synthetic_transfer_cancel(
+    owner: ResumeProcessOwner,
+    peer: DeviceId,
+    generation: u64,
+    transfer_id: [u8; 16],
+) {
+    std::thread::spawn(move || {
+        let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        else {
+            return;
+        };
+        runtime.block_on(async move {
+            let _ = owner
+                .cancel_synthetic_key_transfer(peer, generation, transfer_id)
+                .await;
+        });
+    });
 }
 
 impl Drop for PendingOperation {
@@ -324,6 +478,7 @@ impl qobject::PairingLabController {
     }
 
     fn stop_resume_owner(mut self: Pin<&mut Self>) -> Option<ResumeProcessOwner> {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         self.as_mut().rust_mut().resume_owner_generation =
             self.rust().resume_owner_generation.wrapping_add(1);
         self.as_mut().rust_mut().devices_revision = 0;
@@ -345,6 +500,7 @@ impl qobject::PairingLabController {
         if self.rust().resume_owner_generation != owner_generation {
             return;
         }
+        self.as_mut().rust_mut().synthetic_transfer_progress = state.synthetic_transfers.clone();
         if let Some(ready) = state.ready {
             let preferred = parse_device_id(&self.rust().active_device_id.to_string())
                 .or_else(|| self.rust().selected_peer().map(|peer| peer.device_id));
@@ -481,6 +637,7 @@ impl qobject::PairingLabController {
 
     /// Internet is an explicit carrier choice; it never changes device authorization.
     pub fn configure_internet(mut self: Pin<&mut Self>, enabled: bool, relay_origin: QString) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         if *self.busy() || self.rust().maintenance_busy {
             return;
         }
@@ -500,6 +657,7 @@ impl qobject::PairingLabController {
     }
 
     pub fn configure_network(mut self: Pin<&mut Self>, enabled: bool, index: i32) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         if *self.busy() {
             return;
         }
@@ -542,6 +700,7 @@ impl qobject::PairingLabController {
         allow_lan_exception: bool,
         relay_only: bool,
     ) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         if !cfg!(debug_assertions) || self.rust().maintenance_busy {
             return;
         }
@@ -671,6 +830,7 @@ impl qobject::PairingLabController {
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let _completed = WorkerCompletion(worker_completed);
+            let transfer_fingerprint = super::synthetic_key_transfer::fingerprint();
             let result = (|| {
                 if *cancelled.borrow() {
                     return Err(kryptopass_pairing_lab::LabError::Cancelled);
@@ -697,6 +857,9 @@ impl qobject::PairingLabController {
                 if object.rust().generation != generation { return; }
                 object.as_mut().rust_mut().pending = None;
                 object.as_mut().set_busy(false);
+                object.as_mut().set_synthetic_transfer_fingerprint(
+                    QString::from(transfer_fingerprint),
+                );
                 match result {
                     Ok(loaded) => {
                         let (ready, aliases) = loaded.map_or_else(|| (None, Ok(BTreeMap::new())), |(ready, aliases)| (Some(ready), aliases));
@@ -732,13 +895,26 @@ impl qobject::PairingLabController {
     }
 
     pub fn select_device(mut self: Pin<&mut Self>, index: i32) {
-        if *self.busy() {
+        if *self.busy() || self.rust().sync_busy {
             return;
         }
         let selected = usize::try_from(index)
             .ok()
             .and_then(|index| self.rust().known_peers.get(index))
             .copied();
+        let selection_moved_during_transfer = self
+            .rust()
+            .synthetic_transfer_target
+            .is_some_and(|(peer, _, _)| selected.is_none_or(|selected| selected.device_id != peer))
+            || self
+                .rust()
+                .synthetic_transfer_preparing_peer
+                .is_some_and(|(peer, _)| {
+                    selected.is_none_or(|selected| selected.device_id != peer)
+                });
+        if selection_moved_during_transfer {
+            self.as_mut().cancel_synthetic_key_transfer_operation();
+        }
         self.as_mut()
             .set_selected_index(if selected.is_some() { index } else { -1 });
         self.as_mut().set_can_reconnect(selected.is_some());
@@ -746,6 +922,284 @@ impl qobject::PairingLabController {
             .set_peer(selected.map_or_else(QString::default, |peer| {
                 QString::from(peer.device_id.to_string())
             }));
+        let sync_peer_id = selected.map_or_else(QString::default, |peer| {
+            QString::from(peer.device_id.to_string())
+        });
+        if self.rust().sync_peer_id != sync_peer_id {
+            self.as_mut().set_sync_peer_id(sync_peer_id);
+            self.as_mut().set_sync_configured(false);
+            self.as_mut().set_sync_status(QString::default());
+            self.as_mut().set_sync_error(QString::default());
+            self.as_mut().set_sync_local_revision_count(0);
+            self.as_mut().set_sync_entries(QStringList::default());
+        }
+    }
+
+    pub fn activate_synthetic_sync(mut self: Pin<&mut Self>) {
+        self.as_mut()
+            .run_synthetic_sync(SyntheticSyncAction::Activate);
+    }
+
+    pub fn refresh_synthetic_sync(mut self: Pin<&mut Self>) {
+        self.as_mut()
+            .run_synthetic_sync(SyntheticSyncAction::Refresh);
+    }
+
+    pub fn create_synthetic_credential(mut self: Pin<&mut Self>) {
+        self.as_mut()
+            .run_synthetic_sync(SyntheticSyncAction::CreateCredential);
+    }
+
+    /// Local confirmation callback for the explicitly synthetic fixture.
+    /// GnuPG preparation starts only after this invocation and stays on a worker.
+    pub fn start_synthetic_key_transfer(
+        mut self: Pin<&mut Self>,
+        device_id: QString,
+        connection_generation: QString,
+        approved_fingerprint: QString,
+    ) {
+        if !cfg!(debug_assertions) {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "La transferencia sintética solo está disponible en Desktop debug.",
+            ));
+            return;
+        }
+        if self.rust().synthetic_transfer_preparing
+            || self.rust().sync_busy
+            || self.rust().busy
+            || self.rust().maintenance_busy
+        {
+            return;
+        }
+        let Some(peer) = parse_device_id(&device_id.to_string()) else {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "Selecciona un teléfono autorizado y conectado.",
+            ));
+            return;
+        };
+        let Some(expected_generation) = connection_generation.to_string().parse::<u64>().ok()
+        else {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "La sesión cambió. Vuelve a abrir la confirmación.",
+            ));
+            return;
+        };
+        let approved_fingerprint = approved_fingerprint.to_string();
+        if approved_fingerprint.is_empty()
+            || approved_fingerprint != self.rust().synthetic_transfer_fingerprint.to_string()
+        {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.",
+            ));
+            return;
+        }
+        let connected = self.rust().devices.as_ref().is_some_and(|devices| {
+            devices.snapshot().get(&peer).is_some_and(|device| {
+                device.connection == ConnectionState::Connected
+                    && device.connection_generation == expected_generation
+            })
+        });
+        let ready = self
+            .rust()
+            .synthetic_transfer_progress
+            .get(&peer)
+            .is_some_and(|(generation, progress)| {
+                *generation == expected_generation
+                    && progress.phase == kryptopass_devices::SyntheticTransferPhase::Ready
+            });
+        if !connected || !ready || self.rust().synthetic_transfer_fingerprint.is_empty() {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "El teléfono ya no está conectado con la sesión preparada para la prueba.",
+            ));
+            return;
+        }
+        let Some(owner) = self.rust().resume_owner.clone() else {
+            self.as_mut().set_synthetic_transfer_error(QString::from(
+                "No se pudo acceder al dueño de la sesión activa.",
+            ));
+            return;
+        };
+
+        if let Some(cancel) = self.as_mut().rust_mut().synthetic_transfer_cancel.take() {
+            let _ = cancel.send(true);
+        }
+        let (cancel, cancelled) = watch::channel(false);
+        self.as_mut().rust_mut().synthetic_transfer_cancel = Some(cancel);
+        self.as_mut().rust_mut().synthetic_transfer_generation =
+            self.rust().synthetic_transfer_generation.wrapping_add(1);
+        let operation_generation = self.rust().synthetic_transfer_generation;
+        self.as_mut().rust_mut().synthetic_transfer_preparing_peer =
+            Some((peer, expected_generation));
+        self.as_mut().set_synthetic_transfer_preparing(true);
+        self.as_mut()
+            .set_synthetic_transfer_error(QString::default());
+
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = (|| {
+                if *cancelled.borrow() {
+                    return Ok(None);
+                }
+                let (transfer_id, prepared) =
+                    super::synthetic_key_transfer::prepare(&approved_fingerprint)?;
+                if *cancelled.borrow() {
+                    return Ok(None);
+                }
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|_| kryptopass_devices::SyntheticTransferError::WrongSession)?;
+                runtime.block_on(async {
+                    owner
+                        .start_synthetic_key_transfer(peer, expected_generation, prepared)
+                        .await?;
+                    let cancel_guard = SyntheticTransferCancelOnDrop::new(
+                        owner.clone(),
+                        peer,
+                        expected_generation,
+                        transfer_id,
+                    );
+                    if *cancelled.borrow() {
+                        drop(cancel_guard);
+                        return Ok(None);
+                    }
+                    Ok(Some((transfer_id, cancel_guard)))
+                })
+            })();
+            let _ = thread.queue(move |mut object| {
+                if object.rust().synthetic_transfer_generation != operation_generation {
+                    return;
+                }
+                let exact_session_current = object.rust().devices.as_ref().is_some_and(|devices| {
+                    devices.snapshot().get(&peer).is_some_and(|device| {
+                        device.connection == ConnectionState::Connected
+                            && device.connection_generation == expected_generation
+                    })
+                });
+                if !exact_session_current && matches!(&result, Ok(Some(_))) {
+                    object.as_mut().rust_mut().synthetic_transfer_cancel = None;
+                    object.as_mut().rust_mut().synthetic_transfer_preparing_peer = None;
+                    object.as_mut().set_synthetic_transfer_preparing(false);
+                    object.as_mut().set_synthetic_transfer_error(QString::from(
+                        "La sesión cambió antes de activar la transferencia. No se enviará material privado.",
+                    ));
+                    return;
+                }
+                object.as_mut().rust_mut().synthetic_transfer_cancel = None;
+                object.as_mut().rust_mut().synthetic_transfer_preparing_peer = None;
+                object.as_mut().set_synthetic_transfer_preparing(false);
+                match result {
+                    Ok(Some((transfer_id, mut cancel_guard))) => {
+                        object.as_mut().rust_mut().synthetic_transfer_target =
+                            Some((peer, expected_generation, transfer_id));
+                        cancel_guard.disarm();
+                        object.as_mut()
+                            .set_synthetic_transfer_error(QString::default());
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        object.as_mut().set_synthetic_transfer_error(QString::from(
+                            synthetic_transfer_error_message(error),
+                        ));
+                    }
+                }
+            });
+        });
+    }
+
+    /// Cancels preparation or the exact active transfer when the view closes,
+    /// navigation changes, or the user disconnects the session.
+    pub fn cancel_synthetic_key_transfer(mut self: Pin<&mut Self>) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
+    }
+
+    fn cancel_synthetic_key_transfer_operation(mut self: Pin<&mut Self>) {
+        if let Some(cancel) = self.as_mut().rust_mut().synthetic_transfer_cancel.take() {
+            let _ = cancel.send(true);
+        }
+        self.as_mut().rust_mut().synthetic_transfer_generation =
+            self.rust().synthetic_transfer_generation.wrapping_add(1);
+        self.as_mut().rust_mut().synthetic_transfer_preparing_peer = None;
+        self.as_mut().set_synthetic_transfer_preparing(false);
+        if let Some((peer, generation, transfer_id)) =
+            self.as_mut().rust_mut().synthetic_transfer_target.take()
+        {
+            if let Some(owner) = self.rust().resume_owner.as_ref() {
+                spawn_synthetic_transfer_cancel(owner.clone(), peer, generation, transfer_id);
+            }
+        }
+    }
+
+    fn run_synthetic_sync(mut self: Pin<&mut Self>, action: SyntheticSyncAction) {
+        if !cfg!(debug_assertions) {
+            self.as_mut().set_sync_error(QString::from(
+                "La prueba sintética solo está disponible en Desktop debug.",
+            ));
+            return;
+        }
+        if self.rust().sync_busy || self.rust().busy || self.rust().maintenance_busy {
+            return;
+        }
+        let Some(peer) = self.rust().selected_peer() else {
+            self.as_mut()
+                .set_sync_error(QString::from(SyntheticSyncError::NoPeerSelected.message()));
+            return;
+        };
+        let Ok(directory) = lab_directory() else {
+            self.as_mut().set_sync_error(QString::from(
+                SyntheticSyncError::ProfileUnavailable.message(),
+            ));
+            return;
+        };
+
+        self.as_mut().set_sync_error(QString::default());
+        self.as_mut()
+            .set_sync_peer_id(QString::from(peer.device_id.to_string()));
+        self.as_mut().set_sync_busy(true);
+        self.as_mut().rust_mut().sync_generation = self.rust().sync_generation.wrapping_add(1);
+        let generation = self.rust().sync_generation;
+        let operation_peer_id = QString::from(peer.device_id.to_string());
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = super::synthetic_sync::run(&directory, peer.device_id, action);
+            let _ = thread.queue(move |mut object| {
+                if object.rust().sync_generation != generation {
+                    return;
+                }
+                object.as_mut().set_sync_busy(false);
+                if object.rust().sync_peer_id != operation_peer_id {
+                    return;
+                }
+                match result {
+                    Ok(snapshot) => {
+                        object.as_mut().apply_synthetic_sync_snapshot(snapshot);
+                        object.as_mut().set_sync_configured(true);
+                        object.as_mut().set_sync_error(QString::default());
+                    }
+                    Err(error) => {
+                        object
+                            .as_mut()
+                            .set_sync_error(QString::from(error.message()));
+                        if matches!(error, SyntheticSyncError::NotConfigured) {
+                            object.as_mut().set_sync_configured(false);
+                            object.as_mut().set_sync_entries(QStringList::default());
+                            object.as_mut().set_sync_local_revision_count(0);
+                            object.as_mut().set_sync_status(QString::default());
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    fn apply_synthetic_sync_snapshot(mut self: Pin<&mut Self>, snapshot: SyntheticSyncSnapshot) {
+        let entries = snapshot.rows.into_iter().map(QString::from).collect();
+        self.as_mut().set_sync_entries(entries);
+        self.as_mut().set_sync_local_revision_count(
+            i32::try_from(snapshot.local_revision_count).unwrap_or(i32::MAX),
+        );
+        self.as_mut()
+            .set_sync_status(QString::from(snapshot.status));
     }
 
     fn replace_trusted_devices(
@@ -773,6 +1227,17 @@ impl qobject::PairingLabController {
             .set_peer(selected.map_or_else(QString::default, |peer| {
                 QString::from(peer.device_id.to_string())
             }));
+        let sync_peer_id = selected.map_or_else(QString::default, |peer| {
+            QString::from(peer.device_id.to_string())
+        });
+        if self.rust().sync_peer_id != sync_peer_id {
+            self.as_mut().set_sync_peer_id(sync_peer_id);
+            self.as_mut().set_sync_configured(false);
+            self.as_mut().set_sync_status(QString::default());
+            self.as_mut().set_sync_error(QString::default());
+            self.as_mut().set_sync_local_revision_count(0);
+            self.as_mut().set_sync_entries(QStringList::default());
+        }
     }
 
     pub fn start_pairing(self: Pin<&mut Self>) {
@@ -1079,7 +1544,6 @@ impl qobject::PairingLabController {
                     if !ready.trusted_peers.contains(&peer) {
                         return Err(kryptopass_pairing_lab::LabError::Authentication);
                     }
-                    let local_id = host.public_identity().device_id;
                     let reconnect_port = if matches!(&network, LabNetwork::Lan { .. }) {
                         ready.reconnect_port
                     } else {
@@ -1087,14 +1551,20 @@ impl qobject::PairingLabController {
                     };
                     let options = SessionOptions { reconnect_port };
                     let devices = ready.devices.clone();
-                    let mut handle = kryptopass_devices::start_session_with_options(
+                    let mut handle = host.start_device_session(
                         devices.clone(),
                         outcome.session,
-                        local_id,
                         peer,
                         options,
                     )
                     .map_err(|_| kryptopass_pairing_lab::LabError::Session)?;
+                    let session_generation = handle.generation();
+                    owner
+                        .register_synthetic_transfer_control(
+                            handle.synthetic_key_transfer_control(),
+                        )
+                        .await
+                        .map_err(|_| kryptopass_pairing_lab::LabError::Session)?;
                     let mut changes = devices.subscribe();
                     let ready_devices = devices.clone();
                     let peers = ready.trusted_peers;
@@ -1143,6 +1613,7 @@ impl qobject::PairingLabController {
                         }
                     }
                     let last_exit = *lifecycle.borrow();
+                    owner.unregister_synthetic_transfer_control(peer.device_id, session_generation);
                     Ok((peer.device_id, devices, last_exit))
                 })
             })();
@@ -1235,6 +1706,7 @@ impl qobject::PairingLabController {
         if self.rust().maintenance_busy {
             return;
         }
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         self.as_mut().disconnect_device();
         if let Some(operation) = self.as_mut().rust_mut().pending.take() {
             let _ = operation.cancel.send(true);
@@ -1255,6 +1727,7 @@ impl qobject::PairingLabController {
 
     /// Requests an authenticated session close without deleting persisted trust.
     pub fn disconnect_device(mut self: Pin<&mut Self>) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         if let Some(peer) = parse_device_id(&self.rust().active_device_id.to_string()) {
             if let Some(owner) = self.rust().resume_owner.as_ref() {
                 owner.suppress_peer(peer);
@@ -1274,6 +1747,17 @@ impl qobject::PairingLabController {
         let Some(peer) = parse_device_id(&device_id.to_string()) else {
             return;
         };
+        if self
+            .rust()
+            .synthetic_transfer_target
+            .is_some_and(|(target_peer, _, _)| target_peer == peer)
+            || self
+                .rust()
+                .synthetic_transfer_preparing_peer
+                .is_some_and(|(target_peer, _)| target_peer == peer)
+        {
+            self.as_mut().cancel_synthetic_key_transfer_operation();
+        }
         if let Some(owner) = self.rust().resume_owner.as_ref() {
             owner.suppress_peer(peer);
         }
@@ -1284,6 +1768,7 @@ impl qobject::PairingLabController {
 
     /// Detaches the view while keeping an established connection owned by the app.
     pub fn release_ui(mut self: Pin<&mut Self>) {
+        self.as_mut().cancel_synthetic_key_transfer_operation();
         if self.rust().pending.is_some() {
             self.as_mut().cancel();
         }
@@ -1378,6 +1863,12 @@ impl qobject::PairingLabController {
 
     fn maintain_profile(mut self: Pin<&mut Self>, forget: Option<DeviceId>) {
         if !cfg!(debug_assertions) || self.rust().maintenance_busy || self.rust().alias_busy {
+            return;
+        }
+        if self.rust().sync_busy {
+            self.as_mut().set_status(QString::from(
+                "Espera a que termine la operación de la bóveda sintética antes de cambiar el perfil.",
+            ));
             return;
         }
         if self.rust().busy {
@@ -1526,6 +2017,16 @@ impl qobject::PairingLabController {
                         kryptopass_devices::ConnectionRoute::Turn => "TURN",
                     }.to_owned()
                 };
+                let synthetic_progress = self
+                    .rust()
+                    .synthetic_transfer_progress
+                    .get(&device.identity.device_id)
+                    .filter(|(generation, _)| *generation == device.connection_generation)
+                    .map(|(_, progress)| *progress);
+                let synthetic_transfer_id = synthetic_progress
+                    .and_then(|progress| progress.transfer_id)
+                    .map(|id| hex_transfer_id(&id))
+                    .unwrap_or_default();
                 serde_json::json!({
                     "route": route,
                     "routeLabel": route_label,
@@ -1536,6 +2037,9 @@ impl qobject::PairingLabController {
                         kryptopass_devices::ConnectionFamily::Mixed => "mixed",
                     },
                     "deviceId": id,
+                    "connectionGeneration": device.connection_generation.to_string(),
+                    "syntheticTransferPhase": synthetic_progress.map_or("unsupported", |progress| synthetic_transfer_phase_code(progress.phase)),
+                    "syntheticTransferId": synthetic_transfer_id,
                     "alias": alias,
                     "displayName": name,
                     "isActive": self.rust().session_active && id == self.rust().active_device_id.to_string(),
@@ -1693,6 +2197,53 @@ fn connection_status(state: ConnectionState) -> &'static str {
     }
 }
 
+fn synthetic_transfer_phase_code(
+    phase: kryptopass_devices::SyntheticTransferPhase,
+) -> &'static str {
+    use kryptopass_devices::SyntheticTransferPhase;
+    match phase {
+        SyntheticTransferPhase::Unsupported => "unsupported",
+        SyntheticTransferPhase::Ready => "ready",
+        SyntheticTransferPhase::WaitingAcceptance => "waiting_acceptance",
+        SyntheticTransferPhase::Sending => "sending",
+        SyntheticTransferPhase::WaitingReceipt => "waiting_receipt",
+        SyntheticTransferPhase::Complete => "complete",
+        SyntheticTransferPhase::Rejected => "rejected",
+        SyntheticTransferPhase::Cancelled => "cancelled",
+        SyntheticTransferPhase::Expired => "expired",
+        SyntheticTransferPhase::Failed => "failed",
+        SyntheticTransferPhase::Uncertain => "uncertain",
+    }
+}
+
+fn hex_transfer_id(id: &[u8; 16]) -> String {
+    let mut result = String::with_capacity(32);
+    for byte in id {
+        use std::fmt::Write;
+        let _ = write!(result, "{byte:02x}");
+    }
+    result
+}
+
+fn synthetic_transfer_error_message(
+    error: kryptopass_devices::SyntheticTransferError,
+) -> &'static str {
+    use kryptopass_devices::SyntheticTransferError;
+    match error {
+        SyntheticTransferError::Unsupported => {
+            "El teléfono o la sesión no admite la transferencia sintética."
+        }
+        SyntheticTransferError::Busy => "Ya se inició una transferencia en esta sesión.",
+        SyntheticTransferError::Invalid => {
+            "No se pudo preparar la clave sintética local. No se envió material privado."
+        }
+        SyntheticTransferError::Expired => "La transferencia caducó. Vuelve a iniciar la prueba.",
+        SyntheticTransferError::WrongSession => {
+            "La sesión o la generación cambió. Vuelve a conectar antes de intentarlo."
+        }
+    }
+}
+
 macro_rules! notifying_property {
     ($setter:ident, $field:ident, $changed:ident, $ty:ty) => {
         impl qobject::PairingLabController {
@@ -1792,4 +2343,49 @@ notifying_property!(
     maintenance_busy,
     maintenance_busy_changed,
     bool
+);
+notifying_property!(set_sync_busy, sync_busy, sync_busy_changed, bool);
+notifying_property!(
+    set_sync_peer_id,
+    sync_peer_id,
+    sync_peer_id_changed,
+    QString
+);
+notifying_property!(set_sync_status, sync_status, sync_status_changed, QString);
+notifying_property!(set_sync_error, sync_error, sync_error_changed, QString);
+notifying_property!(
+    set_sync_local_revision_count,
+    sync_local_revision_count,
+    sync_local_revision_count_changed,
+    i32
+);
+notifying_property!(
+    set_sync_entries,
+    sync_entries,
+    sync_entries_changed,
+    QStringList
+);
+notifying_property!(
+    set_sync_configured,
+    sync_configured,
+    sync_configured_changed,
+    bool
+);
+notifying_property!(
+    set_synthetic_transfer_fingerprint,
+    synthetic_transfer_fingerprint,
+    synthetic_transfer_fingerprint_changed,
+    QString
+);
+notifying_property!(
+    set_synthetic_transfer_preparing,
+    synthetic_transfer_preparing,
+    synthetic_transfer_preparing_changed,
+    bool
+);
+notifying_property!(
+    set_synthetic_transfer_error,
+    synthetic_transfer_error,
+    synthetic_transfer_error_changed,
+    QString
 );

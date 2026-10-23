@@ -1224,6 +1224,7 @@ fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
         reconnect_port: 0,
         synthetic_key_transfer_version: 0,
         sync_version: 0,
+        sync_rounds_version: 0,
     };
     let decoded = decode_as(proto::MessageType::SessionHello, &hello)?;
     let kryptopass_protocol::MessagePayload::SessionHello(decoded_hello) = decoded.payload else {
@@ -1233,6 +1234,65 @@ fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
     };
     assert_eq!(decoded_hello.synthetic_key_transfer_version, 0);
     Ok(())
+}
+
+#[test]
+fn sync_rounds_session_capability_roundtrips_and_rejects_duplicate_or_overflow() {
+    for version in [0, 1] {
+        let hello = proto::SessionHello {
+            session_version: 1,
+            device_id: bytes(32, 1),
+            reconnect_port: 0,
+            synthetic_key_transfer_version: 0,
+            sync_version: 1,
+            sync_rounds_version: version,
+        };
+        let decoded = decode_as(proto::MessageType::SessionHello, &hello)
+            .expect("valid continuous-round capability decodes");
+        let kryptopass_protocol::MessagePayload::SessionHello(decoded_hello) = decoded.payload
+        else {
+            panic!("session hello decodes as the expected payload");
+        };
+        assert_eq!(decoded_hello.sync_rounds_version, version);
+    }
+
+    let base = proto::SessionHello {
+        session_version: 1,
+        device_id: bytes(32, 1),
+        reconnect_port: 0,
+        synthetic_key_transfer_version: 0,
+        sync_version: 1,
+        sync_rounds_version: 0,
+    }
+    .encode_to_vec();
+
+    let mut duplicate = base.clone();
+    duplicate.extend_from_slice(&[0x30, 0x00, 0x30, 0x01]);
+    assert!(matches!(
+        SessionCodec::new(SESSION).decode(&frame(
+            &SESSION,
+            1,
+            proto::MessageType::SessionHello as i32,
+            &duplicate,
+            PROTOCOL_VERSION,
+        )),
+        Err(ProtocolError::MalformedPayload { .. })
+    ));
+
+    let mut overflow = base;
+    overflow.extend_from_slice(&[0x30, 0x80, 0x80, 0x80, 0x80, 0x10]);
+    assert!(matches!(
+        SessionCodec::new(SESSION).decode(&frame(
+            &SESSION,
+            1,
+            proto::MessageType::SessionHello as i32,
+            &overflow,
+            PROTOCOL_VERSION,
+        )),
+        Err(ProtocolError::InvalidField {
+            field: "session_capability"
+        })
+    ));
 }
 
 #[test]

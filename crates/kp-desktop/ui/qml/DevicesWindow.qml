@@ -16,6 +16,7 @@ Controls.ApplicationWindow {
     property bool showInvitationCode: false
     property bool reconnectFlow: false
     property string expandedDeviceId: ""
+    property string syncExpandedDeviceId: ""
     property string aliasTargetId: ""
     property string aliasDraft: ""
     property string forgetTargetId: ""
@@ -105,6 +106,33 @@ Controls.ApplicationWindow {
         if (state === "connecting" || state === "reconnecting")
             return Kirigami.Theme.linkColor;
         return Kirigami.Theme.disabledTextColor;
+    }
+
+    function syntheticTransferLabel(phase) {
+        switch (phase) {
+        case "ready":
+            return qsTr("Prueba de transferencia disponible");
+        case "waiting_acceptance":
+            return qsTr("Esperando que Android acepte");
+        case "sending":
+            return qsTr("Enviando clave de prueba");
+        case "waiting_receipt":
+            return qsTr("Esperando confirmación de guardado");
+        case "complete":
+            return qsTr("Android confirmó el guardado y el desafío");
+        case "rejected":
+            return qsTr("Android rechazó la oferta");
+        case "cancelled":
+            return qsTr("Transferencia cancelada");
+        case "expired":
+            return qsTr("La transferencia caducó");
+        case "uncertain":
+            return qsTr("Conexión perdida; el resultado es incierto");
+        case "failed":
+            return qsTr("La transferencia falló");
+        default:
+            return qsTr("Esta sesión no admite la prueba");
+        }
     }
 
     function routeLine(device) {
@@ -614,7 +642,10 @@ Controls.ApplicationWindow {
                     required property var modelData
                     readonly property string deviceId: String(modelData.deviceId || "")
                     readonly property string connection: String(modelData.connection || "")
+                    readonly property string connectionGeneration: String(modelData.connectionGeneration || "")
+                    readonly property string syntheticTransferPhase: String(modelData.syntheticTransferPhase || "unsupported")
                     readonly property bool expanded: dialog.expandedDeviceId === deviceId
+                    readonly property bool syncExpanded: dialog.syncExpandedDeviceId === deviceId
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.smallSpacing
 
@@ -675,7 +706,7 @@ Controls.ApplicationWindow {
                             visible: !deviceRow.modelData.isActive
                             text: qsTr("Reconectar")
                             icon.name: "network-connect"
-                            enabled: !dialog.controller.busy && !dialog.controller.sessionActive && deviceRow.modelData.trust === "trusted"
+                            enabled: !dialog.controller.busy && !dialog.controller.syncBusy && !dialog.controller.sessionActive && deviceRow.modelData.trust === "trusted"
                             onClicked: {
                                 dialog.reconnectFlow = true;
                                 dialog.controller.selectDevice(deviceRow.index);
@@ -725,6 +756,161 @@ Controls.ApplicationWindow {
                                         deleteDialog.open();
                                     }
                                 }
+                            }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        visible: dialog.available && deviceRow.modelData.trust === "trusted"
+                        Controls.ToolButton {
+                            text: deviceRow.syncExpanded ? qsTr("Ocultar prueba de Sync") : qsTr("Prueba sintética de Sync")
+                            icon.name: "network-connect"
+                            enabled: !dialog.controller.syncBusy && !dialog.controller.busy
+                            onClicked: {
+                                dialog.syncExpandedDeviceId = deviceRow.syncExpanded ? "" : deviceRow.deviceId;
+                                dialog.controller.selectDevice(deviceRow.index);
+                            }
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        visible: dialog.available && dialog.controller.syntheticTransferFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: qsTr("Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.Button {
+                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase === "ready"
+                                text: qsTr("Enviar clave de prueba")
+                                icon.name: "mail-send"
+                                enabled: !dialog.controller.syntheticTransferPreparing && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                                onClicked: {
+                                    syntheticTransferApproval.deviceId = deviceRow.deviceId;
+                                    syntheticTransferApproval.connectionGeneration = deviceRow.connectionGeneration;
+                                    syntheticTransferApproval.recipient = dialog.deviceName(deviceRow.modelData);
+                                    syntheticTransferApproval.fingerprint = dialog.controller.syntheticTransferFingerprint;
+                                    syntheticTransferApproval.approved = false;
+                                    syntheticTransferApproval.open();
+                                }
+                            }
+                            Controls.Button {
+                                visible: ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
+                                text: qsTr("Cancelar transferencia")
+                                icon.name: "dialog-cancel"
+                                onClicked: dialog.controller.cancelSyntheticKeyTransfer()
+                            }
+                            Controls.BusyIndicator {
+                                running: dialog.controller.syntheticTransferPreparing
+                                visible: running
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: implicitWidth
+                            }
+                            Controls.Label {
+                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
+                                text: dialog.syntheticTransferLabel(deviceRow.syntheticTransferPhase)
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Kirigami.InlineMessage {
+                            Layout.fillWidth: true
+                            visible: dialog.controller.syntheticTransferError.length > 0
+                            type: Kirigami.MessageType.Error
+                            text: dialog.controller.syntheticTransferError
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        visible: deviceRow.syncExpanded
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: qsTr("Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.Button {
+                                text: qsTr("Activar prueba de Sync")
+                                icon.name: "media-playback-start"
+                                enabled: !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                                onClicked: {
+                                    dialog.controller.selectDevice(deviceRow.index);
+                                    dialog.controller.activateSyntheticSync();
+                                }
+                            }
+                            Controls.Button {
+                                text: qsTr("Actualizar prueba")
+                                icon.name: "view-refresh"
+                                enabled: dialog.controller.syncConfigured && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                                onClicked: {
+                                    dialog.controller.selectDevice(deviceRow.index);
+                                    dialog.controller.refreshSyntheticSync();
+                                }
+                            }
+                            Controls.Button {
+                                text: qsTr("Crear credencial de prueba")
+                                icon.name: "list-add"
+                                enabled: dialog.controller.syncConfigured && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                                onClicked: {
+                                    dialog.controller.selectDevice(deviceRow.index);
+                                    dialog.controller.createSyntheticCredential();
+                                }
+                            }
+                        }
+                        Controls.BusyIndicator {
+                            Layout.alignment: Qt.AlignLeft
+                            running: dialog.controller.syncBusy && dialog.controller.syncPeerId === deviceRow.deviceId
+                            visible: running
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: implicitWidth
+                        }
+                        Kirigami.InlineMessage {
+                            Layout.fillWidth: true
+                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncError.length > 0
+                            type: Kirigami.MessageType.Error
+                            text: dialog.controller.syncError
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncStatus.length > 0
+                            text: dialog.controller.syncStatus
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncConfigured
+                            text: qsTr("Revisiones guardadas en este equipo: %1").arg(dialog.controller.syncLocalRevisionCount)
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        Repeater {
+                            model: dialog.controller.syncPeerId === deviceRow.deviceId ? dialog.controller.syncEntries : []
+                            Controls.Label {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: "• " + modelData
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
                             }
                         }
                     }
@@ -852,6 +1038,106 @@ Controls.ApplicationWindow {
                 }
             }
             onRejected: deleteDialog.close()
+        }
+    }
+
+    Controls.Dialog {
+        id: syntheticTransferApproval
+        parent: Controls.Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Confirmar envío de clave de prueba")
+        width: Math.min(Kirigami.Units.gridUnit * 26, dialog.width - Kirigami.Units.gridUnit * 2)
+        standardButtons: Controls.Dialog.NoButton
+        property string deviceId: ""
+        property string connectionGeneration: ""
+        property string recipient: ""
+        property string fingerprint: ""
+        property bool approved: false
+        readonly property var transferDevice: dialog.devices.find(device => String(device.deviceId || "") === deviceId) || ({})
+        readonly property string transferPhase: String(transferDevice.syntheticTransferPhase || "ready")
+        readonly property bool transferPending: dialog.controller.syntheticTransferPreparing || ["waiting_acceptance", "sending", "waiting_receipt"].includes(transferPhase)
+
+        onClosed: {
+            if (approved && transferPending) {
+                approved = false;
+                dialog.controller.cancelSyntheticKeyTransfer();
+            }
+        }
+        onRejected: close()
+
+        contentItem: ColumnLayout {
+            spacing: Kirigami.Units.mediumSpacing
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: !syntheticTransferApproval.approved
+                text: qsTr("Destinatario: %1").arg(syntheticTransferApproval.recipient)
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: !syntheticTransferApproval.approved
+                text: qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: !syntheticTransferApproval.approved
+                text: syntheticTransferApproval.fingerprint
+                textFormat: Text.PlainText
+                font.family: "monospace"
+                wrapMode: Text.WrapAnywhere
+                Accessible.name: qsTr("Fingerprint completo de la clave de prueba")
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: !syntheticTransferApproval.approved
+                type: Kirigami.MessageType.Warning
+                text: qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
+            }
+            Controls.BusyIndicator {
+                Layout.alignment: Qt.AlignHCenter
+                visible: dialog.controller.syntheticTransferPreparing || syntheticTransferApproval.transferPending
+                running: visible
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: syntheticTransferApproval.approved
+                text: dialog.controller.syntheticTransferPreparing ? qsTr("Preparando la clave de prueba en GnuPG…") : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase)
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: syntheticTransferApproval.approved && dialog.controller.syntheticTransferError.length > 0
+                type: Kirigami.MessageType.Error
+                text: dialog.controller.syntheticTransferError
+            }
+        }
+        footer: Controls.DialogButtonBox {
+            Controls.Button {
+                text: syntheticTransferApproval.approved ? (syntheticTransferApproval.transferPending ? qsTr("Cancelar transferencia") : qsTr("Cerrar")) : qsTr("Cancelar")
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
+                onClicked: {
+                    if (syntheticTransferApproval.approved && syntheticTransferApproval.transferPending)
+                        dialog.controller.cancelSyntheticKeyTransfer();
+                    syntheticTransferApproval.approved = false;
+                    syntheticTransferApproval.close();
+                }
+            }
+            Controls.Button {
+                visible: !syntheticTransferApproval.approved
+                text: qsTr("Confirmar y enviar")
+                icon.name: "mail-send"
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
+                onClicked: {
+                    syntheticTransferApproval.approved = true;
+                    dialog.controller.startSyntheticKeyTransfer(syntheticTransferApproval.deviceId, syntheticTransferApproval.connectionGeneration, syntheticTransferApproval.fingerprint);
+                }
+            }
+            onRejected: syntheticTransferApproval.close()
         }
     }
 

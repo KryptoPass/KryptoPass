@@ -3,12 +3,14 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity};
 use kryptopass_protocol::{MessagePayload, proto};
 use kryptopass_sync::{
-    Id, Ledger, Operation, SyncError, SyncProgressState, SyncSession, SyncSessionError, TrustSource,
+    Id, Ledger, Operation, SESSION_MAX_ROUNDS_PER_WINDOW, SyncError, SyncProgressState,
+    SyncSession, SyncSessionError, TrustSource,
 };
 use rusqlite::Connection;
 
@@ -30,6 +32,36 @@ impl TestTrust {
 impl TrustSource for TestTrust {
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
         Ok(self.0.get(&device_id).copied())
+    }
+}
+
+#[derive(Clone)]
+struct SharedTestTrust(Arc<RwLock<HashMap<DeviceId, PublicIdentity>>>);
+
+impl SharedTestTrust {
+    fn for_pair(small: &DeviceIdentity, large: &DeviceIdentity) -> Self {
+        Self(Arc::new(RwLock::new(HashMap::from([
+            (small.device_id(), small.public_identity()),
+            (large.device_id(), large.public_identity()),
+        ]))))
+    }
+
+    fn remove(&self, device_id: DeviceId) {
+        self.0
+            .write()
+            .expect("test trust lock is not poisoned")
+            .remove(&device_id);
+    }
+}
+
+impl TrustSource for SharedTestTrust {
+    fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
+        Ok(self
+            .0
+            .read()
+            .expect("test trust lock is not poisoned")
+            .get(&device_id)
+            .copied())
     }
 }
 
@@ -178,35 +210,39 @@ fn summary(from_small: bool, _message_type: proto::MessageType, payload: &Messag
 }
 
 fn run_to_completion(sessions: &mut Sessions) -> Vec<Frame> {
+    pump_sessions_to_completion(&mut sessions.small, &mut sessions.large, sessions.now)
+}
+
+fn pump_sessions_to_completion(
+    small: &mut SyncSession,
+    large: &mut SyncSession,
+    now: Instant,
+) -> Vec<Frame> {
     let mut trace = Vec::new();
     for _ in 0..20_000 {
-        if sessions.small.is_complete() && sessions.large.is_complete() {
+        if small.is_complete() && large.is_complete() {
             return trace;
         }
         let mut advanced = false;
-        if let Some(outbound) = sessions
-            .small
-            .poll_output(sessions.now)
+        if let Some(outbound) = small
+            .poll_output(now)
             .expect("small Sync owner polls one frame")
         {
             let (message_type, payload) = outbound.into_message();
             trace.push(summary(true, message_type, &payload));
-            sessions
-                .large
-                .handle_message(message_type, payload, sessions.now)
+            large
+                .handle_message(message_type, payload, now)
                 .expect("large Sync owner accepts the routed frame");
             advanced = true;
         }
-        if let Some(outbound) = sessions
-            .large
-            .poll_output(sessions.now)
+        if let Some(outbound) = large
+            .poll_output(now)
             .expect("large Sync owner polls one frame")
         {
             let (message_type, payload) = outbound.into_message();
             trace.push(summary(false, message_type, &payload));
-            sessions
-                .small
-                .handle_message(message_type, payload, sessions.now)
+            small
+                .handle_message(message_type, payload, now)
                 .expect("small Sync owner accepts the routed frame");
             advanced = true;
         }
@@ -775,6 +811,372 @@ fn replayed_hello_and_unsolicited_chunk_fail_closed() {
             now,
         ),
         Err(SyncSessionError::Protocol)
+    );
+}
+
+#[test]
+fn continuous_rounds_defer_a_busy_local_write_and_do_not_echo_received_revisions() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let trust = TestTrust::for_pair(&small_identity, &large_identity);
+    let directory = TempDirectory::new("continuous-rounds");
+    let small_path = directory.file("small.sqlite");
+    let large_path = directory.file("large.sqlite");
+    let small_ledger = Ledger::create(&small_path, VAULT).expect("create isolated small ledger");
+    let large_ledger = Ledger::create(&large_path, VAULT).expect("create isolated large ledger");
+    let mut small_writer = Ledger::open_existing(&small_path, VAULT, &trust)
+        .expect("open a second small ledger handle");
+    let large_observer =
+        Ledger::open_existing(&large_path, VAULT, &trust).expect("open a large ledger observer");
+    let mut sessions =
+        in_memory_sessions(&small_identity, &large_identity, small_ledger, large_ledger);
+    sessions
+        .small
+        .enable_continuous_rounds()
+        .expect("explicitly negotiate the small continuous mode");
+    sessions
+        .large
+        .enable_continuous_rounds()
+        .expect("explicitly negotiate the large continuous mode");
+    let now = sessions.now;
+    let mut first_trace = Vec::new();
+
+    let small_hello = sessions
+        .small
+        .poll_output(now)
+        .expect("small initial hello")
+        .expect("small announces its ledger");
+    let (small_hello_type, small_hello_payload) = small_hello.into_message();
+    first_trace.push(summary(true, small_hello_type, &small_hello_payload));
+    let large_hello = sessions
+        .large
+        .poll_output(now)
+        .expect("large initial hello")
+        .expect("large announces its ledger");
+    let (large_hello_type, large_hello_payload) = large_hello.into_message();
+    first_trace.push(summary(false, large_hello_type, &large_hello_payload));
+    sessions
+        .small
+        .handle_message(large_hello_type, large_hello_payload, now)
+        .expect("small binds the authenticated peer hello");
+    sessions
+        .large
+        .handle_message(small_hello_type, small_hello_payload, now)
+        .expect("large binds the authenticated peer hello");
+
+    let small_manifest = sessions
+        .small
+        .poll_output(now)
+        .expect("small initial manifest")
+        .expect("small freezes its first snapshot");
+    let (small_manifest_type, small_manifest_payload) = small_manifest.into_message();
+    first_trace.push(summary(true, small_manifest_type, &small_manifest_payload));
+    let large_manifest = sessions
+        .large
+        .poll_output(now)
+        .expect("large initial manifest")
+        .expect("large freezes its first snapshot");
+    let (large_manifest_type, large_manifest_payload) = large_manifest.into_message();
+    first_trace.push(summary(false, large_manifest_type, &large_manifest_payload));
+    sessions
+        .large
+        .handle_message(small_manifest_type, small_manifest_payload, now)
+        .expect("large accepts the first frozen snapshot");
+    sessions
+        .small
+        .handle_message(large_manifest_type, large_manifest_payload, now)
+        .expect("small accepts the first frozen snapshot");
+
+    small_writer
+        .append_local(
+            &small_identity,
+            [0x66; 16],
+            &[],
+            Operation::Write,
+            b"synthetic local write while the first round is busy".to_vec(),
+            &trust,
+        )
+        .expect("write through a second handle after the snapshot froze");
+    assert!(
+        sessions
+            .small
+            .has_uncovered_local_revisions()
+            .expect("small change count")
+    );
+    assert!(
+        !sessions
+            .large
+            .has_uncovered_local_revisions()
+            .expect("large change count")
+    );
+    assert!(
+        sessions.small.request_round(),
+        "the pending local change is coalesced"
+    );
+
+    first_trace.extend(pump_sessions_to_completion(
+        &mut sessions.small,
+        &mut sessions.large,
+        now,
+    ));
+    assert!(sessions.small.is_complete() && sessions.large.is_complete());
+    assert_eq!(
+        small_writer
+            .revision_count()
+            .expect("small first-round count"),
+        1
+    );
+    assert_eq!(
+        large_observer
+            .revision_count()
+            .expect("first round did not include the late write"),
+        0
+    );
+
+    sessions.now += Duration::from_secs(1);
+    let now = sessions.now;
+    let small_hello = sessions
+        .small
+        .poll_output(now)
+        .expect("pending second round")
+        .expect("one-second local debounce elapsed");
+    let (hello_type, hello_payload) = small_hello.into_message();
+    let mut second_trace = vec![summary(true, hello_type, &hello_payload)];
+    sessions
+        .large
+        .handle_message(hello_type, hello_payload, now)
+        .expect("complete peer accepts the next round on the same session");
+    second_trace.extend(pump_sessions_to_completion(
+        &mut sessions.small,
+        &mut sessions.large,
+        now,
+    ));
+
+    assert!(sessions.small.is_complete() && sessions.large.is_complete());
+    assert_eq!(
+        small_writer.revision_count().expect("small durable count"),
+        1
+    );
+    assert_eq!(
+        large_observer
+            .revision_count()
+            .expect("large received the local write"),
+        1
+    );
+    assert!(
+        !sessions
+            .small
+            .has_uncovered_local_revisions()
+            .expect("small has no uncovered changes")
+    );
+    assert!(
+        !sessions
+            .large
+            .has_uncovered_local_revisions()
+            .expect("received write is covered")
+    );
+
+    let mut small_snapshots = Vec::new();
+    let mut large_snapshots = Vec::new();
+    for frame in first_trace.iter().chain(&second_trace) {
+        if let FrameKind::Manifest { snapshot_id } = &frame.kind {
+            if frame.from_small {
+                small_snapshots.push(snapshot_id.clone());
+            } else {
+                large_snapshots.push(snapshot_id.clone());
+            }
+        }
+    }
+    assert_eq!(small_snapshots.len(), 2);
+    assert_eq!(large_snapshots.len(), 2);
+    assert_ne!(small_snapshots[0], small_snapshots[1]);
+    assert_ne!(large_snapshots[0], large_snapshots[1]);
+    assert!(
+        sessions
+            .small
+            .poll_output(now + Duration::from_secs(2))
+            .expect("settled small continuous session")
+            .is_none()
+    );
+    assert!(
+        sessions
+            .large
+            .poll_output(now + Duration::from_secs(2))
+            .expect("settled large continuous session")
+            .is_none()
+    );
+}
+
+#[test]
+fn single_round_default_rejects_hello_after_completion() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let mut sessions = in_memory_sessions(
+        &small_identity,
+        &large_identity,
+        Ledger::in_memory(VAULT).expect("small isolated ledger"),
+        Ledger::in_memory(VAULT).expect("large isolated ledger"),
+    );
+    run_to_completion(&mut sessions);
+
+    assert_eq!(
+        sessions.large.handle_message(
+            proto::MessageType::SyncHello,
+            MessagePayload::SyncHello(proto::SyncHello {
+                vault_id: VAULT.to_vec(),
+                device_id: small_identity.device_id().as_bytes().to_vec(),
+                known_revision_count: 0,
+                openpgp_fingerprint: FINGERPRINT.to_vec(),
+            }),
+            sessions.now,
+        ),
+        Err(SyncSessionError::Protocol)
+    );
+}
+
+#[test]
+fn continuous_peer_hello_is_allowed_before_local_debounce_but_replay_while_busy_fails() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let mut sessions = in_memory_sessions(
+        &small_identity,
+        &large_identity,
+        Ledger::in_memory(VAULT).expect("small isolated ledger"),
+        Ledger::in_memory(VAULT).expect("large isolated ledger"),
+    );
+    sessions
+        .small
+        .enable_continuous_rounds()
+        .expect("explicit continuous capability");
+    run_to_completion(&mut sessions);
+    let now = sessions.now;
+    let peer_hello = proto::SyncHello {
+        vault_id: VAULT.to_vec(),
+        device_id: large_identity.device_id().as_bytes().to_vec(),
+        known_revision_count: 0,
+        openpgp_fingerprint: FINGERPRINT.to_vec(),
+    };
+    sessions
+        .small
+        .handle_message(
+            proto::MessageType::SyncHello,
+            MessagePayload::SyncHello(peer_hello.clone()),
+            now,
+        )
+        .expect("authenticated peer may request a round without local debounce");
+    assert_eq!(
+        sessions.small.progress().state,
+        SyncProgressState::Negotiating
+    );
+    assert_eq!(
+        sessions.small.handle_message(
+            proto::MessageType::SyncHello,
+            MessagePayload::SyncHello(peer_hello),
+            now,
+        ),
+        Err(SyncSessionError::Protocol),
+        "a second peer hello during the active round is a replay"
+    );
+}
+
+#[test]
+fn continuous_rounds_recheck_trust_before_accepting_the_next_round() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let trust = SharedTestTrust::for_pair(&small_identity, &large_identity);
+    let now = Instant::now();
+    let mut small = SyncSession::new(
+        Ledger::in_memory(VAULT).expect("small isolated ledger"),
+        Box::new(trust.clone()),
+        small_identity.device_id(),
+        large_identity.public_identity(),
+        FINGERPRINT.to_vec(),
+        now,
+    )
+    .expect("explicit small binding");
+    let mut large = SyncSession::new(
+        Ledger::in_memory(VAULT).expect("large isolated ledger"),
+        Box::new(trust.clone()),
+        large_identity.device_id(),
+        small_identity.public_identity(),
+        FINGERPRINT.to_vec(),
+        now,
+    )
+    .expect("explicit large binding");
+    small
+        .enable_continuous_rounds()
+        .expect("explicit continuous capability");
+    pump_sessions_to_completion(&mut small, &mut large, now);
+    trust.remove(large_identity.device_id());
+
+    assert_eq!(
+        small.handle_message(
+            proto::MessageType::SyncHello,
+            MessagePayload::SyncHello(proto::SyncHello {
+                vault_id: VAULT.to_vec(),
+                device_id: large_identity.device_id().as_bytes().to_vec(),
+                known_revision_count: 0,
+                openpgp_fingerprint: FINGERPRINT.to_vec(),
+            }),
+            now,
+        ),
+        Err(SyncSessionError::TrustRevoked)
+    );
+}
+
+#[test]
+fn continuous_peer_round_budget_caps_starts_at_128_per_window() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let trust = TestTrust::for_pair(&small_identity, &large_identity);
+    let mut initial = in_memory_sessions(
+        &small_identity,
+        &large_identity,
+        Ledger::in_memory(VAULT).expect("small isolated ledger"),
+        Ledger::in_memory(VAULT).expect("large isolated ledger"),
+    );
+    initial
+        .small
+        .enable_continuous_rounds()
+        .expect("explicit continuous capability");
+    run_to_completion(&mut initial);
+    let mut persistent = initial.small;
+    let now = initial.now;
+
+    for _ in 1..SESSION_MAX_ROUNDS_PER_WINDOW {
+        let mut peer = SyncSession::new(
+            Ledger::in_memory(VAULT).expect("fresh synthetic peer ledger"),
+            Box::new(trust.clone()),
+            large_identity.device_id(),
+            small_identity.public_identity(),
+            FINGERPRINT.to_vec(),
+            now,
+        )
+        .expect("fresh peer is explicitly bound to the same identity");
+        let hello = peer
+            .poll_output(now)
+            .expect("peer hello output")
+            .expect("peer begins one round");
+        let (message_type, payload) = hello.into_message();
+        persistent
+            .handle_message(message_type, payload, now)
+            .expect("continuous receiver accepts peer round within its budget");
+        pump_sessions_to_completion(&mut persistent, &mut peer, now);
+        assert!(persistent.is_complete() && peer.is_complete());
+    }
+
+    let mut over_budget_peer = SyncSession::new(
+        Ledger::in_memory(VAULT).expect("over-budget synthetic peer ledger"),
+        Box::new(trust),
+        large_identity.device_id(),
+        small_identity.public_identity(),
+        FINGERPRINT.to_vec(),
+        now,
+    )
+    .expect("over-budget peer has a valid binding");
+    let hello = over_budget_peer
+        .poll_output(now)
+        .expect("over-budget peer hello output")
+        .expect("over-budget peer starts its local session");
+    let (message_type, payload) = hello.into_message();
+    assert_eq!(
+        persistent.handle_message(message_type, payload, now),
+        Err(SyncSessionError::Capacity)
     );
 }
 

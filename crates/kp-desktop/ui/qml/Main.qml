@@ -367,8 +367,11 @@ Controls.ApplicationWindow {
     Connections {
         target: store.controller
         function onLockedChanged() {
-            if (!store.controller.locked && !root.keysMode)
+            if (store.controller.locked) {
+                deviceController.cancelSyntheticKeyTransfer();
+            } else if (!root.keysMode) {
                 store.controller.selectEntry(store.selectedId);
+            }
         }
         function onClipboardRequested(value) {
             const copied = secureClipboard.copySensitive(value);

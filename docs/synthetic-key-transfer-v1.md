@@ -1,10 +1,15 @@
 # Transferencia sintética v1 — contrato de implementación
 
 Extensión debug exclusivamente para probar el recorrido Desktop → Android con
-la clave pública de pruebas `fixtures/synthetic-key-transfer-v1`. No permite
-seleccionar, exportar ni enviar claves reales. El fingerprint y SHA-256 del
-bloque privado deben coincidir exactamente con `fixture.json` en ambos extremos.
-La contraseña de esta identidad es pública y nunca sirve para secretos reales.
+una clave OpenPGP sintética generada localmente por GnuPG, fuera de Git. No
+permite seleccionar, exportar ni enviar claves reales. El fingerprint, SHA-256
+y tamaño del bloque privado deben coincidir con el manifiesto local
+`fixture.json` usado para preparar ambas builds. No se versionan claves privadas,
+ni en archivos binarios ni en constantes Base64 de tests. La contraseña de
+laboratorio no sirve para secretos reales. El flujo está integrado en las builds
+DEBUG; su API y límites de validación están en
+[synthetic-key-transfer-api-v1.md](synthetic-key-transfer-api-v1.md). Esto no habilita
+el envío de claves reales ni acredita persistencia biométrica por pasar tests del actor.
 
 ## Contrato de bytes
 

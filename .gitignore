@@ -9,3 +9,7 @@
 
 __pycache__/
 *.pyc
+
+# OpenPGP debug keys are generated locally; never stage private fixtures.
+/fixtures/synthetic-key-transfer-v1/
+**/secret-key.pgp
