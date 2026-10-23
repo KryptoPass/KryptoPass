@@ -39,9 +39,19 @@ add_custom_target(kryptopass-desktop ALL
     USES_TERMINAL
     COMMENT "Building ${KRYPTOPASS_BINARY} with Cargo")
 
+set(KRYPTOPASS_TURN_BROKER_ORIGIN "" CACHE STRING
+    "HTTPS origin of the TURN credential broker exported by the launcher; empty keeps STUN only")
 # Launchers resolve the absolute path, so a prefix outside PATH still starts.
+set(KRYPTOPASS_LAUNCH_COMMAND ${KDE_INSTALL_FULL_BINDIR}/${KRYPTOPASS_BINARY})
+if(KRYPTOPASS_TURN_BROKER_ORIGIN)
+    # Only a bare origin: never relay-only switches, paths or provider credentials.
+    if(NOT KRYPTOPASS_TURN_BROKER_ORIGIN MATCHES "^https://[A-Za-z0-9.-]+(:[0-9]+)?$")
+        message(FATAL_ERROR "KRYPTOPASS_TURN_BROKER_ORIGIN must be an https:// origin without path")
+    endif()
+    set(KRYPTOPASS_LAUNCH_COMMAND "env KP_TURN_BROKER_ORIGIN=${KRYPTOPASS_TURN_BROKER_ORIGIN} ${KRYPTOPASS_LAUNCH_COMMAND}")
+endif()
 file(READ packaging/gen/${KRYPTOPASS_APP_ID}.desktop KRYPTOPASS_DESKTOP_ENTRY)
-string(REGEX REPLACE "\nExec=${KRYPTOPASS_BINARY}( |\n)" "\nExec=${KDE_INSTALL_FULL_BINDIR}/${KRYPTOPASS_BINARY}\\1"
+string(REGEX REPLACE "\nExec=${KRYPTOPASS_BINARY}( |\n)" "\nExec=${KRYPTOPASS_LAUNCH_COMMAND}\\1"
     KRYPTOPASS_DESKTOP_ENTRY "${KRYPTOPASS_DESKTOP_ENTRY}")
 set(KRYPTOPASS_DESKTOP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${KRYPTOPASS_APP_ID}.desktop)
 file(WRITE ${KRYPTOPASS_DESKTOP_FILE} "${KRYPTOPASS_DESKTOP_ENTRY}")

@@ -303,9 +303,10 @@ distro-check:
     cmake -S . -B {{ quote(target_dir / "cmake-check") }} -Wno-dev >/dev/null
     ctest --test-dir {{ quote(target_dir / "cmake-check") }} --output-on-failure
 
+# Lanzador con el broker TURN de desarrollo, como `just run`; KP_TURN_BROKER_ORIGIN= lo omite.
 # Compila en release e instala con CMake, como lo haría una distro (por defecto ~/.local).
 install prefix=(home_directory() / ".local"):
-    cmake -S . -B {{ quote(target_dir / "cmake") }} -DCMAKE_INSTALL_PREFIX={{ quote(prefix) }} -DKRYPTOPASS_CARGO_TARGET_DIR={{ quote(target_dir) }}
+    cmake -S . -B {{ quote(target_dir / "cmake") }} -DCMAKE_INSTALL_PREFIX={{ quote(prefix) }} -DKRYPTOPASS_CARGO_TARGET_DIR={{ quote(target_dir) }} -DKRYPTOPASS_TURN_BROKER_ORIGIN="${KP_TURN_BROKER_ORIGIN-https://signal.kryptopass.org}"
     cmake --build {{ quote(target_dir / "cmake") }}
     cmake --install {{ quote(target_dir / "cmake") }}
 

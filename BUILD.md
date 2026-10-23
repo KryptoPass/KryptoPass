@@ -118,6 +118,9 @@ DESTDIR="$pkgdir" cmake --install build
 - `KRYPTOPASS_CARGO_ARGS` (por defecto `--locked`) admite `--offline` o
   `--frozen` para builds sin red tras `cargo fetch --locked` o vendorizado.
 - `KRYPTOPASS_CARGO_TARGET_DIR` reutiliza un directorio de Cargo existente.
+- `KRYPTOPASS_TURN_BROKER_ORIGIN` (vacío por defecto) añade
+  `env KP_TURN_BROKER_ORIGIN=<origen>` a los `Exec` del lanzador. Solo acepta
+  un origen `https://` sin ruta; nunca relay-only ni credenciales.
 - Con `DESTDIR` no se tocan las cachés del sistema: lo hacen los hooks del
   paquete. Sin `DESTDIR`, la instalación ejecuta `update-mime-database`,
   `update-desktop-database` y `gtk-update-icon-cache` si existen.
@@ -126,7 +129,9 @@ DESTDIR="$pkgdir" cmake --install build
   empaquetador.
 
 En local, `just install` compila en release e instala en `~/.local`
-(`just install /otro/prefijo` cambia el destino) y `just uninstall` quita
+(`just install /otro/prefijo` cambia el destino) con el broker TURN de
+desarrollo en el lanzador, igual que `just run` (`KP_TURN_BROKER_ORIGIN=` vacío
+lo omite), y `just uninstall` quita
 exactamente lo instalado. Abierta desde el menú, Plasma la identifica como
 KryptoPass (icono, Monitor del sistema, gestor de tareas). `just distro-check`
 configura CMake y valida lo que instalaría sin compilar; forma parte de

@@ -135,10 +135,10 @@ Pruebas funcionales autorizadas; revisión independiente sigue pausada.
 
 
 Despliegue local TURN (2026-10-19, revisado 2026-10-23): ya no hay lanzador de
-desarrollo instalado. `just run` exporta
-KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org salvo que ya esté definido,
-mientras se integra configuración de UI. No incluir KP_TURN_RELAY_ONLY en
-`just run` ni tokens del proveedor.
+desarrollo. `just run` exporta KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org
+salvo que ya esté definido, y `just install` lo fija en el lanzador instalado
+con la opción CMake KRYPTOPASS_TURN_BROKER_ORIGIN, mientras se integra
+configuración de UI. No incluir KP_TURN_RELAY_ONLY ni tokens del proveedor.
 
 
 Petición vigente posterior (2026-10-21): integrar la bóveda local Android real

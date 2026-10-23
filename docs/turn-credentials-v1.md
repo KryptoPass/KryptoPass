@@ -163,5 +163,6 @@ ICE en esta entrega.
 En desarrollo, `just run` exporta
 `KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org` salvo que la variable ya
 esté definida, y nunca relay-only. Desde 2026-10-23 no existe lanzador de
-desarrollo instalado; una instalación con `just install` no fija la variable. Integrar esta opción
+desarrollo instalado: `just install` fija el mismo origen en los `Exec` del
+lanzador mediante la opción CMake `KRYPTOPASS_TURN_BROKER_ORIGIN`. Integrar esta opción
 en configuración persistente y UI forma parte del siguiente paso.
