@@ -1251,3 +1251,56 @@ El intercambio de claves por red sigue pendiente de implementación: esta
 limpieza no es una transferencia. Claves privadas reales y revisión
 independiente mantienen sus puertas anteriores. Ver [preparación y prueba de
 Sync](synthetic-vault-sync-v1.md) y [contrato de transferencia](synthetic-key-transfer-v1.md).
+
+
+## 2026-10-23 — Diagnóstico de pairing por Internet y configuración TURN
+
+El aviso inicial de «Sync» correspondía al emparejamiento por Internet, antes
+de intercambiar revisiones. Android tenía `relay_only=true` en su política
+local, pero faltaba `no_backup/turn-broker-v1.json`: `iceServers` lanzaba una
+excepción antes de abrir el transporte. Se añadió el estado UI
+`turn_unavailable`, se valida esta condición antes de crear WebRTC y se aplica
+la unión de las restricciones TURN de política y configuración local al fetch.
+Nunca se relaja «solo TURN» como recuperación automática. Los diagnósticos
+registran categorías y ubicaciones de código, sin mensajes de excepción, SDP,
+credenciales ni direcciones. Los cierres Android registran su motivo tipado.
+
+El usuario eligió explícitamente directa cifrada con TURN de respaldo. Se
+aplicó esa preferencia y se preparó la configuración pública del broker en
+Android. La identidad Desktop actual no figuraba en el acceso TURN: se añadió
+su clave pública exportada del perfil local existente, conservando entradas
+anteriores, y se reinició únicamente el broker. El lanzador Desktop perdió el
+prefijo `KP_TURN_BROKER_ORIGIN`: se restauró y el instalador de desarrollo
+conserva ese prefijo conocido cuando reinstala una entrada propia existente.
+No hay registro TURN público automático ni cambios al trust por el broker.
+
+Comprobaciones: Android `just build` y `just check` aprobados, instalación
+`-r --user 0` sin borrar datos; Desktop `just test-packaging` 14/14 y
+`just install-dev-desktop` conservó la configuración. El primer intento
+posterior llegó a SAS, confirmación, persistencia y TRUSTED (18:12 local).
+Después aparecieron CLOSED y un reset explícito Android; se está repitiendo
+el recorrido sin reset para verificar estabilidad y distinguir su cierre.
+Esta observación no valida todavía Sync, una ruta ICE concreta ni una
+transferencia de claves; la revisión independiente continúa pendiente.
+
+
+Repetición posterior sin reset: a las 18:16:00 se registraron confirmación,
+persistencia y TRUSTED; continuaron latidos hasta al menos las 18:16:38,
+superando la comprobación solicitada de 30 segundos sin un cierre nuevo.
+El usuario observó TURN aun con «solo TURN» apagado: es válido, porque esa
+opción permite selección directa más respaldo y no fuerza conexión directa.
+Se añadió también al acceso TURN la identidad pública del teléfono, obtenida
+del trust Desktop después de la nueva confirmación SAS. No se habilitó
+autorregistro ni se cambiaron claves. Esta repetición comprueba pairing y
+sesión, no una ronda de sincronización ni recuperación entre redes.
+
+
+## 2026-10-23 — Investigación de conformidad ICE
+
+Se contrastó el código Android/Desktop/relay con RFC 8445, 8838, 8828,
+8656 y la documentación TURN oficial del proveedor. Se confirmaron snapshots
+tempranos en ambos extremos y ausencia de señalización Trickle; no se atribuye
+todavía la selección TURN a esos hallazgos ni se certifica conformidad completa.
+Informe, evidencias y pruebas pendientes en
+[revisión ICE](ice-standards-review-2026-10-23.md). Investigación sin cambios
+de producto ni interrupción de la sesión activa.
