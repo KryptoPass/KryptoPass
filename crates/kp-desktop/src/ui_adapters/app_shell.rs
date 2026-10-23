@@ -1,5 +1,5 @@
 use cxx_qt::{CxxQtType, casting::Upcast};
-use cxx_qt_lib::{QObjectMutPtr, QString, QUrl};
+use cxx_qt_lib::{QObjectMutPtr, QString, QStringList, QUrl};
 use std::pin::Pin;
 
 #[cxx_qt::bridge]
@@ -7,9 +7,11 @@ pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("cxx-qt-lib/qurl.h");
+        include!("cxx-qt-lib/qstringlist.h");
 
         type QString = cxx_qt_lib::QString;
         type QUrl = cxx_qt_lib::QUrl;
+        type QStringList = cxx_qt_lib::QStringList;
     }
 
     extern "RustQt" {
@@ -73,7 +75,23 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "setIdleLockSeconds"]
         fn set_idle_lock_seconds(self: Pin<&mut Self>, seconds: i32);
+
+        /// Arguments of a later launch, forwarded by the single-instance service.
+        #[qinvokable]
+        #[cxx_name = "receiveActivation"]
+        fn receive_activation(
+            self: Pin<&mut Self>,
+            arguments: &QStringList,
+            working_directory: &QString,
+        );
+
+        /// Same meaning as `launchAction` and `launchBackup`, for a running instance.
+        #[qsignal]
+        #[cxx_name = "activationRequested"]
+        fn activation_requested(self: Pin<&mut Self>, action: QString, backup: QUrl);
     }
+
+    impl cxx_qt::Initialize for ShellController {}
 }
 
 pub struct ShellControllerRust {
@@ -128,6 +146,24 @@ fn launch_action_id(args: impl Iterator<Item = String>) -> &'static str {
     ""
 }
 
+/// Resolves relative arguments against the directory the later launch ran from.
+fn activation_arguments(arguments: &QStringList, working_directory: &QString) -> Vec<String> {
+    let base = std::path::PathBuf::from(working_directory.to_string());
+    arguments
+        .iter()
+        .skip(1)
+        .map(|argument| {
+            let argument = argument.to_string();
+            let path = std::path::Path::new(&argument);
+            if argument.starts_with('-') || path.is_absolute() || base.as_os_str().is_empty() {
+                argument
+            } else {
+                base.join(path).to_string_lossy().into_owned()
+            }
+        })
+        .collect()
+}
+
 /// Picks the first argument naming an existing `.kpb` file; the path is only
 /// preselected for restore, never opened or executed.
 fn launch_backup_url(args: impl Iterator<Item = String>) -> QUrl {
@@ -148,7 +184,32 @@ fn launch_backup_url(args: impl Iterator<Item = String>) -> QUrl {
     QUrl::default()
 }
 
+impl cxx_qt::Initialize for qobject::ShellController {
+    fn initialize(self: Pin<&mut Self>) {
+        let base: Pin<&mut cxx_qt::QObject> = self.upcast_pin();
+        // The connection is bound to this receiver and ends with it.
+        unsafe {
+            let receiver =
+                QObjectMutPtr::from_raw(std::ptr::from_mut(Pin::get_unchecked_mut(base)));
+            crate::ui_adapters::native_ffi::ffi::install_activation_receiver(receiver);
+        }
+    }
+}
+
 impl qobject::ShellController {
+    pub fn receive_activation(
+        self: Pin<&mut Self>,
+        arguments: &QStringList,
+        working_directory: &QString,
+    ) {
+        let arguments = activation_arguments(arguments, working_directory);
+        let action = launch_action_id(arguments.iter().cloned());
+        let backup = launch_backup_url(arguments.into_iter());
+        if !action.is_empty() || backup.is_valid() {
+            self.activation_requested(QString::from(action), backup);
+        }
+    }
+
     pub fn set_idle_lock_seconds(mut self: Pin<&mut Self>, seconds: i32) {
         let seconds = seconds.clamp(0, 24 * 60 * 60);
         crate::ui_adapters::native_ffi::ffi::set_idle_lock_seconds(seconds);

@@ -47,6 +47,16 @@ fn main() {
     QGuiApplication::set_desktop_file_name(&QString::from(APP.desktop_file_id));
 
     ui_adapters::native_ffi::ffi::initialize_desktop();
+    // Browser hosts, screenshots and isolated profiles run beside the user's instance.
+    let separate_instance = std::env::args().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--browser-integration" | "--screenshot" | "--new-instance"
+        )
+    });
+    if !separate_instance && !ui_adapters::native_ffi::ffi::register_unique_application() {
+        tracing::warn!("Could not register the single-instance D-Bus service");
+    }
     ui_adapters::application::finish_desktop_registration();
     process_security::initialize();
 

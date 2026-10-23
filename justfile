@@ -144,7 +144,7 @@ pairing-interop-host:
     cargo build -p kp-pairing-lab --bin pairing-interop-host
 
 pairing-lab: build
-    {{ quote(desktop_binary) }} --pairing-lab
+    {{ quote(desktop_binary) }} --pairing-lab --new-instance
 
 # Reabre el mismo perfil aislado; no crea carpetas ni cambia su llavero GnuPG.
 pairing-lab-profile profile: build
@@ -153,7 +153,7 @@ pairing-lab-profile profile: build
     for directory in {{ quote(profile / "data") }} {{ quote(profile / "config") }} {{ quote(profile / "cache") }} {{ quote(profile / "gnupg") }}; do
         test -d "$directory"
     done
-    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --pairing-lab
+    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --pairing-lab --new-instance
 
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 test-items: check
@@ -183,7 +183,7 @@ smoke: build
     trap 'rm -rf "$profile"' EXIT
     mkdir -m 700 "$profile/data" "$profile/config" "$profile/cache" "$profile/gnupg"
     export XDG_DATA_HOME="$profile/data" XDG_CONFIG_HOME="$profile/config" XDG_CACHE_HOME="$profile/cache" GNUPGHOME="$profile/gnupg"
-    out=$(timeout 10 env QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 {{ quote(desktop_binary) }} 2>&1)
+    out=$(timeout 10 env QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_LOGGING_RULES="*.warning=true;*.critical=true" LANG=C.UTF-8 LC_ALL=C.UTF-8 {{ quote(desktop_binary) }} --new-instance 2>&1)
     status=$?
     echo "$out" | tail -n 8
     if echo "$out" | grep -Ei "not installed|Unable to assign|failed to load|Unknown style|QQmlApplicationEngine failed|Invalid property assignment|Cannot assign|ReferenceError|TypeError|Binding loop|Detected anchors on an item that is managed by a layout|undefined behavior" >/dev/null; then

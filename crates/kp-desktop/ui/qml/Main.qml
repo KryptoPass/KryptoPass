@@ -18,6 +18,12 @@ Controls.ApplicationWindow {
     LayoutMirroring.childrenInherit: true
     Backend.ShellController {
         id: shell
+        onActivationRequested: function (action, backup) {
+            if (action)
+                launchActionTimer.run(action);
+            if (backup.toString())
+                backupWindow.openForRestoreFile(backup);
+        }
     }
     Backend.PairingLabController {
         id: deviceController
@@ -288,7 +294,7 @@ Controls.ApplicationWindow {
         store.controller.loadStore();
         keys.controller.refreshKeys();
         if (shell.launchAction)
-            launchActionTimer.start();
+            launchActionTimer.run(shell.launchAction);
         if (shell.launchBackup.toString())
             Qt.callLater(function () {
                 backupWindow.openForRestoreFile(shell.launchBackup);
@@ -450,6 +456,12 @@ Controls.ApplicationWindow {
     Timer {
         id: launchActionTimer
         property int ticks: 0
+        property string action: ""
+        function run(requested: string) {
+            action = requested;
+            ticks = 0;
+            restart();
+        }
         interval: 250
         repeat: true
         onTriggered: {
@@ -459,9 +471,9 @@ Controls.ApplicationWindow {
                 return;
             }
             stop();
-            if (shell.launchAction === "newEntry")
+            if (action === "newEntry")
                 newEntry.trigger();
-            else if (shell.launchAction === "find")
+            else if (action === "find")
                 findAction.trigger();
         }
     }

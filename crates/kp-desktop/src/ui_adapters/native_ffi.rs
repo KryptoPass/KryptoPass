@@ -19,6 +19,7 @@ pub(crate) mod ffi {
         include!("native/entry_icons.h");
         include!("native/desktop_integration.h");
         include!("native/session_lock.h");
+        include!("native/desktop_bus.h");
         include!("native/file_manager.h");
         include!("cxx-qt-lib/qqmlengine.h");
         type QQmlEngine = cxx_qt_lib::QQmlEngine;
@@ -64,6 +65,12 @@ pub(crate) mod ffi {
 
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn install_session_lock_monitor(receiver: QObjectMutPtr);
+        #[namespace = "kryptopass::desktop::native"]
+        fn register_unique_application() -> bool;
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn install_activation_receiver(receiver: QObjectMutPtr);
+        #[namespace = "kryptopass::desktop::native"]
+        unsafe fn install_vault_bus(receiver: QObjectMutPtr);
         #[namespace = "kryptopass::desktop::native"]
         fn idle_lock_seconds() -> i32;
         #[namespace = "kryptopass::desktop::native"]

@@ -1689,6 +1689,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Could not initialize importer catalog</translation>
     </message>
     <message>
+      <source>Could not register the single-instance D-Bus service</source>
+      <translation>Could not register the single-instance D-Bus service</translation>
+    </message>
+    <message>
       <source>Credencial de prueba</source>
       <translation>Credencial de prueba</translation>
     </message>

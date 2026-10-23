@@ -179,6 +179,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qrc(generated.join("translations.qrc"))
         .qrc(generated.join("app_resources.qrc"))
         .cpp_file("src/native/application.cpp")
+        .cpp_file("src/native/desktop_bus.h")
+        .cpp_file("src/native/desktop_bus.cpp")
         .cpp_file("src/native/desktop_integration.cpp")
         .cpp_file("src/native/session_lock.h")
         .cpp_file("src/native/session_lock.cpp")

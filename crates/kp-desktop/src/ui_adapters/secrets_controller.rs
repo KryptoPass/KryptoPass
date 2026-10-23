@@ -424,6 +424,7 @@ impl cxx_qt::Initialize for qobject::SecretsController {
             let receiver =
                 QObjectMutPtr::from_raw(std::ptr::from_mut(Pin::get_unchecked_mut(base)));
             super::native_ffi::ffi::install_session_lock_monitor(receiver);
+            super::native_ffi::ffi::install_vault_bus(receiver);
         }
     }
 }
