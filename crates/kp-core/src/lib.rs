@@ -9,6 +9,7 @@ pub mod password;
 pub mod ports;
 pub mod search;
 pub mod service;
+pub mod vault_object;
 
 pub use domain::content::{
     CONTENT_SCHEMA_VERSION, CardContent, CustomContent, CustomRecord, HistoricalPassword,
@@ -39,5 +40,9 @@ pub use otp::{
 pub use password::{PasswordOptions, generate_password};
 pub use ports::{ImportStorage, OpenPgp, Storage};
 pub use service::{CreateSecret, RecipientSelection, SaveContentRequest, SecretsService};
+pub use vault_object::{
+    MAX_VAULT_OBJECT_BYTES, VAULT_OBJECT_FORMAT, VaultObject, VaultObjectError,
+    decode_vault_object, encode_vault_object,
+};
 
 pub use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
