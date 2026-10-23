@@ -75,7 +75,7 @@ jobs:
         run: just test
       - name: Packaging tests and metadata
         if: ${{ !cancelled() && steps.check.outcome == 'success' }}
-        run: just test-packaging metadata
+        run: just test-packaging metadata distro-check
       - name: Translation catalogs
         if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         run: just translations-check

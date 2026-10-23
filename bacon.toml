@@ -143,6 +143,12 @@ need_stdout = true
 default_watch = false
 watch = ["Cargo.toml", "packaging"]
 
+[jobs.distro-check]
+command = ["just", "distro-check"]
+need_stdout = true
+default_watch = false
+watch = ["CMakeLists.txt", "doc/CMakeLists.txt", "Cargo.toml", "packaging"]
+
 [jobs.handbook]
 command = ["just", "handbook"]
 need_stdout = true

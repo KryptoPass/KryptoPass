@@ -160,10 +160,8 @@ se conservan. El snapshot no incorpora candidatos tardíos; no se añade trickle
 ICE en esta entrega.
 
 
-En el despliegue local de esta prueba, el lanzador de desarrollo local
-`~/.local/share/applications/org.kryptopass.desktop.desktop` ya incluye
-`env KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org` en Exec, validado
-mediante desktop-file-validate. No incluye relay-only. `just install-dev-desktop`
-(y `just run`, que lo invoca) regenera ese archivo: conservar/reponer ese prefijo
-al regenerarlo, o usar el comando de activación anterior. Integrar esta opción
+En desarrollo, `just run` exporta
+`KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org` salvo que la variable ya
+esté definida, y nunca relay-only. Desde 2026-10-23 no existe lanzador de
+desarrollo instalado; una instalación con `just install` no fija la variable. Integrar esta opción
 en configuración persistente y UI forma parte del siguiente paso.

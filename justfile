@@ -26,9 +26,10 @@ prepare-synthetic-sync-fixture:
 
 alias r := run
 
+# Usa el broker TURN de desarrollo salvo que KP_TURN_BROKER_ORIGIN ya esté definido.
 # Corre la app en ventana (pásale args: `just run -- --help`).
-run *args: install-dev-desktop
-    if [[ "$(locale charmap)" == "UTF-8" ]]; then cargo run -- {{ args }}; else LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}; fi
+run *args:
+    export KP_TURN_BROKER_ORIGIN="${KP_TURN_BROKER_ORIGIN-https://signal.kryptopass.org}"; if [[ "$(locale charmap)" == "UTF-8" ]]; then cargo run -- {{ args }}; else LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}; fi
 
 # Loop de dev: bacon recompila y relanza al guardar.
 dev:
@@ -204,13 +205,6 @@ turn-smoke:
 gen-install:
     python3 packaging/gen_install.py
 
-# Instala una entrada reversible en el directorio de aplicaciones del usuario.
-install-dev-desktop:
-    python3 tools/dev_desktop.py install
-
-uninstall-dev-desktop:
-    python3 tools/dev_desktop.py uninstall
-
 # Ciclo de edición: formato y clippy (clippy ya compila y regenera .qmltypes).
 quick: fmt clippy
 
@@ -226,7 +220,7 @@ _gate-rust-tail: _lint-qml _test-items test
 
 _gate-native: test-icons test-session-lock
 
-_gate-meta: test-packaging metadata translations-check licenses handbook
+_gate-meta: test-packaging metadata distro-check translations-check licenses handbook
 
 # Gate pre-push: todo verde y árbol limpio.
 ready: verify clean
@@ -304,9 +298,20 @@ test-packaging:
 licenses:
     reuse lint
 
-# Instala los recursos de distribución en un prefijo local o de staging.
-install prefix:
-    python3 packaging/install.py --prefix {{ quote(prefix) }}
+# Configura el build CMake de distribución y valida lo que instalaría (sin compilar).
+distro-check:
+    cmake -S . -B {{ quote(target_dir / "cmake-check") }} -Wno-dev >/dev/null
+    ctest --test-dir {{ quote(target_dir / "cmake-check") }} --output-on-failure
+
+# Compila en release e instala con CMake, como lo haría una distro (por defecto ~/.local).
+install prefix=(home_directory() / ".local"):
+    cmake -S . -B {{ quote(target_dir / "cmake") }} -DCMAKE_INSTALL_PREFIX={{ quote(prefix) }} -DKRYPTOPASS_CARGO_TARGET_DIR={{ quote(target_dir) }}
+    cmake --build {{ quote(target_dir / "cmake") }}
+    cmake --install {{ quote(target_dir / "cmake") }}
+
+# Quita exactamente lo que instaló el último `just install`.
+uninstall:
+    cmake --build {{ quote(target_dir / "cmake") }} --target uninstall
 
 # Captura con bóveda y configuración temporales, sin datos del usuario.
 screenshot: build

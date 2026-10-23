@@ -4,15 +4,17 @@ Name=KryptoPass
 GenericName=Credential vault
 GenericName[es]=Bóveda de credenciales
 Comment=Organize credentials and secure notes with OpenPGP encryption
+Comment[es]=Organiza credenciales y notas seguras con cifrado OpenPGP
 Exec=kryptopass-desktop %f
 Icon=org.kryptopass.desktop
 X-DocPath=org.kryptopass.desktop/index.html
 Terminal=false
-Categories=System;Security;
+Categories=Qt;KDE;System;Security;
 Keywords=password;credentials;vault;OpenPGP;
 Keywords[es]=contraseña;credenciales;bóveda;OpenPGP;
 MimeType=application/vnd.kryptopass.backup;
 StartupNotify=true
+SingleMainWindow=true
 Actions=NewEntry;Search;
 
 [Desktop Action NewEntry]

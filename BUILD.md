@@ -93,9 +93,44 @@ y `desktop-file-validate`. CI declara los paquetes equivalentes de Arch Linux.
 comprueba desktop/AppStream; `just licenses` comprueba REUSE. Ambos forman
 parte de `just verify` y tienen jobs de Bacon.
 
-Tras `just build --release`, `just install /ruta/al/prefijo` instala el
-binario, lanzador, metainfo, icono y licencia en ese prefijo. No empaqueta
-Qt ni KDE Frameworks: deben proporcionarlos el sistema o el empaquetador.
+## Instalación para distribuciones
+
+El `CMakeLists.txt` raíz, con extra-cmake-modules, es la ruta de
+instalación. Compila el workspace con Cargo y coloca cada archivo en las rutas
+de `KDEInstallDirs`, como cualquier aplicación KDE:
+
+```bash
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build
+ctest --test-dir build              # desktop-file-validate y appstreamcli
+DESTDIR="$pkgdir" cmake --install build
+```
+
+| Archivo | Destino bajo el prefijo |
+|---------|-------------------------|
+| binario | `bin/` |
+| `.desktop` (Exec con ruta absoluta) | `share/applications/` |
+| metainfo AppStream | `share/metainfo/` |
+| tipo MIME de `.kpb` | `share/mime/packages/` |
+| icono SVG | `share/icons/hicolor/scalable/apps/` |
+| manual compilado (KDocTools) | `share/doc/HTML/es/<app-id>/` |
+
+- `KRYPTOPASS_CARGO_ARGS` (por defecto `--locked`) admite `--offline` o
+  `--frozen` para builds sin red tras `cargo fetch --locked` o vendorizado.
+- `KRYPTOPASS_CARGO_TARGET_DIR` reutiliza un directorio de Cargo existente.
+- Con `DESTDIR` no se tocan las cachés del sistema: lo hacen los hooks del
+  paquete. Sin `DESTDIR`, la instalación ejecuta `update-mime-database`,
+  `update-desktop-database` y `gtk-update-icon-cache` si existen.
+- La licencia la instala el empaquetador según la convención de su distro.
+- No empaqueta Qt ni KDE Frameworks: deben proporcionarlos el sistema o el
+  empaquetador.
+
+En local, `just install` compila en release e instala en `~/.local`
+(`just install /otro/prefijo` cambia el destino) y `just uninstall` quita
+exactamente lo instalado. Abierta desde el menú, Plasma la identifica como
+KryptoPass (icono, Monitor del sistema, gestor de tareas). `just distro-check`
+configura CMake y valida lo que instalaría sin compilar; forma parte de
+`just verify`.
 
 ## Traducciones
 

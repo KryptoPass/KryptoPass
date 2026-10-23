@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = ["*.md", "*.toml", "Cargo.lock", "justfile", ".editorconfig", ".gitattributes", ".gitignore", ".qmlls.ini", ".qmlformat.ini", ".cargo/**", ".github/**", "crates/**", "doc/**", "docs/**", "fixtures/**", "packaging/**", "tools/**", "po/**", "tests/**", ".agents/skills/commit-quality/**", ".agents/skills/qml-comment-quality/**", ".agents/skills/rust-comment-quality/**"]
+path = ["*.md", "*.toml", "CMakeLists.txt", "Cargo.lock", "justfile", ".editorconfig", ".gitattributes", ".gitignore", ".qmlls.ini", ".qmlformat.ini", ".cargo/**", ".github/**", "crates/**", "doc/**", "docs/**", "fixtures/**", "packaging/**", "tools/**", "po/**", "tests/**", ".agents/skills/commit-quality/**", ".agents/skills/qml-comment-quality/**", ".agents/skills/rust-comment-quality/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 KryptoPass contributors"
 SPDX-License-Identifier = "GPL-3.0-or-later"

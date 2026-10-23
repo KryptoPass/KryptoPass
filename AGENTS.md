@@ -134,10 +134,11 @@ explícita y no admite fallback directo. Ver docs/turn-credentials-v1.md.
 Pruebas funcionales autorizadas; revisión independiente sigue pausada.
 
 
-Despliegue local TURN 2026-10-19: el lanzador de desarrollo instalado incluye
-KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org. install-dev-desktop lo
-regenera: conservar/reponer ese prefijo mientras se integra configuración de UI.
-No incluir KP_TURN_RELAY_ONLY en el lanzador normal ni tokens del proveedor.
+Despliegue local TURN (2026-10-19, revisado 2026-10-23): ya no hay lanzador de
+desarrollo instalado. `just run` exporta
+KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org salvo que ya esté definido,
+mientras se integra configuración de UI. No incluir KP_TURN_RELAY_ONLY en
+`just run` ni tokens del proveedor.
 
 
 Petición vigente posterior (2026-10-21): integrar la bóveda local Android real

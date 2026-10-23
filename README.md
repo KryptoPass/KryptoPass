@@ -36,8 +36,9 @@ just qmlls        # inicia el servidor QML con los tipos generados
 bacon            # comprobación continua
 ```
 
-La instalación de desarrollo se controla con `just install-dev-desktop` y
-`just uninstall-dev-desktop`. Para seleccionar otra instalación de Qt:
+`just install` instala la app con CMake en `~/.local` (ver
+[BUILD.md](BUILD.md#instalación-para-distribuciones)). Para seleccionar otra
+instalación de Qt:
 
 ```bash
 QMAKE=/ruta/a/qmake6 just verify
