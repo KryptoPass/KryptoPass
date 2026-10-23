@@ -1,0 +1,20 @@
+[package]
+name = "kp-vault"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "OpenPGP vault adapter over signed offline revisions"
+
+[lib]
+name = "kryptopass_vault"
+
+[dependencies]
+kryptopass_core = { package = "kp-core", path = "../kp-core" }
+kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
+kryptopass_sync = { package = "kp-sync", path = "../kp-sync" }
+uuid = "1"
+
+[lints]
+workspace = true
