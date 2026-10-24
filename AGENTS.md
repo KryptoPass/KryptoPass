@@ -11,17 +11,19 @@ Vaciar propiedades QML no garantiza borrar todas las copias de memoria Qt/JS.
 
 ```bash
 just quick    # fmt + clippy: lo corre el usuario; el agente usa `cargo check` al editar
-just verify   # puerta completa: clippy, lint QML, tests, packaging; el agente la corre al terminar
+just verify   # puerta completa: clippy, lint QML, tests, packaging (la corre el usuario)
 just smoke    # arranque offscreen, falla ante errores QML (lo corre el usuario)
 just ready    # verify + árbol limpio (gate pre-push)
 bacon         # check continuo en fondo
 bacon qmllint # o tecla q: lint QML en cada cambio (vigila crates/)
 ```
 
-Mientras edita, al agente le basta `cargo check`. Al terminar el código sí
-corre los tests (`just verify`) una vez para darlo por listo. `quick`, `smoke`
-y `ready` los corre el usuario de vez en cuando; el agente no los lanza por su
-cuenta ni tras cada edición.
+Mientras edita, al agente le basta `cargo check`. Al terminar corre una sola
+vez la puerta acotada a lo que tocó: `cargo fmt --all --check`, `cargo clippy
+-p <crates> --all-targets -- -D warnings` y los tests de esos crates o su
+receta (`just test-search`, `just test-sync`, `just lint` si cambió QML…).
+`verify`, `quick`, `smoke` y `ready` los corre el usuario; el agente no los
+lanza por su cuenta. Si solo falla el formato, basta con formatear.
 `clippy` ya compila y regenera los `.qmltypes`, por eso `verify` no lleva
 `check` aparte. Para un solo tipo de cambio corre solo su receta
 (`just test-packaging`, `just lint`, `just test-items`).
@@ -69,7 +71,8 @@ mensajes de commit (Conventional Commits).
 ## Commits
 
 Un cambio coherente por commit, mensaje en imperativo que describa el
-resultado. `just verify` en verde antes de commitear; `just ready` lo corre el usuario.
+resultado. Puerta acotada en verde antes de commitear; `just verify` y
+`just ready` los corre el usuario.
 
 ## Desarrollo P2P
 
