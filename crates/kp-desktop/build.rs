@@ -166,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "src/ui_adapters/keyring_controller.rs",
             "src/ui_adapters/markdown_document.rs",
             "src/ui_adapters/secrets_controller.rs",
+            "src/ui_adapters/search_controller.rs",
             "src/ui_adapters/backup_controller.rs",
             "src/ui_adapters/import_controller.rs",
             "src/ui_adapters/sensitive_clipboard.rs",

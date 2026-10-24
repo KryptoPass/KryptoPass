@@ -1,0 +1,16 @@
+[package]
+name = "kp-search"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Session-scoped private search with bounded protected memory"
+publish = false
+
+[dependencies]
+kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
+deunicode = { version = "1.6.2", default-features = false }
+zeroize = "1"
+
+[lints]
+workspace = true

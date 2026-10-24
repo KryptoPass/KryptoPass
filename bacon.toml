@@ -30,6 +30,12 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-memsec", "crates/kp-desktop/src/process_security.rs", "crates/kp-desktop/tests/unit/process_security.rs", "crates/kp-desktop/src/infrastructure/openpgp.rs", "crates/kp-desktop/tests/unit/infrastructure/openpgp.rs"]
 
+[jobs.test-search]
+command = ["just", "test-search"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-search", "crates/kp-memsec", "crates/kp-desktop/src/search", "crates/kp-desktop/src/ui_adapters/search_controller.rs", "crates/kp-desktop/tests/unit/search_projection.rs", "crates/kp-desktop/tests/unit/search_source.rs"]
+
 [jobs.test-items]
 command = ["just", "test-items"]
 need_stdout = true

@@ -83,6 +83,12 @@ test-security:
     cargo test -p kp-desktop process_security::tests
     cargo test -p kp-desktop infrastructure::openpgp::tests
 
+# Índice privado, memoria estricta y adaptadores de búsqueda sin datos reales.
+test-search:
+    cargo test -p kp-search
+    cargo test -p kp-memsec --test protected_memory
+    cargo test -p kp-desktop search::
+
 # Núcleo P2P independiente de Qt.
 check-p2p:
     cargo check -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing

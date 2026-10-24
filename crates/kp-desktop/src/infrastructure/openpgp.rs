@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 use gpgme::{Context, Data, EncryptFlags, Key, PassphraseRequest, PinentryMode, Protocol};
 use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, OpenPgp, RecipientSet};
-use kryptopass_secure_memory::SensitiveBytes;
+use kryptopass_secure_memory::{ProtectedBytes, SensitiveBytes};
 #[cfg(debug_assertions)]
 use serde::Deserialize;
 #[cfg(debug_assertions)]
@@ -25,6 +25,63 @@ mod tests;
 /// GPGME adapter that creates an isolated context for each operation.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GnuPgOpenPgp;
+
+impl GnuPgOpenPgp {
+    /// Background indexing cannot prompt or retain output in an unlocked region.
+    pub(crate) fn decrypt_for_search(
+        &self,
+        ciphertext: &[u8],
+        plaintext: &mut ProtectedBytes,
+    ) -> Result<()> {
+        plaintext.clear();
+        let mut context = open_context()?;
+        context
+            .set_pinentry_mode(PinentryMode::Error)
+            .map_err(|_| anyhow::anyhow!("could not configure background decryption"))?;
+        let mut output = SearchOutput {
+            bytes: plaintext,
+            written: 0,
+        };
+        decrypt_into(
+            &mut context,
+            ciphertext,
+            MAX_CIPHERTEXT_BYTES,
+            &mut output,
+            None,
+        )
+    }
+}
+
+struct SearchOutput<'a> {
+    bytes: &'a mut ProtectedBytes,
+    written: usize,
+}
+
+impl Write for SearchOutput<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        let length = self
+            .written
+            .checked_add(bytes.len())
+            .filter(|length| *length <= MAX_CONTENT_BYTES)
+            .ok_or_else(|| io::Error::other("background plaintext limit exceeded"))?;
+        if length > self.bytes.capacity() {
+            let capacity = length
+                .max(self.bytes.capacity().saturating_mul(2))
+                .min(MAX_CONTENT_BYTES);
+            let mut replacement = ProtectedBytes::try_with_capacity(capacity)?;
+            replacement.try_extend_from_slice(self.bytes.as_slice())?;
+            // Both reservations are independently protected during replacement.
+            *self.bytes = replacement;
+        }
+        self.bytes.try_extend_from_slice(bytes)?;
+        self.written = length;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
 
 impl OpenPgp for GnuPgOpenPgp {
     fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
@@ -609,18 +666,34 @@ fn decrypt_bounded_in_context(
     maximum_plaintext: usize,
     passphrase: Option<&[u8]>,
 ) -> Result<SensitiveBytes> {
-    if ciphertext.is_empty() {
-        bail!("OpenPGP ciphertext is empty");
-    }
-    ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
-
     let mut plaintext = SensitiveOutput {
         bytes: SensitiveBytes::try_with_capacity(
             maximum_plaintext.min(MAX_BOUNDED_INITIAL_CAPACITY),
         )?,
         maximum: maximum_plaintext,
     };
-    let mut output = Data::from_writer(&mut plaintext)
+    decrypt_into(
+        context,
+        ciphertext,
+        maximum_ciphertext,
+        &mut plaintext,
+        passphrase,
+    )?;
+    Ok(plaintext.bytes)
+}
+
+fn decrypt_into<W: Write + Send>(
+    context: &mut Context,
+    ciphertext: &[u8],
+    maximum_ciphertext: usize,
+    plaintext: &mut W,
+    passphrase: Option<&[u8]>,
+) -> Result<()> {
+    if ciphertext.is_empty() {
+        bail!("OpenPGP ciphertext is empty");
+    }
+    ensure_payload_size(ciphertext.len(), maximum_ciphertext, "encrypted payload")?;
+    let mut output = Data::from_writer(plaintext)
         .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
     let decrypted = if let Some(passphrase) = passphrase {
         context.with_passphrase_provider(
@@ -642,7 +715,7 @@ fn decrypt_bounded_in_context(
     if result.unsupported_algorithm_raw().is_some() {
         bail!("OpenPGP ciphertext uses an unsupported algorithm");
     }
-    Ok(plaintext.bytes)
+    Ok(())
 }
 
 #[cfg(debug_assertions)]

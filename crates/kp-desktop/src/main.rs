@@ -7,6 +7,7 @@ mod keyring;
 mod markdown;
 mod process_security;
 mod qt;
+mod search;
 mod storage;
 mod transport_diagnostics;
 mod ui_adapters;

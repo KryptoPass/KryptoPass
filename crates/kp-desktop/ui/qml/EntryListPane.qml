@@ -191,6 +191,15 @@ Controls.Pane {
                 }
             }
         }
+        Controls.Label {
+            Layout.fillWidth: true
+            Layout.margins: Kirigami.Units.smallSpacing
+            visible: !root.keysMode && root.hasSearchQuery && !root.storeAdapter.controller.locked && (root.storeAdapter.searchController.queryRejected || root.storeAdapter.searchController.building || root.storeAdapter.searchController.incomplete)
+            text: root.storeAdapter.searchController.queryRejected ? qsTr("La búsqueda no está disponible para esta consulta.") : root.storeAdapter.searchController.building ? qsTr("Preparando la búsqueda de usuarios…") : qsTr("La búsqueda de usuarios está incompleta.")
+            textFormat: Text.PlainText
+            wrapMode: Text.WordWrap
+            color: Kirigami.Theme.disabledTextColor
+        }
         Controls.ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true

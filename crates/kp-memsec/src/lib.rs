@@ -2,7 +2,9 @@
 //!
 //! Borrowed views and external consumers (Qt, parsers, formatters) can create copies
 //! outside this allocator. Serde visitors cannot control a parser's escape scratch.
+mod protected;
 mod region;
+pub use protected::ProtectedBytes;
 use region::Region;
 pub use region::{MemoryDiagnostics, ProtectionStatus, memory_diagnostics};
 use serde::{

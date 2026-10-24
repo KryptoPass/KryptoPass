@@ -2369,6 +2369,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>authenticator configuration is required</translation>
     </message>
     <message>
+      <source>background plaintext limit exceeded</source>
+      <translation>background plaintext limit exceeded</translation>
+    </message>
+    <message>
       <source>backup ciphertext encoding is invalid</source>
       <translation>backup ciphertext encoding is invalid</translation>
     </message>
@@ -2643,6 +2647,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not configure OpenPGP pinentry</source>
       <translation>could not configure OpenPGP pinentry</translation>
+    </message>
+    <message>
+      <source>could not configure background decryption</source>
+      <translation>could not configure background decryption</translation>
     </message>
     <message>
       <source>could not configure durable store journaling</source>
@@ -4616,6 +4624,18 @@ Huella(s) detectadas:
     <message>
       <source>Cambiar orden por nombre</source>
       <translation>Cambiar orden por nombre</translation>
+    </message>
+    <message>
+      <source>La búsqueda no está disponible para esta consulta.</source>
+      <translation>La búsqueda no está disponible para esta consulta.</translation>
+    </message>
+    <message>
+      <source>Preparando la búsqueda de usuarios…</source>
+      <translation>Preparando la búsqueda de usuarios…</translation>
+    </message>
+    <message>
+      <source>La búsqueda de usuarios está incompleta.</source>
+      <translation>La búsqueda de usuarios está incompleta.</translation>
     </message>
     <message>
       <source> · Vinculado con %1</source>

@@ -2049,6 +2049,7 @@ dependencies = [
  "kp-memsec",
  "kp-pairing",
  "kp-pairing-lab",
+ "kp-search",
  "kp-sync",
  "kp-vault",
  "libc",
@@ -2203,6 +2204,15 @@ dependencies = [
  "protoc-bin-vendored",
  "sha2",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "kp-search"
+version = "0.1.0"
+dependencies = [
+ "deunicode",
+ "kp-memsec",
+ "zeroize",
 ]
 
 [[package]]

@@ -6,6 +6,7 @@ QtObject {
     id: store
 
     readonly property SecretsController controller: SecretsController {}
+    readonly property SearchController searchController: SearchController {}
     property string scope: "all"
     property string query: ""
     property string selectedId: ""
@@ -15,11 +16,27 @@ QtObject {
     readonly property string errorMessage: controller.errorMessage
     readonly property bool busy: controller.busy || controller.detailBusy || controller.editorBusy || controller.saving
     readonly property var kindOptions: EntryTypes.options
+    readonly property var searchKindRecords: kindOptions.map(option => JSON.stringify({
+            id: option.id,
+            name: option.name
+        }))
     readonly property var entries: parseRecords(controller.entryRecords)
     readonly property var folders: parseRecords(controller.folderRecords)
     readonly property var selected: visibleEntries.find(entry => entry.id === selectedId) || null
     readonly property var detail: parseRecord(controller.detailJson)
     readonly property var historyVersion: parseRecord(controller.versionJson)
+    readonly property var searchMatches: {
+        const generation = searchController.generation;
+        if (!query.trim())
+            return null;
+        const ids = Object.create(null);
+        for (const id of Array.from(searchController.matchingIds(query)))
+            ids[id] = true;
+        return {
+            generation: generation,
+            ids: ids
+        };
+    }
     readonly property var visibleEntries: {
         const filtered = entries.filter(entry => {
             if (scope === "trash" ? !entry.trashed : entry.trashed)
@@ -28,7 +45,7 @@ QtObject {
                 return false;
             if (!["all", "favorites", "trash"].includes(scope) && entry.folder !== scope)
                 return false;
-            return controller.matchesSearch(query, [entry.title, folderName(entry.folder), kindName(entry.kind)].join(" "));
+            return !searchMatches || !!searchMatches.ids[entry.id];
         });
         return filtered.sort((left, right) => {
             const result = left.title.localeCompare(right.title, undefined, {
@@ -38,6 +55,24 @@ QtObject {
             return sortDescending ? -result : result;
         });
     }
+
+    function synchronizeSearchCatalog() {
+        searchController.setCatalog(controller.entryRecords, controller.folderRecords, searchKindRecords);
+    }
+
+    readonly property Timer searchPoll: Timer {
+        interval: 80
+        repeat: true
+        running: !store.controller.locked
+        onTriggered: store.searchController.poll()
+    }
+
+    Component.onCompleted: {
+        synchronizeSearchCatalog();
+    }
+
+    onSearchKindRecordsChanged: synchronizeSearchCatalog()
+    onEntriesChanged: synchronizeSearchCatalog()
     readonly property var folderRows: {
         const rows = [];
         const visited = Object.create(null);
@@ -201,12 +236,19 @@ QtObject {
             selectedId = visibleEntries.length ? visibleEntries[0].id : "";
     }
     onFoldersChanged: {
+        synchronizeSearchCatalog();
         if (!["all", "favorites", "trash"].includes(scope) && !folders.some(folder => folder.id === scope))
             selectScope("all");
     }
 
     readonly property Connections controllerConnections: Connections {
         target: store.controller
+
+        function onLockedChanged() {
+            store.searchController.poll();
+            if (store.controller.locked)
+                store.query = "";
+        }
 
         function onEntrySaved(id) {
             const saved = store.entries.find(entry => entry.id === id);

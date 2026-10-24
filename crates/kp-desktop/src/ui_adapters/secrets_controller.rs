@@ -62,10 +62,6 @@ pub mod qobject {
         type SecretsController = super::SecretsControllerRust;
 
         #[qinvokable]
-        #[cxx_name = "matchesSearch"]
-        fn matches_search(self: Pin<&mut Self>, query: &QString, metadata: &QString) -> bool;
-
-        #[qinvokable]
         #[cxx_name = "refreshBrowserPairing"]
         fn refresh_browser_pairing(self: Pin<&mut Self>);
         #[qinvokable]
@@ -272,7 +268,6 @@ pub mod qobject {
 
 /// State owned by the QObject; decrypted values have zeroizing domain types.
 pub struct SecretsControllerRust {
-    metadata_search: kryptopass_core::search::MetadataSearch,
     browser_pairing: QString,
     browser_access: QString,
     entry_records: QStringList,
@@ -325,7 +320,6 @@ pub struct SecretsControllerRust {
 impl Default for SecretsControllerRust {
     fn default() -> Self {
         Self {
-            metadata_search: kryptopass_core::search::MetadataSearch::default(),
             browser_pairing: QString::default(),
             browser_access: QString::default(),
             entry_records: QStringList::default(),
@@ -371,6 +365,12 @@ impl Default for SecretsControllerRust {
             editor_operation: 0,
             editor_cancel_epoch: Arc::new(AtomicU64::new(0)),
         }
+    }
+}
+
+impl Drop for SecretsControllerRust {
+    fn drop(&mut self) {
+        crate::search::set_locked(true, None);
     }
 }
 
@@ -430,12 +430,6 @@ impl cxx_qt::Initialize for qobject::SecretsController {
 }
 
 impl qobject::SecretsController {
-    pub fn matches_search(self: Pin<&mut Self>, query: &QString, metadata: &QString) -> bool {
-        self.rust_mut()
-            .metadata_search
-            .matches(&query.to_string(), &metadata.to_string())
-    }
-
     pub fn request_browser_username(mut self: Pin<&mut Self>, token: &QString, entry_id: &QString) {
         if !*self.locked() {
             kryptopass_browser::request_username(&token.to_string(), &entry_id.to_string());
@@ -2347,6 +2341,7 @@ impl qobject::SecretsController {
     }
 
     fn clear_sensitive_state_contents(mut self: Pin<&mut Self>) {
+        crate::search::set_locked(true, None);
         {
             let mut state = self.as_mut().rust_mut();
             state.selection_operation = state.selection_operation.wrapping_add(1);
@@ -2456,6 +2451,10 @@ impl qobject::SecretsController {
 
     fn set_locked(mut self: Pin<&mut Self>, value: bool) {
         if *self.locked() != value {
+            crate::search::set_locked(
+                value,
+                self.rust().primary.as_ref().map(|key| &key.fingerprint),
+            );
             kryptopass_browser::set_locked(value, false);
             self.as_mut().rust_mut().locked = value;
             self.as_mut().locked_changed();
