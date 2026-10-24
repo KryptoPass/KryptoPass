@@ -1,0 +1,31 @@
+[package]
+name = "kp-keyring"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "GPL-3.0-or-later"
+description = "Typed management of the local OpenPGP keyring for KryptoPass"
+publish = false
+
+[lib]
+name = "kryptopass_keyring"
+
+# Standalone on purpose: the crate is not wired into the main workspace yet,
+# so building it cannot disturb `just verify` or concurrent work elsewhere.
+[workspace]
+
+[dependencies]
+kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
+gpgme = { version = "0.11", features = ["v1_15"] }
+tempfile = "3.27"
+thiserror = "2.0"
+url = "2.5"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
