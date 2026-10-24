@@ -15,7 +15,6 @@ kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
 anyhow = "1.0"
 deunicode = "1.6.2"
 getrandom = "0.4"
-gpgme = "0.11"
 percent-encoding = "2.3"
 regex = "1.13"
 serde = { version = "1.0", features = ["derive"] }

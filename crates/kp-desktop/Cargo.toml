@@ -31,6 +31,7 @@ cxx-qt = "0.10"
 cxx-qt-lib = { version = "0.10", features = ["qt_full"] }
 kryptopass-core = { package = "kp-core", path = "../kp-core" }
 kryptopass-search = { package = "kp-search", path = "../kp-search" }
+kryptopass-keyring = { package = "kp-keyring", path = "../kp-keyring" }
 kryptopass_vault = { package = "kp-vault", path = "../kp-vault" }
 kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
 kryptopass-import = { package = "kp-import", path = "../kp-import" }

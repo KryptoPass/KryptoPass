@@ -2,7 +2,6 @@
 
 pub mod domain;
 pub mod import;
-pub mod keyring;
 pub mod navigation;
 pub mod otp;
 pub mod password;
@@ -30,7 +29,6 @@ pub use import::{
     ImportBatch, ImportFolder, ImportFolderPolicy, ImportItem, ImportOptions, ImportReceipt,
     ImportReceiver, ImportValidationError, MAX_IMPORT_RECORDS,
 };
-pub use keyring::{KeyInfo, KeyValidity, Keyring, KeyringError, UserIdInfo};
 pub use navigation::NavigationNode;
 pub use otp::{
     MAX_TOTP_EXTENSION_BYTES, MAX_TOTP_EXTENSIONS, MAX_TOTP_LABEL_BYTES, MAX_TOTP_SECRET_BYTES,

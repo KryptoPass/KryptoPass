@@ -2012,7 +2012,6 @@ dependencies = [
  "anyhow",
  "deunicode",
  "getrandom 0.4.3",
- "gpgme",
  "kp-memsec",
  "percent-encoding",
  "regex",
@@ -2045,6 +2044,7 @@ dependencies = [
  "kp-devices",
  "kp-identity",
  "kp-import",
+ "kp-keyring",
  "kp-lan",
  "kp-memsec",
  "kp-pairing",
@@ -2113,6 +2113,18 @@ dependencies = [
  "thiserror 2.0.21",
  "zeroize",
  "zip",
+]
+
+[[package]]
+name = "kp-keyring"
+version = "0.1.0"
+dependencies = [
+ "gpgme",
+ "kp-memsec",
+ "libc",
+ "tempfile",
+ "thiserror 2.0.21",
+ "url",
 ]
 
 [[package]]

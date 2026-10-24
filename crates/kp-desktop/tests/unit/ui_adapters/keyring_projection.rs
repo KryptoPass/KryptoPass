@@ -1,12 +1,25 @@
 use super::{key_records, key_summaries};
 use cxx_qt_lib::QStringList;
-use kryptopass_core::keyring::{CertificationInfo, SubkeyInfo};
-use kryptopass_core::{KeyInfo, KeyValidity, UserIdInfo};
+use kryptopass_keyring::{
+    CertificationInfo, Fingerprint, KeyInfo, SubkeyInfo, UserIdInfo, Validity,
+};
 use serde_json::{Value, json};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+fn fingerprint(value: &str) -> Fingerprint {
+    match Fingerprint::parse(value) {
+        Ok(fingerprint) => fingerprint,
+        Err(error) => panic!("synthetic fingerprint {value} rejected: {error:?}"),
+    }
+}
+
+fn at(seconds: u64) -> Option<SystemTime> {
+    Some(UNIX_EPOCH + Duration::from_secs(seconds))
+}
 
 fn key(fingerprint: &str) -> KeyInfo {
     KeyInfo {
-        fingerprint: fingerprint.into(),
+        fingerprint: self::fingerprint(fingerprint),
         user_ids: Vec::new(),
         subkeys: Vec::new(),
         has_secret: false,
@@ -23,20 +36,20 @@ fn key(fingerprint: &str) -> KeyInfo {
 
 fn user_id(id: &str) -> UserIdInfo {
     UserIdInfo {
-        signatures: Vec::new(),
         id: id.into(),
         name: None,
         email: None,
         comment: None,
-        validity: KeyValidity::Unknown,
+        validity: Validity::Unknown,
         revoked: false,
         invalid: false,
+        certifications: Vec::new(),
     }
 }
 
 fn subkey(fingerprint: &str) -> SubkeyInfo {
     SubkeyInfo {
-        fingerprint: fingerprint.into(),
+        fingerprint: Some(self::fingerprint(fingerprint)),
         algorithm: "rsa".into(),
         expires_at: None,
         can_encrypt: false,
@@ -54,7 +67,7 @@ fn certification(signer_key_id: &str, signer: &str) -> CertificationInfo {
     CertificationInfo {
         signer_key_id: signer_key_id.into(),
         signer: signer.into(),
-        revoked: false,
+        revocation: false,
         expired: false,
         invalid: false,
     }
@@ -79,27 +92,27 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
     let mut revoked_identity = user_id("Revoked User <revoked@example.test>");
     revoked_identity.name = Some("Revoked User".into());
     revoked_identity.email = Some("revoked@example.test".into());
-    revoked_identity.validity = KeyValidity::Ultimate;
+    revoked_identity.validity = Validity::Ultimate;
     revoked_identity.revoked = true;
     revoked_identity
-        .signatures
+        .certifications
         .push(certification("CAFE1234", "Earlier signer"));
 
     let mut invalid_identity = user_id("Invalid User <invalid@example.test>");
     invalid_identity.name = Some("Invalid User".into());
-    invalid_identity.validity = KeyValidity::Never;
+    invalid_identity.validity = Validity::Never;
     invalid_identity.invalid = true;
 
     let mut preferred_identity = user_id("Preferred User <preferred@example.test>");
     preferred_identity.name = Some("Preferred Name".into());
     preferred_identity.email = Some("preferred@example.test".into());
-    preferred_identity.validity = KeyValidity::Marginal;
+    preferred_identity.validity = Validity::Marginal;
 
     let mut self_certification = certification("01234567", "Self signer");
     self_certification.signer_key_id = "01234567".into();
 
     let mut signer_without_key_id = certification("", "Signer without key ID");
-    signer_without_key_id.revoked = true;
+    signer_without_key_id.revocation = true;
     signer_without_key_id.expired = true;
     signer_without_key_id.invalid = true;
 
@@ -110,7 +123,7 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
     let mut invalid_certification = certification("ABCDEF99", "Invalid signer");
     invalid_certification.invalid = true;
 
-    preferred_identity.signatures = vec![
+    preferred_identity.certifications = vec![
         self_certification,
         signer_without_key_id,
         expired_certification,
@@ -119,19 +132,19 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
     ];
 
     let mut unknown_identity = user_id("Unknown <unknown@example.test>");
-    unknown_identity.validity = KeyValidity::Unknown;
+    unknown_identity.validity = Validity::Unknown;
 
     let mut undefined_identity = user_id("Undefined <undefined@example.test>");
-    undefined_identity.validity = KeyValidity::Undefined;
+    undefined_identity.validity = Validity::Undefined;
 
     let mut never_identity = user_id("Never <never@example.test>");
-    never_identity.validity = KeyValidity::Never;
+    never_identity.validity = Validity::Never;
 
     let mut full_identity = user_id("Full <full@example.test>");
-    full_identity.validity = KeyValidity::Full;
+    full_identity.validity = Validity::Full;
 
     let mut ultimate_identity = user_id("Ultimate <ultimate@example.test>");
-    ultimate_identity.validity = KeyValidity::Ultimate;
+    ultimate_identity.validity = Validity::Ultimate;
 
     let mut public_key = key(fingerprint);
     public_key.has_secret = true;
@@ -146,9 +159,9 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
         ultimate_identity,
     ];
 
-    let mut subkey = subkey("subkey-fingerprint");
+    let mut subkey = subkey("5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B");
     subkey.algorithm = "ed25519".into();
-    subkey.expires_at = Some(1_700_000_000);
+    subkey.expires_at = at(1_700_000_000);
     subkey.can_encrypt = true;
     subkey.can_sign = true;
     subkey.can_authenticate = true;
@@ -179,7 +192,7 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
                 {"id": "Ultimate <ultimate@example.test>", "primary": false, "revoked": false, "invalid": false, "validity": "Validez absoluta según GnuPG", "validityCode": "ultimate"},
             ],
             "subkeys": [{
-                "fingerprint": "subkey-fingerprint",
+                "fingerprint": "5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B",
                 "isPrimary": true,
                 "algorithm": "ed25519",
                 "expiresAt": 1_700_000_000_u64,
@@ -203,27 +216,27 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
 #[test]
 fn records_keep_status_precedence_capability_order_and_optional_fields()
 -> Result<(), serde_json::Error> {
-    let mut revoked = key("key-revoked");
+    let mut revoked = key("A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1");
     revoked.has_secret = true;
     revoked.revoked = true;
     revoked.expired = true;
     revoked.disabled = true;
     revoked.invalid = true;
 
-    let mut expired = key("key-expired");
+    let mut expired = key("A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2");
     expired.expired = true;
     expired.disabled = true;
     expired.invalid = true;
 
-    let mut disabled = key("key-disabled");
+    let mut disabled = key("A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3");
     disabled.disabled = true;
     disabled.invalid = true;
 
-    let mut invalid = key("key-invalid");
+    let mut invalid = key("A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4");
     invalid.invalid = true;
 
-    let mut status_revoked = subkey("subkey-revoked");
-    status_revoked.expires_at = Some(1_700_000_000);
+    let mut status_revoked = subkey("B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1");
+    status_revoked.expires_at = at(1_700_000_000);
     status_revoked.can_encrypt = true;
     status_revoked.can_sign = true;
     status_revoked.can_certify = true;
@@ -233,28 +246,28 @@ fn records_keep_status_precedence_capability_order_and_optional_fields()
     status_revoked.disabled = true;
     status_revoked.invalid = true;
 
-    let mut status_expired = subkey("subkey-expired");
+    let mut status_expired = subkey("B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2");
     status_expired.can_encrypt = true;
     status_expired.can_sign = true;
     status_expired.expired = true;
     status_expired.disabled = true;
     status_expired.invalid = true;
 
-    let mut status_disabled = subkey("subkey-disabled");
-    status_disabled.expires_at = Some(0);
+    let mut status_disabled = subkey("B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3");
+    status_disabled.expires_at = at(0);
     status_disabled.can_sign = true;
     status_disabled.can_authenticate = true;
     status_disabled.disabled = true;
     status_disabled.invalid = true;
 
-    let mut status_invalid = subkey("subkey-invalid");
-    status_invalid.expires_at = Some(1);
+    let mut status_invalid = subkey("B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4");
+    status_invalid.expires_at = at(1);
     status_invalid.can_certify = true;
     status_invalid.invalid = true;
 
-    let status_valid = subkey("subkey-valid");
+    let status_valid = subkey("B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5");
 
-    let mut valid = key("key-valid");
+    let mut valid = key("A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5");
     valid.subkeys = vec![
         status_revoked,
         status_expired,
@@ -267,40 +280,40 @@ fn records_keep_status_precedence_capability_order_and_optional_fields()
         record_values(&[revoked, expired, disabled, invalid, valid])?,
         json!([
             {
-                "id": "key-revoked", "title": "Sin nombre", "email": "", "hasSecret": true,
+                "id": "A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1", "title": "Sin nombre", "email": "", "hasSecret": true,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Revocada", "statusCode": "revoked",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "key-expired", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2", "title": "Sin nombre", "email": "", "hasSecret": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Caducada", "statusCode": "expired",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "key-disabled", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3", "title": "Sin nombre", "email": "", "hasSecret": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Deshabilitada", "statusCode": "disabled",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "key-invalid", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4", "title": "Sin nombre", "email": "", "hasSecret": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Inválida", "statusCode": "invalid",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "key-valid", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5", "title": "Sin nombre", "email": "", "hasSecret": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Vigente", "statusCode": "valid",
                 "identities": [],
                 "subkeys": [
-                    {"fingerprint": "subkey-revoked", "isPrimary": true, "algorithm": "rsa", "expiresAt": 1_700_000_000_u64, "capabilities": ["Cifrar", "Firmar", "Certificar", "Autenticar"], "status": "Revocada", "statusCode": "revoked"},
-                    {"fingerprint": "subkey-expired", "isPrimary": false, "algorithm": "rsa", "expiresAt": null, "capabilities": ["Cifrar", "Firmar"], "status": "Caducada", "statusCode": "expired"},
-                    {"fingerprint": "subkey-disabled", "isPrimary": false, "algorithm": "rsa", "expiresAt": 0, "capabilities": ["Firmar", "Autenticar"], "status": "Deshabilitada", "statusCode": "disabled"},
-                    {"fingerprint": "subkey-invalid", "isPrimary": false, "algorithm": "rsa", "expiresAt": 1, "capabilities": ["Certificar"], "status": "Inválida", "statusCode": "invalid"},
-                    {"fingerprint": "subkey-valid", "isPrimary": false, "algorithm": "rsa", "expiresAt": null, "capabilities": [], "status": "Vigente", "statusCode": "valid"},
+                    {"fingerprint": "B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1B1", "isPrimary": true, "algorithm": "rsa", "expiresAt": 1_700_000_000_u64, "capabilities": ["Cifrar", "Firmar", "Certificar", "Autenticar"], "status": "Revocada", "statusCode": "revoked"},
+                    {"fingerprint": "B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2", "isPrimary": false, "algorithm": "rsa", "expiresAt": null, "capabilities": ["Cifrar", "Firmar"], "status": "Caducada", "statusCode": "expired"},
+                    {"fingerprint": "B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3B3", "isPrimary": false, "algorithm": "rsa", "expiresAt": 0, "capabilities": ["Firmar", "Autenticar"], "status": "Deshabilitada", "statusCode": "disabled"},
+                    {"fingerprint": "B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4B4", "isPrimary": false, "algorithm": "rsa", "expiresAt": 1, "capabilities": ["Certificar"], "status": "Inválida", "statusCode": "invalid"},
+                    {"fingerprint": "B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5B5", "isPrimary": false, "algorithm": "rsa", "expiresAt": null, "capabilities": [], "status": "Vigente", "statusCode": "valid"},
                 ],
                 "signatures": [],
             },
@@ -312,16 +325,16 @@ fn records_keep_status_precedence_capability_order_and_optional_fields()
 
 #[test]
 fn summaries_use_the_first_identity_and_keep_key_order() {
-    let mut first = key("KEY-1");
+    let mut first = key("C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1");
     let mut first_identity = user_id("First identity");
     first_identity.revoked = true;
     let mut preferred_identity = user_id("Preferred identity");
     preferred_identity.name = Some("Preferred Name".into());
     first.user_ids = vec![first_identity, preferred_identity];
 
-    let second = key("KEY-2");
+    let second = key("C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2");
 
-    let mut third = key("KEY-3");
+    let mut third = key("C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3");
     third.user_ids.push(user_id("Third identity"));
 
     let (summaries, key_count) = key_summaries(vec![first, second, third]);
@@ -330,9 +343,9 @@ fn summaries_use_the_first_identity_and_keep_key_order() {
     assert_eq!(
         strings(&summaries),
         [
-            "First identity\nKEY-1",
-            "Sin identidad\nKEY-2",
-            "Third identity\nKEY-3",
+            "First identity\nC1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1C1",
+            "Sin identidad\nC2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2C2",
+            "Third identity\nC3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3",
         ]
     );
 }

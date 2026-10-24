@@ -1,7 +1,9 @@
 use cxx_qt_lib::{QString, QStringList};
-use kryptopass_core::keyring::{CertificationInfo, SubkeyInfo};
-use kryptopass_core::{KeyInfo, KeyValidity, UserIdInfo};
+use kryptopass_keyring::{
+    CertificationInfo, Fingerprint, KeyInfo, SubkeyInfo, UserIdInfo, Validity,
+};
 use serde_json::{Value, json};
+use std::time::UNIX_EPOCH;
 
 pub(super) fn key_summaries(keys: Vec<KeyInfo>) -> (QStringList, i32) {
     let key_count = i32::try_from(keys.len()).unwrap_or(i32::MAX);
@@ -39,7 +41,7 @@ fn key_record(key: &KeyInfo) -> Value {
     let can_authenticate = has_usable_subkey(key, |subkey| subkey.can_authenticate);
 
     json!({
-        "id": key.fingerprint,
+        "id": key.fingerprint.as_str(),
         "title": identity.and_then(|uid| uid.name.as_deref()).filter(|name| !name.is_empty()).map(str::to_owned).unwrap_or_else(|| crate::i18n::text(identity_title(identity))),
         "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
         "hasSecret": key.has_secret,
@@ -99,12 +101,12 @@ fn validity_presentation(identity: Option<&UserIdInfo>) -> (&'static str, &'stat
         Some(user_id) if user_id.revoked => ("revoked", "Identidad revocada"),
         Some(user_id) if user_id.invalid => ("invalid", "Identidad inválida"),
         Some(user_id) => match user_id.validity {
-            KeyValidity::Unknown => ("unknown", "Sin verificar"),
-            KeyValidity::Undefined => ("undefined", "Sin verificar"),
-            KeyValidity::Never => ("never", "No válida según GnuPG"),
-            KeyValidity::Marginal => ("marginal", "Validez marginal según GnuPG"),
-            KeyValidity::Full => ("full", "Validez plena según GnuPG"),
-            KeyValidity::Ultimate => ("ultimate", "Validez absoluta según GnuPG"),
+            Validity::Unknown => ("unknown", "Sin verificar"),
+            Validity::Undefined => ("undefined", "Sin verificar"),
+            Validity::Never => ("never", "No válida según GnuPG"),
+            Validity::Marginal => ("marginal", "Validez marginal según GnuPG"),
+            Validity::Full => ("full", "Validez plena según GnuPG"),
+            Validity::Ultimate => ("ultimate", "Validez absoluta según GnuPG"),
         },
         None => ("unknown", "Sin verificar"),
     }
@@ -127,10 +129,10 @@ fn subkey_record(subkey: &SubkeyInfo, is_primary: bool) -> Value {
     );
 
     json!({
-        "fingerprint": subkey.fingerprint,
+        "fingerprint": subkey.fingerprint.as_ref().map(Fingerprint::as_str).unwrap_or_default(),
         "isPrimary": is_primary,
         "algorithm": subkey.algorithm,
-        "expiresAt": subkey.expires_at,
+        "expiresAt": subkey.expires_at.and_then(|time| time.duration_since(UNIX_EPOCH).ok()).map(|age| age.as_secs()),
         "capabilities": capabilities(
             subkey.can_encrypt,
             subkey.can_sign,
@@ -225,7 +227,7 @@ fn signature_records(key: &KeyInfo) -> Vec<Value> {
         .iter()
         .flat_map(|identity| {
             identity
-                .signatures
+                .certifications
                 .iter()
                 .filter_map(|signature| signature_record(key, identity, signature))
         })
@@ -238,7 +240,9 @@ fn signature_record(
     signature: &CertificationInfo,
 ) -> Option<Value> {
     // Self-certifications belong to the key structure, not third-party endorsements.
-    if !signature.signer_key_id.is_empty() && key.fingerprint.ends_with(&signature.signer_key_id) {
+    if !signature.signer_key_id.is_empty()
+        && key.fingerprint.as_str().ends_with(&signature.signer_key_id)
+    {
         return None;
     }
 
@@ -251,7 +255,7 @@ fn signature_record(
 }
 
 fn signature_status_label(signature: &CertificationInfo) -> &'static str {
-    if signature.revoked {
+    if signature.revocation {
         "Revocación registrada"
     } else if signature.expired {
         "Caducada"

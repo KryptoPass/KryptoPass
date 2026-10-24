@@ -1,12 +1,14 @@
-//! Request and result types for local OpenPGP keyring operations.
+//! The JSON contract QML sends, parsed into validated keyring values.
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::path::PathBuf;
 
+use kryptopass_keyring::{
+    CertificationKind, DeleteScope, Expiry, ExpiryTarget, Fingerprint, InvalidInput, Keyserver,
+    SubkeyUsage, UserId,
+};
 use serde::{Deserialize, Serialize};
 
-pub(super) const MAX_REQUEST_BYTES: usize = 64 * 1024;
-pub(super) const MAX_USER_ID_BYTES: usize = 255;
-pub(super) const MAX_CERTIFIED_USER_IDS: usize = 64;
+const MAX_REQUEST_BYTES: usize = 64 * 1024;
 
 /// Result returned to the desktop bridge. `public_key` is populated only for
 /// `copyPublic`; secret-key bytes are written directly to a local file.
@@ -17,9 +19,81 @@ pub struct OperationOutcome {
     pub selected_fingerprint: Option<String>,
 }
 
+/// One keyring operation whose every argument already passed validation.
+pub(super) enum Request {
+    Create {
+        user_id: UserId,
+        expiry: Expiry,
+    },
+    Import {
+        path: PathBuf,
+    },
+    ExportPublic {
+        fingerprint: Fingerprint,
+        path: PathBuf,
+    },
+    CopyPublic {
+        fingerprint: Fingerprint,
+    },
+    BackupSecret {
+        fingerprint: Fingerprint,
+        path: PathBuf,
+    },
+    ChangePassphrase {
+        fingerprint: Fingerprint,
+    },
+    SetExpiry {
+        fingerprint: Fingerprint,
+        target: ExpiryTarget,
+        expiry: Expiry,
+    },
+    AddUserId {
+        fingerprint: Fingerprint,
+        user_id: UserId,
+    },
+    SetPrimaryUserId {
+        fingerprint: Fingerprint,
+        user_id: UserId,
+    },
+    RevokeUserId {
+        fingerprint: Fingerprint,
+        user_id: UserId,
+    },
+    AddSubkey {
+        fingerprint: Fingerprint,
+        usage: SubkeyUsage,
+        expiry: Expiry,
+    },
+    RevokeSubkey {
+        fingerprint: Fingerprint,
+        subkey: Fingerprint,
+    },
+    WriteRevocation {
+        fingerprint: Fingerprint,
+        path: PathBuf,
+    },
+    RevokeKey {
+        fingerprint: Fingerprint,
+    },
+    Certify {
+        target: Fingerprint,
+        signer: Fingerprint,
+        user_ids: Vec<UserId>,
+        kind: CertificationKind,
+    },
+    Fetch {
+        fingerprint: Fingerprint,
+        keyserver: Option<Keyserver>,
+    },
+    Delete {
+        fingerprint: Fingerprint,
+        scope: DeleteScope,
+    },
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "action", deny_unknown_fields)]
-pub(super) enum OperationRequest {
+enum RawRequest {
     #[serde(rename = "create")]
     Create {
         userid: String,
@@ -52,7 +126,7 @@ pub(super) enum OperationRequest {
     #[serde(rename = "addSubkey")]
     AddSubkey {
         fingerprint: String,
-        usage: SubkeyUsage,
+        usage: RawSubkeyUsage,
         #[serde(rename = "expiresDays")]
         expires_days: u32,
     },
@@ -79,13 +153,13 @@ pub(super) enum OperationRequest {
     #[serde(rename = "delete")]
     Delete {
         fingerprint: String,
-        material: DeleteMaterial,
+        material: RawDeleteMaterial,
     },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(super) enum SubkeyUsage {
+enum RawSubkeyUsage {
     Encrypt,
     Sign,
     Authenticate,
@@ -93,66 +167,167 @@ pub(super) enum SubkeyUsage {
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(super) enum DeleteMaterial {
+enum RawDeleteMaterial {
     Public,
     Private,
     Both,
 }
 
-pub(super) fn parse_request(request_json: &str) -> Result<OperationRequest, String> {
+pub(super) fn parse_request(request_json: &str) -> Result<Request, InvalidRequest> {
     if request_json.len() > MAX_REQUEST_BYTES {
-        return Err("La solicitud OpenPGP supera el tamaño permitido.".into());
+        return Err(InvalidRequest::TooLarge);
     }
-    serde_json::from_str::<OperationRequest>(request_json).map_err(|error| {
-        crate::i18n::format(
-            "La solicitud OpenPGP no es válida: %1",
-            &[error.to_string()],
-        )
+    let raw = serde_json::from_str::<RawRequest>(request_json)
+        .map_err(|error| InvalidRequest::Malformed(error.to_string()))?;
+    validate(raw).map_err(InvalidRequest::Value)
+}
+
+/// Why a request never reached the keyring.
+pub(super) enum InvalidRequest {
+    TooLarge,
+    Malformed(String),
+    Value(InvalidInput),
+}
+
+fn validate(raw: RawRequest) -> Result<Request, InvalidInput> {
+    let fingerprint = |value: &str| Fingerprint::parse(value);
+    let user_id = |value: &str| UserId::parse(value);
+    Ok(match raw {
+        RawRequest::Create {
+            userid,
+            expires_days,
+        } => Request::Create {
+            user_id: user_id(&userid)?,
+            expiry: Expiry::from_days(expires_days),
+        },
+        RawRequest::Import { path } => Request::Import { path: path.into() },
+        RawRequest::ExportPublic {
+            fingerprint: value,
+            path,
+        } => Request::ExportPublic {
+            fingerprint: fingerprint(&value)?,
+            path: path.into(),
+        },
+        RawRequest::CopyPublic { fingerprint: value } => Request::CopyPublic {
+            fingerprint: fingerprint(&value)?,
+        },
+        RawRequest::BackupPrivate {
+            fingerprint: value,
+            path,
+        } => Request::BackupSecret {
+            fingerprint: fingerprint(&value)?,
+            path: path.into(),
+        },
+        RawRequest::Passphrase { fingerprint: value } => Request::ChangePassphrase {
+            fingerprint: fingerprint(&value)?,
+        },
+        RawRequest::Expiry {
+            fingerprint: value,
+            subkeys,
+            expires_days,
+        } => Request::SetExpiry {
+            fingerprint: fingerprint(&value)?,
+            target: if subkeys.is_empty() {
+                ExpiryTarget::Primary
+            } else {
+                ExpiryTarget::Subkeys(
+                    subkeys
+                        .iter()
+                        .map(|subkey| fingerprint(subkey))
+                        .collect::<Result<_, _>>()?,
+                )
+            },
+            expiry: Expiry::from_days(expires_days),
+        },
+        RawRequest::AddIdentity {
+            fingerprint: value,
+            userid,
+        } => Request::AddUserId {
+            fingerprint: fingerprint(&value)?,
+            user_id: user_id(&userid)?,
+        },
+        RawRequest::PrimaryIdentity {
+            fingerprint: value,
+            userid,
+        } => Request::SetPrimaryUserId {
+            fingerprint: fingerprint(&value)?,
+            user_id: user_id(&userid)?,
+        },
+        RawRequest::RevokeIdentity {
+            fingerprint: value,
+            userid,
+        } => Request::RevokeUserId {
+            fingerprint: fingerprint(&value)?,
+            user_id: user_id(&userid)?,
+        },
+        RawRequest::AddSubkey {
+            fingerprint: value,
+            usage,
+            expires_days,
+        } => Request::AddSubkey {
+            fingerprint: fingerprint(&value)?,
+            usage: match usage {
+                RawSubkeyUsage::Encrypt => SubkeyUsage::Encrypt,
+                RawSubkeyUsage::Sign => SubkeyUsage::Sign,
+                RawSubkeyUsage::Authenticate => SubkeyUsage::Authenticate,
+            },
+            expiry: Expiry::from_days(expires_days),
+        },
+        RawRequest::RevokeSubkey {
+            fingerprint: value,
+            subkey,
+        } => Request::RevokeSubkey {
+            fingerprint: fingerprint(&value)?,
+            subkey: fingerprint(&subkey)?,
+        },
+        RawRequest::PrepareRevocation {
+            fingerprint: value,
+            path,
+        } => Request::WriteRevocation {
+            fingerprint: fingerprint(&value)?,
+            path: path.into(),
+        },
+        RawRequest::RevokeKey { fingerprint: value } => Request::RevokeKey {
+            fingerprint: fingerprint(&value)?,
+        },
+        RawRequest::Certify {
+            fingerprint: value,
+            signer_fingerprint,
+            userids,
+            local,
+        } => Request::Certify {
+            target: fingerprint(&value)?,
+            signer: fingerprint(&signer_fingerprint)?,
+            user_ids: userids
+                .iter()
+                .map(|value| user_id(value))
+                .collect::<Result<_, _>>()?,
+            kind: if local {
+                CertificationKind::Local
+            } else {
+                CertificationKind::Exportable
+            },
+        },
+        RawRequest::RefreshExternal {
+            fingerprint: value,
+            keyserver,
+        } => Request::Fetch {
+            fingerprint: fingerprint(&value)?,
+            keyserver: match keyserver.as_str() {
+                "" => None,
+                value => Some(Keyserver::parse(value)?),
+            },
+        },
+        RawRequest::Delete {
+            fingerprint: value,
+            material,
+        } => Request::Delete {
+            fingerprint: fingerprint(&value)?,
+            scope: match material {
+                RawDeleteMaterial::Public => DeleteScope::PublicOnly,
+                RawDeleteMaterial::Private => DeleteScope::SecretOnly,
+                RawDeleteMaterial::Both => DeleteScope::Everything,
+            },
+        },
     })
-}
-
-pub(super) fn normalize_fingerprint(input: &str) -> Result<String, String> {
-    let bytes = input.as_bytes();
-    if !matches!(bytes.len(), 40 | 64) || !bytes.iter().all(u8::is_ascii_hexdigit) {
-        return Err("Indica una huella OpenPGP completa de 40 o 64 dígitos hexadecimales.".into());
-    }
-    Ok(input.to_ascii_uppercase())
-}
-
-pub(super) fn validated_user_id(input: &str) -> Result<&str, String> {
-    if input.trim().is_empty()
-        || input.len() > MAX_USER_ID_BYTES
-        || input.chars().any(char::is_control)
-        || input.contains('\0')
-    {
-        return Err("La identidad debe tener entre 1 y 255 bytes y no contener controles.".into());
-    }
-    Ok(input)
-}
-
-/// Converts a requested expiry to seconds while ensuring GnuPG's 32-bit
-/// absolute expiration timestamp can represent the resulting date.
-pub(super) fn expiry_duration(days: u32) -> Result<Duration, String> {
-    let seconds = u64::from(days) * 24 * 60 * 60;
-    if days != 0 {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| {
-                "No se pudo determinar la fecha actual para validar la caducidad.".to_owned()
-            })?
-            .as_secs();
-        if now.saturating_add(seconds) > u64::from(u32::MAX) {
-            return Err(
-                "La fecha de caducidad supera el límite que puede representar GnuPG.".into(),
-            );
-        }
-    }
-    Ok(Duration::from_secs(seconds))
-}
-
-pub(super) fn local_path(input: &str) -> Result<std::path::PathBuf, String> {
-    if input.is_empty() || input.len() > 4096 || input.contains('\0') {
-        return Err("La ruta local está vacía o supera el tamaño permitido.".into());
-    }
-    Ok(std::path::PathBuf::from(input))
 }
