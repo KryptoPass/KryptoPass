@@ -173,6 +173,7 @@ Rectangle {
                     Kirigami.Icon {
                         Layout.alignment: Qt.AlignTop
                         source: "view-certificate-add"
+                        selected: createChoice.highlighted
                         implicitWidth: Kirigami.Units.iconSizes.medium
                         implicitHeight: Kirigami.Units.iconSizes.medium
                     }
@@ -180,13 +181,15 @@ Rectangle {
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
                         RowLayout {
+                            // A custom contentItem does not inherit the highlighted text color.
                             Controls.Label {
                                 text: qsTr("Crear una clave para %1").arg(Application.displayName)
                                 font.weight: Font.DemiBold
+                                color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                             }
                             Controls.Label {
                                 text: qsTr("Recomendada")
-                                color: Kirigami.Theme.positiveTextColor
+                                color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
                                 font: Kirigami.Theme.smallFont
                             }
                         }
@@ -194,7 +197,8 @@ Rectangle {
                             Layout.fillWidth: true
                             text: qsTr("Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.").arg(Application.displayName)
                             wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
+                            color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
+                            opacity: createChoice.highlighted ? 0.85 : 1
                         }
                     }
                 }
@@ -219,6 +223,7 @@ Rectangle {
                     Kirigami.Icon {
                         Layout.alignment: Qt.AlignTop
                         source: "view-certificate"
+                        selected: existingChoice.highlighted
                         implicitWidth: Kirigami.Units.iconSizes.medium
                         implicitHeight: Kirigami.Units.iconSizes.medium
                     }
@@ -228,13 +233,15 @@ Rectangle {
                         Controls.Label {
                             text: qsTr("Usar una de mis claves")
                             font.weight: Font.DemiBold
+                            color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                         }
                         Controls.Label {
                             Layout.fillWidth: true
                             visible: root.ownKeys.length === 0
                             text: qsTr("No hay claves privadas en este equipo.")
                             wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
+                            color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
+                            opacity: existingChoice.highlighted ? 0.85 : 1
                         }
                         Controls.ComboBox {
                             id: existingKeys
