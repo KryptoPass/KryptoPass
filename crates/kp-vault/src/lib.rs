@@ -2,15 +2,13 @@
 //! No Qt, network transport, or GnuPG runtime is required; crypto is injected.
 
 use kryptopass_core::{
-    KeyFingerprint, MAX_VAULT_OBJECT_BYTES, OpenPgp, RecipientSet, Secret, SecretContent, SecretId,
-    SecretLink, VaultObject, decode_content, decode_vault_object, encode_vault_object,
+    KeyFingerprint, MAX_VAULT_OBJECT_BYTES, OpenPgp, RecipientSet, SecretContent, SecretId,
+    VaultObject, decode_vault_object, encode_vault_object,
 };
 use kryptopass_identity::DeviceIdentity;
 use kryptopass_sync::{
-    Digest, Id, Ledger, Operation, Revision, SYNC_MAX_CIPHERTEXT_BYTES,
-    SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, fresh_id,
+    Digest, Id, Ledger, Operation, Revision, SYNC_MAX_CIPHERTEXT_BYTES, SyncError, TrustSource,
 };
-use std::collections::BTreeSet;
 use std::fmt;
 
 const MAX_PROJECTED_PLAINTEXT_BYTES: usize = 8 * 1024 * 1024;
@@ -20,12 +18,9 @@ const MAX_PROJECTED_PLAINTEXT_BYTES: usize = 8 * 1024 * 1024;
 pub enum VaultSyncError {
     InvalidInput,
     InvalidObject,
-    ContentNotRepresentable,
-    MetadataNotRepresentable,
     Crypto,
     Trust,
     Conflict,
-    DestinationNotEmpty,
     LimitExceeded,
     Ledger,
 }
@@ -41,12 +36,9 @@ impl fmt::Display for VaultSyncError {
         f.write_str(match self {
             Self::InvalidInput => "vault_sync_invalid_input",
             Self::InvalidObject => "vault_sync_invalid_object",
-            Self::ContentNotRepresentable => "vault_sync_content_not_representable",
-            Self::MetadataNotRepresentable => "vault_sync_metadata_not_representable",
             Self::Crypto => "vault_sync_crypto_failed",
             Self::Trust => "vault_sync_trust_failed",
             Self::Conflict => "vault_sync_heads_changed",
-            Self::DestinationNotEmpty => "vault_sync_destination_not_empty",
             Self::LimitExceeded => "vault_sync_limit_exceeded",
             Self::Ledger => "vault_sync_ledger_failed",
         })
@@ -85,12 +77,6 @@ pub struct RevisionReceipt {
     pub revision_id: Id,
     pub revision_hash: Digest,
     pub operation: Operation,
-}
-
-/// Non-secret result of an explicit one-shot migration.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct MigrationReceipt {
-    pub imported_records: usize,
 }
 
 /// Vault operations backed by the immutable signed ledger and the existing
@@ -249,130 +235,9 @@ impl<'a> SyncedVault<'a> {
         receipt(&revision)
     }
 
-    /// Explicitly migrates an in-memory snapshot of the mutable local vault.
-    /// It decrypts and preflights every item before making one atomic initial
-    /// ledger insertion. The source slice is never modified.
-    pub fn migrate_from(
-        &mut self,
-        secrets: &[Secret],
-        links: &[SecretLink],
-    ) -> Result<MigrationReceipt, VaultSyncError> {
-        if self.ledger.revision_count().map_err(map_sync_error)? != 0 {
-            return Err(VaultSyncError::DestinationNotEmpty);
-        }
-        if secrets.len() > SYNC_MAX_REVISIONS_PER_BATCH {
-            return Err(VaultSyncError::LimitExceeded);
-        }
-        let recipients = self.encryption_recipients()?;
-
-        let record_ids = secrets
-            .iter()
-            .map(|secret| id_bytes(secret.id))
-            .collect::<BTreeSet<_>>();
-        if record_ids.len() != secrets.len() {
-            return Err(VaultSyncError::InvalidInput);
-        }
-        if secrets.iter().any(|secret| {
-            secret.folder_id.is_some() || secret.icon.is_some() || secret.recipients != recipients
-        }) || links.iter().any(|link| {
-            record_ids.contains(&id_bytes(link.first))
-                || record_ids.contains(&id_bytes(link.second))
-        }) {
-            return Err(VaultSyncError::MetadataNotRepresentable);
-        }
-
-        let mut objects = Vec::with_capacity(secrets.len());
-        for secret in secrets {
-            if secret.ciphertext.len() > SYNC_MAX_CIPHERTEXT_BYTES {
-                return Err(VaultSyncError::LimitExceeded);
-            }
-            let plaintext = self
-                .crypto
-                .decrypt(&secret.ciphertext)
-                .map_err(|_| VaultSyncError::Crypto)?;
-            let content = decode_content(plaintext.as_slice())
-                .map_err(|_| VaultSyncError::ContentNotRepresentable)?;
-            if content.kind() != secret.kind {
-                return Err(VaultSyncError::InvalidInput);
-            }
-            ensure_android_content(&content)?;
-            let object = VaultObject {
-                record_id: secret.id,
-                key_fingerprint: self.fingerprint.clone(),
-                title: secret.title.clone(),
-                favorite: secret.favorite,
-                trashed: secret.trashed,
-                content,
-            };
-            // Validate the complete wrapper, including outer byte bounds, before
-            // any ciphertext is inserted into the destination ledger.
-            let _ = encode_vault_object(&object).map_err(map_object_error)?;
-            objects.push(object);
-        }
-
-        let mut revisions = Vec::with_capacity(objects.len());
-        for object in &objects {
-            let plaintext = encode_vault_object(object).map_err(map_object_error)?;
-            let ciphertext = self
-                .crypto
-                .encrypt(plaintext.as_slice(), &recipients)
-                .map_err(|_| VaultSyncError::Crypto)?;
-            validate_ciphertext(&ciphertext)?;
-            let revision = Revision::sign(
-                self.ledger.vault_id(),
-                id_bytes(object.record_id),
-                fresh_id().map_err(map_sync_error)?,
-                Vec::new(),
-                Operation::Write,
-                ciphertext,
-                self.identity,
-            )
-            .map_err(map_sync_error)?;
-            revisions.push(revision);
-        }
-
-        self.ledger
-            .insert_initial_batch(&revisions, self.trust)
-            .map_err(map_sync_error)?;
-        Ok(MigrationReceipt {
-            imported_records: revisions.len(),
-        })
-    }
-
     fn encryption_recipients(&self) -> Result<RecipientSet, VaultSyncError> {
         RecipientSet::new(vec![self.fingerprint.clone()]).map_err(|_| VaultSyncError::InvalidInput)
     }
-}
-
-fn ensure_android_content(content: &SecretContent) -> Result<(), VaultSyncError> {
-    match content {
-        SecretContent::Login(login) => {
-            if login.totp.is_some()
-                || !login.history.events().is_empty()
-                || !login.history.version_metadata().is_empty()
-                || login.urls.len() > 64
-                || login.urls.iter().any(|url| url.len() > 4096)
-                || login.username.len() > 65_536
-                || login.password.len() > 65_536
-                || login.notes.len() > 256 * 1024
-            {
-                return Err(VaultSyncError::ContentNotRepresentable);
-            }
-        }
-        SecretContent::Note(note) => {
-            if note.value.len() > 512 * 1024 || note.notes.len() > 256 * 1024 {
-                return Err(VaultSyncError::ContentNotRepresentable);
-            }
-        }
-        SecretContent::Custom(_)
-        | SecretContent::Card(_)
-        | SecretContent::Totp(_)
-        | SecretContent::Identity(_)
-        | SecretContent::Wifi(_)
-        | SecretContent::License(_)
-        | SecretContent::SshKey(_) => return Err(VaultSyncError::ContentNotRepresentable),
-    }
-    Ok(())
 }
 
 fn validate_ciphertext(ciphertext: &[u8]) -> Result<(), VaultSyncError> {
@@ -408,7 +273,6 @@ fn map_object_error(error: kryptopass_core::VaultObjectError) -> VaultSyncError 
 fn map_sync_error(error: SyncError) -> VaultSyncError {
     match error {
         SyncError::HeadConflict => VaultSyncError::Conflict,
-        SyncError::LedgerNotEmpty => VaultSyncError::DestinationNotEmpty,
         SyncError::LimitExceeded | SyncError::Allocation => VaultSyncError::LimitExceeded,
         SyncError::UnknownAuthor | SyncError::InvalidSignature => VaultSyncError::Trust,
         SyncError::Randomness => VaultSyncError::Crypto,

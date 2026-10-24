@@ -97,7 +97,7 @@ message SyncHello {
   bytes vault_id = 1;              // 16 bytes
   bytes device_id = 2;             // 32 bytes
   uint64 known_revision_count = 3;
-  bytes openpgp_fingerprint = 4;   // 20/32 bytes; required by negotiated Sync v1
+  bytes openpgp_fingerprint = 4;   // 20/32 bytes
 }
 
 message RevisionHead {

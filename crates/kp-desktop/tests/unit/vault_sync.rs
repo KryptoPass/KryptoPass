@@ -3,14 +3,11 @@
 use super::{SyncedVault, VaultSyncError};
 use anyhow::bail;
 use kryptopass_core::{
-    CustomContent, KeyFingerprint, LoginContent, MAX_VAULT_OBJECT_BYTES, NoteContent, OpenPgp,
-    RecipientSet, Secret, SecretContent, SecretId, SensitiveBytes, VaultObject,
-    decode_vault_object, encode_content, encode_vault_object,
+    KeyFingerprint, LoginContent, MAX_VAULT_OBJECT_BYTES, NoteContent, OpenPgp, RecipientSet,
+    SecretContent, SecretId, SensitiveBytes, VaultObject, decode_vault_object, encode_vault_object,
 };
 use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity};
-use kryptopass_sync::{
-    Id, Ledger, Operation, Revision, SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, fresh_id,
-};
+use kryptopass_sync::{Id, Ledger, Operation, Revision, SyncError, TrustSource, fresh_id};
 use std::collections::HashMap;
 
 const VAULT_ID: Id = [0x51; 16];
@@ -106,29 +103,6 @@ impl Fixture {
         )
         .expect("trusted local identity binds to the ledger")
     }
-
-    fn encrypted_secret(&self, content: SecretContent) -> Secret {
-        let recipients =
-            RecipientSet::new(vec![self.fingerprint.clone()]).expect("one synthetic recipient");
-        let plaintext = encode_content(&content).expect("valid synthetic content");
-        let ciphertext = self
-            .crypto
-            .encrypt(plaintext.as_slice(), &recipients)
-            .expect("synthetic encryption succeeds");
-        let kind = content.kind();
-        Secret {
-            icon: None,
-            id: SecretId::new(),
-            folder_id: None,
-            title: "Synthetic legacy record".to_owned(),
-            kind,
-            recipients,
-            ciphertext,
-            favorite: false,
-            trashed: false,
-            revision: 1,
-        }
-    }
 }
 
 fn record_bytes(id: SecretId) -> Id {
@@ -139,102 +113,11 @@ fn synthetic_login(username: &str, password: &str) -> SecretContent {
     SecretContent::Login(LoginContent {
         username: username.into(),
         password: password.into(),
-        url: Default::default(),
         notes: Default::default(),
         urls: Vec::new(),
         totp: None,
         history: Box::default(),
     })
-}
-
-#[test]
-fn migration_preflights_unsupported_content_without_inserting_or_mutating_source() {
-    let fixture = Fixture::new();
-    let mut ledger = fixture.ledger();
-    let mut vault = fixture.vault(&mut ledger);
-    let source = vec![
-        fixture.encrypted_secret(synthetic_login(
-            "alice@example.invalid",
-            "synthetic-password",
-        )),
-        fixture.encrypted_secret(SecretContent::Custom(CustomContent::default())),
-    ];
-    let source_before = source.clone();
-
-    assert!(matches!(
-        vault.migrate_from(&source, &[]),
-        Err(VaultSyncError::ContentNotRepresentable)
-    ));
-    assert_eq!(vault.ledger_revision_count().expect("ledger count"), 0);
-    assert_eq!(source, source_before);
-}
-
-#[test]
-fn migration_rejects_secrets_with_multiple_recipients_without_inserting_or_mutating_source() {
-    let fixture = Fixture::new();
-    let mut ledger = fixture.ledger();
-    let mut vault = fixture.vault(&mut ledger);
-    let additional_fingerprint = KeyFingerprint::parse("ABCDEF0123456789ABCDEF0123456789ABCDEF01")
-        .expect("synthetic additional fingerprint");
-    let mut secret = fixture.encrypted_secret(synthetic_login(
-        "alice@example.invalid",
-        "synthetic-password",
-    ));
-    secret.recipients =
-        RecipientSet::new(vec![fixture.fingerprint.clone(), additional_fingerprint])
-            .expect("two distinct synthetic recipients");
-    let source = vec![secret];
-    let source_before = source.clone();
-
-    assert!(matches!(
-        vault.migrate_from(&source, &[]),
-        Err(VaultSyncError::MetadataNotRepresentable)
-    ));
-    assert_eq!(vault.ledger_revision_count().expect("ledger count"), 0);
-    assert_eq!(source, source_before);
-}
-
-#[test]
-fn migration_enforces_batch_limit_and_refuses_to_overwrite_a_nonempty_ledger() {
-    let fixture = Fixture::new();
-    let mut ledger = fixture.ledger();
-    let mut vault = fixture.vault(&mut ledger);
-    let oversized = (0..=SYNC_MAX_REVISIONS_PER_BATCH)
-        .map(|_| fixture.encrypted_secret(SecretContent::Note(NoteContent::default())))
-        .collect::<Vec<_>>();
-    let oversized_before = oversized.clone();
-
-    assert!(matches!(
-        vault.migrate_from(&oversized, &[]),
-        Err(VaultSyncError::LimitExceeded)
-    ));
-    assert_eq!(vault.ledger_revision_count().expect("ledger count"), 0);
-    assert_eq!(oversized, oversized_before);
-
-    let supported_batch = (0..SYNC_MAX_REVISIONS_PER_BATCH)
-        .map(|_| fixture.encrypted_secret(SecretContent::Note(NoteContent::default())))
-        .collect::<Vec<_>>();
-    let supported_before = supported_batch.clone();
-    let receipt = vault
-        .migrate_from(&supported_batch, &[])
-        .expect("maximum supported batch migrates atomically");
-    assert_eq!(receipt.imported_records, SYNC_MAX_REVISIONS_PER_BATCH);
-    assert_eq!(
-        vault.ledger_revision_count().expect("ledger count"),
-        SYNC_MAX_REVISIONS_PER_BATCH
-    );
-    assert_eq!(supported_batch, supported_before);
-
-    assert!(matches!(
-        vault.migrate_from(&supported_batch, &[]),
-        Err(VaultSyncError::DestinationNotEmpty)
-    ));
-    assert_eq!(
-        vault
-            .ledger_revision_count()
-            .expect("ledger count after rejected retry"),
-        SYNC_MAX_REVISIONS_PER_BATCH
-    );
 }
 
 #[test]

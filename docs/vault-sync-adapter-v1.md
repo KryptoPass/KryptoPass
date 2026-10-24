@@ -33,7 +33,6 @@ hasRevisions(): Boolean
 listEntries(unlockedKey: UnlockedOpenPgpKey): SyncedVaultProjection
 save(entry, unlockedKey, openPgpCertificate): Revision
 delete(entry): Revision
-migrateLegacyVault(legacy, unlockedKey): LegacyVaultMigrationResult
 ```
 
 `LocalVaultController.bindSyncedRepository(repo)` es opt-in: sólo acepta el
@@ -52,31 +51,11 @@ SyncedVault::new(&mut ledger, fingerprint, &identity, &trust, &openpgp)
 vault.list()
 vault.save(record_id, expected_heads, title, favorite, trashed, content)
 vault.delete(record_id, expected_heads)
-vault.migrate_from(secrets, links)
 ```
 
 El llamador inyecta el backend GnuPG existente y la identidad protegida local.
-Cada head conserva su revisión, hash, padres y objeto o tombstone. La migración
-Rust toma un snapshot de origen; el llamador debe detener sus escritores durante
-la selección/cambio de autoridad. Rechaza carpetas, iconos, enlaces, tipos y
-campos que la primera integración Android no puede conservar/editarlos, y
-destinatarios que no sean exactamente la identidad compartida elegida. No
-cambia silenciosamente quién puede descifrar una credencial heredada.
+Cada head conserva su revisión, hash, padres y objeto o tombstone.
 
-La selección de vault/backend todavía no se guarda como configuración durable
-de producto. El caller debe vincular el mismo ledger explícitamente antes de
-cada unlock. No hay pantalla de producción, selección automática ni rondas de
-fondo/WorkManager. El camino visible comprobado es DEBUG: ambos dispositivos
-activan una bóveda sintética con una clave fixture conocida. Con la extensión
-[rondas continuas](sync-rounds-v1.md) negociada, guardar dispara otra ronda
-sobre el mismo canal. «Sincronizar» permite pedirla explícitamente; sólo el
-fallback de una conexión anterior necesita Noise nuevo. No se
-transfiere una clave privada OpenPGP por red ni se relaja la política normal de
-Keystore.
-
-## Objeto cifrado común
-
-Cada revisión `WRITE` contiene ciphertext OpenPGP del wrapper compartido
 `org.kryptopass.vault-object.v1`. No se insertan objetos `SecretContent` de
 Desktop directamente: ambos lados deben leer el wrapper completo.
 
@@ -89,16 +68,15 @@ Desktop directamente: ambos lados deben leer el wrapper completo.
   "favorite": false,
   "trashed": false,
   "content": {
-    "schemaVersion": 4,
+    "schemaVersion": 1,
     "kind": "login o note",
     "fields": {}
   }
 }
 ```
 
-Login conserva `username`, `password`, `url`, `urls` y `notes`; en esta versión
-Android sólo edita `totp: null` e historial vacío (`events`,
-`previousPasswords` y `versions`). Note conserva `value` y `notes`. No se añade
+Login conserva `username`, `password`, `urls` y `notes`; en esta versión
+Android sólo edita `totp: null` e historial vacío (`events` y `versions`). Note conserva `value` y `notes`. No se añade
 un contador local ni `expectedSyncHeads` al JSON: esos valores son metadatos
 causales/CAS del ledger, nunca parte del objeto cifrado compartido.
 
@@ -107,8 +85,7 @@ historial, TOTP, campo o estructura que Android no puede round-tripear, la
 entrada se marca no editable y se informa el conteo de contenido no compatible.
 La revisión cifrada original permanece intacta en el ledger. Guardar o borrar
 una entrada no compatible falla explícitamente; Android no reconstruye el JSON
-ni elimina campos que no entiende. La migración desde SQLite también rechaza
-contenido no editable y no importa ninguna fila si falla.
+ni elimina campos que no entiende.
 
 ## CAS, conflictos y borrados
 

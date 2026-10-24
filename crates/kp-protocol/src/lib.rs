@@ -917,11 +917,7 @@ fn validate_session_close(value: &proto::SessionClose) -> Result<(), ProtocolErr
 fn validate_sync_hello(value: &proto::SyncHello) -> Result<(), ProtocolError> {
     require_id(&value.vault_id, 16, "vault_id")?;
     require_id(&value.device_id, 32, "device_id")?;
-    // Legacy clients may omit this field; negotiated Sync v1 requires the exact
-    // fingerprint from the local binding before exchanging any revisions.
-    if !value.openpgp_fingerprint.is_empty() {
-        require_fingerprint(&value.openpgp_fingerprint)?;
-    }
+    require_fingerprint(&value.openpgp_fingerprint)?;
     if value.known_revision_count > 1_000_000 {
         return Err(ProtocolError::InvalidField {
             field: "known_revision_count",

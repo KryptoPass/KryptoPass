@@ -22,7 +22,7 @@ fn sync_hello(codec: &mut SessionCodec, salt: u8) -> Vec<u8> {
                 vault_id: bytes(16, salt),
                 device_id: bytes(32, salt.wrapping_add(1)),
                 known_revision_count: u64::from(salt),
-                openpgp_fingerprint: vec![],
+                openpgp_fingerprint: vec![0x64; 20],
             },
         )
         .expect("valid SyncHello")

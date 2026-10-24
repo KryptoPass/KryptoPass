@@ -22,7 +22,7 @@ _default:
 
 # Prepara o valida la clave pública sintética de Sync en la caché privada local.
 prepare-synthetic-sync-fixture:
-    python3 scripts/prepare_synthetic_sync_fixture.py --legacy-dir fixtures/synthetic-key-transfer-v1
+    python3 scripts/prepare_synthetic_sync_fixture.py
 
 alias r := run
 
@@ -107,7 +107,7 @@ test-p2p:
 test-sync:
     cargo test -p kp-sync
 
-# Shared encrypted object and explicit migration into the signed ledger.
+# Shared encrypted object and the signed ledger.
 test-vault-sync:
     cargo test -p kp-core --test vault_object
     cargo test -p kp-sync

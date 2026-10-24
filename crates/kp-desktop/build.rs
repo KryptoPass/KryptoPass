@@ -49,13 +49,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("PROFILE").as_deref() == Ok("debug") {
         let fixture_script =
             manifest_directory.join("../../scripts/prepare_synthetic_sync_fixture.py");
-        let legacy_directory = manifest_directory.join("../../fixtures/synthetic-key-transfer-v1");
         let prepared = Command::new("python3")
             .arg(&fixture_script)
             .arg("--directory")
             .arg(&fixture_directory)
-            .arg("--legacy-dir")
-            .arg(legacy_directory)
             .output()?;
         if !prepared.status.success() {
             let message = String::from_utf8_lossy(&prepared.stderr);

@@ -345,8 +345,6 @@ pub enum SyncError {
     RevisionIdCollision,
     /// An append's expected current heads do not match the ledger.
     HeadConflict,
-    /// A migration requiring a fresh ledger found existing revisions.
-    LedgerNotEmpty,
     /// A configured revision, byte or graph limit was exceeded.
     LimitExceeded,
     /// Protobuf encoding failed or could not represent the requested batch.
@@ -380,7 +378,6 @@ impl fmt::Display for SyncError {
             Self::Cycle => "sync revision graph contains a cycle",
             Self::RevisionIdCollision => "sync revision identifier collision",
             Self::HeadConflict => "sync revision heads changed",
-            Self::LedgerNotEmpty => "sync ledger must be empty",
             Self::LimitExceeded => "sync limit exceeded",
             Self::Encode => "sync batch encoding failed",
             Self::Decode => "sync batch decoding failed",

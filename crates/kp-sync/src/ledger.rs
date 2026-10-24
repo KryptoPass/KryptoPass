@@ -226,28 +226,7 @@ impl Ledger {
         revisions: &[Revision],
         trust: &dyn TrustSource,
     ) -> Result<InsertOutcome, SyncError> {
-        self.insert_batch_inner(revisions, trust, false)
-    }
-
-    /// Validates and inserts an initial revision set only if this ledger is
-    /// still empty after acquiring the SQLite write transaction. The empty
-    /// check and the complete batch commit are atomic with respect to other
-    /// ledger handles.
-    pub fn insert_initial_batch(
-        &mut self,
-        revisions: &[Revision],
-        trust: &dyn TrustSource,
-    ) -> Result<InsertOutcome, SyncError> {
-        self.insert_batch_inner(revisions, trust, true)
-    }
-
-    fn insert_batch_inner(
-        &mut self,
-        revisions: &[Revision],
-        trust: &dyn TrustSource,
-        require_empty: bool,
-    ) -> Result<InsertOutcome, SyncError> {
-        if revisions.is_empty() && !require_empty {
+        if revisions.is_empty() {
             return Ok(InsertOutcome::default());
         }
         if revisions.len() > SYNC_MAX_REVISIONS_PER_BATCH {
@@ -275,20 +254,6 @@ impl Ledger {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(map_sqlite_error)?;
-        if require_empty {
-            let has_revisions: bool = transaction
-                .query_row("SELECT EXISTS(SELECT 1 FROM revisions)", [], |row| {
-                    row.get(0)
-                })
-                .map_err(map_sqlite_error)?;
-            if has_revisions {
-                return Err(SyncError::LedgerNotEmpty);
-            }
-        }
-        if revisions.is_empty() {
-            transaction.commit().map_err(map_sqlite_error)?;
-            return Ok(InsertOutcome::default());
-        }
         let mut new_revisions = BTreeMap::<Id, Revision>::new();
         let mut duplicate_ids = BTreeSet::<Id>::new();
         for (revision_id, revision) in &validated {

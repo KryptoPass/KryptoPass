@@ -236,7 +236,6 @@ fn synthetic_login() -> SecretContent {
         username: SensitiveText::from("sync-test@kryptopass.invalid"),
         password: SensitiveText::from("KryptoPass synthetic test password"),
         notes: SensitiveText::from("Dato sintético. No contiene una contraseña real."),
-        url: SensitiveText::default(),
         urls: Vec::new(),
         totp: None,
         history: Box::default(),
@@ -284,15 +283,12 @@ fn project_rows(heads: Vec<VaultHeadProjection>) -> Vec<String> {
 fn map_service_error(error: VaultSyncError) -> SyntheticSyncError {
     match error {
         VaultSyncError::Conflict => SyntheticSyncError::WriteRejected,
-        VaultSyncError::DestinationNotEmpty | VaultSyncError::LimitExceeded => {
-            SyntheticSyncError::LimitExceeded
-        }
+        VaultSyncError::LimitExceeded => SyntheticSyncError::LimitExceeded,
         VaultSyncError::Trust => SyntheticSyncError::PeerNotAuthorized,
         VaultSyncError::Crypto => SyntheticSyncError::OpenPgpUnavailable,
-        VaultSyncError::InvalidInput
-        | VaultSyncError::InvalidObject
-        | VaultSyncError::ContentNotRepresentable
-        | VaultSyncError::MetadataNotRepresentable => SyntheticSyncError::ContentUnavailable,
+        VaultSyncError::InvalidInput | VaultSyncError::InvalidObject => {
+            SyntheticSyncError::ContentUnavailable
+        }
         VaultSyncError::Ledger => SyntheticSyncError::LedgerUnavailable,
     }
 }

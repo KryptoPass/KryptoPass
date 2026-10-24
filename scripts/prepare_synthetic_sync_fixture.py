@@ -277,36 +277,6 @@ def _read_existing(directory: Path) -> tuple[bytes, dict[str, Any]] | None:
     return key_bytes, metadata
 
 
-def _legacy_fixture(legacy_directory: Path | None) -> tuple[bytes, dict[str, Any]] | None:
-    if legacy_directory is None:
-        return None
-    key_path = legacy_directory / KEY_NAME
-    manifest_path = legacy_directory / MANIFEST_NAME
-    key_info = _lstat(key_path)
-    manifest_info = _lstat(manifest_path)
-    if key_info is None and manifest_info is None:
-        return None
-    if key_info is None or manifest_info is None or not stat.S_ISREG(key_info.st_mode) or not stat.S_ISREG(manifest_info.st_mode):
-        raise FixtureError("legacy synthetic fixture is incomplete or invalid")
-    if (
-        key_info.st_size <= 0
-        or key_info.st_size > MAX_KEY_SIZE
-        or manifest_info.st_size <= 0
-        or manifest_info.st_size > MAX_MANIFEST_SIZE
-    ):
-        raise FixtureError("legacy synthetic fixture file size is invalid")
-    try:
-        key_bytes = key_path.read_bytes()
-        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        raise FixtureError("legacy synthetic fixture is unreadable or corrupt") from error
-    if not isinstance(raw, dict):
-        raise FixtureError("legacy synthetic fixture metadata is corrupt")
-    metadata = _metadata(key_bytes, raw)
-    _import_and_verify(key_bytes, metadata)
-    return key_bytes, metadata
-
-
 def _generate_fixture() -> tuple[bytes, dict[str, Any]]:
     temporary = _gpg_home()
     home = Path(temporary.name)
@@ -383,7 +353,7 @@ def _manifest_bytes(metadata: dict[str, Any]) -> bytes:
     return (json.dumps(metadata, indent=2, ensure_ascii=True) + "\n").encode("utf-8")
 
 
-def _prepare(directory: Path, legacy_directory: Path | None) -> dict[str, Any]:
+def _prepare(directory: Path) -> dict[str, Any]:
     _ensure_directory(directory, private=True)
     lock_path = directory / ".prepare.lock"
     flags = os.O_CREAT | os.O_RDWR
@@ -403,8 +373,7 @@ def _prepare(directory: Path, legacy_directory: Path | None) -> dict[str, Any]:
         existing = _read_existing(directory)
         if existing is not None:
             return existing[1]
-        legacy = _legacy_fixture(legacy_directory)
-        key_bytes, metadata = legacy if legacy is not None else _generate_fixture()
+        key_bytes, metadata = _generate_fixture()
         _write_private_file(directory / KEY_NAME, key_bytes)
         _write_private_file(directory / MANIFEST_NAME, _manifest_bytes(metadata))
         _import_and_verify(key_bytes, metadata)
@@ -435,11 +404,10 @@ def _stage_assets(directory: Path, stage_directory: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path, default=cache_directory())
-    parser.add_argument("--legacy-dir", type=Path)
     parser.add_argument("--stage", type=Path, help="copy verified assets into a generated debug asset directory")
     arguments = parser.parse_args()
     try:
-        _prepare(arguments.directory.expanduser().absolute(), arguments.legacy_dir)
+        _prepare(arguments.directory.expanduser().absolute())
         if arguments.stage is not None:
             _stage_assets(arguments.directory.expanduser().absolute(), arguments.stage.expanduser().absolute())
         return 0
