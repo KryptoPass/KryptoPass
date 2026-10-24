@@ -186,7 +186,6 @@ fn sample_login() -> LoginContent {
     let previous = LoginContent {
         username: "user@example.org".into(),
         password: "previous password".into(),
-        url: "https://example.org/login".into(),
         urls: vec!["https://example.org/login".into()],
         notes: "Recovery information".into(),
         totp: None,
@@ -197,10 +196,6 @@ fn sample_login() -> LoginContent {
     current
         .history
         .record_event(LoginHistoryEventKind::Create, 5);
-    current
-        .history
-        .record_password("legacy password".into(), 10)
-        .unwrap();
     current
         .history
         .record_version(&previous, "Historical title", 20)
@@ -225,18 +220,11 @@ fn login_cannot_be_replaced_by_note_or_lose_its_history() {
     let SecretContent::Login(login) = &content else {
         panic!("expected original login content");
     };
-    assert_eq!(
-        login.history.version_metadata(),
-        vec![(20, false), (10, true)]
-    );
+    assert_eq!(login.history.version_metadata(), vec![20]);
     assert_eq!(login.history.version_title(0), Some("Historical title"));
     assert_eq!(
         login.history.version_content(0).unwrap().password,
         "previous password"
-    );
-    assert_eq!(
-        login.history.version_content(1).unwrap().password,
-        "legacy password"
     );
     assert_eq!(login.history.events().len(), 1);
     assert_eq!(login.history.events()[0].timestamp, 5);
@@ -278,7 +266,7 @@ fn login_edit_keeps_its_type_and_retains_previous_history() {
     };
     assert_eq!(login.username, "updated@example.org");
     assert_eq!(login.password, "updated password");
-    assert_eq!(login.history.version_metadata().len(), 3);
+    assert_eq!(login.history.version_metadata().len(), 2);
     assert_eq!(login.history.version_title(0), Some("Original title"));
     assert_eq!(
         login.history.version_content(0).unwrap().password,
@@ -286,8 +274,8 @@ fn login_edit_keeps_its_type_and_retains_previous_history() {
     );
     assert_eq!(login.history.version_title(1), Some("Historical title"));
     assert_eq!(
-        login.history.version_content(2).unwrap().password,
-        "legacy password"
+        login.history.version_content(1).unwrap().password,
+        "previous password"
     );
     assert!(
         login

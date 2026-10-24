@@ -38,7 +38,6 @@ TestCase {
             return {
                 username: "user@example.org",
                 password: "example password",
-                url: "https://example.org/login",
                 urls: ["https://example.org/login", "https://example.org/account"],
                 totpInput: "JBSWY3DPEHPK3PXP",
                 notes: "Recovery information"
@@ -135,7 +134,6 @@ TestCase {
             return {
                 username: "",
                 password: "",
-                url: "",
                 urls: [],
                 totpInput: "",
                 notes: ""
@@ -227,8 +225,7 @@ TestCase {
                 versions: [
                     {
                         index: 0,
-                        at: 1700000000,
-                        passwordOnly: false
+                        at: 1700000000
                     }
                 ]
             };
@@ -433,7 +430,6 @@ TestCase {
         const version = {
             index: 0,
             at: 1700000000,
-            passwordOnly: false,
             title: "Previous title",
             username: "previous@example.org",
             hasPassword: true,

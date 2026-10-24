@@ -1464,15 +1464,13 @@ impl qobject::SecretsController {
             let Some(version) = login.history.version_content(index) else {
                 return;
             };
-            let Some((at, password_only)) = login.history.version_metadata().get(index).copied()
-            else {
+            let Some(at) = login.history.version_metadata().get(index).copied() else {
                 return;
             };
             #[derive(serde::Serialize)]
             #[serde(rename_all = "camelCase")]
             struct VersionProjection<'a> {
                 at: u64,
-                password_only: bool,
                 title: Option<&'a str>,
                 username: &'a str,
                 urls: &'a [SensitiveText],
@@ -1482,7 +1480,6 @@ impl qobject::SecretsController {
             }
             let projection = VersionProjection {
                 at,
-                password_only,
                 title: login.history.version_title(index),
                 username: &version.username,
                 urls: &version.urls,

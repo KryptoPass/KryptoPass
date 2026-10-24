@@ -9,7 +9,6 @@ SecretFields {
 
     property string username: ""
     property string password: ""
-    property string url: ""
     property var urls: []
     property string urlsText: ""
     property string totpInput: ""
@@ -27,7 +26,7 @@ SecretFields {
     function loadFields(fields) {
         username = fields.username || "";
         password = fields.password || "";
-        setUrls(Array.isArray(fields.urls) ? fields.urls : [], fields.url || "");
+        setUrls(Array.isArray(fields.urls) ? fields.urls : []);
         totpInput = fields.totpInput || "";
         notes = fields.notes || "";
         notesEditor.resetSource(notes);
@@ -39,7 +38,6 @@ SecretFields {
         return {
             username: username,
             password: password,
-            url: normalizedUrls.length ? normalizedUrls[0] : "",
             urls: normalizedUrls,
             totpInput: totpInput,
             notes: notes
@@ -55,19 +53,15 @@ SecretFields {
 
     spacing: 24
 
-    function setUrls(values, legacyUrl) {
+    function setUrls(values) {
         const next = Array.isArray(values) ? values.map(value => String(value || "").trim()).filter(value => !!value) : [];
-        if (!next.length && legacyUrl)
-            next.push(String(legacyUrl).trim());
         urls = next;
-        url = next.length ? next[0] : "";
         urlsText = next.join("\n");
     }
 
     function updateUrlsText(text) {
         urlsText = String(text || "");
         urls = normalizedUrls;
-        url = normalizedUrls.length ? normalizedUrls[0] : "";
     }
 
     ColumnLayout {

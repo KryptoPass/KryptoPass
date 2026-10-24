@@ -149,7 +149,7 @@ fn expanded_variants_reject_missing_and_unknown_fields() {
             );
         }
 
-        for unsupported_version in [3, CONTENT_SCHEMA_VERSION + 1] {
+        for unsupported_version in [0, CONTENT_SCHEMA_VERSION + 1] {
             let mut unsupported = envelope.clone();
             unsupported["schemaVersion"] = unsupported_version.into();
             assert!(

@@ -339,7 +339,6 @@ TestCase {
         const version = {
             index: 0,
             at: 1700000000,
-            passwordOnly: false,
             notes: source
         };
 
@@ -378,17 +377,17 @@ TestCase {
         seedRevealedSpoiler(document);
 
         detail.versionDetail = Object.assign({}, version, {
-            passwordOnly: true
+            notes: ""
         });
         tryCompare(section, "visible", false);
         compareCleared(document);
-        const loadsWhilePasswordOnly = document.loadCount;
+        const loadsWithoutNotes = document.loadCount;
         detail.versionDetail = null;
         compareCleared(document);
         wait(180);
-        compare(document.loadCount, loadsWhilePasswordOnly);
+        compare(document.loadCount, loadsWithoutNotes);
         detail.versionDetail = version;
-        tryVerify(() => document.loadCount > loadsWhilePasswordOnly, 3000);
+        tryVerify(() => document.loadCount > loadsWithoutNotes, 3000);
         compare(document.lastLoadedSource, source);
         compareCleared(document);
         seedRevealedSpoiler(document);

@@ -14,7 +14,6 @@ fn login() -> LoginContent {
     LoginContent {
         username: "alice@example.invalid".into(),
         password: "current-password-marker".into(),
-        url: "https://example.invalid/login".into(),
         urls: vec![
             "https://example.invalid/login".into(),
             "https://alternate.invalid/login".into(),
@@ -103,7 +102,6 @@ fn login_editor_round_trip_preserves_metadata_and_typed_fields() {
     };
     assert_eq!(saved.username, original.username);
     assert_eq!(saved.password, original.password);
-    assert_eq!(saved.url, original.url);
     assert_eq!(saved.urls, original.urls);
     assert_eq!(saved.notes, original.notes);
     assert!(saved.totp == original.totp);
@@ -203,7 +201,6 @@ fn new_editor_is_a_deserializable_empty_login() {
         json!({
             "username": "",
             "password": "",
-            "url": "",
             "urls": [],
             "totpInput": "",
             "notes": ""
@@ -275,10 +272,6 @@ fn login_detail_reveals_only_the_current_password_when_requested() {
         .unwrap();
     current
         .history
-        .record_password("historical-password-marker".into(), 20)
-        .unwrap();
-    current
-        .history
         .record_event(LoginHistoryEventKind::PasswordRotated, 40);
     let content = SecretContent::Login(current);
 
@@ -300,13 +293,9 @@ fn login_detail_reveals_only_the_current_password_when_requested() {
         if !reveal {
             assert!(!projection.contains("current-password-marker"));
         }
-        assert_eq!(fields["history"]["passwordRotations"], json!([{"at": 20}]));
         assert_eq!(
             fields["history"]["versions"],
-            json!([
-                {"index": 0, "at": 40, "passwordOnly": false},
-                {"index": 1, "at": 20, "passwordOnly": true}
-            ])
+            json!([{"index": 0, "at": 40}])
         );
         assert!(fields["totp"]["currentCode"].is_string());
         assert!(fields["totp"]["nextCode"].is_string());
@@ -315,7 +304,6 @@ fn login_detail_reveals_only_the_current_password_when_requested() {
             TOTP_SECRET,
             "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
             "historical-version-password-marker",
-            "historical-password-marker",
         ] {
             assert!(!projection.contains(secret), "detail leaked {secret}");
         }

@@ -42,10 +42,7 @@ impl CredentialProvider for VaultProvider {
         let SecretContent::Login(login) = &mut content else {
             anyhow::bail!("not a login");
         };
-        let mut urls = std::mem::take(&mut login.urls);
-        if urls.is_empty() && !login.url.is_empty() {
-            urls.push(std::mem::take(&mut login.url));
-        }
+        let urls = std::mem::take(&mut login.urls);
         Ok(Login {
             username: std::mem::take(&mut login.username),
             password: std::mem::take(&mut login.password),

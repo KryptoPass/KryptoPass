@@ -12,12 +12,11 @@ pub mod service;
 pub mod vault_object;
 
 pub use domain::content::{
-    CONTENT_SCHEMA_VERSION, CardContent, CustomContent, CustomRecord, HistoricalPassword,
-    IdentityContent, IdentityDocument, LicenseContent, LoginContent, LoginHistory,
-    LoginHistoryEvent, LoginHistoryEventKind, MAX_CONTENT_BYTES, MAX_HISTORY_PASSWORD_BYTES,
-    MAX_LOGIN_HISTORY_EVENTS, MAX_PREVIOUS_PASSWORDS, NoteContent, SecretContent, SshKeyContent,
-    TotpAlgorithm, TotpConfig, TotpContent, TotpUriParameter, WifiContent, WifiSecurity,
-    decode_content, encode_content, wifi_qr_payload,
+    CONTENT_SCHEMA_VERSION, CardContent, CustomContent, CustomRecord, IdentityContent,
+    IdentityDocument, LicenseContent, LoginContent, LoginHistory, LoginHistoryEvent,
+    LoginHistoryEventKind, MAX_CONTENT_BYTES, MAX_HISTORY_PASSWORD_BYTES, MAX_LOGIN_HISTORY_EVENTS,
+    NoteContent, SecretContent, SshKeyContent, TotpAlgorithm, TotpConfig, TotpContent,
+    TotpUriParameter, WifiContent, WifiSecurity, decode_content, encode_content, wifi_qr_payload,
 };
 pub use domain::entry_icon::{
     EntryAppearanceUpdate, EntryIcon, EntryIconAsset, MAX_ENTRY_ICON_BYTES,

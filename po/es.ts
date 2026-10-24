@@ -3057,10 +3057,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>icon store unavailable</translation>
     </message>
     <message>
-      <source>icons require backup version 3</source>
-      <translation>icons require backup version 3</translation>
-    </message>
-    <message>
       <source>ignoring unreadable setup state</source>
       <translation>ignoring unreadable setup state</translation>
     </message>
@@ -3147,10 +3143,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>legacy OpenPGP ciphertext without integrity protection is not accepted</source>
       <translation>legacy OpenPGP ciphertext without integrity protection is not accepted</translation>
-    </message>
-    <message>
-      <source>links require backup version 4</source>
-      <translation>links require backup version 4</translation>
     </message>
     <message>
       <source>local time zone unavailable</source>
@@ -7186,10 +7178,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Aún no hay versiones anteriores. Se guardan cuando actualizas los datos de esta credencial.</translation>
     </message>
     <message>
-      <source>Contraseña anterior</source>
-      <translation>Contraseña anterior</translation>
-    </message>
-    <message>
       <source>Versión anterior</source>
       <translation>Versión anterior</translation>
     </message>
@@ -7200,10 +7188,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Consultar versión anterior del %1</source>
       <translation>Consultar versión anterior del %1</translation>
-    </message>
-    <message>
-      <source>Este registro antiguo conserva únicamente la contraseña anterior.</source>
-      <translation>Este registro antiguo conserva únicamente la contraseña anterior.</translation>
     </message>
     <message>
       <source>Nombre:</source>

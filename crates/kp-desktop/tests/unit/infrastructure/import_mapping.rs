@@ -135,7 +135,6 @@ fn login_keeps_concealed_fields_in_a_linked_companion_and_dates_in_notes() {
     };
     assert_eq!(login.username.as_str(), "synthetic-user");
     assert_eq!(login.password.as_str(), "synthetic-login-password");
-    assert_eq!(login.url.as_str(), "https://example.invalid/login");
     assert_eq!(
         login
             .urls

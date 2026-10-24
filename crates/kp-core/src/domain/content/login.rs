@@ -1,17 +1,12 @@
-//! Login payload, compatibility and encrypted history rules.
+//! Login payload and encrypted history rules.
 
 use crate::SensitiveText;
 
-use anyhow::{Context, Result, ensure};
-use serde::de::Deserializer;
+use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::{
-    CONTENT_SCHEMA_VERSION, LEGACY_CONTENT_SCHEMA_VERSION, LOGIN_HISTORY_SCHEMA_VERSION,
-    MAX_HISTORY_PASSWORD_BYTES, MAX_LOGIN_HISTORY_EVENTS, MAX_PREVIOUS_PASSWORDS,
-    ensure_field_size,
-};
+use super::{MAX_HISTORY_PASSWORD_BYTES, MAX_LOGIN_HISTORY_EVENTS, ensure_field_size};
 use crate::otp::{TotpConfig, validate_totp_config};
 
 const MAX_LOGIN_VERSIONS: usize = 20;
@@ -26,26 +21,11 @@ const MAX_NOTES_BYTES: usize = 256 * 1024;
 pub struct LoginContent {
     pub username: SensitiveText,
     pub password: SensitiveText,
-    /// Legacy primary URL, synchronized to `urls.first()`.
-    pub url: SensitiveText,
     pub notes: SensitiveText,
-    /// Complete ordered site list; `url` mirrors its first item.
+    /// Complete ordered site list; the first item is the primary site.
     pub urls: Vec<SensitiveText>,
     pub totp: Option<TotpConfig>,
     pub history: Box<LoginHistory>,
-}
-
-impl LoginContent {
-    /// Replaces the complete ordered site list and synchronizes the legacy URL.
-    pub fn set_urls(&mut self, urls: Vec<SensitiveText>) {
-        self.urls = urls;
-        self.sync_primary_url();
-    }
-
-    /// Synchronizes the legacy URL from the first site, or clears it if empty.
-    pub fn sync_primary_url(&mut self) {
-        self.url = self.urls.first().cloned().unwrap_or_default();
-    }
 }
 
 /// Metadata-only event kind recorded in a login's encrypted history.
@@ -72,15 +52,6 @@ pub struct LoginHistoryEvent {
     pub kind: LoginHistoryEventKind,
 }
 
-/// A prior login password, kept only in encrypted history and never projected.
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct HistoricalPassword {
-    password: SensitiveText,
-    #[zeroize(skip)]
-    changed_at: u64,
-}
-
 /// A previous login state; history is excluded to avoid recursive snapshots.
 #[derive(Clone, Zeroize, ZeroizeOnDrop, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -100,8 +71,6 @@ struct LoginVersion {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LoginHistory {
     events: Vec<LoginHistoryEvent>,
-    previous_passwords: Vec<HistoricalPassword>,
-    #[serde(default)]
     versions: Vec<LoginVersion>,
 }
 
@@ -133,7 +102,7 @@ impl LoginHistory {
         self.versions.insert(index, version);
         self.versions.truncate(MAX_LOGIN_VERSIONS);
         while self.retained_version_bytes()? > MAX_HISTORY_PASSWORD_BYTES {
-            if self.previous_passwords.pop().is_none() && self.versions.pop().is_none() {
+            if self.versions.pop().is_none() {
                 break;
             }
         }
@@ -156,81 +125,25 @@ impl LoginHistory {
         }
         let mut size = SizeWriter(0);
         serde_json::to_writer(&mut size, &self.versions)?;
-        serde_json::to_writer(&mut size, &self.previous_passwords)?;
         Ok(size.0)
     }
 
-    /// Metadata for snapshots and legacy password-only entries, newest first.
-    pub fn version_metadata(&self) -> Vec<(u64, bool)> {
-        let mut entries: Vec<_> = self
-            .versions
-            .iter()
-            .map(|entry| (entry.changed_at, false))
-            .collect();
-        entries.extend(
-            self.previous_passwords
-                .iter()
-                .map(|entry| (entry.changed_at, true)),
-        );
-        entries.sort_by_key(|entry| std::cmp::Reverse(entry.0));
-        entries
+    /// Timestamps of the retained complete versions, newest first.
+    pub fn version_metadata(&self) -> Vec<u64> {
+        self.versions.iter().map(|entry| entry.changed_at).collect()
     }
 
-    /// Returns the original title when a complete snapshot is available.
+    /// Returns the original title of one retained version.
     pub fn version_title(&self, index: usize) -> Option<&str> {
-        let (at, password_only) = *self.version_metadata().get(index)?;
-        if password_only {
-            return None;
-        }
-        let ordinal = self.version_metadata()[..index]
-            .iter()
-            .filter(|entry| **entry == (at, false))
-            .count();
-        self.versions
-            .iter()
-            .filter(|entry| entry.changed_at == at)
-            .nth(ordinal)
-            .map(|entry| entry.title.as_str())
+        self.versions.get(index).map(|entry| entry.title.as_str())
     }
 
-    /// Opens one retained state in Rust. Legacy entries contain only a password.
+    /// Opens one retained state in Rust.
     pub fn version_content(&self, index: usize) -> Option<LoginContent> {
-        let (at, password_only) = *self.version_metadata().get(index)?;
-        if password_only {
-            let entry = self
-                .previous_passwords
-                .iter()
-                .filter(|entry| entry.changed_at == at)
-                .nth(
-                    self.version_metadata()[..index]
-                        .iter()
-                        .filter(|entry| **entry == (at, true))
-                        .count(),
-                )?;
-            return Some(LoginContent {
-                username: SensitiveText::new(),
-                password: entry.password.clone(),
-                url: SensitiveText::new(),
-                urls: vec![],
-                notes: SensitiveText::new(),
-                totp: None,
-                history: Box::default(),
-            });
-        }
-        let entry = self
-            .versions
-            .iter()
-            .filter(|entry| entry.changed_at == at)
-            .nth(
-                self.version_metadata()[..index]
-                    .iter()
-                    .filter(|entry| **entry == (at, false))
-                    .count(),
-            )?;
+        let entry = self.versions.get(index)?;
         Some(LoginContent {
             username: entry.username.clone(),
             password: entry.password.clone(),
-            url: entry.urls.first().cloned().unwrap_or_default(),
             urls: entry.urls.clone(),
             notes: entry.notes.clone(),
             totp: entry.totp.clone(),
@@ -243,11 +156,6 @@ impl LoginHistory {
         &self.events
     }
 
-    /// Returns password-change timestamps without exposing prior password values.
-    pub fn password_change_timestamps(&self) -> impl Iterator<Item = u64> + '_ {
-        self.previous_passwords.iter().map(|entry| entry.changed_at)
-    }
-
     /// Records an event in descending timestamp order and retains the newest 100.
     pub fn record_event(&mut self, kind: LoginHistoryEventKind, timestamp: u64) {
         let index = self
@@ -257,46 +165,11 @@ impl LoginHistory {
             .insert(index, LoginHistoryEvent { timestamp, kind });
         self.events.truncate(MAX_LOGIN_HISTORY_EVENTS);
     }
-
-    /// Saves a prior password, retaining at most 20 entries and 512 KiB total.
-    /// Oldest entries are removed when either retention limit is exceeded.
-    pub fn record_password(&mut self, password: SensitiveText, changed_at: u64) -> Result<()> {
-        ensure!(
-            password.len() <= MAX_PASSWORD_BYTES,
-            "historical password exceeds the maximum size"
-        );
-        let index = self
-            .previous_passwords
-            .partition_point(|entry| entry.changed_at >= changed_at);
-        self.previous_passwords.insert(
-            index,
-            HistoricalPassword {
-                password,
-                changed_at,
-            },
-        );
-        self.previous_passwords.truncate(MAX_PREVIOUS_PASSWORDS);
-
-        let mut total_bytes = self
-            .previous_passwords
-            .iter()
-            .map(|entry| entry.password.len())
-            .sum::<usize>();
-        while total_bytes > MAX_HISTORY_PASSWORD_BYTES {
-            if let Some(oldest) = self.previous_passwords.pop() {
-                total_bytes -= oldest.password.len();
-            } else {
-                break;
-            }
-        }
-        Ok(())
-    }
 }
 
 pub(super) fn validate_login(content: &LoginContent) -> Result<()> {
     ensure_field_size("username", &content.username, MAX_USERNAME_BYTES)?;
     ensure_field_size("password", &content.password, MAX_PASSWORD_BYTES)?;
-    ensure_field_size("URL", &content.url, MAX_URL_BYTES)?;
     ensure_field_size("notes", &content.notes, MAX_NOTES_BYTES)?;
     ensure!(
         content.urls.len() <= MAX_URLS,
@@ -309,15 +182,6 @@ pub(super) fn validate_login(content: &LoginContent) -> Result<()> {
     for url in &content.urls {
         ensure_field_size("URL", url, MAX_URL_BYTES)?;
     }
-    ensure!(
-        content.url
-            == content
-                .urls
-                .first()
-                .map(SensitiveText::as_str)
-                .unwrap_or_default(),
-        "login content URL does not match the primary URL in its URL list"
-    );
     if let Some(totp) = &content.totp {
         validate_totp_config(totp)?;
     }
@@ -350,7 +214,6 @@ fn validate_history(history: &LoginHistory) -> Result<()> {
         let login = LoginContent {
             username: entry.username.clone(),
             password: entry.password.clone(),
-            url: entry.urls.first().cloned().unwrap_or_default(),
             urls: entry.urls.clone(),
             notes: entry.notes.clone(),
             totp: entry.totp.clone(),
@@ -369,30 +232,6 @@ fn validate_history(history: &LoginHistory) -> Result<()> {
             .windows(2)
             .all(|pair| pair[0].timestamp >= pair[1].timestamp),
         "login history events are not newest-first"
-    );
-    ensure!(
-        history.previous_passwords.len() <= MAX_PREVIOUS_PASSWORDS,
-        "login history contains too many previous passwords"
-    );
-    ensure!(
-        history
-            .previous_passwords
-            .windows(2)
-            .all(|pair| pair[0].changed_at >= pair[1].changed_at),
-        "previous passwords are not newest-first"
-    );
-    let mut total_password_bytes = 0usize;
-    for historical in &history.previous_passwords {
-        ensure_field_size(
-            "historical password",
-            &historical.password,
-            MAX_PASSWORD_BYTES,
-        )?;
-        total_password_bytes = total_password_bytes.saturating_add(historical.password.len());
-    }
-    ensure!(
-        total_password_bytes <= MAX_HISTORY_PASSWORD_BYTES,
-        "previous passwords exceed the history size limit"
     );
     Ok(())
 }
@@ -439,7 +278,6 @@ impl LoginContent {
 pub(super) struct FieldsRef<'a> {
     username: &'a str,
     password: &'a str,
-    url: &'a str,
     notes: &'a str,
     urls: &'a [SensitiveText],
     totp: Option<&'a TotpConfig>,
@@ -451,11 +289,6 @@ impl<'a> From<&'a LoginContent> for FieldsRef<'a> {
         Self {
             username: &content.username,
             password: &content.password,
-            url: content
-                .urls
-                .first()
-                .map(SensitiveText::as_str)
-                .unwrap_or_default(),
             notes: &content.notes,
             urls: &content.urls,
             totp: content.totp.as_ref(),
@@ -469,104 +302,23 @@ impl<'a> From<&'a LoginContent> for FieldsRef<'a> {
 pub(super) struct StoredFields {
     username: SensitiveText,
     password: SensitiveText,
-    url: SensitiveText,
     notes: SensitiveText,
-    #[serde(default)]
-    urls: Present<Vec<SensitiveText>>,
-    #[serde(default)]
-    totp: Present<TotpConfig>,
-    #[serde(default)]
-    history: Present<LoginHistory>,
+    urls: Vec<SensitiveText>,
+    // Required, but may be null.
+    #[serde(deserialize_with = "Option::deserialize")]
+    totp: Option<TotpConfig>,
+    history: LoginHistory,
 }
 
 impl StoredFields {
-    pub(super) fn take_content(&mut self, schema_version: u32) -> Result<LoginContent> {
-        let (urls, totp, history) = match schema_version {
-            LEGACY_CONTENT_SCHEMA_VERSION => {
-                ensure!(
-                    !self.urls.present && !self.totp.present && !self.history.present,
-                    "content schema version 1 contains unexpected login fields"
-                );
-                let urls = if self.url.is_empty() {
-                    vec![]
-                } else {
-                    vec![self.url.clone()]
-                };
-                (urls, None, LoginHistory::default())
-            }
-            LOGIN_HISTORY_SCHEMA_VERSION | 3 | CONTENT_SCHEMA_VERSION => (
-                take_value(&mut self.urls, "login content is missing URLs")?,
-                take_nullable(&mut self.totp, "login content is missing TOTP field")?,
-                take_value(&mut self.history, "login content is missing history")?,
-            ),
-            _ => anyhow::bail!("unsupported secret content schema version"),
-        };
-        let content = LoginContent {
+    pub(super) fn take_content(&mut self) -> LoginContent {
+        LoginContent {
             username: std::mem::take(&mut self.username),
             password: std::mem::take(&mut self.password),
-            url: std::mem::take(&mut self.url),
             notes: std::mem::take(&mut self.notes),
-            urls,
-            totp,
-            history: Box::new(history),
-        };
-        Ok(content)
-    }
-}
-fn take_value<T: Zeroize>(field: &mut Present<T>, message: &'static str) -> Result<T> {
-    ensure!(field.present, message);
-    field.value.take().context(message)
-}
-
-fn take_nullable<T: Zeroize>(field: &mut Present<T>, message: &'static str) -> Result<Option<T>> {
-    ensure!(field.present, message);
-    Ok(field.value.take())
-}
-
-struct Present<T: Zeroize> {
-    present: bool,
-    value: Option<T>,
-}
-
-impl<T: Zeroize> Zeroize for Present<T> {
-    fn zeroize(&mut self) {
-        self.present.zeroize();
-        if let Some(value) = &mut self.value {
-            value.zeroize();
+            urls: std::mem::take(&mut self.urls),
+            totp: self.totp.take(),
+            history: Box::new(std::mem::take(&mut self.history)),
         }
-        self.value = None;
-    }
-}
-
-impl<T: Zeroize> ZeroizeOnDrop for Present<T> {}
-
-impl<T: Zeroize> Drop for Present<T> {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-impl<T: Zeroize> Default for Present<T> {
-    fn default() -> Self {
-        Self {
-            present: false,
-            value: None,
-        }
-    }
-}
-
-impl<'de, T> Deserialize<'de> for Present<T>
-where
-    T: Deserialize<'de> + Zeroize,
-{
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = Option::<T>::deserialize(deserializer)?;
-        Ok(Self {
-            present: true,
-            value,
-        })
     }
 }

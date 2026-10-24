@@ -13,10 +13,7 @@ SecretContentView {
     property bool historyExpanded: false
     property string historyEntryId: ""
     readonly property var websiteUrls: {
-        const urls = Array.isArray(detail?.urls) ? detail.urls.slice().filter(url => !!String(url || "").trim()) : [];
-        if (!urls.length && detail?.url)
-            urls.push(detail.url);
-        return urls;
+        return Array.isArray(detail?.urls) ? detail.urls.slice().filter(url => !!String(url || "").trim()) : [];
     }
     readonly property var historyItems: Array.isArray(detail?.history?.events) ? detail.history.events : []
     readonly property var visibleHistoryItems: historyItems.slice(0, historyExpanded ? 20 : 5)
@@ -427,7 +424,7 @@ SecretContentView {
                                 spacing: 0
                                 Controls.Label {
                                     Layout.fillWidth: true
-                                    text: versionRow.modelData.passwordOnly ? qsTranslate("SecretDetail", "Contraseña anterior") : qsTranslate("SecretDetail", "Versión anterior")
+                                    text: qsTranslate("SecretDetail", "Versión anterior")
                                     wrapMode: Text.Wrap
                                 }
                                 Controls.Label {
@@ -457,7 +454,7 @@ SecretContentView {
             width: Math.min(Kirigami.Units.gridUnit * 30, parent ? parent.width - Kirigami.Units.largeSpacing * 2 : 540)
             height: Math.min(implicitHeight, parent ? parent.height - Kirigami.Units.largeSpacing * 2 : 600)
             modal: true
-            title: root.versionDetail?.passwordOnly ? qsTranslate("SecretDetail", "Contraseña anterior") : qsTranslate("SecretDetail", "Versión anterior")
+            title: qsTranslate("SecretDetail", "Versión anterior")
             standardButtons: Controls.Dialog.Close
             onClosed: root.versionCloseRequested()
             contentItem: Controls.ScrollView {
@@ -479,18 +476,11 @@ SecretContentView {
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        visible: !!root.versionDetail?.passwordOnly
-                        text: qsTranslate("SecretDetail", "Este registro antiguo conserva únicamente la contraseña anterior.")
-                        wrapMode: Text.Wrap
-                    }
                     Kirigami.FormLayout {
                         Layout.fillWidth: true
                         Controls.Label {
                             Kirigami.FormData.label: qsTranslate("SecretDetail", "Nombre:")
                             Layout.fillWidth: true
-                            visible: !root.versionDetail?.passwordOnly
                             text: root.versionDetail?.title || qsTranslate("SecretDetail", "Sin nombre")
                             textFormat: Text.PlainText
                             wrapMode: Text.Wrap
@@ -498,7 +488,6 @@ SecretContentView {
                         Controls.Label {
                             Kirigami.FormData.label: qsTranslate("SecretDetail", "Correo o usuario:")
                             Layout.fillWidth: true
-                            visible: !root.versionDetail?.passwordOnly
                             text: root.versionDetail?.username || qsTranslate("SecretDetail", "Sin usuario")
                             textFormat: Text.PlainText
                             wrapMode: Text.WrapAnywhere
@@ -510,7 +499,6 @@ SecretContentView {
                         Controls.Label {
                             Kirigami.FormData.label: qsTranslate("SecretDetail", "Sitios web:")
                             Layout.fillWidth: true
-                            visible: !root.versionDetail?.passwordOnly
                             text: root.versionDetail?.urls?.join("\n") || qsTranslate("SecretDetail", "Sin sitios web")
                             textFormat: Text.PlainText
                             wrapMode: Text.WrapAnywhere
@@ -520,7 +508,7 @@ SecretContentView {
                         objectName: "markdownVersionNotesSection"
                         heading: qsTranslate("SecretDetail", "Notas")
                         Layout.fillWidth: true
-                        visible: root.visible && versionDialog.visible && !root.versionDetail?.passwordOnly && !!root.versionDetail?.notes
+                        visible: root.visible && versionDialog.visible && !!root.versionDetail?.notes
                         value: root.versionDetail?.notes || ""
                         documentKey: root.entryId + ":" + (root.versionDetail?.index ?? "")
                         accessibleLabel: qsTranslate("SecretDetail", "Notas de la versión anterior")
@@ -532,25 +520,25 @@ SecretContentView {
                         onClicked: root.versionCopyRequested("password")
                     }
                     Controls.Button {
-                        visible: !root.versionDetail?.passwordOnly && !!root.versionDetail?.username
+                        visible: !!root.versionDetail?.username
                         text: qsTranslate("SecretDetail", "Copiar usuario anterior")
                         icon.name: "edit-copy"
                         onClicked: root.versionCopyRequested("username")
                     }
                     Controls.Button {
-                        visible: !root.versionDetail?.passwordOnly && !!root.versionDetail?.title
+                        visible: !!root.versionDetail?.title
                         text: qsTranslate("SecretDetail", "Copiar nombre anterior")
                         icon.name: "edit-copy"
                         onClicked: root.versionCopyRequested("title")
                     }
                     Controls.Button {
-                        visible: !root.versionDetail?.passwordOnly && !!root.versionDetail?.urls?.length
+                        visible: !!root.versionDetail?.urls?.length
                         text: qsTranslate("SecretDetail", "Copiar sitios web anteriores")
                         icon.name: "edit-copy"
                         onClicked: root.versionCopyRequested("urls")
                     }
                     Controls.Button {
-                        visible: !root.versionDetail?.passwordOnly && !!root.versionDetail?.notes
+                        visible: !!root.versionDetail?.notes
                         text: qsTranslate("SecretDetail", "Copiar notas anteriores")
                         icon.name: "edit-copy"
                         onClicked: root.versionCopyRequested("notes")

@@ -22,28 +22,20 @@ pub use card::CardContent;
 pub use custom::{CustomContent, CustomRecord};
 pub use identity::{IdentityContent, IdentityDocument};
 pub use license::LicenseContent;
-pub use login::{
-    HistoricalPassword, LoginContent, LoginHistory, LoginHistoryEvent, LoginHistoryEventKind,
-};
+pub use login::{LoginContent, LoginHistory, LoginHistoryEvent, LoginHistoryEventKind};
 pub use note::NoteContent;
 pub use ssh_key::SshKeyContent;
 pub use totp::TotpContent;
 pub use wifi::{WifiContent, WifiSecurity, wifi_qr_payload};
 
 /// Current encrypted content envelope version.
-pub const CONTENT_SCHEMA_VERSION: u32 = 4;
+pub const CONTENT_SCHEMA_VERSION: u32 = 1;
 /// Maximum serialized or decoded content size in bytes.
 pub const MAX_CONTENT_BYTES: usize = 1024 * 1024;
 /// Maximum retained login-history event count.
 pub const MAX_LOGIN_HISTORY_EVENTS: usize = 100;
-/// Maximum retained previous-password count.
-pub const MAX_PREVIOUS_PASSWORDS: usize = 20;
-/// Maximum combined byte size of retained previous passwords and snapshots.
+/// Maximum combined byte size of retained login snapshots.
 pub const MAX_HISTORY_PASSWORD_BYTES: usize = 512 * 1024;
-
-const LEGACY_CONTENT_SCHEMA_VERSION: u32 = 1;
-const LOGIN_HISTORY_SCHEMA_VERSION: u32 = 2;
-const PREVIOUS_CONTENT_SCHEMA_VERSION: u32 = 3;
 
 /// Supported payloads. Each variant owns its fields and validation rules.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
@@ -370,7 +362,7 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
             fields,
         } => {
             validate_schema_version(*schema_version)?;
-            SecretContent::Login(fields.take_content(*schema_version)?)
+            SecretContent::Login(fields.take_content())
         }
         StoredEnvelope::Note {
             schema_version,
@@ -386,49 +378,49 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::Custom(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::Card {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::Card(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::Totp {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::Totp(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::Identity {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::Identity(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::Wifi {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::Wifi(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::License {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::License(fields.take().context("secret content is missing fields")?)
         }
         StoredEnvelope::SshKey {
             schema_version,
             fields,
         } => {
-            validate_new_schema_version(*schema_version)?;
+            validate_schema_version(*schema_version)?;
             SecretContent::SshKey(fields.take().context("secret content is missing fields")?)
         }
     };
@@ -437,20 +429,6 @@ pub fn decode_content(bytes: &[u8]) -> Result<SecretContent> {
 }
 
 fn validate_schema_version(version: u32) -> Result<()> {
-    ensure!(
-        matches!(
-            version,
-            LEGACY_CONTENT_SCHEMA_VERSION
-                | LOGIN_HISTORY_SCHEMA_VERSION
-                | PREVIOUS_CONTENT_SCHEMA_VERSION
-                | CONTENT_SCHEMA_VERSION
-        ),
-        "unsupported secret content schema version"
-    );
-    Ok(())
-}
-
-fn validate_new_schema_version(version: u32) -> Result<()> {
     ensure!(
         version == CONTENT_SCHEMA_VERSION,
         "unsupported secret content schema version"

@@ -24,7 +24,6 @@ fn activity_export_preserves_all_events_and_exact_times_without_credentials() {
     let login = LoginContent {
         username: "fake-history-user@example.invalid".into(),
         password: "fake-history-password-unique".into(),
-        url: "https://fake-history-site.invalid".into(),
         urls: vec!["https://fake-history-site.invalid".into()],
         notes: "fake-history-private-notes".into(),
         totp: Some(TotpConfig {
@@ -39,9 +38,6 @@ fn activity_export_preserves_all_events_and_exact_times_without_credentials() {
         }),
         history: Box::default(),
     };
-    history
-        .record_password("fake-legacy-password-unique".into(), first_timestamp)
-        .unwrap();
     history
         .record_version(&login, "fake-history-title", first_timestamp)
         .unwrap();
@@ -74,13 +70,12 @@ fn activity_export_preserves_all_events_and_exact_times_without_credentials() {
     for value in [
         login.username.as_str(),
         login.password.as_str(),
-        login.url.as_str(),
+        login.urls[0].as_str(),
         login.notes.as_str(),
         "JBSWY3DPEHPK3PXP",
         "fake-history-issuer",
         "fake-history-account",
         "fake-history-title",
-        "fake-legacy-password-unique",
     ] {
         assert!(!exported.contains(value));
     }

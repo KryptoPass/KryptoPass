@@ -100,9 +100,7 @@ pub(super) struct SshKeyDraft {
 pub(super) struct LoginDraft {
     username: SensitiveText,
     password: SensitiveText,
-    url: SensitiveText,
-    #[serde(default)]
-    urls: Option<Vec<SensitiveText>>,
+    urls: Vec<SensitiveText>,
     #[serde(default)]
     totp_input: SensitiveText,
     notes: SensitiveText,
@@ -120,16 +118,10 @@ impl DraftContent {
         match self {
             Self::Login(draft) => {
                 let totp = parse_totp_input(&draft.totp_input)?;
-                let urls = match std::mem::take(&mut draft.urls) {
-                    Some(urls) => urls,
-                    None if draft.url.is_empty() => vec![],
-                    None => vec![std::mem::take(&mut draft.url)],
-                };
                 Ok(SecretContent::Login(LoginContent {
                     username: std::mem::take(&mut draft.username),
                     password: std::mem::take(&mut draft.password),
-                    url: urls.first().cloned().unwrap_or_default(),
-                    urls,
+                    urls: std::mem::take(&mut draft.urls),
                     totp,
                     notes: std::mem::take(&mut draft.notes),
                     history: Box::default(),
@@ -211,7 +203,6 @@ pub(super) struct SshKeyEditor<'a> {
 pub(super) struct LoginEditor<'a> {
     username: &'a str,
     password: &'a str,
-    url: &'a str,
     urls: &'a [SensitiveText],
     #[serde(serialize_with = "serialize_sensitive_text")]
     totp_input: SensitiveText,
@@ -224,7 +215,6 @@ impl<'a> EditorContent<'a> {
             SecretContent::Login(login) => Self::Login(LoginEditor {
                 username: &login.username,
                 password: &login.password,
-                url: &login.url,
                 urls: &login.urls,
                 totp_input: login
                     .totp
@@ -284,7 +274,6 @@ pub(super) enum DetailContent<'a> {
 #[serde(rename_all = "camelCase")]
 pub(super) struct LoginDetail<'a> {
     username: &'a str,
-    url: &'a str,
     urls: &'a [SensitiveText],
     notes: &'a str,
     password: &'a str,
@@ -304,7 +293,6 @@ impl<'a> DetailContent<'a> {
         Ok(match content {
             SecretContent::Login(login) => Self::Login(Box::new(LoginDetail {
                 username: &login.username,
-                url: &login.url,
                 urls: &login.urls,
                 notes: &login.notes,
                 password: if reveal_password { &login.password } else { "" },

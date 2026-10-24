@@ -34,7 +34,6 @@ fn sample_login_object() -> VaultObject {
     let mut previous = LoginContent {
         username: "old-user@example.invalid".into(),
         password: "synthetic-old-password".into(),
-        url: "https://old.example.invalid/login".into(),
         notes: "old synthetic note".into(),
         urls: vec!["https://old.example.invalid/login".into()],
         totp: Some(old_totp),
@@ -44,15 +43,11 @@ fn sample_login_object() -> VaultObject {
     let mut history = LoginHistory::default();
     history.record_event(LoginHistoryEventKind::Create, 10);
     history
-        .record_password("synthetic-retired-password".into(), 20)
-        .unwrap();
-    history
         .record_version(&previous, "Previous synthetic title", 30)
         .unwrap();
 
     previous.username = "ada@example.invalid".into();
     previous.password = "synthetic-current-password".into();
-    previous.url = "https://example.invalid/account".into();
     previous.notes = "current synthetic note".into();
     previous.urls = vec![
         "https://example.invalid/account".into(),
@@ -119,7 +114,7 @@ fn login_and_note_roundtrip_keep_metadata_totp_and_history() {
     assert_eq!(envelope["format"], VAULT_OBJECT_FORMAT);
     assert_eq!(envelope["recordId"], record_id().0.to_string());
     assert_eq!(envelope["keyFingerprint"], FINGERPRINT);
-    assert_eq!(envelope["content"]["schemaVersion"], 4);
+    assert_eq!(envelope["content"]["schemaVersion"], 1);
     assert_eq!(envelope["favorite"], true);
     assert_eq!(envelope["trashed"], false);
     assert_eq!(
@@ -187,17 +182,7 @@ fn login_and_note_roundtrip_keep_metadata_totp_and_history() {
     assert_eq!(actual.history.events().len(), 1);
     assert_eq!(actual.history.events()[0].timestamp, 10);
     assert!(actual.history.events()[0].kind == LoginHistoryEventKind::Create);
-    assert_eq!(
-        actual
-            .history
-            .password_change_timestamps()
-            .collect::<Vec<_>>(),
-        vec![20]
-    );
-    assert_eq!(
-        actual.history.version_metadata(),
-        vec![(30, false), (20, true)]
-    );
+    assert_eq!(actual.history.version_metadata(), vec![30]);
     assert_eq!(
         actual.history.version_title(0),
         Some("Previous synthetic title")
@@ -248,7 +233,7 @@ fn envelope_rejects_duplicate_unknown_unsupported_or_mismatched_fields() {
     assert!(decode(&unknown, id, &key).is_err());
 
     let mut unsupported: Value = serde_json::from_slice(encoded.as_slice()).unwrap();
-    unsupported["content"]["schemaVersion"] = 5.into();
+    unsupported["content"]["schemaVersion"] = 2.into();
     let unsupported = serde_json::to_vec(&unsupported).unwrap();
     assert!(decode(&unsupported, id, &key).is_err());
 

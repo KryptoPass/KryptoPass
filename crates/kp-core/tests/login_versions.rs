@@ -10,7 +10,6 @@ fn sample_login() -> LoginContent {
     LoginContent {
         username: "old@example.org".into(),
         password: "old password".into(),
-        url: "https://example.org/login".into(),
         notes: "Recovery information before the edit".into(),
         urls: vec![
             "https://example.org/login".into(),
@@ -41,7 +40,6 @@ fn decode_login(bytes: &[u8]) -> LoginContent {
 fn assert_snapshot_fields(actual: &LoginContent, expected: &LoginContent) {
     assert_eq!(actual.username, expected.username);
     assert_eq!(actual.password, expected.password);
-    assert_eq!(actual.url, expected.url);
     assert_eq!(actual.urls, expected.urls);
     assert_eq!(actual.notes, expected.notes);
     let actual_totp = actual.totp.as_ref().unwrap();
@@ -54,7 +52,6 @@ fn assert_snapshot_fields(actual: &LoginContent, expected: &LoginContent) {
     assert_eq!(actual_totp.account, expected_totp.account);
     assert!(actual.history.events().is_empty());
     assert!(actual.history.version_metadata().is_empty());
-    assert!(actual.history.password_change_timestamps().next().is_none());
 }
 
 #[test]
@@ -63,10 +60,6 @@ fn current_schema_roundtrip_preserves_complete_login_without_nested_history() {
     previous
         .history
         .record_event(LoginHistoryEventKind::Create, 1);
-    previous
-        .history
-        .record_password("earlier password".into(), 2)
-        .unwrap();
     let mut history = LoginHistory::default();
     history
         .record_version(&previous, "Previous title", 42)
@@ -74,25 +67,25 @@ fn current_schema_roundtrip_preserves_complete_login_without_nested_history() {
     previous.username = "changed@example.org".into();
     previous.password = "changed password".into();
     previous.notes.clear();
-    previous.set_urls(vec!["https://new.example.org".into()]);
+    previous.urls = vec!["https://new.example.org".into()];
     previous.totp = None;
     previous.history = Box::new(history);
 
     let bytes = encode_content(&SecretContent::Login(previous)).unwrap();
     let envelope: serde_json::Value = serde_json::from_slice(bytes.as_slice()).unwrap();
-    assert_eq!(CONTENT_SCHEMA_VERSION, 4);
+    assert_eq!(CONTENT_SCHEMA_VERSION, 1);
     assert_eq!(envelope["schemaVersion"], CONTENT_SCHEMA_VERSION);
     let current = decode_login(bytes.as_slice());
 
     assert_eq!(current.username, "changed@example.org");
-    assert_eq!(current.history.version_metadata(), vec![(42, false)]);
+    assert_eq!(current.history.version_metadata(), vec![42]);
     let snapshot = current.history.version_content(0).unwrap();
     assert_snapshot_fields(&snapshot, &sample_login());
     assert!(current.history.version_content(1).is_none());
 }
 
 #[test]
-fn metadata_orders_complete_and_legacy_versions_together_by_timestamp() {
+fn metadata_orders_complete_versions_by_timestamp() {
     let mut login = sample_login();
     let mut history = LoginHistory::default();
     login.password = "snapshot 10".into();
@@ -101,32 +94,13 @@ fn metadata_orders_complete_and_legacy_versions_together_by_timestamp() {
     history.record_version(&login, "Newest", 30).unwrap();
     login.password = "snapshot 20".into();
     history.record_version(&login, "Middle", 20).unwrap();
-    history
-        .record_password("legacy newest".into(), 100)
-        .unwrap();
-    history.record_password("legacy older".into(), 25).unwrap();
 
-    assert_eq!(
-        history.version_metadata(),
-        vec![
-            (100, true),
-            (30, false),
-            (25, true),
-            (20, false),
-            (10, false)
-        ]
-    );
-    assert_eq!(
-        history.version_content(0).unwrap().password,
-        "legacy newest"
-    );
-    assert_eq!(history.version_content(2).unwrap().password, "legacy older");
-    assert_eq!(history.version_content(1).unwrap().password, "snapshot 30");
-    assert_eq!(history.version_content(3).unwrap().password, "snapshot 20");
-    assert_eq!(history.version_content(4).unwrap().password, "snapshot 10");
-    assert_eq!(history.version_title(1), Some("Newest"));
-    assert_eq!(history.version_title(0), None);
-    assert!(history.version_content(5).is_none());
+    assert_eq!(history.version_metadata(), vec![30, 20, 10]);
+    assert_eq!(history.version_content(0).unwrap().password, "snapshot 30");
+    assert_eq!(history.version_content(1).unwrap().password, "snapshot 20");
+    assert_eq!(history.version_content(2).unwrap().password, "snapshot 10");
+    assert_eq!(history.version_title(0), Some("Newest"));
+    assert!(history.version_content(3).is_none());
 }
 
 #[test]
@@ -140,10 +114,7 @@ fn version_retention_keeps_twenty_newest_complete_snapshots() {
 
     assert_eq!(
         history.version_metadata(),
-        (6..=25)
-            .rev()
-            .map(|timestamp| (timestamp, false))
-            .collect::<Vec<_>>()
+        (6..=25).rev().collect::<Vec<_>>()
     );
     assert_eq!(history.version_content(0).unwrap().username, "user-25");
     assert_eq!(history.version_content(19).unwrap().username, "user-6");
@@ -151,20 +122,17 @@ fn version_retention_keeps_twenty_newest_complete_snapshots() {
 }
 
 #[test]
-fn retained_complete_versions_and_legacy_passwords_share_the_size_budget() {
+fn retained_complete_versions_respect_the_size_budget() {
     let mut login = sample_login();
     login.notes = "n".repeat(150 * 1024).into();
     let mut history = LoginHistory::default();
-    history
-        .record_password("p".repeat(64 * 1024).into(), 1)
-        .unwrap();
-    for timestamp in 2..=4 {
+    for timestamp in 1..=4 {
         history.record_version(&login, "Login", timestamp).unwrap();
     }
 
     let metadata = history.version_metadata();
     assert!(!metadata.is_empty());
-    assert_eq!(metadata[0], (4, false));
+    assert_eq!(metadata[0], 4);
     let mut retained_bytes = 0;
     for index in 0..metadata.len() {
         let version = history.version_content(index).unwrap();
@@ -182,56 +150,6 @@ fn retained_complete_versions_and_legacy_passwords_share_the_size_budget() {
     );
 }
 
-#[test]
-fn schema_one_login_migrates_with_empty_versions_and_primary_url() {
-    let login = decode_login(
-        br#"{"schemaVersion":1,"kind":"login","fields":{"username":"legacy user","password":"legacy password","url":"https://legacy.example.org","notes":"legacy notes"}}"#,
-    );
-
-    assert_eq!(login.username, "legacy user");
-    assert_eq!(login.password, "legacy password");
-    assert_eq!(login.urls, vec!["https://legacy.example.org"]);
-    assert_eq!(login.url, login.urls[0]);
-    assert!(login.totp.is_none());
-    assert!(login.history.version_metadata().is_empty());
-}
-
-#[test]
-fn schema_two_password_history_remains_readable_as_password_only_versions() {
-    let login = decode_login(
-        br#"{"schemaVersion":2,"kind":"login","fields":{"username":"current user","password":"current password","url":"https://legacy.example.org","notes":"current notes","urls":["https://legacy.example.org"],"totp":null,"history":{"events":[{"timestamp":30,"kind":"passwordRotated"}],"previousPasswords":[{"password":"previous password","changedAt":30},{"password":"oldest password","changedAt":10}]}}}"#,
-    );
-
-    assert_eq!(login.history.events().len(), 1);
-    assert_eq!(login.history.events()[0].timestamp, 30);
-    assert_eq!(
-        login.history.version_metadata(),
-        vec![(30, true), (10, true)]
-    );
-    let previous = login.history.version_content(0).unwrap();
-    assert_eq!(previous.password, "previous password");
-    assert!(previous.username.is_empty());
-    assert!(previous.notes.is_empty());
-    assert!(previous.urls.is_empty());
-    assert!(previous.totp.is_none());
-    assert!(previous.history.version_metadata().is_empty());
-    assert_eq!(
-        login.history.version_content(1).unwrap().password,
-        "oldest password"
-    );
-
-    let bytes = encode_content(&SecretContent::Login(login)).unwrap();
-    let migrated = decode_login(bytes.as_slice());
-    assert_eq!(
-        migrated.history.version_metadata(),
-        vec![(30, true), (10, true)]
-    );
-    assert_eq!(
-        migrated.history.version_content(0).unwrap().password,
-        "previous password"
-    );
-}
-
 fn snapshot_envelope() -> serde_json::Value {
     let mut login = sample_login();
     let mut history = LoginHistory::default();
@@ -244,7 +162,7 @@ fn snapshot_envelope() -> serde_json::Value {
 }
 
 #[test]
-fn schema_three_rejects_malformed_or_recursive_snapshot_fields() {
+fn rejects_malformed_or_recursive_snapshot_fields() {
     let valid = snapshot_envelope();
     let mut missing_username = valid.clone();
     missing_username["fields"]["history"]["versions"][0]
@@ -257,7 +175,7 @@ fn schema_three_rejects_malformed_or_recursive_snapshot_fields() {
     invalid_totp["fields"]["history"]["versions"][0]["totp"]["digits"] = serde_json::json!(0);
     let mut recursive_history = valid;
     recursive_history["fields"]["history"]["versions"][0]["history"] =
-        serde_json::json!({"events": [], "previousPasswords": [], "versions": []});
+        serde_json::json!({"events": [], "versions": []});
 
     for malformed in [missing_username, empty_url, invalid_totp, recursive_history] {
         assert!(decode_content(&serde_json::to_vec(&malformed).unwrap()).is_err());
@@ -265,7 +183,7 @@ fn schema_three_rejects_malformed_or_recursive_snapshot_fields() {
 }
 
 #[test]
-fn schema_three_rejects_history_exceeding_the_combined_size_budget() {
+fn rejects_history_exceeding_the_combined_size_budget() {
     let mut envelope = snapshot_envelope();
     let mut version = envelope["fields"]["history"]["versions"][0].clone();
     version["notes"] = serde_json::json!("n".repeat(150 * 1024));
@@ -273,12 +191,10 @@ fn schema_three_rejects_history_exceeding_the_combined_size_budget() {
         .as_array_mut()
         .unwrap();
     versions.clear();
-    for timestamp in (1..=3).rev() {
+    for timestamp in (1..=4).rev() {
         version["changedAt"] = serde_json::json!(timestamp);
         versions.push(version.clone());
     }
-    envelope["fields"]["history"]["previousPasswords"] =
-        serde_json::json!([{"password": "p".repeat(64 * 1024), "changedAt": 1}]);
 
     let bytes = serde_json::to_vec(&envelope).unwrap();
     assert!(bytes.len() < kryptopass_core::MAX_CONTENT_BYTES);
@@ -286,34 +202,20 @@ fn schema_three_rejects_history_exceeding_the_combined_size_budget() {
 }
 
 #[test]
-fn equal_timestamps_preserve_each_complete_and_legacy_version_mapping() {
+fn equal_timestamps_preserve_each_complete_version_mapping() {
     let mut history = LoginHistory::default();
     let mut login = sample_login();
     login.password = "snapshot first".into();
     history.record_version(&login, "First", 42).unwrap();
     login.password = "snapshot second".into();
     history.record_version(&login, "Second", 42).unwrap();
-    history.record_password("legacy first".into(), 42).unwrap();
-    history.record_password("legacy second".into(), 42).unwrap();
 
-    assert_eq!(
-        history.version_metadata(),
-        vec![(42, false), (42, false), (42, true), (42, true)]
-    );
-    for (index, password) in [
-        "snapshot first",
-        "snapshot second",
-        "legacy first",
-        "legacy second",
-    ]
-    .iter()
-    .enumerate()
-    {
+    assert_eq!(history.version_metadata(), vec![42, 42]);
+    for (index, password) in ["snapshot first", "snapshot second"].iter().enumerate() {
         assert_eq!(history.version_content(index).unwrap().password, *password);
     }
     assert_eq!(history.version_title(0), Some("First"));
     assert_eq!(history.version_title(1), Some("Second"));
-    assert_eq!(history.version_title(2), None);
 }
 
 #[derive(Default)]
@@ -444,7 +346,7 @@ fn service_edits_snapshot_previous_login_and_copy_events_keep_versions_unchanged
     updated.username = "updated@example.org".into();
     updated.password = "new password".into();
     updated.notes = "Updated recovery information".into();
-    updated.set_urls(vec!["https://updated.example.org".into()]);
+    updated.urls = vec!["https://updated.example.org".into()];
     updated.totp.as_mut().unwrap().period = 30;
     let expected = updated.clone();
     service
@@ -469,10 +371,8 @@ fn service_edits_snapshot_previous_login_and_copy_events_keep_versions_unchanged
     assert_eq!(login.totp.as_ref().unwrap().period, 30);
     let versions = login.history.version_metadata();
     assert_eq!(versions.len(), 1);
-    assert!(!versions[0].1);
     assert_eq!(login.history.version_title(0), Some("Previous title"));
     assert_snapshot_fields(&login.history.version_content(0).unwrap(), &previous);
-    assert!(login.history.password_change_timestamps().next().is_none());
     let stored = service.list_secrets().unwrap();
     assert_eq!(stored[0].title, "Updated title");
     assert_eq!(stored[0].revision, 1);

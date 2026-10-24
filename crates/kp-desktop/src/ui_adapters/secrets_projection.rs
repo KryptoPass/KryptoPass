@@ -83,8 +83,6 @@ struct TotpProjection {
 #[derive(serde::Serialize)]
 struct HistoryProjection {
     events: Vec<HistoryEventProjection>,
-    #[serde(rename = "passwordRotations")]
-    password_rotations: Vec<HistoryAtProjection>,
     versions: Vec<VersionMetadataProjection>,
 }
 
@@ -93,17 +91,11 @@ struct HistoryProjection {
 struct VersionMetadataProjection {
     index: usize,
     at: u64,
-    password_only: bool,
 }
 
 #[derive(serde::Serialize)]
 struct HistoryEventProjection {
     kind: &'static str,
-    at: u64,
-}
-
-#[derive(serde::Serialize)]
-struct HistoryAtProjection {
     at: u64,
 }
 
@@ -428,26 +420,13 @@ fn history_projection(history: &LoginHistory) -> HistoryProjection {
             at: event.timestamp,
         })
         .collect();
-    let password_rotations = history
-        .password_change_timestamps()
-        .map(|timestamp| HistoryAtProjection { at: timestamp })
-        .collect();
-
     let versions = history
         .version_metadata()
         .into_iter()
         .enumerate()
-        .map(|(index, (at, password_only))| VersionMetadataProjection {
-            index,
-            at,
-            password_only,
-        })
+        .map(|(index, at)| VersionMetadataProjection { index, at })
         .collect();
-    HistoryProjection {
-        events,
-        password_rotations,
-        versions,
-    }
+    HistoryProjection { events, versions }
 }
 
 fn history_event_kind_name(kind: &LoginHistoryEventKind) -> &'static str {

@@ -39,7 +39,6 @@ TestCase {
         return {
             username: session + "@example.invalid",
             password: session + " private password",
-            url: "https://example.invalid/" + session,
             urls: ["https://example.invalid/" + session, "https://alternate.invalid/" + session],
             totpInput: "JBSWY3DPEHPK3PXP",
             notes: session + " login context"
@@ -55,7 +54,6 @@ TestCase {
         return {
             username: "",
             password: "",
-            url: "",
             urls: [],
             totpInput: "",
             notes: ""

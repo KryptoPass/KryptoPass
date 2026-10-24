@@ -122,7 +122,6 @@ fn append_entry(
             SecretContent::Login(core::LoginContent {
                 username,
                 password: login.password,
-                url: login.urls.first().cloned().unwrap_or_default(),
                 urls: login.urls,
                 notes: login.notes,
                 totp: login.otp.map(otp).transpose()?.flatten(),
