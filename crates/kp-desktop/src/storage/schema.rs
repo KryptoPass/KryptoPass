@@ -1,106 +1,43 @@
-//! Store identity, schema creation, and versioned migrations.
+//! Store identity and schema creation.
 
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Context, Result, ensure};
 use rusqlite::{Connection, OpenFlags, Transaction, TransactionBehavior};
 use std::path::Path;
-pub(super) const SCHEMA_VERSION: i64 = 7;
+pub(super) const SCHEMA_VERSION: i64 = 1;
 pub(super) const APPLICATION_ID: i64 = 0x4b50_5331;
 
 pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
     let version = pragma_i64(connection, "user_version")?;
-    if matches!(version, 0..=6) {
+    if version == 0 {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .context("could not initialize the encrypted store")?;
-        let locked_version = pragma_i64(&transaction, "user_version")?;
-        match locked_version {
-            0 => {
-                let existing_application_id = pragma_i64(&transaction, "application_id")?;
-                ensure!(
-                    existing_application_id == 0 || existing_application_id == APPLICATION_ID,
-                    "database file belongs to another application"
-                );
-                let objects: i64 = transaction
-                    .query_row(
-                        "SELECT COUNT(*) FROM sqlite_master \
-                         WHERE type IN ('table', 'index', 'view', 'trigger') \
-                           AND name NOT LIKE 'sqlite_%'",
-                        [],
-                        |row| row.get(0),
-                    )
-                    .context("could not inspect the encrypted store schema")?;
-                ensure!(
-                    objects == 0,
-                    "store schema is unversioned; refusing to modify it",
-                );
-                create_schema(&transaction)?;
-                transaction
-                    .pragma_update(None, "application_id", APPLICATION_ID)
-                    .context("could not mark the encrypted store")?;
-                transaction
-                    .pragma_update(None, "user_version", SCHEMA_VERSION)
-                    .context("could not version the encrypted store")?;
-            }
-            1 => {
-                let application_id = pragma_i64(&transaction, "application_id")?;
-                ensure!(
-                    application_id == APPLICATION_ID,
-                    "database file is not a KryptoPass store",
-                );
-                migrate_schema_v1_to_v2(&transaction)?;
-                migrate_schema_v2_to_v3(&transaction)?;
-                migrate_schema_v3_to_v4(&transaction)?;
-                migrate_schema_v4_to_v5(&transaction)?;
-                migrate_schema_v5_to_v6(&transaction)?;
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            2 => {
-                ensure!(
-                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
-                    "database file is not a KryptoPass store"
-                );
-                migrate_schema_v2_to_v3(&transaction)?;
-                migrate_schema_v3_to_v4(&transaction)?;
-                migrate_schema_v4_to_v5(&transaction)?;
-                migrate_schema_v5_to_v6(&transaction)?;
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            3 => {
-                ensure!(
-                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
-                    "database file is not a KryptoPass store"
-                );
-                migrate_schema_v3_to_v4(&transaction)?;
-                migrate_schema_v4_to_v5(&transaction)?;
-                migrate_schema_v5_to_v6(&transaction)?;
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            4 => {
-                ensure!(
-                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
-                    "database file is not a KryptoPass store"
-                );
-                migrate_schema_v4_to_v5(&transaction)?;
-                migrate_schema_v5_to_v6(&transaction)?;
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            5 => {
-                ensure!(
-                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
-                    "database file is not a KryptoPass store"
-                );
-                migrate_schema_v5_to_v6(&transaction)?;
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            6 => {
-                ensure!(
-                    pragma_i64(&transaction, "application_id")? == APPLICATION_ID,
-                    "database file is not a KryptoPass store"
-                );
-                migrate_schema_v6_to_v7(&transaction)?;
-            }
-            SCHEMA_VERSION => {}
-            _ => bail!("store schema version is unsupported"),
+        if pragma_i64(&transaction, "user_version")? == 0 {
+            let existing_application_id = pragma_i64(&transaction, "application_id")?;
+            ensure!(
+                existing_application_id == 0 || existing_application_id == APPLICATION_ID,
+                "database file belongs to another application"
+            );
+            let objects: i64 = transaction
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master \
+                     WHERE type IN ('table', 'index', 'view', 'trigger') \
+                       AND name NOT LIKE 'sqlite_%'",
+                    [],
+                    |row| row.get(0),
+                )
+                .context("could not inspect the encrypted store schema")?;
+            ensure!(
+                objects == 0,
+                "store schema is unversioned; refusing to modify it",
+            );
+            create_schema(&transaction)?;
+            transaction
+                .pragma_update(None, "application_id", APPLICATION_ID)
+                .context("could not mark the encrypted store")?;
+            transaction
+                .pragma_update(None, "user_version", SCHEMA_VERSION)
+                .context("could not version the encrypted store")?;
         }
         transaction
             .commit()
@@ -123,107 +60,12 @@ pub(super) fn initialize_schema(connection: &mut Connection) -> Result<()> {
     Ok(())
 }
 
-fn migrate_schema_v1_to_v2(transaction: &Transaction<'_>) -> Result<()> {
-    transaction
-        .execute_batch(
-            "ALTER TABLE folders ADD COLUMN icon TEXT NOT NULL DEFAULT 'folder';
-             ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT 'transparent';",
-        )
-        .map_err(|_| anyhow::anyhow!("could not migrate folder appearance metadata"))?;
-    transaction
-        .pragma_update(None, "user_version", 2)
-        .context("could not version the encrypted store")
-}
-
-fn migrate_schema_v2_to_v3(transaction: &Transaction<'_>) -> Result<()> {
-    transaction.execute_batch(
-        "ALTER TABLE folders ADD COLUMN sort_position INTEGER NOT NULL DEFAULT 0
-             CHECK(sort_position >= 0 AND typeof(sort_position) = 'integer');
-         WITH ordered AS (
-             SELECT id, ROW_NUMBER() OVER (PARTITION BY parent_id ORDER BY name COLLATE NOCASE, id) - 1 AS position
-             FROM folders
-         )
-         UPDATE folders SET sort_position = (SELECT position FROM ordered WHERE ordered.id = folders.id);"
-    ).context("could not migrate folder order")?;
-    transaction
-        .pragma_update(None, "user_version", 3)
-        .context("could not version the encrypted store")
-}
-
-fn migrate_schema_v3_to_v4(transaction: &Transaction<'_>) -> Result<()> {
-    transaction.execute_batch(
-        "CREATE TABLE entry_icon_assets (id TEXT PRIMARY KEY NOT NULL, png BLOB NOT NULL
-             CHECK(typeof(png) = 'blob' AND length(png) BETWEEN 45 AND 524288));
-         ALTER TABLE secrets ADD COLUMN icon_theme TEXT;
-         ALTER TABLE secrets ADD COLUMN icon_favicon_host TEXT;
-         ALTER TABLE secrets ADD COLUMN icon_asset_id TEXT REFERENCES entry_icon_assets(id) ON DELETE RESTRICT;"
-    ).context("could not migrate entry icons")?;
-    transaction
-        .pragma_update(None, "user_version", 4)
-        .context("could not version entry icons")
-}
-
-fn migrate_schema_v4_to_v5(transaction: &Transaction<'_>) -> Result<()> {
-    transaction
-        .execute_batch(
-            "CREATE TABLE secret_links (
-                 first_secret_id TEXT PRIMARY KEY NOT NULL REFERENCES secrets(id) ON DELETE CASCADE,
-                 second_secret_id TEXT NOT NULL UNIQUE REFERENCES secrets(id) ON DELETE CASCADE,
-                 CHECK(first_secret_id < second_secret_id)
-             );
-             CREATE TRIGGER secret_links_unique_endpoints_insert
-             BEFORE INSERT ON secret_links
-             WHEN EXISTS (
-                 SELECT 1 FROM secret_links
-                 WHERE first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
-                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
-             )
-             BEGIN
-                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
-             END;
-             CREATE TRIGGER secret_links_unique_endpoints_update
-             BEFORE UPDATE ON secret_links
-             WHEN EXISTS (
-                 SELECT 1 FROM secret_links
-                 WHERE (first_secret_id IN (NEW.first_secret_id, NEW.second_secret_id)
-                    OR second_secret_id IN (NEW.first_secret_id, NEW.second_secret_id))
-                   AND NOT (first_secret_id = OLD.first_secret_id
-                        AND second_secret_id = OLD.second_secret_id)
-             )
-             BEGIN
-                 SELECT RAISE(ABORT, 'secret endpoint is already paired');
-             END;",
-        )
-        .context("could not migrate linked item metadata")?;
-    transaction
-        .pragma_update(None, "user_version", 5)
-        .context("could not version linked item metadata")
-}
-
 const PRIMARY_KEY_TABLE: &str = "CREATE TABLE vault_primary_key (
          singleton INTEGER PRIMARY KEY NOT NULL CHECK(singleton = 1),
          fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64))
      );";
 const FORGET_ON_LOCK_COLUMN: &str = "ALTER TABLE vault_primary_key ADD COLUMN forget_on_lock \
      INTEGER NOT NULL DEFAULT 0 CHECK(forget_on_lock IN (0, 1));";
-
-fn migrate_schema_v5_to_v6(transaction: &Transaction<'_>) -> Result<()> {
-    transaction
-        .execute_batch(PRIMARY_KEY_TABLE)
-        .context("could not migrate the vault primary key")?;
-    transaction
-        .pragma_update(None, "user_version", 6)
-        .context("could not version the vault primary key")
-}
-
-fn migrate_schema_v6_to_v7(transaction: &Transaction<'_>) -> Result<()> {
-    transaction
-        .execute_batch(FORGET_ON_LOCK_COLUMN)
-        .context("could not migrate the primary key lock policy")?;
-    transaction
-        .pragma_update(None, "user_version", SCHEMA_VERSION)
-        .context("could not version the primary key lock policy")
-}
 
 fn create_schema(transaction: &Transaction<'_>) -> Result<()> {
     transaction
@@ -333,7 +175,7 @@ fn ensure_secret_links_schema_is_readable(connection: &Connection) -> Result<()>
 }
 
 /// Checks an existing vault using a read-only connection before any writable
-/// connection, pragma changes, migration, or permission adjustment occurs.
+/// connection, pragma changes, or permission adjustment occurs.
 pub(super) fn prevalidate_existing_database(path: &Path) -> Result<()> {
     let connection = Connection::open_with_flags(
         path,
@@ -349,35 +191,12 @@ pub(super) fn prevalidate_existing_database(path: &Path) -> Result<()> {
         "existing file is not a KryptoPass store"
     );
     ensure!(
-        matches!(version, 1 | 2 | 3 | 4 | 5 | 6 | SCHEMA_VERSION),
+        version == SCHEMA_VERSION,
         "existing store schema version is unsupported"
     );
-
-    if version == 1 || version == 2 {
-        connection
-            .prepare("SELECT id, parent_id, name FROM folders LIMIT 0")
-            .and_then(|_| {
-                connection.prepare(
-                    "SELECT id, folder_id, title, kind, favorite, trashed, ciphertext, revision \
-                     FROM secrets LIMIT 0",
-                )
-            })
-            .and_then(|_| {
-                connection.prepare("SELECT folder_id, fingerprint FROM folder_recipients LIMIT 0")
-            })
-            .and_then(|_| {
-                connection.prepare("SELECT secret_id, fingerprint FROM secret_recipients LIMIT 0")
-            })
-            .map_err(|_| anyhow::anyhow!("existing store schema is corrupt or unsupported"))?;
-    } else {
-        ensure_schema_is_readable(&connection)?;
-        if version >= 5 {
-            ensure_secret_links_schema_is_readable(&connection)?;
-        }
-        if version == SCHEMA_VERSION {
-            ensure_primary_key_schema_is_readable(&connection)?;
-        }
-    }
+    ensure_schema_is_readable(&connection)?;
+    ensure_secret_links_schema_is_readable(&connection)?;
+    ensure_primary_key_schema_is_readable(&connection)?;
     Ok(())
 }
 

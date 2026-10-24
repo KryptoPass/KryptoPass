@@ -22,7 +22,7 @@ use validation::{validate_domain_records, validate_icon_resources, validate_link
 pub(super) use encoding::base64_decode;
 
 const BACKUP_FORMAT: &str = "org.kryptopass.backup";
-const BACKUP_VERSION: u32 = 4;
+const BACKUP_VERSION: u32 = 1;
 const MAX_RECIPIENTS_PER_RECORD: usize = 64;
 
 #[derive(Serialize, Deserialize)]
@@ -32,9 +32,7 @@ struct BackupDocument {
     version: u32,
     folders: BoundedVec<BackupFolder, MAX_BACKUP_ROWS>,
     secrets: BoundedVec<BackupSecret, MAX_BACKUP_ROWS>,
-    #[serde(default)]
     assets: BoundedVec<BackupIconAsset, MAX_BACKUP_ROWS>,
-    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     links: BoundedVec<BackupLink, MAX_BACKUP_ROWS>,
 }
 
@@ -57,7 +55,6 @@ struct BackupIconAsset {
 struct BackupFolder {
     id: String,
     parent_id: Option<String>,
-    #[serde(default)]
     sort_position: i64,
     name: String,
     icon: String,
@@ -77,7 +74,6 @@ struct BackupSecret {
     favorite: bool,
     trashed: bool,
     revision: u64,
-    #[serde(default)]
     icon: Option<EntryIcon>,
 }
 
@@ -109,7 +105,7 @@ pub(super) fn serialize_backup_with_links(
     validate_links(&secrets, &links)?;
     let document = BackupDocument {
         format: BACKUP_FORMAT.to_owned(),
-        version: if links.is_empty() { 3 } else { BACKUP_VERSION },
+        version: BACKUP_VERSION,
         links: BoundedVec(
             links
                 .into_iter()
@@ -203,12 +199,8 @@ pub(super) fn deserialize_backup_with_links(bytes: &[u8]) -> Result<EncryptedSto
     let document: BackupDocument =
         serde_json::from_slice(bytes).context("backup document is invalid")?;
     ensure!(
-        document.format == BACKUP_FORMAT && matches!(document.version, 1 | 2 | 3 | BACKUP_VERSION),
+        document.format == BACKUP_FORMAT && document.version == BACKUP_VERSION,
         "backup format or version is unsupported"
-    );
-    ensure!(
-        document.version >= 4 || document.links.0.is_empty(),
-        "links require backup version 4"
     );
     let links = document
         .links
@@ -233,16 +225,6 @@ pub(super) fn deserialize_backup_with_links(bytes: &[u8]) -> Result<EncryptedSto
         "backup contains too many records"
     );
 
-    ensure!(
-        document.version >= 3
-            || (document.assets.0.is_empty()
-                && document
-                    .secrets
-                    .0
-                    .iter()
-                    .all(|secret| secret.icon.is_none())),
-        "icons require backup version 3"
-    );
     let assets: Vec<_> = document
         .assets
         .0

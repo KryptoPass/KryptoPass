@@ -76,7 +76,7 @@ fn image_icon_and_resource_survive_reopen_and_backup_restore() {
     assert_eq!(assets, vec![asset.clone()]);
     let bytes = serialize_backup_with_icons(folders, secrets, assets).unwrap();
     let document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(document["version"], 3);
+    assert_eq!(document["version"], 1);
     let (folders, secrets, assets) = deserialize_backup_with_icons(&bytes).unwrap();
     assert_eq!(assets, vec![asset]);
 
@@ -169,9 +169,9 @@ fn backup_rejects_missing_duplicate_or_unreferenced_image_resources() {
     duplicate["assets"].as_array_mut().unwrap().push(entry);
     let mut unreferenced = document.clone();
     unreferenced["secrets"][0]["icon"] = serde_json::Value::Null;
-    let mut legacy = document;
-    legacy["version"] = serde_json::json!(2);
-    for malformed in [missing, duplicate, unreferenced, legacy] {
+    let mut other_version = document;
+    other_version["version"] = serde_json::json!(2);
+    for malformed in [missing, duplicate, unreferenced, other_version] {
         assert!(deserialize_backup_with_icons(&serde_json::to_vec(&malformed).unwrap()).is_err());
     }
 }

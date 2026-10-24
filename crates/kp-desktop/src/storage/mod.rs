@@ -1,6 +1,6 @@
 //! SQLite persistence for the desktop vault.
 //!
-//! `connection` opens stores; `schema` owns migrations; `repository` implements
+//! `connection` opens stores; `schema` owns the store layout; `repository` implements
 //! the core storage port. `records`, `recipients`, `folders`, `links`, and `icons`
 //! own their SQL, while `snapshots` handles backup/import transactions and
 //! `validation` enforces their bounds. `paths` selects vault locations and
@@ -38,7 +38,7 @@ use kryptopass_core::{
 #[cfg(test)]
 use rusqlite::params;
 #[cfg(test)]
-use schema::{APPLICATION_ID, SCHEMA_VERSION, initialize_schema};
+use schema::initialize_schema;
 #[cfg(test)]
 use std::fs;
 #[cfg(test)]

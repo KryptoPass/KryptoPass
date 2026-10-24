@@ -184,43 +184,6 @@ fn linked_writes_reject_self_missing_and_occupied_replacement_atomically() {
 }
 
 #[test]
-fn schema_v4_migration_adds_empty_links_without_changing_secret_data() {
-    let directory = TestDirectory::new();
-    let path = directory.0.join("store.sqlite3");
-    let id = SecretId::new();
-    let mut storage = SqliteStorage::open(&path).unwrap();
-    storage.insert_secret(secret(id, "Existing item")).unwrap();
-    let mut updated = storage.find_secret(id).unwrap().unwrap();
-    updated.title = "Existing item after edit".to_owned();
-    storage.replace_secret(updated, 0).unwrap();
-    let before = storage.find_secret(id).unwrap().unwrap();
-
-    storage
-        .connection
-        .execute_batch(
-            "DROP TABLE secret_links; DROP TABLE vault_primary_key; PRAGMA user_version = 4;",
-        )
-        .unwrap();
-    drop(storage);
-
-    let storage = SqliteStorage::open_existing(&path).unwrap();
-    let after = storage.find_secret(id).unwrap().unwrap();
-    assert_eq!(after, before);
-    assert_eq!(after.revision, 1);
-    assert_eq!(after.ciphertext, before.ciphertext);
-    let (_, metadata, links) = storage.read_snapshot_with_links().unwrap();
-    assert_eq!(metadata.len(), 1);
-    assert_eq!(revision(&metadata, id), before.revision);
-    assert!(links.is_empty());
-
-    let version = storage
-        .connection
-        .pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
-        .unwrap();
-    assert_eq!(version, 7, "a v4 store migrates to the current schema");
-}
-
-#[test]
 fn additive_import_stores_companion_links_and_rejects_reused_endpoints() {
     use kryptopass_core::{ImportStorage, Storage};
 
@@ -249,64 +212,4 @@ fn additive_import_stores_companion_links_and_rejects_reused_endpoints() {
         "a rejected batch writes nothing"
     );
     assert_eq!(storage.list_secret_links().unwrap(), vec![link]);
-}
-
-#[test]
-fn schema_v5_migration_adds_an_unset_primary_key_with_its_lock_policy() {
-    let directory = TestDirectory::new();
-    let path = directory.0.join("primary.sqlite3");
-    let storage = SqliteStorage::open(&path).unwrap();
-    storage
-        .connection
-        .execute_batch("DROP TABLE vault_primary_key; PRAGMA user_version = 5;")
-        .unwrap();
-    drop(storage);
-
-    let mut storage = SqliteStorage::open_existing(&path).unwrap();
-    assert_eq!(storage.primary_key().unwrap(), None);
-
-    let first = super::PrimaryKey {
-        fingerprint: KeyFingerprint::parse(RECIPIENT).unwrap(),
-        forget_on_lock: true,
-    };
-    let second = super::PrimaryKey {
-        fingerprint: KeyFingerprint::parse("FEDCBA9876543210FEDCBA9876543210FEDCBA98").unwrap(),
-        forget_on_lock: false,
-    };
-    storage.set_primary_key(&first).unwrap();
-    assert_eq!(storage.primary_key().unwrap(), Some(first));
-    storage.set_primary_key(&second).unwrap();
-    drop(storage);
-
-    let storage = SqliteStorage::open_existing(&path).unwrap();
-    assert_eq!(storage.primary_key().unwrap(), Some(second));
-}
-
-#[test]
-fn schema_v6_migration_keeps_the_primary_key_and_leaves_forgetting_off() {
-    let directory = TestDirectory::new();
-    let path = directory.0.join("primary-v6.sqlite3");
-    let storage = SqliteStorage::open(&path).unwrap();
-    storage
-        .connection
-        .execute_batch(&format!(
-            "DROP TABLE vault_primary_key;
-             CREATE TABLE vault_primary_key (
-                 singleton INTEGER PRIMARY KEY NOT NULL CHECK(singleton = 1),
-                 fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64))
-             );
-             INSERT INTO vault_primary_key(singleton, fingerprint) VALUES (1, '{RECIPIENT}');
-             PRAGMA user_version = 6;"
-        ))
-        .unwrap();
-    drop(storage);
-
-    let storage = SqliteStorage::open_existing(&path).unwrap();
-    assert_eq!(
-        storage.primary_key().unwrap(),
-        Some(super::PrimaryKey {
-            fingerprint: KeyFingerprint::parse(RECIPIENT).unwrap(),
-            forget_on_lock: false,
-        })
-    );
 }

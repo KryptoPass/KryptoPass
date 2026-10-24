@@ -14,12 +14,6 @@ const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 #[serde(transparent)]
 pub(super) struct BoundedVec<T, const LIMIT: usize>(pub(super) Vec<T>);
 
-impl<T, const LIMIT: usize> BoundedVec<T, LIMIT> {
-    pub(super) fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
 impl<T, const LIMIT: usize> Default for BoundedVec<T, LIMIT> {
     fn default() -> Self {
         Self(Vec::new())

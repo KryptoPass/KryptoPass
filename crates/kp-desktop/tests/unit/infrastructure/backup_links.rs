@@ -34,7 +34,7 @@ fn pair(left: SecretId, right: SecretId) -> SecretLink {
 }
 
 #[test]
-fn backup_round_trip_preserves_links_and_uses_v3_when_unlinked() {
+fn backup_round_trip_preserves_links_and_writes_an_empty_list_when_unlinked() {
     let first = secret(SecretId::new(), "First");
     let second = secret(SecretId::new(), "Second");
     let third = secret(SecretId::new(), "Third");
@@ -47,7 +47,7 @@ fn backup_round_trip_preserves_links_and_uses_v3_when_unlinked() {
     )
     .unwrap();
     let document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(document["version"], 4);
+    assert_eq!(document["version"], 1);
     assert_eq!(
         document["links"],
         serde_json::json!([{
@@ -65,12 +65,11 @@ fn backup_round_trip_preserves_links_and_uses_v3_when_unlinked() {
     let unlinked =
         serialize_backup_with_links(vec![], vec![first, second, third], vec![], vec![]).unwrap();
     let document: serde_json::Value = serde_json::from_slice(&unlinked).unwrap();
-    assert_eq!(document["version"], 3);
-    assert!(document.get("links").is_none());
+    assert_eq!(document["links"], serde_json::json!([]));
 }
 
 #[test]
-fn backup_reader_rejects_self_missing_occupied_and_legacy_links() {
+fn backup_reader_rejects_self_missing_occupied_and_other_version_links() {
     let first = secret(SecretId::new(), "First");
     let second = secret(SecretId::new(), "Second");
     let third = secret(SecretId::new(), "Third");
@@ -100,10 +99,10 @@ fn backup_reader_rejects_self_missing_occupied_and_legacy_links() {
             "second": occupied_link.second.0.to_string(),
         }));
 
-    let mut legacy_links = document;
-    legacy_links["version"] = serde_json::json!(3);
+    let mut other_version = document;
+    other_version["version"] = serde_json::json!(2);
 
-    for malformed in [self_link, missing_target, occupied_endpoint, legacy_links] {
+    for malformed in [self_link, missing_target, occupied_endpoint, other_version] {
         assert!(deserialize_backup_with_links(&serde_json::to_vec(&malformed).unwrap()).is_err());
     }
 }
