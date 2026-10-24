@@ -10,16 +10,18 @@ Vaciar propiedades QML no garantiza borrar todas las copias de memoria Qt/JS.
 ## Puertas: just manda, bacon vigila
 
 ```bash
-just quick    # fmt + clippy: ciclo de edición, lo que corres mientras trabajas
-just verify   # puerta completa en paralelo: clippy, lint QML, tests, packaging
-just smoke    # arranque offscreen, falla ante errores QML
+just quick    # fmt + clippy: lo corre el usuario; el agente usa `cargo check` al editar
+just verify   # puerta completa: clippy, lint QML, tests, packaging; el agente la corre al terminar
+just smoke    # arranque offscreen, falla ante errores QML (lo corre el usuario)
 just ready    # verify + árbol limpio (gate pre-push)
 bacon         # check continuo en fondo
 bacon qmllint # o tecla q: lint QML en cada cambio (vigila crates/)
 ```
 
-No corras `check` ni `verify` tras cada edición: usa `quick` mientras
-iteras y `verify` una vez antes de commitear o dar el trabajo por listo.
+Mientras edita, al agente le basta `cargo check`. Al terminar el código sí
+corre los tests (`just verify`) una vez para darlo por listo. `quick`, `smoke`
+y `ready` los corre el usuario de vez en cuando; el agente no los lanza por su
+cuenta ni tras cada edición.
 `clippy` ya compila y regenera los `.qmltypes`, por eso `verify` no lleva
 `check` aparte. Para un solo tipo de cambio corre solo su receta
 (`just test-packaging`, `just lint`, `just test-items`).
@@ -67,7 +69,7 @@ mensajes de commit (Conventional Commits).
 ## Commits
 
 Un cambio coherente por commit, mensaje en imperativo que describa el
-resultado. `just ready` en verde antes de commitear.
+resultado. `just verify` en verde antes de commitear; `just ready` lo corre el usuario.
 
 ## Desarrollo P2P
 
