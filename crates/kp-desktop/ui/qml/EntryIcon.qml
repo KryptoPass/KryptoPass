@@ -33,6 +33,8 @@ Item {
         fallback: root.fallbackIcon
         placeholder: root.fallbackIcon
         selected: root.selected
+        isMask: root.entryIcon?.kind === "theme" && root.entryIcon.name.endsWith("-symbolic")
+        color: root.selected ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
         visible: image.status !== Image.Ready
         Accessible.ignored: true
     }

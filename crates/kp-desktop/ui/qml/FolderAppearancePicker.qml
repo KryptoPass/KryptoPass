@@ -10,6 +10,9 @@ ColumnLayout {
 
     property string selectedIcon: "folder"
     property string selectedColor: "transparent"
+    // Entries pick theme icons by their real name and have no color yet.
+    property bool showColors: true
+    property bool themeNames: false
 
     readonly property real cellSize: Kirigami.Units.gridUnit * 2.5
     readonly property real cellSpacing: Kirigami.Units.largeSpacing
@@ -26,7 +29,7 @@ ColumnLayout {
 
     readonly property bool darkTheme: Kirigami.ColorUtils.brightnessForColor(Kirigami.Theme.backgroundColor) === Kirigami.ColorUtils.Dark
     readonly property var colorOptions: Desktop.FolderPalette.options
-    readonly property var iconOptions: [
+    property var iconOptions: [
         {
             value: "folder",
             name: qsTr("Carpeta")
@@ -138,11 +141,13 @@ ColumnLayout {
     opacity: enabled ? 1 : 0.45
 
     Controls.Label {
+        visible: picker.showColors
         text: qsTr("Color")
         font.weight: Font.DemiBold
     }
 
     GridLayout {
+        visible: picker.showColors
         Layout.alignment: Qt.AlignLeft
         columns: 6
         rowSpacing: picker.cellSpacing
@@ -217,7 +222,7 @@ ColumnLayout {
     }
 
     Controls.Label {
-        Layout.topMargin: Kirigami.Units.largeSpacing
+        Layout.topMargin: picker.showColors ? Kirigami.Units.largeSpacing : 0
         text: qsTr("Icono")
         font.weight: Font.DemiBold
     }
@@ -257,10 +262,20 @@ ColumnLayout {
                 contentItem: Item {
                     FolderIcon {
                         anchors.centerIn: parent
+                        visible: !picker.themeNames
                         width: Kirigami.Units.iconSizes.smallMedium
                         height: width
                         iconName: iconButton.modelData.value
                         monochrome: true
+                    }
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        visible: picker.themeNames
+                        width: Kirigami.Units.iconSizes.smallMedium
+                        height: width
+                        source: iconButton.modelData.value
+                        isMask: true
+                        color: Kirigami.Theme.textColor
                     }
                 }
 

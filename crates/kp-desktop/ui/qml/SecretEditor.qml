@@ -320,14 +320,14 @@ Controls.Pane {
     Shortcut {
         sequences: [StandardKey.Cancel]
         context: Qt.WindowShortcut
-        enabled: editor.opened && !editor.externalModalOpen && !discardDialog.opened && !themeIconDialog.opened && !iconMenu.opened && !folderField.menuOpen
+        enabled: editor.opened && !editor.externalModalOpen && !discardDialog.opened && !iconWindow.opened && !iconMenu.opened && !folderField.menuOpen
         onActivated: editor.requestClose()
     }
 
     Shortcut {
         sequences: [StandardKey.Save]
         context: Qt.WindowShortcut
-        enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened && !themeIconDialog.opened && !iconMenu.opened
+        enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened && !iconWindow.opened && !iconMenu.opened
         onActivated: editor.submit()
     }
 
@@ -342,109 +342,17 @@ Controls.Pane {
         onRejected: editor.externalModalOpen = false
     }
 
-    Controls.Dialog {
-        id: themeIconDialog
-        title: qsTr("Icono del tema")
-        modal: true
-        anchors.centerIn: Controls.Overlay.overlay
-        parent: Controls.Overlay.overlay
-        standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
-        onOpened: {
-            themeIconName.text = editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "internet-web-browser";
-            themeIconName.forceActiveFocus();
-        }
-        onAccepted: {
-            if (!themeIconName.acceptableInput)
-                return;
+    EntryIconWindow {
+        id: iconWindow
+        onIconChosen: iconName => {
             editor.draftIcon = {
                 kind: "theme",
-                name: themeIconName.text
+                name: iconName
             };
             editor.draftIconSource = "";
             editor.updateDirty();
         }
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            EntryIcon {
-                Layout.alignment: Qt.AlignHCenter
-                iconSize: Kirigami.Units.iconSizes.large
-                entryIcon: ({
-                        kind: "theme",
-                        name: themeIconName.text
-                    })
-                fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
-            }
-            GridLayout {
-                columns: 4
-                Repeater {
-                    model: [
-                        {
-                            name: qsTr("Internet"),
-                            icon: "internet-web-browser"
-                        },
-                        {
-                            name: qsTr("Correo"),
-                            icon: "mail-message"
-                        },
-                        {
-                            name: qsTr("Trabajo"),
-                            icon: "applications-office"
-                        },
-                        {
-                            name: qsTr("Personal"),
-                            icon: "user-identity"
-                        },
-                        {
-                            name: qsTr("Servidor"),
-                            icon: "network-server"
-                        },
-                        {
-                            name: qsTr("Billetera"),
-                            icon: "wallet-open"
-                        },
-                        {
-                            name: qsTr("Desarrollo"),
-                            icon: "utilities-terminal"
-                        },
-                        {
-                            name: qsTr("Juegos"),
-                            icon: "applications-games"
-                        }
-                    ]
-                    delegate: Controls.ToolButton {
-                        required property var modelData
-                        icon.name: modelData.icon
-                        display: Controls.AbstractButton.IconOnly
-                        text: modelData.name
-                        checkable: true
-                        checked: themeIconName.text === modelData.icon
-                        focusPolicy: Qt.StrongFocus
-                        Accessible.name: modelData.name
-                        Accessible.description: checked ? qsTr("Icono seleccionado") : qsTr("Seleccionar icono")
-                        Layout.preferredWidth: Kirigami.Units.gridUnit * 3
-                        Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-                        onClicked: themeIconName.text = modelData.icon
-                        Controls.ToolTip.visible: hovered || visualFocus
-                        Controls.ToolTip.text: text
-                    }
-                }
-            }
-            Controls.TextField {
-                id: themeIconName
-                Layout.fillWidth: true
-                maximumLength: 128
-                validator: RegularExpressionValidator {
-                    regularExpression: /[a-zA-Z0-9-]{1,128}/
-                }
-                Accessible.name: qsTr("Nombre del icono del tema")
-                placeholderText: "internet-web-browser"
-            }
-        }
-        Binding {
-            target: themeIconDialog.standardButton(Controls.Dialog.Ok)
-            property: "enabled"
-            value: themeIconName.acceptableInput
-        }
+        onOpenedChanged: editor.externalModalOpen = opened
     }
 
     Connections {
@@ -620,7 +528,7 @@ Controls.Pane {
                                         }
                                         Controls.MenuItem {
                                             text: qsTr("Elegir icono del tema…")
-                                            onTriggered: themeIconDialog.open()
+                                            onTriggered: iconWindow.openWith(editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "", titleField.text.trim(), kindField.currentText, editor.storeAdapter.kindIcon(kindField.currentValue || "login"))
                                         }
                                     }
                                 }

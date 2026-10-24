@@ -124,6 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/FolderAppearancePicker.qml")
         .qml_file("ui/qml/FolderIcon.qml")
         .qml_file("ui/qml/EntryIcon.qml")
+        .qml_file("ui/qml/EntryIconWindow.qml")
         .qml_file(QmlFile::from("ui/qml/FolderPalette.qml").singleton(true))
         .qml_file("ui/qml/FolderPicker.qml")
         .qml_file("ui/qml/MoveEntryDialog.qml")

@@ -57,6 +57,7 @@ pub(super) fn prepare(source: ImportedEntries) -> Result<PreparedImport, ImportE
                 folder: index,
                 favorite: false,
                 trashed: false,
+                icon: None,
             });
             adaptations.folder_descriptions += 1;
         }
@@ -233,6 +234,7 @@ fn append_entry(
         folder,
         favorite,
         trashed,
+        icon: None,
     });
     // Extra fields keep their concealment in a custom secret linked to the entry.
     if !additional_fields.is_empty() {
@@ -242,6 +244,9 @@ fn append_entry(
             folder,
             favorite,
             trashed,
+            icon: Some(core::EntryIcon::Theme {
+                name: "insert-link".into(),
+            }),
             content: SecretContent::Custom(core::CustomContent {
                 records: records(additional_fields),
                 notes: SensitiveText::new(),

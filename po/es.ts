@@ -4573,6 +4573,25 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>EntryIconWindow</name>
+    <message>
+      <source>Elemento sin nombre</source>
+      <translation>Elemento sin nombre</translation>
+    </message>
+    <message>
+      <source>Icono del tema</source>
+      <translation>Icono del tema</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Aceptar</source>
+      <translation>Aceptar</translation>
+    </message>
+  </context>
+  <context>
     <name>EntryListPane</name>
     <message>
       <source>Resultados: %1</source>
@@ -7327,54 +7346,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Imágenes (*.png *.jpg *.jpeg *.webp)</source>
       <translation>Imágenes (*.png *.jpg *.jpeg *.webp)</translation>
-    </message>
-    <message>
-      <source>Icono del tema</source>
-      <translation>Icono del tema</translation>
-    </message>
-    <message>
-      <source>Internet</source>
-      <translation>Internet</translation>
-    </message>
-    <message>
-      <source>Correo</source>
-      <translation>Correo</translation>
-    </message>
-    <message>
-      <source>Trabajo</source>
-      <translation>Trabajo</translation>
-    </message>
-    <message>
-      <source>Personal</source>
-      <translation>Personal</translation>
-    </message>
-    <message>
-      <source>Servidor</source>
-      <translation>Servidor</translation>
-    </message>
-    <message>
-      <source>Billetera</source>
-      <translation>Billetera</translation>
-    </message>
-    <message>
-      <source>Desarrollo</source>
-      <translation>Desarrollo</translation>
-    </message>
-    <message>
-      <source>Juegos</source>
-      <translation>Juegos</translation>
-    </message>
-    <message>
-      <source>Icono seleccionado</source>
-      <translation>Icono seleccionado</translation>
-    </message>
-    <message>
-      <source>Seleccionar icono</source>
-      <translation>Seleccionar icono</translation>
-    </message>
-    <message>
-      <source>Nombre del icono del tema</source>
-      <translation>Nombre del icono del tema</translation>
     </message>
     <message>
       <source>No se pudo guardar el elemento.</source>

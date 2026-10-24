@@ -649,7 +649,13 @@ impl<S: crate::ports::ImportStorage, G: OpenPgp> crate::import::ImportReceiver
                 ImportFolderPolicy::PlaceAll { folder } => folder,
             };
             secrets.push(Secret {
-                icon: crate::automatic_entry_icon(&item.content),
+                icon: match &item.icon {
+                    Some(icon) => {
+                        icon.validate()?;
+                        Some(icon.clone())
+                    }
+                    None => crate::automatic_entry_icon(&item.content),
+                },
                 id: SecretId::new(),
                 folder_id,
                 title: item.title.trim().to_owned(),

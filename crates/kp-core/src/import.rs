@@ -34,6 +34,9 @@ pub struct ImportItem {
     pub favorite: bool,
     #[zeroize(skip)]
     pub trashed: bool,
+    /// Explicit icon; `None` derives the automatic one from the content.
+    #[zeroize(skip)]
+    pub icon: Option<crate::EntryIcon>,
 }
 
 /// Common domain format accepted from any provider; plaintext never enters UI.
