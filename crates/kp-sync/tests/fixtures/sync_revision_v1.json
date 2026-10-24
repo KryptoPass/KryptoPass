@@ -1,6 +1,6 @@
 {
   "fixture": "kryptopass-sync-revision-v1",
-  "source": "Independent Python cryptography Ed25519 + hashlib implementation of docs/sync-model.md canonical format.",
+  "source": "Independent Python cryptography Ed25519 + hashlib implementation of docs/sin-revisar/sync/modelo-ledger-sync-v1.md canonical format.",
   "static_seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
   "signing_seed_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
   "static_public_key_hex": "8f40c5adb68f25624ae5b214ea767a6ec94d829d3d7b5e1ad1ba6f3e2138285f",

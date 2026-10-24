@@ -181,7 +181,7 @@ Mayús+F10. La ventana principal recuerda su tamaño y estado con
 KWindowStateSaver; las capturas usan siempre el tamaño inicial reproducible.
 Al terminar un respaldo, Mostrar en la carpeta utiliza KIO para seleccionar
 el archivo en el gestor de archivos configurado.
-La dirección de esta integración vive en `docs/kde-native-integration.md`.
+La dirección de esta integración vive en `docs/sin-revisar/escritorio-kde/integracion-nativa-kde.md`.
 
 REUSE.toml proporciona las declaraciones SPDX de los archivos y conserva
 las licencias propias de las skills incluidas. Esta integración no convierte

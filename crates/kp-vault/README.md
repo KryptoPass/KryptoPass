@@ -10,5 +10,5 @@ atomically appends a revision with exact-head CAS; `delete` appends a persistent
 tombstone. `list` returns every head, preserving concurrent branches.
 
 The debug Desktop/Android exercise uses a separate public synthetic key and
-ledger. It cannot export real private keys. See `docs/vault-sync-adapter-v1.md`
-and `docs/synthetic-vault-sync-v1.md` in the application repositories.
+ledger. It cannot export real private keys. See `docs/sin-revisar/sync/adaptadores-boveda-sync-v1.md`
+and `docs/sin-revisar/sync/prueba-boveda-sincronizada-sintetica.md` in the application repositories.

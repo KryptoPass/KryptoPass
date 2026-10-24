@@ -6,7 +6,6 @@ temporales del contenido necesario para el detalle o editor abierto; no
 recibe claves privadas ni conserva secretos en modelos globales. Rust controla
 el cifrado, la persistencia, la autorización de lectura y la invalidación.
 Vaciar propiedades QML no garantiza borrar todas las copias de memoria Qt/JS.
-El contrato completo vive en `docs/SECRET_DATA_CONTRACT.md`.
 
 ## Puertas: just manda, bacon vigila
 
@@ -72,98 +71,59 @@ resultado. `just ready` en verde antes de commitear.
 
 ## Desarrollo P2P
 
-Antes de trabajar en P2P, leer `docs/p2p-implementation-plan.md` y
-`docs/p2p-progress.md`. El primero conserva el plan completo del usuario;
-el segundo registra las puertas y la evidencia de pruebas. Actualizar el
-progreso al cerrar una fase. El primer hito termina con dos nodos Rust en
-memoria, Noise XX, SAS y confianza persistente probados. No empezar WebRTC,
-Android ni transferencia de claves privadas de producción antes de cumplir
-las puertas correspondientes del plan.
+El primer hito termina con dos nodos Rust en memoria, Noise XX, SAS y confianza
+persistente probados. No empezar WebRTC, Android ni transferencia de claves
+privadas de producción antes de cumplir las puertas correspondientes. Al cerrar
+una fase, registrar las puertas y la evidencia de pruebas.
 
-Petición posterior del usuario (2026-10-18): adelantar la integración LAN entre
-Desktop y Android tras confirmar manualmente pairing y reconexión por emulador.
-Mantener pausados los agentes de tests y seguridad hasta que los reactive;
-solo implementación y comprobaciones de compilación/apertura. Esta autorización
-permite avanzar el laboratorio, no declarar aceptada su seguridad o sus suites.
-Consultar `docs/lan-transport-v1.md`; no habilitar transferencia privada GPG.
+Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
 
-Petición del usuario (2026-10-18): preparar primitivas observables de dispositivos
-y mantener la sesión autenticada, sin implementar UI nueva. Las futuras pantallas
-se construirán aparte con sus frameworks. Ver `docs/device-session-v1.md`.
-
-Petición posterior del usuario (2026-10-18): el agente implementa UI/UX de
-dispositivos en Desktop; el usuario implementa Android. Los ajustes comunes
-y contratos de UI se registran también en docs Android. Ver
-`docs/desktop-devices-ui-contract.md`. Las pausas de tests/seguridad continúan.
-
-Petición vigente posterior (2026-10-18): reparar la integración funcional de
-dispositivos en ambas apps, lector QR, ingreso de códigos y eliminación/reset
-explícitos del perfil de vinculación. El usuario autoriza pruebas de estos
-flujos al terminar; el agente de seguridad independiente continúa pausado.
-El borrado de vinculación no elimina la bóveda ni claves OpenPGP.
-
-Petición posterior vigente (2026-10-18): simplificar Android a Buscar en red y
-Manual y QR. La identidad inicial se prepara automáticamente al confirmar
-Emparejar una invitación válida si no existe identidad ni trust residual.
-Esta autorización sustituye el paso manual Crear perfil, no permite regenerar
-identidades existentes/corruptas ni reparar trust faltante automáticamente.
-
-Petición posterior vigente (2026-10-18): implementar recuperación de conexión
-tras corte Wi-Fi, cambio de dirección y reinicio de apps sin repetir QR/SAS
-para identidades autorizadas. Escucha local de proceso y metadatos de routing
-persistentes; nunca generar identidades/trust al reanudar. Desconexión humana
-detiene recuperación; olvidar/reset eliminan su estado antes de borrar claves.
-Pruebas funcionales autorizadas; seguridad independiente continúa pausada.
-Ver docs/connection-recovery-v1.md.
-
-Petición vigente posterior (2026-10-18): adelantar fase 6 para comunicación
-por Internet con relay de señalización no confiable, Cloudflare Tunnel y
-subdominio signal.kryptopass.org en proyecto separado. Mantener LAN, Noise/SAS,
-pinning de identidades y limpieza existentes. STUN/TURN configurables; no
-transferencia GPG ni sincronización. No atribuir seguridad de producción a
-compilación o pruebas funcionales. Ver docs/internet-transport-v1.md.
-
-
-Petición vigente posterior (2026-10-19): implementar respaldo TURN real mediante
-Cloudflare Realtime y un emisor HTTPS independiente en el proyecto relay.
-Credenciales temporales por petición firmada con identidad existente; token del
-proveedor solo en configuración privada del servidor. La lista de uso TURN es
-independiente del trust P2P y se provisiona por el operador, sin alta pública.
-No regenerar identidades para habilitar TURN. El modo relay-only es una prueba
-explícita y no admite fallback directo. Ver docs/turn-credentials-v1.md.
-Pruebas funcionales autorizadas; revisión independiente sigue pausada.
-
-
-Despliegue local TURN (2026-10-19, revisado 2026-10-23): ya no hay lanzador de
-desarrollo. `just run` exporta KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org
-salvo que ya esté definido, y `just install` lo fija en el lanzador instalado
-con la opción CMake KRYPTOPASS_TURN_BROKER_ORIGIN, mientras se integra
-configuración de UI. No incluir KP_TURN_RELAY_ONLY ni tokens del proveedor.
-
-
-Petición vigente posterior (2026-10-21): integrar la bóveda local Android real
-con PGPainless en Kotlin/JVM y reutilizar GnuPG Desktop. Pruebas funcionales con
-claves sintéticas autorizadas, revisión independiente todavía pausada.
-La recepción de la clave desde Desktop tras pairing, autorización local del
-emisor y aceptación del teléfono será el flujo principal; importación manual
-en pantalla dedicada como alternativa. El envío privado por red aún está
-pendiente y mantiene su puerta de revisión/autorización por operación. Ver
-docs/key-provisioning-flow.md y documentación local OpenPGP de Android.
-
-Petición vigente posterior (2026-10-21): priorizar privacidad de red antes de
-Sync/provisionamiento. Respetar rutas del sistema y la VPN del usuario; no añadir
-interfaces físicas arbitrarias a ICE. La política «Exigir VPN» debe bloquear si
-no se puede verificar su cumplimiento, con excepción LAN explícita y persistente.
-Probar con perfiles aislados y conservar datos al actualizar las apps. El usuario
-dejó el Samsung por USB para estas comprobaciones. No modificar VPN/firewall del
-sistema ni prometer protección contra fugas por observar solo el par ICE final.
-Ver docs/network-privacy-policy-v1.md. Pruebas funcionales autorizadas;
-revisión independiente y transferencia de claves reales continúan pausadas.
-
-Petición del usuario (2026-10-23): retirar de Git el material privado OpenPGP
-sintético y continuar las pruebas con claves generadas localmente. No versionar
-claves privadas OpenPGP de prueba en binarios, assets ni constantes Base64. Compartir la
-fixture local entre builds debug mediante `KP_SYNTHETIC_FIXTURE_DIR`; release
-no incorpora las claves de laboratorio. No regenerar silenciosamente una
-fixture existente ni borrar ledgers para cambiarla. La revisión independiente
-y la habilitación de claves privadas reales siguen pendientes.
+- La integración LAN Desktop ↔ Android, el pairing y la reconexión son
+  laboratorio: no declarar aceptada su seguridad ni sus suites. Los agentes de
+  tests y seguridad siguen pausados hasta que el usuario los reactive; solo
+  implementación y comprobaciones de compilación/apertura. No habilitar
+  transferencia privada GPG.
+- El agente implementa la UI/UX de dispositivos en Desktop; el usuario
+  implementa Android. Los ajustes comunes y contratos de UI se registran
+  también en la documentación Android.
+- El borrado de vinculación no elimina la bóveda ni claves OpenPGP. La
+  identidad inicial solo se prepara automáticamente al emparejar una invitación
+  válida si no existe identidad ni trust residual; nunca se regeneran
+  identidades existentes o corruptas ni se repara trust faltante.
+- Recuperación de conexión sin repetir QR/SAS para identidades autorizadas:
+  escucha local de proceso y metadatos de routing persistentes; nunca generar
+  identidades/trust al reanudar. La desconexión humana detiene la recuperación;
+  olvidar/reset eliminan su estado antes de borrar claves.
+- Internet: relay de señalización no confiable (Cloudflare Tunnel,
+  signal.kryptopass.org, proyecto separado), STUN/TURN configurables, sin
+  transferencia GPG ni sincronización. Mantener LAN, Noise/SAS, pinning de
+  identidades y limpieza. No atribuir seguridad de producción a compilación o
+  pruebas funcionales.
+- TURN real mediante Cloudflare Realtime y un emisor HTTPS independiente:
+  credenciales temporales por petición firmada con identidad existente; el
+  token del proveedor solo vive en configuración privada del servidor. La lista
+  de uso TURN es independiente del trust P2P y la provisiona el operador, sin
+  alta pública. No regenerar identidades para habilitar TURN. El modo
+  relay-only es una prueba explícita y no admite fallback directo.
+- `just run` exporta `KP_TURN_BROKER_ORIGIN=https://signal.kryptopass.org`
+  salvo que ya esté definido, y `just install` lo fija en el lanzador con la
+  opción CMake `KRYPTOPASS_TURN_BROKER_ORIGIN`. No incluir `KP_TURN_RELAY_ONLY`
+  ni tokens del proveedor.
+- Bóveda Android real con PGPainless (Kotlin/JVM) reutilizando GnuPG Desktop;
+  pruebas con claves sintéticas. La recepción de la clave desde Desktop tras
+  pairing, autorización local del emisor y aceptación del teléfono es el flujo
+  principal; la importación manual en pantalla dedicada es la alternativa. El
+  envío privado por red sigue pendiente y mantiene su puerta de
+  revisión/autorización por operación.
+- Privacidad de red antes de Sync/provisionamiento: respetar rutas del sistema
+  y la VPN del usuario; no añadir interfaces físicas arbitrarias a ICE. «Exigir
+  VPN» debe bloquear si no se puede verificar su cumplimiento, con excepción
+  LAN explícita y persistente. Probar con perfiles aislados y conservar datos
+  al actualizar las apps. No modificar VPN/firewall del sistema ni prometer
+  protección contra fugas por observar solo el par ICE final.
+- No versionar claves privadas OpenPGP de prueba en binarios, assets ni
+  constantes Base64: usar claves generadas localmente y compartir la fixture
+  entre builds debug con `KP_SYNTHETIC_FIXTURE_DIR`. Release no incorpora las
+  claves de laboratorio. No regenerar silenciosamente una fixture existente ni
+  borrar ledgers para cambiarla. La revisión independiente y la habilitación de
+  claves privadas reales siguen pendientes.

@@ -2,7 +2,7 @@
 
 Motor de revisiones cifradas e inmutables, independiente de Qt, GnuPG y la red.
 Reutiliza la identidad Ed25519 y el trust store de `kp-identity`. El contrato
-normativo y los límites están en [sync-model.md](../../docs/sync-model.md).
+normativo y los límites están en [sync-model.md](../../docs/sin-revisar/sync/modelo-ledger-sync-v1.md).
 
 Desde la raíz Desktop:
 
@@ -45,6 +45,6 @@ La extensión opt-in `SyncSession` ya implementa una ronda negociada sobre el
 owner Noise de `kp-devices`. Usa manifiestos congelados, ancestros, fragmentos,
 commit y ACK posterior a SQLite. `just test-sync-session` comprueba el motor
 y el owner autenticado; `just verify-sync-session` añade formato y Clippy.
-Ver [contrato de sesión](../../../docs/sync-session-v1.md). La bóveda de usuario,
+Ver [contrato de sesión](../../docs/sin-revisar/sync/sync-sobre-sesion-autenticada-v1.md). La bóveda de usuario,
 la migración, los recibos durables por peer y las rondas automáticas siguen
 pendientes. Las sesiones actuales conservan Sync desactivado por defecto.
