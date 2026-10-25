@@ -1,0 +1,207 @@
+{
+  "vectors": [
+    {
+      "envelope": {
+        "fields": {
+          "history": {
+            "events": [],
+            "versions": []
+          },
+          "notes": "",
+          "password": "pa55 word",
+          "totp": null,
+          "urls": [],
+          "username": "ada"
+        },
+        "kind": "login",
+        "schemaVersion": 1
+      },
+      "kind": "login",
+      "name": "login-minimal"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "history": {
+            "events": [],
+            "versions": []
+          },
+          "notes": "line one\nline two",
+          "password": "  spaces and ünïcödé 🔑  ",
+          "totp": {
+            "account": "ada@example.invalid",
+            "algorithm": "sha256",
+            "digits": 8,
+            "extensions": [],
+            "issuer": "Example",
+            "originalLabel": null,
+            "period": 60,
+            "secret": "JBSWY3DPEHPK3PXP"
+          },
+          "urls": [
+            "https://example.invalid/login",
+            "https://example.invalid/account"
+          ],
+          "username": "ada@example.invalid"
+        },
+        "kind": "login",
+        "schemaVersion": 1
+      },
+      "kind": "login",
+      "name": "login-complete"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "notes": "Extra notes",
+          "value": "# Title\n\nA **markdown** body\nwith lines"
+        },
+        "kind": "note",
+        "schemaVersion": 1
+      },
+      "kind": "note",
+      "name": "note"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "notes": "Custom notes",
+          "records": [
+            {
+              "concealed": true,
+              "id": "00000000-0000-0000-0000-000000000001",
+              "key": "Recovery code",
+              "multiline": true,
+              "value": "  value with spaces\nand a newline  "
+            }
+          ]
+        },
+        "kind": "custom",
+        "schemaVersion": 1
+      },
+      "kind": "custom",
+      "name": "custom"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "cvv": "123",
+          "expiryMonth": 12,
+          "expiryYear": 2032,
+          "holder": "Ada Example",
+          "notes": "Card notes",
+          "number": "4111-1111 1111-1111",
+          "pin": "2468"
+        },
+        "kind": "card",
+        "schemaVersion": 1
+      },
+      "kind": "card",
+      "name": "card"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "config": {
+            "account": "ada@example.invalid",
+            "algorithm": "sha256",
+            "digits": 8,
+            "extensions": [],
+            "issuer": "Example",
+            "originalLabel": null,
+            "period": 60,
+            "secret": "JBSWY3DPEHPK3PXP"
+          },
+          "notes": "Authenticator notes"
+        },
+        "kind": "totp",
+        "schemaVersion": 1
+      },
+      "kind": "totp",
+      "name": "totp"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "address": "1 Example Street",
+          "documents": [
+            {
+              "country": "GB",
+              "documentType": "Passport",
+              "expires": "2032-12-31",
+              "id": "00000000-0000-0000-0000-000000000002",
+              "number": "P123456"
+            }
+          ],
+          "emails": [
+            "ada@example.invalid"
+          ],
+          "firstName": "Ada",
+          "lastName": "Example",
+          "notes": "Identity notes",
+          "phones": [
+            "+1 555 0100"
+          ]
+        },
+        "kind": "identity",
+        "schemaVersion": 1
+      },
+      "kind": "identity",
+      "name": "identity"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "hidden": true,
+          "notes": "Wi-Fi notes",
+          "password": "example-network-password",
+          "security": "wpa3",
+          "ssid": "Example network"
+        },
+        "kind": "wifi",
+        "schemaVersion": 1
+      },
+      "kind": "wifi",
+      "name": "wifi"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "email": "ada@example.invalid",
+          "expires": "2030-01-02",
+          "holder": "Ada Example",
+          "licenseKey": "AAAA-BBBB-CCCC-DDDD",
+          "notes": "License notes",
+          "product": "Example Product",
+          "purchased": "2025-01-02",
+          "version": "2.1"
+        },
+        "kind": "license",
+        "schemaVersion": 1
+      },
+      "kind": "license",
+      "name": "license"
+    },
+    {
+      "envelope": {
+        "fields": {
+          "algorithm": "ssh-ed25519",
+          "fingerprint": "SHA256:z/fSv0Z0RZS+Lccbc6ZoOWwt/fbj1VFJGSBKQbo4icE",
+          "hosts": [
+            "example.invalid"
+          ],
+          "notes": "SSH notes",
+          "passphrase": "",
+          "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLAAAAJgAAAAAAAAA\nAAAAAAtzc2gtZWQyNTUxOQAAACDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA\nAAAEAHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHB+pKbGPinFIKvvVQexMuxfmV\nR3auvr57kkIe6mkURtIsAAAAEnN5bnRoZXRpYyB0ZXN0IGtleQECAw==\n-----END OPENSSH PRIVATE KEY-----\n",
+          "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpKbGPinFIKvvVQexMuxfmVR3auvr57kkIe6mkURtIs synthetic test key",
+          "user": "ada"
+        },
+        "kind": "ssh-key",
+        "schemaVersion": 1
+      },
+      "kind": "ssh-key",
+      "name": "ssh-key"
+    }
+  ],
+  "version": 1
+}
