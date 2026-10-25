@@ -7310,10 +7310,6 @@ https://cuenta.ejemplo.test</translation>
       </translation>
     </message>
     <message>
-      <source>Procesando la bóveda</source>
-      <translation>Procesando la bóveda</translation>
-    </message>
-    <message>
       <source>Cambiar sección: %1</source>
       <translation>Cambiar sección: %1</translation>
     </message>
@@ -8678,12 +8674,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>Sincronizando…</translation>
     </message>
     <message>
-      <source>En pausa: la bóveda está bloqueada</source>
-      <translation>En pausa: la bóveda está bloqueada</translation>
-    </message>
-    <message>
-      <source>En pausa: falta la contraseña de una clave</source>
-      <translation>En pausa: falta la contraseña de una clave</translation>
+      <source>Falta una contraseña</source>
+      <translation>Falta una contraseña</translation>
     </message>
     <message>
       <source>Error de sincronización</source>
@@ -8694,12 +8686,16 @@ https://cuenta.ejemplo.test</translation>
       <translation>Sincronizada</translation>
     </message>
     <message>
-      <source>Sincronización activa</source>
-      <translation>Sincronización activa</translation>
+      <source>La sincronización está detenida: una clave necesita su contraseña.</source>
+      <translation>La sincronización está detenida: una clave necesita su contraseña.</translation>
     </message>
     <message>
-      <source>Estado de la sincronización: %1</source>
-      <translation>Estado de la sincronización: %1</translation>
+      <source>Sincronización con el teléfono: activa.</source>
+      <translation>Sincronización con el teléfono: activa.</translation>
+    </message>
+    <message>
+      <source>Estado de la bóveda: %1</source>
+      <translation>Estado de la bóveda: %1</translation>
     </message>
   </context>
   <context>

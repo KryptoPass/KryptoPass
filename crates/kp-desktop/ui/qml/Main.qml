@@ -29,17 +29,6 @@ Controls.ApplicationWindow {
         id: deviceController
     }
     Component.onDestruction: deviceController.shutdownResumeOwner()
-    // Vault Sync status, bottom right over whatever page is open.
-    SyncStatusBadge {
-        parent: Controls.Overlay.overlay
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: Kirigami.Units.largeSpacing
-        z: 1000
-        controller: deviceController
-        vaultLocked: store.controller.locked
-        onActivated: devicesWindow.open()
-    }
     SecretStore {
         id: store
         objectName: "secretStore"
@@ -1366,21 +1355,15 @@ Controls.ApplicationWindow {
                 Item {
                     Layout.fillWidth: true
                 }
-                Controls.Label {
-                    visible: true
+                // The vault's message and the Sync with phones, in one KDE-style indicator.
+                SyncStatusBadge {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    horizontalAlignment: Text.AlignRight
-                    elide: Text.ElideRight
-                    text: root.keysMode ? keys.controller.status : store.controller.status
-                    color: Kirigami.Theme.disabledTextColor
-                }
-                Controls.BusyIndicator {
-                    visible: !root.keysMode && (root.storeOperationBusy || backupWindow.busy || importWindow.busy)
-                    running: visible
-                    Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-                    Layout.preferredHeight: width
-                    Accessible.name: qsTr("Procesando la bóveda")
+                    syncController: deviceController
+                    storeStatus: root.keysMode ? keys.controller.status : store.controller.status
+                    busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)
+                    failed: !root.keysMode && !store.controller.locked && store.controller.errorMessage.length > 0
+                    onActivated: devicesWindow.open()
                 }
             }
         }
