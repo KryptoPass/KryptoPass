@@ -48,6 +48,32 @@ const COPY_SUFFIX: &str = " (copia del teléfono)";
 /// update together).
 const PUBLISH_ICONS: bool = true;
 
+/// Key (upper-case hex) whose passphrase the last run needed and the agent did not have.
+static LOCKED_KEY: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+/// The failure the previous run ended with, so callers log a change once and not every pass.
+static LAST_FAILURE: std::sync::Mutex<Option<MirrorError>> = std::sync::Mutex::new(None);
+
+/// The key the last run could not use because its passphrase is not cached, if any.
+pub(crate) fn locked_key() -> Option<String> {
+    LOCKED_KEY.lock().ok().and_then(|key| key.clone())
+}
+
+fn set_locked_key(key: Option<String>) {
+    if let Ok(mut slot) = LOCKED_KEY.lock() {
+        *slot = key;
+    }
+}
+
+/// Records how a run ended (`None` for success) and tells whether that differs from the
+/// previous run, so a persistent failure is logged once instead of every few seconds.
+pub(crate) fn note_failure(failure: Option<MirrorError>) -> bool {
+    LAST_FAILURE.lock().is_ok_and(|mut last| {
+        let changed = *last != failure;
+        *last = failure;
+        changed
+    })
+}
+
 /// Payload-free failures, each with a fixed message for the UI.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum MirrorError {
@@ -213,6 +239,7 @@ pub(crate) fn run(
     lab_directory: &Path,
     declared: &HashMap<DeviceId, Vec<String>>,
 ) -> Result<MirrorOutcome, MirrorError> {
+    set_locked_key(None);
     let mut vault = ActiveVault::open()?;
     let host =
         LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
@@ -498,7 +525,7 @@ impl Mirror<'_> {
                 }
                 Ok(None) => {}
                 Err(Failure::Locked) => {
-                    tracing::warn!("Vault mirror stopped: gpg-agent has no cached passphrase");
+                    tracing::debug!("Vault mirror stopped: gpg-agent has no cached passphrase");
                     locked = true;
                     break;
                 }
@@ -796,10 +823,14 @@ impl Mirror<'_> {
             .find_secret(id)
             .map_err(|_| Failure::Record(line!()))?
             .ok_or(Failure::Record(line!()))?;
-        let plaintext = self
-            .crypto
-            .decrypt(&secret.ciphertext)
-            .map_err(|_| Failure::Locked)?;
+        let plaintext = self.crypto.decrypt(&secret.ciphertext).map_err(|_| {
+            // Name the key to unlock: the one this record shares with the phone.
+            set_locked_key(
+                self.shared_key(secret.recipients.as_slice())
+                    .map(|key| key.as_str().to_ascii_uppercase()),
+            );
+            Failure::Locked
+        })?;
         let content = decode_content(plaintext.as_slice()).map_err(|_| Failure::Record(line!()))?;
         if content.kind() != secret.kind {
             return Err(Failure::Record(line!()));

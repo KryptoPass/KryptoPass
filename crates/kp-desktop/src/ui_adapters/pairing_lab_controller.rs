@@ -115,6 +115,13 @@ pub mod qobject {
         #[qproperty(QString, vault_sync_keys, cxx_name = "vaultSyncKeys", READ, NOTIFY)]
         #[qproperty(
             QString,
+            vault_sync_locked_key,
+            cxx_name = "vaultSyncLockedKey",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            QString,
             vault_sync_message,
             cxx_name = "vaultSyncMessage",
             READ,
@@ -246,6 +253,8 @@ pub mod qobject {
         #[cxx_name = "dismissInboundKeyTransfer"]
         fn dismiss_inbound_key_transfer(self: Pin<&mut Self>);
         #[qinvokable]
+        #[cxx_name = "unlockSyncKey"]
+        fn unlock_sync_key(self: Pin<&mut Self>, fingerprint: QString);
         #[cxx_name = "enableVaultSync"]
         fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString, fingerprints: QString);
         #[qinvokable]
@@ -306,6 +315,7 @@ pub struct PairingLabControllerRust {
     vault_key_fingerprint: QString,
     vault_sync_peers: QStringList,
     vault_sync_keys: QString,
+    vault_sync_locked_key: QString,
     vault_sync_message: QString,
     vault_sync_failed: bool,
     vault_mirror_running: bool,
@@ -377,6 +387,7 @@ impl Default for PairingLabControllerRust {
             vault_key_fingerprint: QString::default(),
             vault_sync_peers: QStringList::default(),
             vault_sync_keys: QString::default(),
+            vault_sync_locked_key: QString::default(),
             vault_sync_message: QString::default(),
             vault_sync_failed: false,
             vault_mirror_running: false,
@@ -1362,10 +1373,20 @@ impl qobject::PairingLabController {
                     )
                 }
                 Ok(_) => {}
-                Err(error) => tracing::warn!(error = ?error, "Vault mirror run failed"),
+                Err(error) => {
+                    // A persistent failure (a locked key, say) is logged when it appears.
+                    if mirror::note_failure(Some(*error)) {
+                        tracing::warn!(error = ?error, locked_key = ?mirror::locked_key(), "Vault mirror run failed");
+                    }
+                }
             }
+            if result.is_ok() && mirror::note_failure(None) {
+                tracing::info!("Vault mirror recovered");
+            }
+            let locked_key = QString::from(mirror::locked_key().unwrap_or_default());
             let _ = thread.queue(move |mut object| {
                 object.as_mut().rust_mut().vault_mirror_running = false;
+                object.as_mut().set_vault_sync_locked_key(locked_key);
                 match result {
                     Ok(outcome) => {
                         let prior_failure = object.rust().vault_sync_failed;
@@ -1396,6 +1417,42 @@ impl qobject::PairingLabController {
                 }
             });
         });
+    }
+
+    /// Asks gpg-agent for the passphrase of one vault key, so a Sync that stopped because
+    /// that key was locked can continue. Pinentry shows the prompt.
+    pub fn unlock_sync_key(mut self: Pin<&mut Self>, fingerprint: QString) {
+        let fingerprint = fingerprint.to_string();
+        if fingerprint.is_empty() {
+            return;
+        }
+        tracing::info!(key = %&fingerprint[fingerprint.len().saturating_sub(16)..], "Vault sync: asking for a key passphrase");
+        self.as_mut().set_vault_sync_failed(false);
+        self.as_mut().set_vault_sync_message(QString::default());
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || crate::keyring::commands::probe_agent_for(&fingerprint),
+            |controller, result| match result {
+                Ok(()) => {
+                    tracing::info!("Vault sync: key passphrase cached");
+                    let mut controller = controller;
+                    controller
+                        .as_mut()
+                        .set_vault_sync_locked_key(QString::default());
+                    controller.as_mut().set_vault_sync_message(QString::from(
+                        "Clave desbloqueada. La sincronización continuará en unos segundos.",
+                    ));
+                }
+                Err(error) => {
+                    tracing::warn!(error = %error, "Vault sync: could not unlock the key");
+                    let mut controller = controller;
+                    controller.as_mut().set_vault_sync_failed(true);
+                    controller
+                        .as_mut()
+                        .set_vault_sync_message(QString::from(error));
+                }
+            },
+        );
     }
 
     /// Keys (upper-case hex) that `peer` declared holding in this connection;
@@ -2854,6 +2911,12 @@ notifying_property!(
     set_synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint_changed,
+    QString
+);
+notifying_property!(
+    set_vault_sync_locked_key,
+    vault_sync_locked_key,
+    vault_sync_locked_key_changed,
     QString
 );
 notifying_property!(

@@ -1485,6 +1485,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave %1 marcada como tuya: GnuPG ya puede cifrar con ella.</translation>
     </message>
     <message>
+      <source>Clave desbloqueada. La sincronización continuará en unos segundos.</source>
+      <translation>Clave desbloqueada. La sincronización continuará en unos segundos.</translation>
+    </message>
+    <message>
       <source>Claves SSH</source>
       <translation>Claves SSH</translation>
     </message>
@@ -1787,6 +1791,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</source>
       <translation>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</translation>
+    </message>
+    <message>
+      <source>La huella de la clave no es válida.</source>
+      <translation>La huella de la clave no es válida.</translation>
     </message>
     <message>
       <source>La identidad está revocada.</source>
@@ -2345,6 +2353,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vault mirror published an icon asset</translation>
     </message>
     <message>
+      <source>Vault mirror recovered</source>
+      <translation>Vault mirror recovered</translation>
+    </message>
+    <message>
       <source>Vault mirror rejected an icon asset</source>
       <translation>Vault mirror rejected an icon asset</translation>
     </message>
@@ -2387,6 +2399,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Vault sync selection changed</source>
       <translation>Vault sync selection changed</translation>
+    </message>
+    <message>
+      <source>Vault sync: asking for a key passphrase</source>
+      <translation>Vault sync: asking for a key passphrase</translation>
+    </message>
+    <message>
+      <source>Vault sync: could not unlock the key</source>
+      <translation>Vault sync: could not unlock the key</translation>
+    </message>
+    <message>
+      <source>Vault sync: key passphrase cached</source>
+      <translation>Vault sync: key passphrase cached</translation>
     </message>
     <message>
       <source>Vencimiento</source>
@@ -4403,6 +4427,14 @@ Huella(s) detectadas:
     <message>
       <source>Claves sincronizadas: %1</source>
       <translation>Claves sincronizadas: %1</translation>
+    </message>
+    <message>
+      <source>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</source>
+      <translation>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</translation>
+    </message>
+    <message>
+      <source>Desbloquear clave…</source>
+      <translation>Desbloquear clave…</translation>
     </message>
     <message>
       <source>Reconectar para enviar</source>

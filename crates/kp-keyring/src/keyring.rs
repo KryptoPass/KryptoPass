@@ -91,6 +91,26 @@ impl Keyring {
         Ok(key)
     }
 
+    /// Like [`Self::probe_agent`] for one specific secret key, so a vault that uses
+    /// several keys can ask for each key's passphrase.
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
+    pub fn probe_agent_for(&self, fingerprint: &Fingerprint) -> Result<()> {
+        let mut session = self.session()?;
+        let key = session.require(fingerprint)?;
+        backend::require_secret(&key, fingerprint)?;
+        session
+            .context
+            .add_signer(&key)
+            .map_err(gpg(Step::SelectSigner))?;
+        let mut signature = Vec::new();
+        session
+            .context
+            .sign_detached("KryptoPass agent probe", &mut signature)
+            .map_err(gpg(Step::Sign))?;
+        debug!("Keyring: agent probe signed with the requested key");
+        Ok(())
+    }
+
     /// Signs and discards a fixed message with the first secret key, which
     /// makes the agent ask for its passphrase unless it has it cached.
     #[instrument(level = "debug", skip(self))]

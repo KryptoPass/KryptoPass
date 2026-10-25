@@ -16,6 +16,15 @@ pub fn list_keys() -> Result<Vec<KeyInfo>, String> {
         .map_err(|error| super::errors::describe(&error))
 }
 
+/// Signs a fixed probe message with one specific key so the agent asks for that key's passphrase.
+pub fn probe_agent_for(fingerprint: &str) -> Result<(), String> {
+    let fingerprint = kryptopass_keyring::Fingerprint::parse(fingerprint)
+        .map_err(|_| crate::i18n::text("La huella de la clave no es válida."))?;
+    Keyring::system()
+        .probe_agent_for(&fingerprint)
+        .map_err(|error| super::errors::describe(&error))
+}
+
 /// Signs a fixed probe message so the configured system agent can request a passphrase.
 pub fn probe_agent() -> Result<(), String> {
     Keyring::system()

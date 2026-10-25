@@ -153,6 +153,19 @@ Controls.ScrollView {
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
+                    visible: deviceRow.vaultSyncOn && deviceRow.host.controller.vaultSyncLockedKey.length > 0
+                    type: Kirigami.MessageType.Warning
+                    text: qsTr("La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.").arg(deviceRow.host.keyTitle(deviceRow.host.controller.vaultSyncLockedKey))
+                    actions: [
+                        Kirigami.Action {
+                            text: qsTr("Desbloquear clave…")
+                            icon.name: "dialog-password"
+                            onTriggered: deviceRow.host.controller.unlockSyncKey(deviceRow.host.controller.vaultSyncLockedKey)
+                        }
+                    ]
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
                     visible: deviceRow.host.syncMessageDeviceId === deviceRow.deviceId && deviceRow.host.controller.vaultSyncMessage.length > 0
                     type: deviceRow.host.controller.vaultSyncFailed ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
                     text: deviceRow.host.controller.vaultSyncMessage
