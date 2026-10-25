@@ -97,6 +97,8 @@ pub enum AssetWrite {
 pub struct SyncedVault<'a> {
     ledger: &'a mut Ledger,
     fingerprint: KeyFingerprint,
+    /// Keys that may also open what is written, besides `fingerprint`.
+    extra_recipients: Vec<KeyFingerprint>,
     identity: &'a DeviceIdentity,
     trust: &'a dyn TrustSource,
     crypto: &'a dyn OpenPgp,
@@ -122,10 +124,19 @@ impl<'a> SyncedVault<'a> {
         Ok(Self {
             ledger,
             fingerprint,
+            extra_recipients: Vec::new(),
             identity,
             trust,
             crypto,
         })
+    }
+
+    /// Also encrypts everything written to these keys, so a device that holds any of them
+    /// can open it. `fingerprint` still names the key in the object's envelope.
+    #[must_use]
+    pub fn with_extra_recipients(mut self, keys: Vec<KeyFingerprint>) -> Self {
+        self.extra_recipients = keys;
+        self
     }
 
     /// Returns a decrypted projection for every current head in the ledger.
@@ -339,7 +350,9 @@ impl<'a> SyncedVault<'a> {
     }
 
     fn encryption_recipients(&self) -> Result<RecipientSet, VaultSyncError> {
-        RecipientSet::new(vec![self.fingerprint.clone()]).map_err(|_| VaultSyncError::InvalidInput)
+        let mut keys = vec![self.fingerprint.clone()];
+        keys.extend(self.extra_recipients.iter().cloned());
+        RecipientSet::new(keys).map_err(|_| VaultSyncError::InvalidInput)
     }
 }
 

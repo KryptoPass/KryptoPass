@@ -275,6 +275,7 @@ pub(crate) fn run(
             tracing::debug!("Vault mirror idle: the phone holds none of the selected keys");
             continue;
         }
+
         selected += 1;
         let state_path = info.ledger_path.with_extension("mirror.json");
         let outcome = host
@@ -354,6 +355,10 @@ struct RecordState {
     /// missing or unreadable; each run retries it until it lands.
     #[serde(default)]
     icon_pending: bool,
+    /// Digest of the keys the ledger copy was encrypted to; changing the item's permissions
+    /// or the selected keys re-publishes it even when its content did not change.
+    #[serde(default)]
+    wrap: u64,
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -412,7 +417,7 @@ struct Mirror<'a> {
     identity: &'a DeviceIdentity,
     trust: &'a dyn TrustSource,
     vault: &'a mut ActiveVault,
-    /// Keys selected for this phone, anchor included.
+    /// Keys selected for this phone: they decide which records take part.
     keys: &'a [KeyFingerprint],
     crypto: NonInteractiveGnuPgOpenPgp,
     state_path: &'a Path,
@@ -442,6 +447,22 @@ impl Mirror<'_> {
     /// one of the selected keys.
     fn shared_key<'k>(&'k self, recipients: &'k [KeyFingerprint]) -> Option<&'k KeyFingerprint> {
         self.keys.iter().find(|key| recipients.contains(key))
+    }
+
+    /// Keys the ledger copy of a record is encrypted to: the item's own recipients that the
+    /// user also selected for this phone. The item's permissions are the ceiling and the
+    /// selection is the explicit consent, so a key the phone merely holds, or an item
+    /// recipient that was never selected, never receives a copy; the ledger is immutable,
+    /// so a copy cannot be taken back later. Sorted, so the digest is stable.
+    fn wrap_keys(&self, recipients: &[KeyFingerprint]) -> Vec<KeyFingerprint> {
+        let mut keys: Vec<KeyFingerprint> = recipients
+            .iter()
+            .filter(|key| self.keys.contains(key))
+            .cloned()
+            .collect();
+        keys.sort_unstable();
+        keys.dedup();
+        keys
     }
 
     fn run(mut self) -> Result<MirrorOutcome, MirrorError> {
@@ -494,6 +515,9 @@ impl Mirror<'_> {
                 not_primary_only += 1;
                 continue;
             }
+            let wrap = meta.map_or(0, |meta| {
+                wrap_digest(&self.wrap_keys(meta.recipients.as_slice()))
+            });
             let record_heads = heads.remove(&id).unwrap_or_default();
             let folder = folder_digest(
                 meta.and_then(|meta| meta.folder_id)
@@ -511,10 +535,12 @@ impl Mirror<'_> {
                 state.records.get(&id).copied(),
                 folder,
                 icon,
+                wrap,
                 &mut outcome,
             ) {
                 Ok(Some(mut next)) => {
                     next.folder = if next.main.is_some() { folder } else { 0 };
+                    next.wrap = if next.main.is_some() { wrap } else { 0 };
                     // A pull may have changed the Desktop icon; record the one it has now.
                     next.icon = match next.main {
                         Some(_) => self.current_icon_digest(SecretId(id)),
@@ -566,13 +592,16 @@ impl Mirror<'_> {
         prior: Option<RecordState>,
         folder: u64,
         icon: u64,
+        wrap: u64,
         outcome: &mut MirrorOutcome,
     ) -> Result<Option<RecordState>, Failure> {
         let main_revision = meta.map(|meta| meta.revision);
         // A move between Desktop folders, or a first publication of an icon, keeps
         // the revision but must still reach the phone.
         let main_moved = main_revision.is_some()
-            && prior.is_some_and(|prior| prior.folder != folder || prior.icon != icon);
+            && prior.is_some_and(|prior| {
+                prior.folder != folder || prior.icon != icon || prior.wrap != wrap
+            });
         let head_ids: Vec<Id> = heads.iter().map(|head| head.revision_id).collect();
 
         if heads.len() > 1 {
@@ -719,6 +748,15 @@ impl Mirror<'_> {
             Some(main) if PUBLISH_ICONS => self.outgoing_icon(id, main.secret.icon.as_ref()),
             _ => OutgoingIcon::Automatic,
         };
+        // Encrypt to every selected key among the item's recipients, not only the one named
+        // in the envelope, so a phone holding any of them can open the copy.
+        let extra: Vec<KeyFingerprint> = stored
+            .as_ref()
+            .map(|secret| self.wrap_keys(secret.recipients.as_slice()))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|key| *key != fingerprint)
+            .collect();
         let mut synced = SyncedVault::new(
             self.ledger,
             fingerprint,
@@ -726,7 +764,8 @@ impl Mirror<'_> {
             self.trust,
             &self.crypto,
         )
-        .map_err(Failure::from)?;
+        .map_err(Failure::from)?
+        .with_extra_recipients(extra);
         // The asset goes first, so a phone never sees an object whose image is missing.
         let icon = match outgoing {
             OutgoingIcon::Automatic => IconState::Automatic,
@@ -1263,6 +1302,20 @@ fn folder_paths(folders: &[Folder]) -> HashMap<FolderId, Vec<String>> {
 }
 
 /// Stable digest of a folder path for change detection; 0 means the root.
+/// Stable digest of the keys a record is encrypted to; 0 when there are none.
+fn wrap_digest(keys: &[KeyFingerprint]) -> u64 {
+    if keys.is_empty() {
+        return 0;
+    }
+    let mut digest = Sha256::new();
+    for key in keys {
+        digest.update(key.as_str().as_bytes());
+        digest.update([0]);
+    }
+    let digest = digest.finalize();
+    u64::from_le_bytes(digest[..8].try_into().unwrap_or_default()).max(1)
+}
+
 fn folder_digest(path: &[String]) -> u64 {
     if path.is_empty() {
         return 0;
