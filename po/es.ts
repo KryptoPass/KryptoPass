@@ -8672,6 +8672,37 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>SyncStatusBadge</name>
+    <message>
+      <source>Sincronizando…</source>
+      <translation>Sincronizando…</translation>
+    </message>
+    <message>
+      <source>En pausa: la bóveda está bloqueada</source>
+      <translation>En pausa: la bóveda está bloqueada</translation>
+    </message>
+    <message>
+      <source>En pausa: falta la contraseña de una clave</source>
+      <translation>En pausa: falta la contraseña de una clave</translation>
+    </message>
+    <message>
+      <source>Error de sincronización</source>
+      <translation>Error de sincronización</translation>
+    </message>
+    <message>
+      <source>Sincronizada</source>
+      <translation>Sincronizada</translation>
+    </message>
+    <message>
+      <source>Sincronización activa</source>
+      <translation>Sincronización activa</translation>
+    </message>
+    <message>
+      <source>Estado de la sincronización: %1</source>
+      <translation>Estado de la sincronización: %1</translation>
+    </message>
+  </context>
+  <context>
     <name>ToastHost</name>
     <message>
       <source>Cerrar notificación</source>

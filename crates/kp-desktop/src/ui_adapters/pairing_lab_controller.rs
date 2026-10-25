@@ -114,6 +114,13 @@ pub mod qobject {
         )]
         #[qproperty(QString, vault_sync_keys, cxx_name = "vaultSyncKeys", READ, NOTIFY)]
         #[qproperty(
+            bool,
+            vault_mirror_active,
+            cxx_name = "vaultMirrorActive",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
             QString,
             vault_sync_locked_key,
             cxx_name = "vaultSyncLockedKey",
@@ -319,6 +326,7 @@ pub struct PairingLabControllerRust {
     vault_key_fingerprint: QString,
     vault_sync_peers: QStringList,
     vault_sync_keys: QString,
+    vault_mirror_active: bool,
     vault_sync_locked_key: QString,
     vault_sync_message: QString,
     vault_sync_failed: bool,
@@ -393,6 +401,7 @@ impl Default for PairingLabControllerRust {
             vault_key_fingerprint: QString::default(),
             vault_sync_peers: QStringList::default(),
             vault_sync_keys: QString::default(),
+            vault_mirror_active: false,
             vault_sync_locked_key: QString::default(),
             vault_sync_message: QString::default(),
             vault_sync_failed: false,
@@ -1374,6 +1383,7 @@ impl qobject::PairingLabController {
             return;
         };
         self.as_mut().rust_mut().vault_mirror_running = true;
+        self.as_mut().set_vault_mirror_active(true);
         let declared: HashMap<DeviceId, Vec<String>> = self
             .rust()
             .known_peers
@@ -1406,6 +1416,7 @@ impl qobject::PairingLabController {
             let locked_key = QString::from(mirror::locked_key().unwrap_or_default());
             let _ = thread.queue(move |mut object| {
                 object.as_mut().rust_mut().vault_mirror_running = false;
+                object.as_mut().set_vault_mirror_active(false);
                 object.as_mut().set_vault_sync_locked_key(locked_key);
                 match result {
                     Ok(outcome) => {
@@ -2977,6 +2988,12 @@ notifying_property!(
     synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint_changed,
     QString
+);
+notifying_property!(
+    set_vault_mirror_active,
+    vault_mirror_active,
+    vault_mirror_active_changed,
+    bool
 );
 notifying_property!(
     set_vault_sync_locked_key,

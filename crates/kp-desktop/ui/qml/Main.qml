@@ -29,6 +29,17 @@ Controls.ApplicationWindow {
         id: deviceController
     }
     Component.onDestruction: deviceController.shutdownResumeOwner()
+    // Vault Sync status, bottom right over whatever page is open.
+    SyncStatusBadge {
+        parent: Controls.Overlay.overlay
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: Kirigami.Units.largeSpacing
+        z: 1000
+        controller: deviceController
+        vaultLocked: store.controller.locked
+        onActivated: devicesWindow.open()
+    }
     SecretStore {
         id: store
         objectName: "secretStore"
