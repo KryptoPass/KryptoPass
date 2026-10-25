@@ -7,6 +7,7 @@ use std::{
 };
 
 use gpgme::{CreateKeyFlags, DeleteKeyFlags, ExportMode, KeySigningFlags};
+use tracing::{debug, info, instrument};
 
 use crate::{
     backend::{self, Session},
@@ -63,26 +64,36 @@ impl Keyring {
 
     // Reading
 
+    #[instrument(level = "debug", skip(self))]
     pub fn list_keys(&self) -> Result<Vec<KeyInfo>> {
         let mut session = self.session()?;
-        collect(session.context.keys().map_err(gpg(Step::ListKeys))?)
+        let keys = collect(session.context.keys().map_err(gpg(Step::ListKeys))?)?;
+        debug!(keys = keys.len(), "Keyring: listed public keys");
+        Ok(keys)
     }
 
+    #[instrument(level = "debug", skip(self))]
     pub fn list_secret_keys(&self) -> Result<Vec<KeyInfo>> {
         let mut session = self.session()?;
-        collect(session.context.secret_keys().map_err(gpg(Step::ListKeys))?)
+        let keys = collect(session.context.secret_keys().map_err(gpg(Step::ListKeys))?)?;
+        debug!(keys = keys.len(), "Keyring: listed secret keys");
+        Ok(keys)
     }
 
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn key(&self, fingerprint: &Fingerprint) -> Result<Option<KeyInfo>> {
         let mut session = self.session()?;
-        session
+        let key = session
             .find(fingerprint)?
             .map(|key| KeyInfo::from_gpgme(&key).map_err(Error::Unconfirmed))
-            .transpose()
+            .transpose()?;
+        debug!(found = key.is_some(), "Keyring: looked up key");
+        Ok(key)
     }
 
     /// Signs and discards a fixed message with the first secret key, which
     /// makes the agent ask for its passphrase unless it has it cached.
+    #[instrument(level = "debug", skip(self))]
     pub fn probe_agent(&self) -> Result<()> {
         let mut session = self.session()?;
         let key = {
@@ -100,6 +111,7 @@ impl Keyring {
             .context
             .sign_detached("KryptoPass agent probe", &mut signature)
             .map_err(gpg(Step::Sign))?;
+        debug!("Keyring: agent probe signed");
         Ok(())
     }
 
@@ -107,6 +119,11 @@ impl Keyring {
 
     /// Creates a sign+certify primary key plus an encryption subkey, both
     /// with the same expiry.
+    #[instrument(
+        level = "debug",
+        skip(self, user_id),
+        fields(user_id_len = user_id.as_str().len())
+    )]
     pub fn create_key(&self, user_id: &UserId, expiry: Expiry) -> Result<Fingerprint> {
         let expires = expiry.duration()?;
         let mut session = self.session()?;
@@ -149,9 +166,11 @@ impl Keyring {
                     other => other,
                 })?;
         }
+        info!(fingerprint = %fingerprint, "Keyring: created key");
         Ok(fingerprint)
     }
 
+    #[instrument(level = "debug", skip(self), fields(path = %path.display()))]
     pub fn import_file(&self, path: &Path) -> Result<ImportReport> {
         files::check_path(path)?;
         let bytes = files::read_bounded(path, files::MAX_INPUT_FILE_BYTES)?;
@@ -160,6 +179,7 @@ impl Keyring {
 
     /// Imports keys or revocations. Fails only when nothing was applied; a
     /// partial import succeeds with [`ImportReport::is_partial`] set.
+    #[instrument(level = "debug", skip(self, bytes), fields(bytes = bytes.len()))]
     pub fn import(&self, bytes: &[u8]) -> Result<ImportReport> {
         let mut session = self.session()?;
         let result = session.import(bytes)?;
@@ -202,46 +222,82 @@ impl Keyring {
                 failed: report.failed,
             });
         }
+        info!(
+            imported = report.imported,
+            unchanged = report.unchanged,
+            failed = report.failed,
+            first_key = ?report.first_key,
+            "Keyring: imported key material"
+        );
         Ok(report)
     }
 
     /// The armored public key, ready to paste or share.
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn public_key_armored(&self, fingerprint: &Fingerprint) -> Result<String> {
         let mut session = self.session()?;
         session.require(fingerprint)?;
         let bytes = session.export(fingerprint, ExportMode::empty())?;
-        String::from_utf8(bytes.to_vec()).map_err(|_| Error::Unconfirmed(Unconfirmed::NotUtf8))
+        let armored = String::from_utf8(bytes.to_vec())
+            .map_err(|_| Error::Unconfirmed(Unconfirmed::NotUtf8))?;
+        debug!(
+            bytes = armored.len(),
+            "Keyring: exported armored public key"
+        );
+        Ok(armored)
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, path = %path.display())
+    )]
     pub fn export_public_to(&self, fingerprint: &Fingerprint, path: &Path) -> Result<Published> {
         files::check_path(path)?;
         let mut session = self.session()?;
         session.require(fingerprint)?;
         let bytes = session.export(fingerprint, ExportMode::empty())?;
-        Ok(files::publish_new(
-            path,
-            &bytes,
-            self.resolved_home().as_deref(),
-        )?)
+        let published = files::publish_new(path, &bytes, self.resolved_home().as_deref())?;
+        info!(
+            fingerprint = %fingerprint,
+            durable = published.durable,
+            "Keyring: exported public key"
+        );
+        Ok(published)
     }
 
     /// Writes the armored secret key to a new owner-only file. The secret
     /// bytes stay in protected memory and are never returned.
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, path = %path.display())
+    )]
     pub fn backup_secret_to(&self, fingerprint: &Fingerprint, path: &Path) -> Result<Published> {
         files::check_path(path)?;
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
         backend::require_secret(&key, fingerprint)?;
         let bytes = session.export(fingerprint, ExportMode::SECRET)?;
-        Ok(files::publish_new(
-            path,
-            &bytes,
-            self.resolved_home().as_deref(),
-        )?)
+        let published = files::publish_new(path, &bytes, self.resolved_home().as_deref())?;
+        info!(
+            fingerprint = %fingerprint,
+            durable = published.durable,
+            "Keyring: backed up secret key"
+        );
+        Ok(published)
     }
 
     /// Imports a key from a keyserver, or refreshes it when already present.
     /// Without `keyserver`, GnuPG's configured sources are used.
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(
+            fingerprint = %fingerprint,
+            keyserver = keyserver.map_or("default", Keyserver::as_str)
+        )
+    )]
     pub fn fetch(
         &self,
         fingerprint: &Fingerprint,
@@ -262,17 +318,26 @@ impl Keyring {
         self.gpg(&session).run_batch(&arguments)?;
 
         let mut verification = self.session()?;
-        match verification.find(fingerprint)? {
-            Some(_) if present => Ok(Fetched::Refreshed),
-            Some(_) => Ok(Fetched::Imported),
-            None => Err(Error::Unconfirmed(Unconfirmed::NotFetched(
-                fingerprint.clone(),
-            ))),
-        }
+        let fetched = match verification.find(fingerprint)? {
+            Some(_) if present => Fetched::Refreshed,
+            Some(_) => Fetched::Imported,
+            None => {
+                return Err(Error::Unconfirmed(Unconfirmed::NotFetched(
+                    fingerprint.clone(),
+                )));
+            }
+        };
+        info!(
+            fingerprint = %fingerprint,
+            refreshed = matches!(fetched, Fetched::Refreshed),
+            "Keyring: fetched key"
+        );
+        Ok(fetched)
     }
 
     // Key management
 
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn change_passphrase(&self, fingerprint: &Fingerprint) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -280,9 +345,16 @@ impl Keyring {
         session
             .context
             .change_key_passphrase(&key)
-            .map_err(gpg(Step::ChangePassphrase))
+            .map_err(gpg(Step::ChangePassphrase))?;
+        info!(fingerprint = %fingerprint, "Keyring: changed key passphrase");
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self, target),
+        fields(fingerprint = %fingerprint)
+    )]
     pub fn set_expiry(
         &self,
         fingerprint: &Fingerprint,
@@ -306,9 +378,20 @@ impl Keyring {
         session
             .context
             .set_expire(&key, expires, subkeys.iter().map(Fingerprint::as_str))
-            .map_err(gpg(Step::SetExpiry))
+            .map_err(gpg(Step::SetExpiry))?;
+        info!(
+            fingerprint = %fingerprint,
+            subkeys = subkeys.len(),
+            "Keyring: updated key expiry"
+        );
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self, user_id),
+        fields(fingerprint = %fingerprint)
+    )]
     pub fn add_user_id(&self, fingerprint: &Fingerprint, user_id: &UserId) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -319,9 +402,16 @@ impl Keyring {
         session
             .context
             .add_uid(&key, user_id.as_str())
-            .map_err(gpg(Step::AddUserId))
+            .map_err(gpg(Step::AddUserId))?;
+        info!(fingerprint = %fingerprint, "Keyring: added user ID");
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self, user_id),
+        fields(fingerprint = %fingerprint)
+    )]
     pub fn set_primary_user_id(&self, fingerprint: &Fingerprint, user_id: &UserId) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -330,9 +420,16 @@ impl Keyring {
         session
             .context
             .set_primary_uid(&key, user_id.as_str())
-            .map_err(gpg(Step::SetPrimaryUserId))
+            .map_err(gpg(Step::SetPrimaryUserId))?;
+        info!(fingerprint = %fingerprint, "Keyring: set primary user ID");
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self, user_id),
+        fields(fingerprint = %fingerprint)
+    )]
     pub fn revoke_user_id(&self, fingerprint: &Fingerprint, user_id: &UserId) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -341,9 +438,16 @@ impl Keyring {
         session
             .context
             .revoke_uid(&key, user_id.as_str())
-            .map_err(gpg(Step::RevokeUserId))
+            .map_err(gpg(Step::RevokeUserId))?;
+        info!(fingerprint = %fingerprint, "Keyring: revoked user ID");
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, usage = ?usage)
+    )]
     pub fn add_subkey(
         &self,
         fingerprint: &Fingerprint,
@@ -363,9 +467,20 @@ impl Keyring {
             .context
             .create_subkey_with_flags(&key, "default", expires, with_expiry(flags, expiry))
             .map(drop)
-            .map_err(gpg(Step::AddSubkey))
+            .map_err(gpg(Step::AddSubkey))?;
+        info!(
+            fingerprint = %fingerprint,
+            usage = ?usage,
+            "Keyring: added subkey"
+        );
+        Ok(())
     }
 
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, subkey = %subkey)
+    )]
     pub fn revoke_subkey(&self, fingerprint: &Fingerprint, subkey: &Fingerprint) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -393,10 +508,20 @@ impl Keyring {
                 subkey.clone(),
             )));
         }
+        info!(
+            fingerprint = %fingerprint,
+            subkey = %subkey,
+            "Keyring: revoked subkey"
+        );
         Ok(())
     }
 
     /// Saves a revocation certificate to keep offline, without revoking.
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, path = %path.display())
+    )]
     pub fn write_revocation_certificate(
         &self,
         fingerprint: &Fingerprint,
@@ -407,15 +532,18 @@ impl Keyring {
         let key = session.require(fingerprint)?;
         backend::require_own_primary(&key, fingerprint)?;
         let certificate = self.revocation_certificate(&session, fingerprint)?;
-        Ok(files::publish_new(
-            path,
-            &certificate,
-            self.resolved_home().as_deref(),
-        )?)
+        let published = files::publish_new(path, &certificate, self.resolved_home().as_deref())?;
+        info!(
+            fingerprint = %fingerprint,
+            durable = published.durable,
+            "Keyring: wrote revocation certificate"
+        );
+        Ok(published)
     }
 
     /// Revokes the key in the local keyring. Publishing the revocation is a
     /// separate, explicit step.
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn revoke_key(&self, fingerprint: &Fingerprint) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -429,11 +557,22 @@ impl Keyring {
                 fingerprint.clone(),
             )));
         }
+        info!(fingerprint = %fingerprint, "Keyring: revoked key locally");
         Ok(())
     }
 
     /// Certifies `user_ids` of another key with the user's own `signer`.
     /// Returns how many user IDs were certified.
+    #[instrument(
+        level = "debug",
+        skip(self, user_ids),
+        fields(
+            target = %target,
+            signer = %signer,
+            user_ids = user_ids.len(),
+            kind = ?kind
+        )
+    )]
     pub fn certify(
         &self,
         target: &Fingerprint,
@@ -487,9 +626,63 @@ impl Keyring {
                 flags,
             )
             .map_err(gpg(Step::Certify))?;
+        info!(
+            target = %target,
+            signer = %signer,
+            user_ids = user_ids.len(),
+            "Keyring: certified user IDs"
+        );
         Ok(user_ids.len())
     }
 
+    /// Records in GnuPG that `fingerprint` is the user's own key (ultimate ownertrust).
+    /// GnuPG refuses to encrypt to a key whose ownertrust is unknown, which is how a key
+    /// that arrives from another device starts. Only keys whose private part is here
+    /// qualify, and the user must ask for it: nothing grants this trust implicitly.
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
+    pub fn mark_as_own(&self, fingerprint: &Fingerprint) -> Result<()> {
+        let mut session = self.session()?;
+        let key = session.require(fingerprint)?;
+        backend::require_secret(&key, fingerprint)?;
+        if key.owner_trust() == gpgme::Validity::Ultimate {
+            debug!(
+                fingerprint = %fingerprint,
+                "Keyring: key already carried ultimate ownertrust"
+            );
+            return Ok(());
+        }
+        // `--import-ownertrust` reads a file of `FINGERPRINT:6:` lines; 6 is ultimate.
+        let folder = files::private_temp_dir(".kryptopass-ownertrust-")?;
+        let path = folder.path().join("ownertrust.txt");
+        std::fs::write(&path, format!("{}:6:\n", fingerprint.as_str())).map_err(|source| {
+            crate::error::FileError::Write {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        let argument =
+            path.to_str()
+                .ok_or(Error::Unconfirmed(Unconfirmed::OwnerTrustNotApplied(
+                    fingerprint.clone(),
+                )))?;
+        self.gpg(&session)
+            .run_batch(&["--import-ownertrust", argument])?;
+        match self.session()?.find(fingerprint)? {
+            Some(updated) if updated.owner_trust() == gpgme::Validity::Ultimate => {
+                info!(fingerprint = %fingerprint, "Keyring: marked key as own");
+                Ok(())
+            }
+            _ => Err(Error::Unconfirmed(Unconfirmed::OwnerTrustNotApplied(
+                fingerprint.clone(),
+            ))),
+        }
+    }
+
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, scope = ?scope)
+    )]
     pub fn delete(&self, fingerprint: &Fingerprint, scope: DeleteScope) -> Result<()> {
         let mut session = self.session()?;
         let key = session.require(fingerprint)?;
@@ -509,7 +702,14 @@ impl Keyring {
                     fingerprint.as_str(),
                 ])?;
                 match self.session()?.find(fingerprint)? {
-                    Some(remaining) if !remaining.has_secret() => Ok(()),
+                    Some(remaining) if !remaining.has_secret() => {
+                        info!(
+                            fingerprint = %fingerprint,
+                            scope = ?scope,
+                            "Keyring: deleted key material"
+                        );
+                        Ok(())
+                    }
                     Some(_) => Err(Error::Unconfirmed(Unconfirmed::SecretStillPresent(
                         fingerprint.clone(),
                     ))),
@@ -532,12 +732,22 @@ impl Keyring {
                         fingerprint.clone(),
                     )));
                 }
+                info!(
+                    fingerprint = %fingerprint,
+                    scope = ?scope,
+                    "Keyring: deleted key material"
+                );
                 Ok(())
             }
         }
     }
 
     /// gpg's pre-generated certificate when present, a fresh one otherwise.
+    #[instrument(
+        level = "trace",
+        skip(self, session),
+        fields(fingerprint = %fingerprint)
+    )]
     fn revocation_certificate(
         &self,
         session: &Session,
@@ -546,10 +756,21 @@ impl Keyring {
         if let Some(home) = self.resolved_home() {
             let path = revocation::stored_certificate_path(&home, fingerprint.as_str());
             if let Some(certificate) = revocation::read_stored_certificate(&path)? {
+                debug!(
+                    fingerprint = %fingerprint,
+                    origin = "stored",
+                    "Keyring: loaded revocation certificate"
+                );
                 return Ok(certificate);
             }
         }
-        self.gpg(session).generate_revocation(fingerprint)
+        let certificate = self.gpg(session).generate_revocation(fingerprint)?;
+        debug!(
+            fingerprint = %fingerprint,
+            origin = "generated",
+            "Keyring: loaded revocation certificate"
+        );
+        Ok(certificate)
     }
 }
 

@@ -116,12 +116,34 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: Kirigami.Units.largeSpacing
         Layout.rightMargin: Kirigami.Units.largeSpacing
+        visible: !!root.selectedKey?.needsOwnTrust
+        type: Kirigami.MessageType.Warning
+        text: qsTr("GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.")
+        actions: [
+            Kirigami.Action {
+                text: qsTr("Marcar como mía…")
+                icon.name: "security-high"
+                enabled: root.operationAvailable
+                onTriggered: root.operationDialog.openFor("markAsOwn", root.selectedKey.id)
+            }
+        ]
+    }
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.largeSpacing
+        Layout.rightMargin: Kirigami.Units.largeSpacing
         visible: !!root.keyStore.controller.operationError && !root.operationDialog.opened && !onlineDialog.opened
         type: Kirigami.MessageType.Error
         text: root.keyStore.controller.operationError
     }
     Controls.Menu {
         id: administrationMenu
+        Controls.MenuItem {
+            visible: !!root.selectedKey?.needsOwnTrust
+            text: qsTr("Marcar como mía…")
+            icon.name: "security-high"
+            onTriggered: root.operationDialog.openFor("markAsOwn", root.selectedKey.id)
+        }
         Controls.MenuItem {
             visible: !!root.selectedKey?.hasSecret
             text: qsTr("Guardar respaldo privado…")

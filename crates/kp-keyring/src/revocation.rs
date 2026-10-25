@@ -12,6 +12,7 @@ use std::{
 
 use gpgme::{Context, InteractionStatus, Interactor, Key};
 use kryptopass_secure_memory::SensitiveBytes;
+use tracing::{debug, instrument, trace};
 
 use crate::{
     backend::MAX_KEY_BLOB_BYTES,
@@ -108,6 +109,7 @@ fn parse_status_line(line: &[u8]) -> Result<Option<(&str, &str)>, CommandError> 
 }
 
 /// Revokes subkey number `index` (1-based, as `gpg --edit-key` counts).
+#[instrument(level = "debug", skip(context, key), fields(index = index))]
 pub(crate) fn revoke_subkey(context: &mut Context, key: &Key, index: usize) -> Result<()> {
     let state = Arc::new(Mutex::new(0usize));
     let interactor = SubkeyRevocation {
@@ -126,6 +128,7 @@ pub(crate) fn revoke_subkey(context: &mut Context, key: &Key, index: usize) -> R
     if step < SUBKEY_DIALOGUE_STEPS {
         return Err(CommandError::Protocol("gpg ended before saving the revocation").into());
     }
+    debug!("Keyring: revoked subkey through GPGME");
     Ok(())
 }
 
@@ -179,12 +182,20 @@ pub(crate) fn stored_certificate_path(home: &Path, fingerprint: &str) -> PathBuf
 }
 
 /// Reads gpg's pre-generated certificate, or `None` when it does not exist.
+#[instrument(
+    level = "trace",
+    skip_all,
+    fields(path = %path.display())
+)]
 pub(crate) fn read_stored_certificate(path: &Path) -> Result<Option<SensitiveBytes>> {
     if let Some(folder) = path.parent() {
         match fs::symlink_metadata(folder) {
             Ok(metadata) if metadata.file_type().is_dir() => {}
             Ok(_) => return Err(FileError::NotRegular(folder.to_owned()).into()),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                trace!("Keyring: no stored revocation certificate");
+                return Ok(None);
+            }
             Err(source) => {
                 return Err(FileError::Open {
                     path: folder.to_owned(),
@@ -197,10 +208,15 @@ pub(crate) fn read_stored_certificate(path: &Path) -> Result<Option<SensitiveByt
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_file() => {
             let raw = files::read_bounded(path, MAX_KEY_BLOB_BYTES as u64)?;
-            normalize_certificate(&raw).map(Some)
+            let certificate = normalize_certificate(&raw)?;
+            trace!("Keyring: loaded stored revocation certificate");
+            Ok(Some(certificate))
         }
         Ok(_) => Err(FileError::NotRegular(path.to_owned()).into()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            trace!("Keyring: no stored revocation certificate");
+            Ok(None)
+        }
         Err(source) => Err(FileError::Open {
             path: path.to_owned(),
             source,
@@ -211,6 +227,7 @@ pub(crate) fn read_stored_certificate(path: &Path) -> Result<Option<SensitiveByt
 
 /// Extracts the single armored block from gpg's certificate file, whose
 /// comment lines and `:` escape before the block are dropped.
+#[instrument(level = "trace", skip_all, fields(bytes = raw.len()))]
 pub(crate) fn normalize_certificate(raw: &[u8]) -> Result<SensitiveBytes> {
     let begin = single_position(raw, BEGIN.as_bytes())?;
     let end = single_position(raw, END.as_bytes())?;
@@ -219,6 +236,10 @@ pub(crate) fn normalize_certificate(raw: &[u8]) -> Result<SensitiveBytes> {
     }
     let block = &raw[begin..end + END.len()];
     validate_armor(block)?;
+    trace!(
+        bytes = block.len(),
+        "Keyring: normalized revocation certificate"
+    );
     Ok(SensitiveBytes::from(block))
 }
 

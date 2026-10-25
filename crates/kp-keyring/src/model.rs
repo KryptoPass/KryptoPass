@@ -11,6 +11,9 @@ pub struct KeyInfo {
     /// The primary key first, then its subkeys, in GnuPG's order.
     pub subkeys: Vec<SubkeyInfo>,
     pub has_secret: bool,
+    /// GnuPG's ownertrust for the key. A key whose private part is here but whose
+    /// ownertrust is not `Ultimate` is refused as an encryption recipient.
+    pub owner_trust: Validity,
     pub can_encrypt: bool,
     pub can_sign: bool,
     pub can_certify: bool,
@@ -32,6 +35,7 @@ impl KeyInfo {
             user_ids: key.user_ids().map(UserIdInfo::from_gpgme).collect(),
             subkeys: key.subkeys().map(SubkeyInfo::from_gpgme).collect(),
             has_secret: key.has_secret(),
+            owner_trust: Validity::from_gpgme(key.owner_trust()),
             can_encrypt: key.can_encrypt(),
             can_sign: key.can_sign(),
             can_certify: key.can_certify(),

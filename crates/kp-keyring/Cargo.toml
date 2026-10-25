@@ -16,6 +16,7 @@ kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
 gpgme = { version = "0.11", features = ["v1_15"] }
 tempfile = "3.27"
 thiserror = "2.0"
+tracing = "0.1"
 url = "2.5"
 
 [target.'cfg(unix)'.dependencies]

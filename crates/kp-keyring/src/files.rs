@@ -7,6 +7,7 @@ use std::{
 };
 
 use kryptopass_secure_memory::SensitiveBytes;
+use tracing::{debug, instrument, trace};
 
 use crate::{backend::MAX_KEY_BLOB_BYTES, error::FileError, types::Published};
 
@@ -23,6 +24,11 @@ pub(crate) fn check_path(path: &Path) -> Result<(), crate::error::InvalidInput> 
 
 /// Reads a regular file without following a final symlink, into protected
 /// memory, and refuses anything larger than `limit`.
+#[instrument(
+    level = "trace",
+    skip_all,
+    fields(path = %path.display(), limit = limit)
+)]
 pub(crate) fn read_bounded(path: &Path, limit: u64) -> Result<SensitiveBytes, FileError> {
     let mut options = OpenOptions::new();
     options.read(true);
@@ -58,6 +64,7 @@ pub(crate) fn read_bounded(path: &Path, limit: u64) -> Result<SensitiveBytes, Fi
     if bytes.len() as u64 > limit {
         return Err(FileError::TooLarge(path.to_owned()));
     }
+    trace!(bytes = bytes.len(), "Keyring: read bounded file");
     Ok(bytes)
 }
 
@@ -65,6 +72,11 @@ pub(crate) fn read_bounded(path: &Path, limit: u64) -> Result<SensitiveBytes, Fi
 ///
 /// The content is fully written and synced to a mode-0600 temporary in the
 /// same folder before it appears under its final name.
+#[instrument(
+    level = "debug",
+    skip(bytes),
+    fields(path = %path.display(), bytes = bytes.len())
+)]
 pub(crate) fn publish_new(
     path: &Path,
     bytes: &[u8],
@@ -115,6 +127,7 @@ pub(crate) fn publish_new(
     let durable = File::open(&parent)
         .and_then(|folder| folder.sync_all())
         .is_ok();
+    debug!(durable, "Keyring: published file");
     Ok(Published {
         path: destination,
         durable,
@@ -148,9 +161,12 @@ fn reject_protected(
 }
 
 /// A private, mode-0700 folder that is removed when dropped.
+#[instrument(level = "trace")]
 pub(crate) fn private_temp_dir(prefix: &str) -> Result<tempfile::TempDir, FileError> {
-    tempfile::Builder::new()
+    let folder = tempfile::Builder::new()
         .prefix(prefix)
         .tempdir()
-        .map_err(FileError::Temporary)
+        .map_err(FileError::Temporary)?;
+    trace!(path = %folder.path().display(), "Keyring: created private temporary folder");
+    Ok(folder)
 }

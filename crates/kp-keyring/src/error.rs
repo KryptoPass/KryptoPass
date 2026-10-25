@@ -119,6 +119,8 @@ pub enum Unconfirmed {
     PublicPartDeleted(Fingerprint),
     #[error("the source did not return {0}")]
     NotFetched(Fingerprint),
+    #[error("GnuPG did not record the ownertrust of {0}")]
+    OwnerTrustNotApplied(Fingerprint),
     #[error("GnuPG returned no fingerprint for a new key")]
     MissingFingerprint,
     #[error("GnuPG produced no data")]

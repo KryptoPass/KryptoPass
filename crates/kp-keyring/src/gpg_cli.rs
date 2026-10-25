@@ -10,6 +10,7 @@ use std::{
 };
 
 use kryptopass_secure_memory::SensitiveBytes;
+use tracing::{debug, instrument};
 
 use crate::{
     backend::MAX_KEY_BLOB_BYTES,
@@ -44,6 +45,11 @@ impl Gpg {
     }
 
     /// Runs a batch command whose output is discarded.
+    #[instrument(
+        level = "debug",
+        skip(self, arguments),
+        fields(program = %self.program.display(), arguments = ?arguments)
+    )]
     pub fn run_batch(&self, arguments: &[&str]) -> Result<(), CommandError> {
         let mut child = self
             .command()
@@ -62,14 +68,18 @@ impl Gpg {
         let status = wait_with_timeout(&mut child, COMMAND_TIMEOUT);
         let drained = drain.join();
         let status = status?;
+        let success = status.success();
         drained
             .map_err(|_| CommandError::Protocol("stderr reader panicked"))?
             .map_err(CommandError::Io)?;
-        exit_ok(status)
+        let result = exit_ok(status);
+        debug!(success, "Keyring: gpg batch command finished");
+        result
     }
 
     /// Asks gpg for a revocation certificate, answering its fixed dialogue
     /// with reason "no reason specified". Pinentry may prompt for the key.
+    #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn generate_revocation(&self, fingerprint: &Fingerprint) -> Result<SensitiveBytes> {
         let folder = files::private_temp_dir(".kryptopass-revocation-")?;
         let output = folder.path().join("revocation.asc");
@@ -108,7 +118,12 @@ impl Gpg {
         dialogue.map_err(|_| CommandError::Protocol("dialogue driver panicked"))??;
 
         let raw = files::read_bounded(&output, MAX_KEY_BLOB_BYTES as u64)?;
-        revocation::normalize_certificate(&raw)
+        let certificate = revocation::normalize_certificate(&raw)?;
+        debug!(
+            bytes = certificate.len(),
+            "Keyring: generated revocation certificate"
+        );
+        Ok(certificate)
     }
 }
 

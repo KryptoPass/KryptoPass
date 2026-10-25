@@ -89,6 +89,9 @@ pub(super) enum Request {
         fingerprint: Fingerprint,
         scope: DeleteScope,
     },
+    MarkAsOwn {
+        fingerprint: Fingerprint,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -150,6 +153,8 @@ enum RawRequest {
         #[serde(default)]
         keyserver: String,
     },
+    #[serde(rename = "markAsOwn")]
+    MarkAsOwn { fingerprint: String },
     #[serde(rename = "delete")]
     Delete {
         fingerprint: String,
@@ -317,6 +322,9 @@ fn validate(raw: RawRequest) -> Result<Request, InvalidInput> {
                 "" => None,
                 value => Some(Keyserver::parse(value)?),
             },
+        },
+        RawRequest::MarkAsOwn { fingerprint: value } => Request::MarkAsOwn {
+            fingerprint: fingerprint(&value)?,
         },
         RawRequest::Delete {
             fingerprint: value,

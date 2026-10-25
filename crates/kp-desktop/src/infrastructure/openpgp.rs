@@ -188,7 +188,7 @@ const MAX_TRANSFER_KEY_BYTES: usize = 1024 * 1024;
 /// Largest encrypted challenge accepted by the offer.
 const MAX_TRANSFER_CHALLENGE_BYTES: usize = 16 * 1024;
 
-/// Exports the protected secret key of the vault identity from the user's
+/// Exports the protected secret key of the selected identity from the user's
 /// GnuPG keyring and encrypts a fresh challenge to it.
 ///
 /// The cached passphrase is forgotten first, so gpg-agent always asks for it in
@@ -196,7 +196,7 @@ const MAX_TRANSFER_CHALLENGE_BYTES: usize = 16 * 1024;
 /// while the vault is unlocked. Afterwards the vault asks for the passphrase
 /// again on its next decryption. The exported block stays protected by that
 /// same passphrase; no temporary export file is created.
-pub(crate) fn prepare_vault_identity_transfer(
+pub(crate) fn prepare_private_key_transfer(
     fingerprint: &KeyFingerprint,
 ) -> Result<SyntheticTransferMaterial> {
     let fingerprint_bytes = decode_fingerprint(fingerprint.as_str())?;
@@ -206,10 +206,10 @@ pub(crate) fn prepare_vault_identity_transfer(
     let mut context = open_context()?;
     let key = context
         .get_secret_key(fingerprint.as_str())
-        .map_err(|_| anyhow::anyhow!("the vault identity has no secret key in GnuPG"))?;
+        .map_err(|_| anyhow::anyhow!("the selected identity has no secret key in GnuPG"))?;
     let stored = key
         .fingerprint()
-        .map_err(|_| anyhow::anyhow!("the vault identity is invalid"))?;
+        .map_err(|_| anyhow::anyhow!("the selected identity is invalid"))?;
     if !stored.eq_ignore_ascii_case(fingerprint.as_str())
         || key.protocol() != Protocol::OpenPgp
         || key.is_bad()
@@ -219,7 +219,7 @@ pub(crate) fn prepare_vault_identity_transfer(
             .subkeys()
             .any(|subkey| subkey.can_encrypt() && !subkey.is_bad())
     {
-        bail!("the vault identity cannot be sent");
+        bail!("the selected identity cannot be sent");
     }
     // Fail closed: without a fresh prompt the export would not prove presence.
     GnuPgOpenPgp.forget_cached_passphrase(fingerprint)?;
@@ -230,10 +230,10 @@ pub(crate) fn prepare_vault_identity_transfer(
             .map_err(|_| anyhow::anyhow!("could not prepare the key export"))?;
         context
             .export_keys([&key], ExportMode::SECRET, &mut output)
-            .map_err(|_| anyhow::anyhow!("GnuPG did not export the vault identity"))?;
+            .map_err(|_| anyhow::anyhow!("GnuPG did not export the selected identity"))?;
     }
     if exported.is_empty() {
-        bail!("GnuPG did not export the vault identity");
+        bail!("GnuPG did not export the selected identity");
     }
     let protected_secret_key = zeroize::Zeroizing::new(exported.into_bytes());
 
@@ -241,7 +241,7 @@ pub(crate) fn prepare_vault_identity_transfer(
     getrandom::fill(&mut challenge[..])
         .map_err(|_| anyhow::anyhow!("could not create the transfer challenge"))?;
     let recipients = RecipientSet::new(vec![fingerprint.clone()])
-        .map_err(|_| anyhow::anyhow!("the vault identity is not a valid recipient"))?;
+        .map_err(|_| anyhow::anyhow!("the selected identity is not a valid recipient"))?;
     let encrypted_challenge = encrypt_bounded_in_context(
         &mut context,
         &challenge[..],
@@ -758,10 +758,46 @@ fn encrypt_bounded_in_context(
         .map_err(|_| anyhow::anyhow!("could not prepare bounded OpenPGP output"))?;
     let encryption_result = context.encrypt_with_flags(keys.iter(), plaintext, &mut output, flags);
     drop(output);
-    let result = encryption_result.map_err(|_| anyhow::anyhow!("OpenPGP encryption failed"))?;
-
-    if result.invalid_recipients().next().is_some() || ciphertext.is_empty() {
-        bail!("OpenPGP encryption did not accept every selected recipient");
+    // The cause is rarely the plaintext: GnuPG refuses recipients it cannot use. Name the
+    // keys that are the user's own but not trusted as such, since the keyring manager can
+    // fix exactly that, and say so in the error instead of hiding it.
+    let untrusted_own: Vec<String> = keys
+        .iter()
+        .filter(|key| key.has_secret() && key.owner_trust() != gpgme::Validity::Ultimate)
+        .filter_map(|key| key.fingerprint().ok().map(str::to_owned))
+        .collect();
+    let refusal = |detail: String| -> anyhow::Error {
+        if let Some(fingerprint) = untrusted_own.first() {
+            tracing::warn!(
+                key = %short_fingerprint(fingerprint),
+                detail = %detail,
+                "OpenPGP encryption refused: the key is here with its private part but GnuPG does not trust it as the user's own"
+            );
+            anyhow::anyhow!(
+                "{}",
+                crate::i18n::format(
+                    "GnuPG no puede cifrar con la clave %1 porque no está marcada como tuya. Ábrela en Claves y pulsa «Marcar como mía».",
+                    std::slice::from_ref(fingerprint),
+                )
+            )
+        } else {
+            tracing::warn!(detail = %detail, recipients = keys.len(), "OpenPGP encryption failed");
+            anyhow::anyhow!("OpenPGP encryption failed: {detail}")
+        }
+    };
+    let result = match encryption_result {
+        Ok(result) => result,
+        Err(error) => return Err(refusal(error.to_string())),
+    };
+    if let Some(invalid) = result.invalid_recipients().next() {
+        let detail = match invalid.reason() {
+            Some(error) => format!("recipient refused: {error}"),
+            None => "recipient refused".to_owned(),
+        };
+        return Err(refusal(detail));
+    }
+    if ciphertext.is_empty() {
+        return Err(refusal("empty ciphertext".to_owned()));
     }
     Ok(ciphertext.into_bytes())
 }
@@ -907,3 +943,8 @@ fn load_encryption_key(context: &mut Context, fingerprint: &KeyFingerprint) -> R
 
 /// Receiving the vault identity from a paired phone (key transfer v3).
 pub(crate) mod inbound_key;
+
+/// Last 16 hex digits of a fingerprint: enough to tell keys apart in a log.
+fn short_fingerprint(fingerprint: &str) -> &str {
+    &fingerprint[fingerprint.len().saturating_sub(16)..]
+}

@@ -4,6 +4,7 @@ use std::{io::Cursor, path::Path};
 
 use gpgme::{Context, Data, ExportMode, Key, KeyListMode, PinentryMode, Protocol};
 use kryptopass_secure_memory::SensitiveBytes;
+use tracing::{debug, instrument, trace};
 
 use crate::{
     error::{Error, InvalidInput, Result, Step, Unconfirmed, gpg},
@@ -23,6 +24,7 @@ pub(crate) struct Session {
 }
 
 impl Session {
+    #[instrument(level = "trace", skip(home), fields(home = ?home))]
     pub fn open(home: Option<&Path>) -> Result<Self> {
         let mut context =
             Context::from_protocol(Protocol::OpenPgp).map_err(gpg(Step::OpenContext))?;
@@ -32,31 +34,41 @@ impl Session {
                 .set_engine_home_dir(home)
                 .map_err(gpg(Step::OpenContext))?;
         }
-        let engine = context.engine_info();
-        if !engine.check_version(MINIMUM_GNUPG) {
-            return Err(Error::UnsupportedEngine {
-                found: engine.version().unwrap_or("unknown").to_owned(),
-                minimum: MINIMUM_GNUPG,
-            });
-        }
+        let version = {
+            let engine = context.engine_info();
+            if !engine.check_version(MINIMUM_GNUPG) {
+                return Err(Error::UnsupportedEngine {
+                    found: engine.version().unwrap_or("unknown").to_owned(),
+                    minimum: MINIMUM_GNUPG,
+                });
+            }
+            engine.version().unwrap_or("unknown").to_owned()
+        };
         context
             .set_pinentry_mode(PinentryMode::Ask)
             .map_err(gpg(Step::OpenContext))?;
         context
             .add_key_list_mode(KeyListMode::WITH_SECRET | KeyListMode::SIGS)
             .map_err(gpg(Step::OpenContext))?;
+        trace!(engine = %version, "Keyring: opened GPGME context");
         Ok(Self { context })
     }
 
     /// The key whose primary fingerprint is exactly `fingerprint`. A subkey
     /// fingerprint does not match, although GPGME would resolve it.
+    #[instrument(level = "trace", skip(self), fields(fingerprint = %fingerprint))]
     pub fn find(&mut self, fingerprint: &Fingerprint) -> Result<Option<Key>> {
         let key = match self.context.get_key(fingerprint.as_str()) {
             Ok(key) => key,
-            Err(error) if error.code() == gpgme::Error::EOF.code() => return Ok(None),
+            Err(error) if error.code() == gpgme::Error::EOF.code() => {
+                trace!("Keyring: key not found");
+                return Ok(None);
+            }
             Err(error) => return Err(gpg(Step::ListKeys)(error)),
         };
-        Ok((primary_fingerprint(&key).as_ref() == Some(fingerprint)).then_some(key))
+        let found = primary_fingerprint(&key).as_ref() == Some(fingerprint);
+        trace!(found, "Keyring: resolved primary key");
+        Ok(found.then_some(key))
     }
 
     pub fn require(&mut self, fingerprint: &Fingerprint) -> Result<Key> {
@@ -65,6 +77,11 @@ impl Session {
     }
 
     /// Exports into protected memory, refusing output beyond the blob limit.
+    #[instrument(
+        level = "debug",
+        skip(self),
+        fields(fingerprint = %fingerprint, mode = ?mode)
+    )]
     pub fn export(
         &mut self,
         fingerprint: &Fingerprint,
@@ -83,13 +100,20 @@ impl Session {
         if bytes.is_empty() {
             return Err(Error::Unconfirmed(Unconfirmed::EmptyOutput));
         }
+        debug!(bytes = bytes.len(), "Keyring: exported key material");
         Ok(bytes)
     }
 
+    #[instrument(level = "debug", skip(self, bytes), fields(bytes = bytes.len()))]
     pub fn import(&mut self, bytes: &[u8]) -> Result<gpgme::ImportResult> {
         let data = Data::from_reader(Cursor::new(bytes))
             .map_err(|error| gpg(Step::Import)(error.error()))?;
-        self.context.import(data).map_err(gpg(Step::Import))
+        let result = self.context.import(data).map_err(gpg(Step::Import))?;
+        debug!(
+            considered = result.considered(),
+            "Keyring: handed import data to GPGME"
+        );
+        Ok(result)
     }
 
     /// The path of the gpg binary GPGME drives, so the CLI matches it.

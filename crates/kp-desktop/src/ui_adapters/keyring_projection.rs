@@ -45,6 +45,10 @@ fn key_record(key: &KeyInfo) -> Value {
         "title": identity.and_then(|uid| uid.name.as_deref()).filter(|name| !name.is_empty()).map(str::to_owned).unwrap_or_else(|| crate::i18n::text(identity_title(identity))),
         "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
         "hasSecret": key.has_secret,
+        "ownerTrust": owner_trust_code(key.owner_trust),
+        // A key that is here with its private part but that GnuPG does not trust as the
+        // user's own cannot be an encryption recipient until the user marks it.
+        "needsOwnTrust": key.has_secret && key.owner_trust != Validity::Ultimate,
         "canEncrypt": can_encrypt,
         "canCertify": can_certify,
         "capabilities": capabilities(can_encrypt, can_sign, can_certify, can_authenticate),
@@ -269,3 +273,14 @@ fn signature_status_label(signature: &CertificationInfo) -> &'static str {
 #[cfg(test)]
 #[path = "../../tests/unit/ui_adapters/keyring_projection.rs"]
 mod tests;
+
+fn owner_trust_code(trust: Validity) -> &'static str {
+    match trust {
+        Validity::Ultimate => "ultimate",
+        Validity::Full => "full",
+        Validity::Marginal => "marginal",
+        Validity::Never => "never",
+        Validity::Undefined => "undefined",
+        Validity::Unknown => "unknown",
+    }
+}

@@ -19,6 +19,7 @@ pub enum Operation {
     RevokeKey,
     Certify,
     Delete,
+    MarkAsOwn,
 }
 
 /// Why an operation exists in KryptoPass.
@@ -32,7 +33,7 @@ pub enum Scope {
 }
 
 impl Operation {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::CreateKey,
         Self::Import,
         Self::ExportPublic,
@@ -49,6 +50,7 @@ impl Operation {
         Self::RevokeKey,
         Self::Certify,
         Self::Delete,
+        Self::MarkAsOwn,
     ];
 
     pub const fn scope(self) -> Scope {
@@ -57,7 +59,8 @@ impl Operation {
             | Self::Import
             | Self::ExportPublic
             | Self::BackupSecret
-            | Self::Fetch => Scope::Vault,
+            | Self::Fetch
+            | Self::MarkAsOwn => Scope::Vault,
             Self::ChangePassphrase
             | Self::SetExpiry
             | Self::AddUserId

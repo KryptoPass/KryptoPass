@@ -165,7 +165,8 @@ Controls.Dialog {
             revokeKey: qsTr("Revocar clave"),
             certify: qsTr("Certificar identidad"),
             refreshExternal: qsTr("Obtener o actualizar clave"),
-            delete: qsTr("Eliminar clave del llavero")
+            delete: qsTr("Eliminar clave del llavero"),
+            markAsOwn: qsTr("Marcar clave como mía")
         };
         return titles[action] || qsTr("Operación OpenPGP");
     }
@@ -188,7 +189,8 @@ Controls.Dialog {
             revokeKey: qsTr("Revocar clave"),
             certify: qsTr("Certificar identidad"),
             refreshExternal: qsTr("Obtener clave"),
-            delete: qsTr("Eliminar del llavero")
+            delete: qsTr("Eliminar del llavero"),
+            markAsOwn: qsTr("Marcar como mía")
         };
         return labels[action] || qsTr("Continuar");
     }
@@ -601,6 +603,12 @@ Controls.Dialog {
                 placeholderText: qsTr("Huella completa de 40 o 64 caracteres hexadecimales")
                 font: Kirigami.Theme.fixedWidthFont
                 Accessible.name: qsTr("Huella OpenPGP completa para recuperar una clave externa")
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: dialog.action === "markAsOwn"
+                text: qsTr("Esta clave tiene su parte privada en este equipo, pero GnuPG no sabe que es tuya y por eso se niega a cifrar con ella. Al marcarla como tuya, GnuPG le da confianza total (ultimate) en este llavero. Solo hazlo con claves que sean realmente tuyas. No se envía nada a otros dispositivos ni se revoca nada.")
+                wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true

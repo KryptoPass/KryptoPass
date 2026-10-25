@@ -130,6 +130,10 @@ fn unconfirmed(unconfirmed: &Unconfirmed) -> String {
             "GnuPG eliminó también la parte pública de %1; la operación quedó parcialmente aplicada.",
             value,
         ),
+        Unconfirmed::OwnerTrustNotApplied(value) => with(
+            "GnuPG no registró la confianza de la clave %1. Sigue sin poder cifrar con ella; revisa GnuPG e inténtalo de nuevo.",
+            value,
+        ),
         Unconfirmed::NotFetched(value) => with(
             "La fuente externa no devolvió la clave %1 solicitada.",
             value,

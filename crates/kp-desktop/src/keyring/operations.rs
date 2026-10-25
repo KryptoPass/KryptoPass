@@ -215,6 +215,32 @@ fn run(keyring: &Keyring, request: Request) -> kryptopass_keyring::Result<Operat
                 &fingerprint,
             )
         }
+        Request::MarkAsOwn { fingerprint } => {
+            tracing::info!(
+                key = %short(&fingerprint),
+                "Keyring: user asked to mark a key as own (ultimate ownertrust)"
+            );
+            match keyring.mark_as_own(&fingerprint) {
+                Ok(()) => {
+                    tracing::info!(key = %short(&fingerprint), "Keyring: key marked as own");
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        key = %short(&fingerprint),
+                        error = %error,
+                        "Keyring: could not mark the key as own"
+                    );
+                    return Err(error);
+                }
+            }
+            selected(
+                crate::i18n::format(
+                    "Clave %1 marcada como tuya: GnuPG ya puede cifrar con ella.",
+                    &[fingerprint.to_string()],
+                ),
+                &fingerprint,
+            )
+        }
         Request::Delete { fingerprint, scope } => {
             keyring.delete(&fingerprint, scope)?;
             let source = match scope {
@@ -230,6 +256,12 @@ fn run(keyring: &Keyring, request: Request) -> kryptopass_keyring::Result<Operat
             )
         }
     })
+}
+
+/// Last 16 hex digits of a fingerprint: enough to tell keys apart in a log.
+fn short(fingerprint: &Fingerprint) -> String {
+    let text = fingerprint.as_str();
+    text[text.len().saturating_sub(16)..].to_owned()
 }
 
 fn selected(message: String, fingerprint: &Fingerprint) -> OperationOutcome {
