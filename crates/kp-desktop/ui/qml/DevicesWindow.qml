@@ -9,6 +9,8 @@ Controls.ApplicationWindow {
     objectName: "devicesWindow"
     required property var controller
     required property var keyStore
+    // Desktop only exchanges changes with phones while its vault is unlocked.
+    property bool vaultLocked: false
     readonly property bool opened: visible
     readonly property bool available: controller.available
 

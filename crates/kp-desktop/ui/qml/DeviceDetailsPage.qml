@@ -276,6 +276,12 @@ Controls.ScrollView {
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
+                    visible: deviceRow.vaultSyncOn && deviceRow.host.vaultLocked
+                    type: Kirigami.MessageType.Warning
+                    text: qsTr("La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.")
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
                     visible: deviceRow.vaultSyncOn && deviceRow.host.controller.vaultSyncLockedKey.length > 0
                     type: Kirigami.MessageType.Warning
                     text: qsTr("La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.").arg(deviceRow.host.keyTitle(deviceRow.host.controller.vaultSyncLockedKey))

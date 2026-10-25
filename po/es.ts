@@ -4493,6 +4493,10 @@ Huella(s) detectadas:
       <translation>Aún no hay claves con parte privada en este equipo.</translation>
     </message>
     <message>
+      <source>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</source>
+      <translation>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</translation>
+    </message>
+    <message>
       <source>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</source>
       <translation>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</translation>
     </message>
