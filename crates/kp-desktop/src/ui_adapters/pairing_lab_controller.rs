@@ -1723,6 +1723,9 @@ impl qobject::PairingLabController {
             self.as_mut().set_sync_local_revision_count(0);
             self.as_mut().set_sync_entries(QStringList::default());
         }
+        // The vault mirror only runs for phones listed here, so read the Sync selection as
+        // soon as the peers are known instead of waiting for the devices window to open.
+        self.as_mut().refresh_vault_sync_peers();
     }
 
     pub fn start_pairing(self: Pin<&mut Self>) {
