@@ -3,7 +3,7 @@ use crate::{
     SYNC_MAX_HEADS, SYNC_MAX_LEDGER_CIPHERTEXT_BYTES, SYNC_MAX_LEDGER_REVISIONS, SYNC_MAX_PARENTS,
     SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, encode_batch, fresh_id,
 };
-use kryptopass_identity::{DeviceId, DeviceIdentity};
+use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity};
 use rusqlite::{Connection, OpenFlags, OptionalExtension, TransactionBehavior, params};
 use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -135,7 +135,7 @@ impl Ledger {
                 .load_revision(meta.revision_id)?
                 .ok_or(SyncError::InvalidLedger)?;
             validate_revision_shape(&revision, vault_id).map_err(|_| SyncError::InvalidLedger)?;
-            authorize_revision(&revision, trust).map_err(|error| match error {
+            authorize_stored_revision(&revision, trust).map_err(|error| match error {
                 SyncError::Storage => SyncError::Storage,
                 SyncError::UnknownAuthor => SyncError::UnknownAuthor,
                 SyncError::InvalidSignature => SyncError::InvalidSignature,
@@ -922,13 +922,28 @@ fn authorize_revision(revision: &Revision, trust: &dyn TrustSource) -> Result<()
     let identity = trust
         .lookup(revision.author_device_id)?
         .ok_or(SyncError::UnknownAuthor)?;
+    verify_author(revision, &identity)
+}
+
+/// Re-checks history already in the ledger; its author may have been forgotten.
+fn authorize_stored_revision(
+    revision: &Revision,
+    trust: &dyn TrustSource,
+) -> Result<(), SyncError> {
+    let identity = trust
+        .lookup_history(revision.author_device_id)?
+        .ok_or(SyncError::UnknownAuthor)?;
+    verify_author(revision, &identity)
+}
+
+fn verify_author(revision: &Revision, identity: &PublicIdentity) -> Result<(), SyncError> {
     if identity.device_id != revision.author_device_id {
         return Err(SyncError::InvalidSignature);
     }
     identity
         .validate()
         .map_err(|_| SyncError::InvalidSignature)?;
-    revision.verify(&identity)
+    revision.verify(identity)
 }
 
 fn same_revision(left: &Revision, right: &Revision) -> Result<bool, SyncError> {

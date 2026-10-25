@@ -20,6 +20,8 @@ pub const MAX_FRAME_SIZE: usize = 64 * 1024;
 pub const MAX_PAIRING_INVITE_SIZE: usize = 512;
 /// Maximum encoded payload, leaving room for its envelope.
 pub const MAX_PAYLOAD_SIZE: usize = MAX_FRAME_SIZE - 64;
+/// Most keys one device can declare in a `VaultKeys` message.
+pub const MAX_VAULT_KEYS: usize = 8;
 /// Maximum opaque bytes in one data chunk.
 pub const MAX_FRAGMENT_SIZE: usize = 48 * 1024;
 /// Maximum complete transfer size.
@@ -180,6 +182,8 @@ pub enum MessagePayload {
     SessionHello(proto::SessionHello),
     /// Active-session keepalive request.
     SessionPing(proto::SessionPing),
+    /// OpenPGP keys the peer holds private keys for.
+    VaultKeys(proto::VaultKeys),
     /// Active-session keepalive response.
     SessionPong(proto::SessionPong),
     /// Authenticated active-session closure.
@@ -215,6 +219,7 @@ impl fmt::Debug for MessagePayload {
             Self::SyntheticKeyAbort(_) => "SyntheticKeyAbort",
             Self::SessionHello(_) => "SessionHello",
             Self::SessionPing(_) => "SessionPing",
+            Self::VaultKeys(_) => "VaultKeys",
             Self::SessionPong(_) => "SessionPong",
             Self::SessionClose(_) => "SessionClose",
         };
@@ -550,6 +555,7 @@ fn message_type_name(message_type: proto::MessageType) -> &'static str {
         Type::SyntheticKeyAbort => "SyntheticKeyAbort",
         Type::SessionHello => "SessionHello",
         Type::SessionPing => "SessionPing",
+        Type::VaultKeys => "VaultKeys",
         Type::SessionPong => "SessionPong",
         Type::SessionClose => "SessionClose",
     }
@@ -662,6 +668,7 @@ fn decode_payload(type_value: i32, bytes: &[u8]) -> Result<MessagePayload, Proto
         ),
         Type::SessionHello => decode!(proto::SessionHello, SessionHello, validate_session_hello),
         Type::SessionPing => decode!(proto::SessionPing, SessionPing, validate_session_ping),
+        Type::VaultKeys => decode!(proto::VaultKeys, VaultKeys, validate_vault_keys),
         Type::SessionPong => decode!(proto::SessionPong, SessionPong, validate_session_pong),
         Type::SessionClose => decode!(proto::SessionClose, SessionClose, validate_session_close),
     })
@@ -672,6 +679,7 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
         Ok(proto::MessageType::SyncManifest) => Some((2_u64, 1024_usize)),
         Ok(proto::MessageType::SyncRequest) => Some((2, 256)),
         Ok(proto::MessageType::SyncConflict) => Some((2, 16)),
+        Ok(proto::MessageType::VaultKeys) => Some((1, MAX_VAULT_KEYS)),
         Ok(_) => None,
         Err(_) => return Err(ProtocolError::UnknownMessageType { value: type_value }),
     };
@@ -688,7 +696,7 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
     let mut offset = 0usize;
     let mut repeated_count = 0usize;
     let is_session_hello = type_value == proto::MessageType::SessionHello as i32;
-    let mut capabilities_seen = [false; 3];
+    let mut capabilities_seen = [false; 4];
     while offset < payload.len() {
         let key = read_varint(payload, &mut offset, type_value)?;
         let field = key >> 3;
@@ -698,7 +706,7 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
                 message_type: type_value,
             });
         }
-        let session_capability = is_session_hello && (4..=6).contains(&field);
+        let session_capability = is_session_hello && (4..=7).contains(&field);
         if session_capability {
             let seen = &mut capabilities_seen[(field - 4) as usize];
             if wire != 0 || *seen {
@@ -885,10 +893,33 @@ fn validate_session_hello(value: &proto::SessionHello) -> Result<(), ProtocolErr
         });
     }
     require_id(&value.device_id, 32, "device_id")?;
+    if value.vault_keys_version > 1 {
+        return Err(ProtocolError::InvalidField {
+            field: "vault_keys_version",
+        });
+    }
     if value.reconnect_port > u32::from(u16::MAX) {
         return Err(ProtocolError::InvalidField {
             field: "reconnect_port",
         });
+    }
+    Ok(())
+}
+
+fn validate_vault_keys(value: &proto::VaultKeys) -> Result<(), ProtocolError> {
+    if value.openpgp_fingerprints.len() > MAX_VAULT_KEYS {
+        return Err(ProtocolError::InvalidField {
+            field: "openpgp_fingerprints",
+        });
+    }
+    let mut seen = HashSet::with_capacity(value.openpgp_fingerprints.len());
+    for fingerprint in &value.openpgp_fingerprints {
+        require_fingerprint(fingerprint)?;
+        if fingerprint.iter().all(|byte| *byte == 0) || !seen.insert(fingerprint.as_slice()) {
+            return Err(ProtocolError::InvalidField {
+                field: "openpgp_fingerprints",
+            });
+        }
     }
     Ok(())
 }

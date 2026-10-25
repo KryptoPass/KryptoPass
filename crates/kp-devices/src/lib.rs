@@ -44,6 +44,8 @@ use tokio::time::{Instant, sleep_until};
 pub const MAX_TRUSTED_DEVICES: usize = 1024;
 /// Active-session extension version understood by this implementation.
 pub const ACTIVE_SESSION_VERSION: u32 = 1;
+/// Session capability: the peer may declare its OpenPGP keys in `VaultKeys`.
+const VAULT_KEYS_VERSION: u32 = 1;
 /// Interval between keepalive requests when the previous request was answered.
 pub const SESSION_PING_INTERVAL: Duration = Duration::from_secs(3);
 /// Maximum time allowed for the outstanding keepalive request.
@@ -99,6 +101,7 @@ pub struct SyncSessionBinding {
     trust: Box<dyn TrustSource + Send>,
     openpgp_fingerprint: Vec<u8>,
     automatic_rounds: bool,
+    key_agnostic_hello: bool,
 }
 
 impl SyncSessionBinding {
@@ -114,7 +117,15 @@ impl SyncSessionBinding {
             trust,
             openpgp_fingerprint,
             automatic_rounds: false,
+            key_agnostic_hello: false,
         }
+    }
+
+    /// Accepts any valid OpenPGP fingerprint in the peer's hello (random-vault-ID bindings).
+    #[must_use]
+    pub fn with_key_agnostic_hello(mut self, enabled: bool) -> Self {
+        self.key_agnostic_hello = enabled;
+        self
     }
 
     /// Opts this binding into automatic follow-up rounds when both peers
@@ -219,6 +230,8 @@ pub struct DeviceDirectory {
 #[derive(Default)]
 struct DirectoryMutationState {
     next_generation: u64,
+    /// Keys each peer declared in `VaultKeys`, with the session generation that sent them.
+    peer_vault_keys: std::collections::HashMap<DeviceId, (u64, Vec<Vec<u8>>)>,
 }
 
 impl fmt::Debug for DeviceDirectory {
@@ -452,6 +465,50 @@ impl DeviceDirectory {
             .ok_or(DeviceDirectoryError::RevisionExhausted)?;
         self.snapshots.send_replace(Arc::new(next));
         Ok(())
+    }
+
+    /// Keeps the keys `peer` declared for this exact connection generation.
+    fn set_peer_vault_keys(
+        &self,
+        peer: &PublicIdentity,
+        generation: u64,
+        keys: Vec<Vec<u8>>,
+    ) -> Result<(), DeviceDirectoryError> {
+        let mut mutation = self.lock_mutations()?;
+        let current = self.snapshot();
+        current
+            .get(&peer.device_id)
+            .filter(|device| {
+                device.trust == TrustState::Trusted
+                    && device.identity == *peer
+                    && device.connection_generation == generation
+            })
+            .ok_or(DeviceDirectoryError::PeerNotTrusted)?;
+        mutation
+            .peer_vault_keys
+            .insert(peer.device_id, (generation, keys));
+        // Observers read the keys through the snapshot, so announce a new revision.
+        let mut next = (*current).clone();
+        next.revision = current
+            .revision
+            .checked_add(1)
+            .ok_or(DeviceDirectoryError::RevisionExhausted)?;
+        self.snapshots.send_replace(Arc::new(next));
+        Ok(())
+    }
+
+    /// Public fingerprints that `peer` declared holding private keys for, if its
+    /// current connection declared any. They are the peer's claim, used only to
+    /// narrow what Desktop offers to sync, never to authorize anything.
+    #[must_use]
+    pub fn peer_vault_keys(&self, peer: &DeviceId) -> Option<Vec<Vec<u8>>> {
+        let mutation = self.lock_mutations().ok()?;
+        let (generation, keys) = mutation.peer_vault_keys.get(peer)?;
+        let current = self.snapshot();
+        let device = current.get(peer)?;
+        (device.connection == ConnectionState::Connected
+            && device.connection_generation == *generation)
+            .then(|| keys.clone())
     }
 
     fn lock_mutations(
@@ -939,6 +996,8 @@ struct SyncRuntime {
     worker: Option<SyncWorker>,
     progress: watch::Sender<Option<SyncProgress>>,
     synthetic: SyntheticRuntime,
+    /// The peer advertised `VaultKeys` support, so it may send that message.
+    accepts_vault_keys: bool,
 }
 
 struct SyntheticRuntime {
@@ -1006,6 +1065,7 @@ fn spawn_sync_worker(
     let worker_cancelled = Arc::clone(&cancelled);
     tokio::task::spawn_blocking(move || {
         let continuous_rounds = continuous_rounds && binding.automatic_rounds;
+        let key_agnostic_hello = binding.key_agnostic_hello;
         let mut engine = match SyncSession::new(
             binding.ledger,
             binding.trust,
@@ -1020,6 +1080,7 @@ fn spawn_sync_worker(
                 return;
             }
         };
+        engine = engine.with_ignored_peer_key(key_agnostic_hello);
         if continuous_rounds {
             if let Err(error) = engine.enable_continuous_rounds() {
                 let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
@@ -1438,6 +1499,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                 remote_sync_version,
                 remote_sync_rounds_version,
                 remote_synthetic_version,
+                remote_vault_keys_version,
             )) if owner_directory.session_is_current(&expected_peer, generation) => {
                 if owner_directory
                     .update_connection_state_for_generation(
@@ -1519,6 +1581,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                         SyncRuntime {
                             worker: sync_worker,
                             progress: sync_progress_tx.clone(),
+                            accepts_vault_keys: remote_vault_keys_version == VAULT_KEYS_VERSION,
                             synthetic: SyntheticRuntime {
                                 actor: synthetic_actor,
                                 receiver: synthetic_receiver,
@@ -1598,7 +1661,7 @@ async fn exchange_session_hello<T: PeerTransport>(
     context: &SessionHelloContext<'_>,
     directory_changes: &mut watch::Receiver<Arc<DeviceDirectorySnapshot>>,
     commands: &mut mpsc::Receiver<SessionCommand>,
-) -> Result<(u16, u32, u32, u32), SessionExit> {
+) -> Result<(u16, u32, u32, u32, u32), SessionExit> {
     let hello_deadline = Instant::now() + SESSION_HELLO_TIMEOUT;
     if !context
         .directory
@@ -1619,6 +1682,7 @@ async fn exchange_session_hello<T: PeerTransport>(
         synthetic_key_transfer_version: context.synthetic_key_transfer_version,
         sync_version: context.sync_version,
         sync_rounds_version: context.sync_rounds_version,
+        vault_keys_version: VAULT_KEYS_VERSION,
     };
     let send = session.send_message(proto::MessageType::SessionHello, &hello);
     tokio::select! {
@@ -1664,6 +1728,7 @@ async fn exchange_session_hello<T: PeerTransport>(
                 hello.sync_version,
                 hello.sync_rounds_version,
                 hello.synthetic_key_transfer_version,
+                hello.vault_keys_version,
             ))
         }
         (proto::MessageType::SessionClose, MessagePayload::SessionClose(close)) => {
@@ -1706,6 +1771,7 @@ async fn run_connected_session<T: PeerTransport>(
         worker: mut sync_worker,
         progress: sync_progress,
         mut synthetic,
+        accepts_vault_keys,
     } = sync_runtime;
     let mut next_observation = Instant::now();
     let mut next_local_nonce = 1_u64;
@@ -2006,6 +2072,24 @@ async fn run_connected_session<T: PeerTransport>(
                             return SessionExit::Failed(SessionFailure::Protocol);
                         };
                         return SessionExit::Disconnected(reason, false);
+                    }
+                    (proto::MessageType::VaultKeys, MessagePayload::VaultKeys(keys)) => {
+                        // Only a peer that advertised the capability may send it.
+                        if !accepts_vault_keys {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        }
+                        let count = keys.openpgp_fingerprints.len();
+                        if directory
+                            .set_peer_vault_keys(
+                                &expected_peer,
+                                generation,
+                                keys.openpgp_fingerprints,
+                            )
+                            .is_err()
+                        {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        }
+                        tracing::info!(keys = count, "Peer declared its vault keys");
                     }
                     (
                         proto::MessageType::SyntheticKeyOffer

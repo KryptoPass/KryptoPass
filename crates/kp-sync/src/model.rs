@@ -261,6 +261,14 @@ pub struct RevisionHead {
 pub trait TrustSource {
     /// Returns the currently trusted public identity for `device_id`, if any.
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError>;
+
+    /// Returns the key that signed already stored history. A source may keep the
+    /// public key of an author it no longer trusts, so old revisions stay
+    /// verifiable; such an author never passes [`TrustSource::lookup`], so it
+    /// cannot sign or introduce anything new.
+    fn lookup_history(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
+        self.lookup(device_id)
+    }
 }
 
 /// Reads only the remote identities explicitly authorized in the trust store.

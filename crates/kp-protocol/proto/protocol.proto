@@ -34,6 +34,7 @@ enum MessageType {
   MESSAGE_TYPE_SYNTHETIC_KEY_COMPLETE = 26;
   MESSAGE_TYPE_SYNTHETIC_KEY_RECEIPT = 27;
   MESSAGE_TYPE_SYNTHETIC_KEY_ABORT = 28;
+  MESSAGE_TYPE_VAULT_KEYS = 29;
 }
 
 // `payload` is the encoded message selected by `message_type`.
@@ -217,6 +218,14 @@ message SessionHello {
   uint32 synthetic_key_transfer_version = 4; // 0 disabled, 1 debug synthetic extension, 2 also vault identity, 3 also phone → Desktop vault identity
   uint32 sync_version = 5;        // 0 disabled; 1 explicitly bound revision-sync v1
   uint32 sync_rounds_version = 6; // 0 single round; 1 repeat rounds on this Noise session
+  uint32 vault_keys_version = 7;  // 0 unsupported; 1 accepts VaultKeys from the peer (and may send it)
+}
+
+// Public fingerprints of the OpenPGP keys the sender holds private keys for, so the
+// peer syncs only records encrypted to keys this device can open. Sent by the phone
+// after SessionHello when the peer advertised vault_keys_version 1; last message wins.
+message VaultKeys {
+  repeated bytes openpgp_fingerprints = 1;   // 0..8 entries, 20/32 bytes each, no duplicates
 }
 
 message SessionPing {

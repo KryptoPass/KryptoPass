@@ -46,6 +46,8 @@ const MAX_TRACKED_TRANSFERS: usize = SESSION_MAX_KNOWN_REVISIONS;
 pub enum SyncSessionError {
     /// The supplied local identity, peer identity or fingerprint binding is invalid.
     InvalidBinding,
+    /// The peer announced another vault or another OpenPGP key than the one selected here.
+    BindingMismatch,
     /// The authenticated peer is no longer exactly present in the trust source.
     TrustRevoked,
     /// A sync message arrived in an invalid order or failed a protocol check.
@@ -72,6 +74,7 @@ impl fmt::Display for SyncSessionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Self::InvalidBinding => "sync session binding is invalid",
+            Self::BindingMismatch => "peer announced another vault or OpenPGP key",
             Self::TrustRevoked => "sync peer is no longer trusted",
             Self::Protocol => "sync session protocol failed",
             Self::Timeout => "sync session timed out",
@@ -226,6 +229,8 @@ pub struct SyncSession {
     local_identity: PublicIdentity,
     expected_peer: PublicIdentity,
     expected_fingerprint: Vec<u8>,
+    /// The peer's announced key is not compared; only the vault and device are.
+    ignore_peer_key: bool,
     started_at: Instant,
     last_activity: Instant,
     continuous_rounds: bool,
@@ -345,6 +350,7 @@ impl SyncSession {
             local_identity: local,
             expected_peer,
             expected_fingerprint: expected_openpgp_fingerprint,
+            ignore_peer_key: false,
             started_at: now,
             last_activity: now,
             continuous_rounds: false,
@@ -683,6 +689,14 @@ impl SyncSession {
         self.complete
     }
 
+    /// Stops comparing the peer's announced OpenPGP key in its hello. For bindings whose
+    /// vault ID is random, which keys take part is decided per record, not by the hello.
+    #[must_use]
+    pub fn with_ignored_peer_key(mut self, ignore: bool) -> Self {
+        self.ignore_peer_key = ignore;
+        self
+    }
+
     /// Cancels the round and discards every queued or partial transfer buffer.
     pub fn cancel(&mut self) {
         let was_failed = self.failed;
@@ -701,12 +715,20 @@ impl SyncSession {
         if self.remote_hello_received {
             return Err(SyncSessionError::Protocol);
         }
-        if hello.vault_id.as_slice() != self.ledger.vault_id()
-            || hello.device_id.as_slice() != self.expected_peer.device_id.as_bytes()
+        if hello.device_id.as_slice() != self.expected_peer.device_id.as_bytes()
             || hello.known_revision_count > SESSION_MAX_KNOWN_REVISIONS as u64
-            || hello.openpgp_fingerprint != self.expected_fingerprint
         {
             return Err(SyncSessionError::InvalidBinding);
+        }
+        let same_vault = hello.vault_id.as_slice() == self.ledger.vault_id();
+        let same_key =
+            self.ignore_peer_key || hello.openpgp_fingerprint == self.expected_fingerprint;
+        if !same_vault || !same_key {
+            warn!(
+                same_vault,
+                same_key, "Peer selected another vault or OpenPGP key"
+            );
+            return Err(SyncSessionError::BindingMismatch);
         }
         self.remote_hello_received = true;
         self.remote_known_revision_count =
