@@ -4,10 +4,10 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 
-// Status of the vault for the list footer, in the manner of KDE's task indicators. One
-// icon says what is going on: it spins while the vault loads or changes are exchanged with
-// a phone, turns into a check when everything is in step, and flags what needs attention.
-// The text beside it is the vault's own message ("Bóveda cargada", "Cambios guardados"...).
+// Status of the vault for the list footer, in the manner of KDE's task indicators: a small
+// flat icon. It spins only while there is real work (a slow load, or changes that actually
+// moved to or from a phone), turns into a check when everything is in step, and flags what
+// needs attention. The vault's own message ("Bóveda cargada"...) is its tooltip.
 Controls.ToolButton {
     id: badge
     required property var syncController
@@ -26,10 +26,14 @@ Controls.ToolButton {
             return "locked";
         if (syncOn && syncController.vaultSyncFailed)
             return "error";
-        if (busy || (syncOn && (syncController.vaultMirrorActive || holdSpin.running)))
+        if (working)
             return "working";
         return "ok";
     }
+    // Spin only for real work: an operation that outlasts a blink, a mirror pass that takes
+    // time, or data that really moved. The mirror polls every few seconds and most passes
+    // find nothing, and those must not make the icon spin.
+    readonly property bool working: (busy && slowBusy.elapsed) || (syncOn && (slowRun.elapsed || holdSpin.running))
     readonly property string text_: {
         switch (phase) {
         case "locked":
@@ -52,21 +56,41 @@ Controls.ToolButton {
     }
 
     flat: true
-    // Only a status when no phone is connected; with Sync on it opens the devices window.
+    // A status, not a control to tab through; with Sync on, clicking opens the devices window.
+    focusPolicy: Qt.NoFocus
     hoverEnabled: syncOn
+    padding: Kirigami.Units.smallSpacing
     onClicked: if (syncOn)
         activated()
 
-    // Keep spinning for a moment after a run ends, so a quick exchange is still visible.
     Timer {
         id: holdSpin
-        interval: 1200
+        interval: 1500
+    }
+    // A mirror pass or an operation counts as work only once it has lasted a moment.
+    Timer {
+        id: slowRun
+        property bool elapsed: false
+        interval: 600
+        running: badge.syncOn && badge.syncController.vaultMirrorActive
+        onTriggered: elapsed = true
+        onRunningChanged: if (!running)
+            elapsed = false
+    }
+    Timer {
+        id: slowBusy
+        property bool elapsed: false
+        interval: 600
+        running: badge.busy
+        onTriggered: elapsed = true
+        onRunningChanged: if (!running)
+            elapsed = false
     }
     Connections {
         target: badge.syncController
-        function onVaultMirrorActiveChanged() {
-            if (badge.syncController.vaultMirrorActive)
-                holdSpin.restart();
+        // Data really moved with a phone: show it even if the pass was quick.
+        function onVaultSyncActivityChanged() {
+            holdSpin.restart();
         }
     }
 
@@ -102,13 +126,12 @@ Controls.ToolButton {
                 rotation = 0
         }
         Controls.Label {
-            Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            visible: badge.text_.length > 0
+            // Words only when something needs attention; otherwise the icon and its tooltip.
+            visible: badge.phase === "locked" || badge.phase === "error"
             text: badge.text_
             textFormat: Text.PlainText
             elide: Text.ElideRight
-            horizontalAlignment: Text.AlignRight
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 10
             color: badge.phase === "error" ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
         }
     }

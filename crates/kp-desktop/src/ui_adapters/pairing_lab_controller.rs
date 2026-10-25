@@ -120,6 +120,7 @@ pub mod qobject {
             READ,
             NOTIFY
         )]
+        #[qproperty(i32, vault_sync_activity, cxx_name = "vaultSyncActivity", READ, NOTIFY)]
         #[qproperty(
             QString,
             vault_sync_locked_key,
@@ -327,6 +328,7 @@ pub struct PairingLabControllerRust {
     vault_sync_peers: QStringList,
     vault_sync_keys: QString,
     vault_mirror_active: bool,
+    vault_sync_activity: i32,
     vault_sync_locked_key: QString,
     vault_sync_message: QString,
     vault_sync_failed: bool,
@@ -402,6 +404,7 @@ impl Default for PairingLabControllerRust {
             vault_sync_peers: QStringList::default(),
             vault_sync_keys: QString::default(),
             vault_mirror_active: false,
+            vault_sync_activity: 0,
             vault_sync_locked_key: QString::default(),
             vault_sync_message: QString::default(),
             vault_sync_failed: false,
@@ -1426,6 +1429,9 @@ impl qobject::PairingLabController {
                             object.as_mut().vault_mirror_pulled();
                         }
                         if outcome.pulled > 0 || outcome.pushed > 0 {
+                            // Tells the status indicator that data really moved.
+                            let activity = object.rust().vault_sync_activity.wrapping_add(1);
+                            object.as_mut().set_vault_sync_activity(activity);
                             object
                                 .as_mut()
                                 .set_vault_sync_message(QString::from(format!(
@@ -2988,6 +2994,12 @@ notifying_property!(
     synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint_changed,
     QString
+);
+notifying_property!(
+    set_vault_sync_activity,
+    vault_sync_activity,
+    vault_sync_activity_changed,
+    i32
 );
 notifying_property!(
     set_vault_mirror_active,
