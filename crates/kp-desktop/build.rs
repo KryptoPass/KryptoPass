@@ -87,6 +87,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/SyncKeysPicker.qml")
         .qml_file("ui/qml/SyncKeyList.qml")
         .qml_file("ui/qml/SyncStatusBadge.qml")
+        .qml_file("ui/qml/SyncStatusModel.qml")
         .qml_file("ui/qml/SyncStatusPopover.qml")
         .qml_file("ui/qml/LockGuard.qml")
         .qml_file("ui/qml/BrowserAccessDialog.qml")

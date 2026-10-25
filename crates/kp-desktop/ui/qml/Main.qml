@@ -107,6 +107,15 @@ Controls.ApplicationWindow {
             secureClipboard.copySensitive(code);
         }
     }
+    // What the vault Sync status is, shared by the footer indicator and its popover.
+    SyncStatusModel {
+        id: syncStatus
+        controller: deviceController
+        host: devicesWindow
+        storeStatus: root.keysMode ? keys.controller.status : store.controller.status
+        busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)
+        failed: !root.keysMode && !store.controller.locked && store.controller.errorMessage.length > 0
+    }
     // Views that must stay closed while the vault is locked (one guard each). The first-run
     // setup counts as locked too, but it must still be able to restore a backup.
     readonly property bool viewsLocked: store.controller.locked && !store.controller.setupRequired
@@ -1380,21 +1389,12 @@ Controls.ApplicationWindow {
                 }
                 // The vault's message and the Sync with phones, in one KDE-style indicator.
                 SyncStatusBadge {
-                    id: syncBadge
-                    syncController: deviceController
-                    storeStatus: root.keysMode ? keys.controller.status : store.controller.status
-                    busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)
-                    failed: !root.keysMode && !store.controller.locked && store.controller.errorMessage.length > 0
+                    model: syncStatus
                     onActivated: syncPopover.opened ? syncPopover.close() : syncPopover.open()
-                    // Opens above the indicator, not the whole devices window.
+                    // Opens above the indicator: a compact status, not the devices window.
                     SyncStatusPopover {
                         id: syncPopover
-                        host: devicesWindow
-                        controller: deviceController
-                        onOpenDevicesRequested: {
-                            close();
-                            devicesWindow.open();
-                        }
+                        model: syncStatus
                     }
                 }
             }

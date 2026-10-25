@@ -8673,9 +8673,12 @@ https://cuenta.ejemplo.test</translation>
   <context>
     <name>SyncStatusBadge</name>
     <message>
-      <source>Sincronizando…</source>
-      <translation>Sincronizando…</translation>
+      <source>Estado de la bóveda: %1</source>
+      <translation>Estado de la bóveda: %1</translation>
     </message>
+  </context>
+  <context>
+    <name>SyncStatusModel</name>
     <message>
       <source>Falta una contraseña</source>
       <translation>Falta una contraseña</translation>
@@ -8683,6 +8686,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Error de sincronización</source>
       <translation>Error de sincronización</translation>
+    </message>
+    <message>
+      <source>Sincronizando…</source>
+      <translation>Sincronizando…</translation>
     </message>
     <message>
       <source>Sincronizada</source>
@@ -8693,43 +8700,50 @@ https://cuenta.ejemplo.test</translation>
       <translation>La sincronización está detenida: una clave necesita su contraseña.</translation>
     </message>
     <message>
-      <source>Sincronización con el teléfono: activa.</source>
-      <translation>Sincronización con el teléfono: activa.</translation>
+      <source>ahora</source>
+      <translation>ahora</translation>
     </message>
     <message>
-      <source>Estado de la bóveda: %1</source>
-      <translation>Estado de la bóveda: %1</translation>
-    </message>
-  </context>
-  <context>
-    <name>SyncStatusPopover</name>
-    <message>
-      <source>Sincronización de la bóveda</source>
-      <translation>Sincronización de la bóveda</translation>
+      <source>hace %1 s</source>
+      <translation>hace %1 s</translation>
     </message>
     <message>
-      <source>La sincronización está detenida: falta la contraseña de la clave de %1.</source>
-      <translation>La sincronización está detenida: falta la contraseña de la clave de %1.</translation>
+      <source>hace %1 min</source>
+      <translation>hace %1 min</translation>
     </message>
     <message>
-      <source>Desbloquear clave…</source>
-      <translation>Desbloquear clave…</translation>
+      <source>hace %1 h</source>
+      <translation>hace %1 h</translation>
     </message>
     <message>
-      <source>Ningún dispositivo sincroniza esta bóveda. Actívalo desde la ventana de dispositivos.</source>
-      <translation>Ningún dispositivo sincroniza esta bóveda. Actívalo desde la ventana de dispositivos.</translation>
+      <source>Última sincronización %1</source>
+      <translation>Última sincronización %1</translation>
     </message>
     <message>
       <source>Conectado</source>
       <translation>Conectado</translation>
     </message>
     <message>
-      <source>Sin conexión. Se sincroniza al reconectar.</source>
-      <translation>Sin conexión. Se sincroniza al reconectar.</translation>
+      <source>Sin conexión</source>
+      <translation>Sin conexión</translation>
+    </message>
+  </context>
+  <context>
+    <name>SyncStatusPopover</name>
+    <message>
+      <source>Ningún dispositivo sincroniza esta bóveda.</source>
+      <translation>Ningún dispositivo sincroniza esta bóveda.</translation>
+    </message>
+    <message numerus="yes">
+      <source>%n clave</source>
+      <translation>
+        <numerusform>%n clave</numerusform>
+        <numerusform>%n claves</numerusform>
+      </translation>
     </message>
     <message>
-      <source>Administrar dispositivos…</source>
-      <translation>Administrar dispositivos…</translation>
+      <source>Actualizar</source>
+      <translation>Actualizar</translation>
     </message>
   </context>
   <context>
