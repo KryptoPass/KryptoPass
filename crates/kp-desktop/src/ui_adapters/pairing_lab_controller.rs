@@ -255,6 +255,7 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "unlockSyncKey"]
         fn unlock_sync_key(self: Pin<&mut Self>, fingerprint: QString);
+        #[qinvokable]
         #[cxx_name = "enableVaultSync"]
         fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString, fingerprints: QString);
         #[qinvokable]
