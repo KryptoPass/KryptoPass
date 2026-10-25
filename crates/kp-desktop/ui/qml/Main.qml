@@ -97,6 +97,7 @@ Controls.ApplicationWindow {
         id: devicesWindow
         transientParent: root
         controller: deviceController
+        keyStore: keys
         Component.onCompleted: {
             if (available && Qt.application.arguments.indexOf("--pairing-lab") !== -1)
                 open();

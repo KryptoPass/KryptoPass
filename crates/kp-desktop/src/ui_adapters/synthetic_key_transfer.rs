@@ -1,9 +1,9 @@
 //! Preparation for the explicit OpenPGP key transfer to a paired phone: the
-//! debug synthetic fixture, or the identity that encrypts the active vault.
+//! debug synthetic fixture, or the private identity explicitly chosen by the user.
 //!
 //! Key bytes stay in the backend; only the send-owner DTO is returned. This
 //! module contains no QML properties. The fixture path never reads the user's
-//! normal GnuPG keyring; the vault path reads only the vault's primary key.
+//! normal GnuPG keyring; the real-key path reads only the approved fingerprint.
 
 use kryptopass_devices::{SyntheticKeyTransferSend, SyntheticTransferError};
 
@@ -53,25 +53,23 @@ pub(crate) fn vault_identity_fingerprint() -> String {
         .unwrap_or_default()
 }
 
-/// Exports the vault identity only if it still equals the fingerprint the
-/// user approved. GnuPG asks for the key passphrase before releasing it.
-pub(crate) fn prepare_vault_identity(
+/// Exports only the exact private identity approved locally, without changing
+/// the vault's primary key. GnuPG prompts for its passphrase before release.
+pub(crate) fn prepare_selected_identity(
     expected_fingerprint: &str,
 ) -> Result<([u8; 16], SyntheticKeyTransferSend), SyntheticTransferError> {
     use crate::infrastructure::openpgp;
     use kryptopass_devices::KeyTransferPurpose;
     use uuid::Uuid;
 
-    let fingerprint = vault_primary_key().ok_or(SyntheticTransferError::Invalid)?;
-    if !fingerprint
-        .as_str()
-        .eq_ignore_ascii_case(expected_fingerprint)
-    {
+    let fingerprint = kryptopass_core::KeyFingerprint::parse(expected_fingerprint)
+        .map_err(|_| SyntheticTransferError::Invalid)?;
+    if fingerprint.as_str().len() != 40 {
         return Err(SyntheticTransferError::Invalid);
     }
     // The adapter errors are static descriptions; they carry no key material.
-    let mut material = openpgp::prepare_vault_identity_transfer(&fingerprint).map_err(|error| {
-        tracing::warn!(error = %error, "Key transfer: vault identity export failed");
+    let mut material = openpgp::prepare_private_key_transfer(&fingerprint).map_err(|error| {
+        tracing::warn!(error = %error, "Key transfer: selected identity export failed");
         SyntheticTransferError::Invalid
     })?;
     let transfer_id = *Uuid::new_v4().as_bytes();
@@ -85,6 +83,56 @@ pub(crate) fn prepare_vault_identity(
         material.challenge_sha256,
     )?;
     Ok((transfer_id, prepared))
+}
+
+/// Whether `offered` (hex) belongs to the active vault: it is the primary key or a
+/// recipient of at least one of its secrets, so importing it restores access.
+fn vault_owns_key(offered: &str) -> bool {
+    use crate::storage::{SqliteStorage, paths};
+    use kryptopass_core::Storage as _;
+
+    let app_id = crate::app_info::APP.desktop_file_id;
+    let path = match paths::active_vault_path(app_id).ok().flatten() {
+        Some(path) => path,
+        None => match paths::database_path(app_id) {
+            Ok(path) => path,
+            Err(_) => return false,
+        },
+    };
+    if !path.exists() {
+        return false;
+    }
+    let Ok(storage) = SqliteStorage::open_existing(&path) else {
+        return false;
+    };
+    if storage
+        .primary_key()
+        .ok()
+        .flatten()
+        .is_some_and(|primary| primary.fingerprint.as_str().eq_ignore_ascii_case(offered))
+    {
+        return true;
+    }
+    storage.list_secret_metadata().is_ok_and(|secrets| {
+        secrets.iter().any(|secret| {
+            secret
+                .recipients
+                .as_slice()
+                .iter()
+                .any(|key| key.as_str().eq_ignore_ascii_case(offered))
+        })
+    })
+}
+
+/// Whether the active vault has any key to compare against.
+fn vault_exists() -> bool {
+    use crate::storage::paths;
+
+    let app_id = crate::app_info::APP.desktop_file_id;
+    match paths::active_vault_path(app_id).ok().flatten() {
+        Some(path) => path.exists(),
+        None => paths::database_path(app_id).is_ok_and(|path| path.exists()),
+    }
 }
 
 fn vault_primary_key() -> Option<kryptopass_core::KeyFingerprint> {
@@ -105,15 +153,15 @@ fn vault_primary_key() -> Option<kryptopass_core::KeyFingerprint> {
 /// What accepting an inbound vault identity from the phone would do.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum InboundAssessment {
-    /// Matches the vault key and is not in GnuPG: the import creates it.
+    /// A key of the vault that is not in GnuPG: the import creates it.
     New,
-    /// Matches the vault key and GnuPG has its public part: secret parts are added.
+    /// A key of the vault whose public part GnuPG has: secret parts are added.
     AddSecret,
-    /// Matches the vault key and GnuPG has it: the import merges new material.
+    /// A key of the vault that GnuPG has: the import merges new material.
     Merge,
-    /// Does not match the active vault's primary key: rejected automatically.
+    /// Neither the vault's primary key nor a recipient of its secrets: rejected automatically.
     VaultMismatch,
-    /// No active vault with a primary key to compare against: rejected.
+    /// No active vault to compare against: rejected.
     NoVault,
     /// GnuPG could not be queried: rejected.
     Unavailable,
@@ -137,20 +185,18 @@ impl InboundAssessment {
 
     pub(crate) const fn message(self) -> &'static str {
         match self {
-            Self::New => {
-                "Es la clave principal de tu bóveda y no está en GnuPG: se creará al importarla."
-            }
+            Self::New => "Es una clave de tu bóveda y no está en GnuPG: se creará al importarla.",
             Self::AddSecret => {
-                "Es la clave principal de tu bóveda. GnuPG solo tiene su parte pública: se añadirá la parte privada."
+                "Es una clave de tu bóveda. GnuPG solo tiene su parte pública: se añadirá la parte privada."
             }
             Self::Merge => {
-                "Es la clave principal de tu bóveda y ya está en GnuPG: se combinará (identidades, subclaves y firmas nuevas). No se borra nada."
+                "Es una clave de tu bóveda y ya está en GnuPG: se combinará (identidades, subclaves y firmas nuevas). No se borra nada."
             }
             Self::VaultMismatch => {
-                "Esta clave no coincide con la clave principal de la bóveda activa. Se rechazó automáticamente."
+                "Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente."
             }
             Self::NoVault => {
-                "No hay una bóveda activa con clave principal con la que comparar. Se rechazó automáticamente."
+                "No hay una bóveda activa con la que comparar. Se rechazó automáticamente."
             }
             Self::Unavailable => {
                 "No se pudo consultar GnuPG para revisar la clave. Se rechazó automáticamente."
@@ -175,13 +221,13 @@ pub(crate) fn assess_inbound(fingerprint: &[u8; 20]) -> InboundAssessment {
     use crate::infrastructure::openpgp::inbound_key::{ExistingKey, existing_key};
 
     let offered = fingerprint_hex(fingerprint);
-    let Some(vault) = vault_primary_key() else {
-        tracing::warn!("Inbound key transfer: no active vault primary key to compare");
+    if !vault_exists() {
+        tracing::warn!("Inbound key transfer: no active vault to compare");
         return InboundAssessment::NoVault;
-    };
-    if !vault.as_str().eq_ignore_ascii_case(&offered) {
+    }
+    if !vault_owns_key(&offered) {
         tracing::warn!(
-            "Inbound key transfer: offered fingerprint is not the active vault primary key"
+            "Inbound key transfer: offered fingerprint is not a key of the active vault"
         );
         return InboundAssessment::VaultMismatch;
     }
@@ -206,9 +252,7 @@ pub(crate) struct InboundImportFailure {
 impl InboundImportFailure {
     pub(crate) const fn message(self) -> &'static str {
         match self.stage.as_bytes() {
-            b"vault" => {
-                "La clave ya no coincide con la clave principal de la bóveda activa. No se importó nada."
-            }
+            b"vault" => "La clave ya no pertenece a la bóveda activa. No se importó nada.",
             b"validate" => {
                 "El bloque recibido no es una única clave privada protegida con contraseña con la huella ofrecida. No se importó nada."
             }
@@ -233,12 +277,10 @@ pub(crate) fn import_inbound(
 
     let fingerprint = material.fingerprint();
     let offered = fingerprint_hex(&fingerprint);
-    let vault_matches =
-        vault_primary_key().is_some_and(|vault| vault.as_str().eq_ignore_ascii_case(&offered));
-    if !vault_matches {
+    if !vault_owns_key(&offered) {
         return Err(InboundImportFailure {
             stage: "vault",
-            reason: "offered key is not the active vault primary key",
+            reason: "offered key is not a key of the active vault",
         });
     }
     let to_failure = |error: inbound_key::InboundKeyError| InboundImportFailure {

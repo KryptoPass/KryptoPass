@@ -8,6 +8,7 @@ Controls.ApplicationWindow {
     id: dialog
     objectName: "devicesWindow"
     required property var controller
+    required property var keyStore
     readonly property bool opened: visible
     readonly property bool available: controller.available
 
@@ -16,10 +17,15 @@ Controls.ApplicationWindow {
     property bool networkOptionsVisible: false
     property bool showInvitationCode: false
     property bool reconnectFlow: false
-    property string expandedDeviceId: ""
-    property string syncExpandedDeviceId: ""
+    property string selectedDeviceId: ""
+    readonly property var selectedDevice: devices.find(device => String(device.deviceId) === selectedDeviceId) || null
+    readonly property bool showingDetail: selectedDevice !== null
+    readonly property var activeDevice: devices.find(device => String(device.deviceId) === controller.activeDeviceId) || null
+    readonly property string activeDeviceName: activeDevice ? deviceName(activeDevice) : qsTr("otro dispositivo")
     // Which offer the last key transfer of this window carried, to label its status.
     property bool keyTransferVault: false
+    property string keyTransferDeviceId: ""
+    property string syncMessageDeviceId: ""
     property string aliasTargetId: ""
     property string aliasDraft: ""
     property string forgetTargetId: ""
@@ -44,7 +50,7 @@ Controls.ApplicationWindow {
     readonly property bool lanAllowed: !controller.relayOnly && (!controller.requireVpn || controller.allowLanException)
     readonly property bool comparing: controller.awaiting || controller.statusCode === "confirming"
     readonly property string statusHint: hintForStatus(controller.statusCode)
-    readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error", "network_policy_blocked", "network_policy_changed"].includes(controller.statusCode)
+    readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error", "network_policy_blocked", "network_policy_changed", "sync_history_error"].includes(controller.statusCode)
     readonly property bool canPair: controller.available && !controller.busy && !controller.sessionActive && !controller.awaiting
 
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint | Qt.WindowMaximizeButtonHint
@@ -68,9 +74,13 @@ Controls.ApplicationWindow {
     function parseInboundTransfer(value) {
         try {
             const parsed = JSON.parse(value || "{}");
-            return parsed && typeof parsed === "object" ? parsed : ({ visible: false });
+            return parsed && typeof parsed === "object" ? parsed : ({
+                    visible: false
+                });
         } catch (error) {
-            return ({ visible: false });
+            return ({
+                    visible: false
+                });
         }
     }
 
@@ -161,6 +171,10 @@ Controls.ApplicationWindow {
 
     function keyTransferLabel(phase) {
         switch (phase) {
+        case "ready":
+            return qsTr("Lista para enviar la clave elegida");
+        case "unsupported":
+            return qsTr("Este dispositivo no admite recibir la clave");
         case "waiting_acceptance":
             return qsTr("Esperando que aceptes en el teléfono");
         case "sending":
@@ -249,10 +263,96 @@ Controls.ApplicationWindow {
     }
 
     function startPairing() {
+        if (controller.sessionActive) {
+            connectionLimit.open();
+            return;
+        }
         if (!canPair)
             return;
         reconnectFlow = false;
         controller.startPairing();
+    }
+
+    function openDevice(device) {
+        if (comparing)
+            return;
+        selectedDeviceId = String(device.deviceId || "");
+        networkOptionsVisible = false;
+    }
+
+    function reconnectDevice(device) {
+        if (controller.sessionActive) {
+            connectionLimit.open();
+            return;
+        }
+        if (controller.busy || controller.syncBusy || controller.maintenanceBusy || device.trust !== "trusted")
+            return;
+        const index = devices.findIndex(candidate => candidate.deviceId === device.deviceId);
+        if (index < 0)
+            return;
+        reconnectFlow = true;
+        selectedDeviceId = "";
+        controller.selectDevice(index);
+        controller.startReconnect();
+    }
+
+    function forgetDevice(device) {
+        forgetTargetId = String(device.deviceId || "");
+        forgetTargetName = deviceName(device);
+        resetRequested = false;
+        deleteDialog.open();
+    }
+
+    function setVaultSync(deviceId, enabled) {
+        syncMessageDeviceId = deviceId;
+        if (enabled) {
+            const device = devices.find(candidate => String(candidate.deviceId) === deviceId);
+            syncKeysPicker.deviceId = deviceId;
+            syncKeysPicker.recipient = device ? deviceName(device) : "";
+            syncKeysPicker.phoneKeys = device && device.vaultKeys ? device.vaultKeys : null;
+            syncKeysPicker.open();
+        } else {
+            controller.disableVaultSync(deviceId);
+        }
+    }
+
+    function keyTitle(fingerprint) {
+        const key = keyStore.entries.find(entry => String(entry.id).toUpperCase() === String(fingerprint).toUpperCase());
+        return key ? key.title : String(fingerprint).slice(-16);
+    }
+
+    function vaultSyncKeyIds(deviceId) {
+        try {
+            return JSON.parse(controller.vaultSyncKeys)[deviceId] || [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function canTransferKey(key) {
+        return !!key && key.hasSecret && key.statusCode === "valid" && key.canEncrypt && /^[A-Fa-f0-9]{40}$/.test(String(key.id));
+    }
+
+    function chooseKey(device) {
+        keyPicker.deviceId = String(device.deviceId);
+        keyPicker.connectionGeneration = String(device.connectionGeneration);
+        keyPicker.recipient = deviceName(device);
+        keyPicker.selectedFingerprint = "";
+        keyStore.controller.refreshKeys();
+        keyPicker.open();
+    }
+
+    function approveTransfer(device, vaultIdentity, fingerprint, keyTitle) {
+        keyTransferVault = vaultIdentity;
+        keyTransferDeviceId = String(device.deviceId);
+        syntheticTransferApproval.vaultIdentity = vaultIdentity;
+        syntheticTransferApproval.deviceId = String(device.deviceId);
+        syntheticTransferApproval.connectionGeneration = String(device.connectionGeneration);
+        syntheticTransferApproval.recipient = deviceName(device);
+        syntheticTransferApproval.fingerprint = fingerprint;
+        syntheticTransferApproval.keyTitle = keyTitle || "";
+        syntheticTransferApproval.approved = false;
+        syntheticTransferApproval.open();
     }
 
     function openAliasEditor(device) {
@@ -279,6 +379,10 @@ Controls.ApplicationWindow {
         } else {
             aliasDialog.close();
             deleteDialog.close();
+            keyPicker.close();
+            syntheticTransferApproval.close();
+            connectionLimit.close();
+            selectedDeviceId = "";
             // Cancels an unfinished pairing and clears QR/SAS; an active session survives.
             controller.releaseUi();
         }
@@ -286,8 +390,13 @@ Controls.ApplicationWindow {
 
     Shortcut {
         sequences: [StandardKey.Cancel]
-        enabled: dialog.visible && !aliasDialog.opened && !deleteDialog.opened && !dialog.controller.maintenanceBusy
-        onActivated: dialog.close()
+        enabled: dialog.visible && !aliasDialog.opened && !deleteDialog.opened && !keyPicker.opened && !syntheticTransferApproval.opened && !inboundKeyDialog.opened && !connectionLimit.opened && !dialog.controller.maintenanceBusy
+        onActivated: {
+            if (dialog.showingDetail)
+                dialog.selectedDeviceId = "";
+            else
+                dialog.close();
+        }
     }
 
     Connections {
@@ -297,10 +406,12 @@ Controls.ApplicationWindow {
                 aliasDialog.close();
         }
         function onAwaitingChanged() {
-            if (dialog.controller.awaiting)
+            if (dialog.controller.awaiting) {
+                dialog.selectedDeviceId = "";
                 Qt.callLater(function () {
                     noMatchesButton.forceActiveFocus();
                 });
+            }
         }
         function onBootstrapChanged() {
             if (dialog.controller.bootstrap.length === 0)
@@ -313,7 +424,17 @@ Controls.ApplicationWindow {
         RowLayout {
             anchors.fill: parent
             spacing: Kirigami.Units.largeSpacing
+            Controls.ToolButton {
+                visible: dialog.showingDetail
+                icon.name: "go-previous"
+                text: qsTr("Volver a dispositivos")
+                display: Controls.AbstractButton.IconOnly
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.text: text
+                onClicked: dialog.selectedDeviceId = ""
+            }
             Kirigami.Icon {
+                visible: !dialog.showingDetail
                 source: "network-connect"
                 implicitWidth: Kirigami.Units.iconSizes.smallMedium
                 implicitHeight: Kirigami.Units.iconSizes.smallMedium
@@ -324,12 +445,13 @@ Controls.ApplicationWindow {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 4
-                    text: qsTr("Tus dispositivos")
+                    text: dialog.showingDetail ? dialog.deviceName(dialog.selectedDevice) : qsTr("Tus dispositivos")
+                    textFormat: Text.PlainText
                     elide: Text.ElideRight
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Vincula y conecta tus dispositivos")
+                    text: dialog.showingDetail ? qsTr("Conexión y opciones del dispositivo") : qsTr("Vincula y conecta tus dispositivos")
                     textFormat: Text.PlainText
                     color: Kirigami.Theme.disabledTextColor
                     elide: Text.ElideRight
@@ -350,7 +472,10 @@ Controls.ApplicationWindow {
                         icon.name: "network-wired"
                         checkable: true
                         checked: dialog.networkOptionsVisible
-                        onTriggered: dialog.networkOptionsVisible = checked
+                        onTriggered: {
+                            dialog.selectedDeviceId = "";
+                            dialog.networkOptionsVisible = checked;
+                        }
                     }
                     Controls.MenuItem {
                         text: qsTr("Actualizar dispositivos y redes")
@@ -363,7 +488,7 @@ Controls.ApplicationWindow {
                     }
                     Controls.MenuSeparator {}
                     Controls.MenuItem {
-                        text: qsTr("Reiniciar vinculación…")
+                        text: qsTr("Borrar todas las vinculaciones…")
                         icon.name: "edit-clear-all"
                         enabled: dialog.controller.available && !dialog.controller.busy && !dialog.controller.aliasBusy
                         onTriggered: {
@@ -376,9 +501,17 @@ Controls.ApplicationWindow {
         }
     }
 
+    DeviceDetailsPage {
+        anchors.fill: parent
+        visible: dialog.showingDetail
+        host: dialog
+        modelData: dialog.selectedDevice || ({})
+    }
+
     Controls.ScrollView {
         id: pageScroll
         anchors.fill: parent
+        visible: !dialog.showingDetail
         contentWidth: availableWidth
         clip: true
 
@@ -400,14 +533,6 @@ Controls.ApplicationWindow {
                 type: Kirigami.MessageType.Warning
                 text: dialog.controller.aliasError
             }
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                visible: dialog.controller.sessionActive && !dialog.comparing
-                type: Kirigami.MessageType.Information
-                text: qsTr("Hay una sesión activa con %1. Desconéctalo antes de vincular o reconectar otro dispositivo.").arg(dialog.shortId(dialog.controller.activeDeviceId))
-            }
-
             // Invitation: QR first, the long code only on request.
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
@@ -814,25 +939,21 @@ Controls.ApplicationWindow {
             }
             Repeater {
                 model: dialog.devices
-                delegate: ColumnLayout {
+                delegate: Controls.ItemDelegate {
                     id: deviceRow
-                    required property int index
                     required property var modelData
-                    readonly property string deviceId: String(modelData.deviceId || "")
-                    readonly property string connection: String(modelData.connection || "")
-                    readonly property string connectionGeneration: String(modelData.connectionGeneration || "")
-                    readonly property string syntheticTransferPhase: String(modelData.syntheticTransferPhase || "unsupported")
-                    readonly property int keyTransferVersion: Number(modelData.keyTransferVersion || 0)
-                    readonly property bool expanded: dialog.expandedDeviceId === deviceId
-                    readonly property bool syncExpanded: dialog.syncExpandedDeviceId === deviceId
                     Layout.fillWidth: true
-                    spacing: Kirigami.Units.smallSpacing
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        Layout.topMargin: Kirigami.Units.smallSpacing
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    leftPadding: Kirigami.Units.largeSpacing
+                    rightPadding: Kirigami.Units.smallSpacing
+                    topPadding: Kirigami.Units.largeSpacing
+                    bottomPadding: Kirigami.Units.largeSpacing
+                    text: dialog.deviceName(modelData)
+                    enabled: !dialog.comparing
+                    Accessible.description: dialog.connectionLabel(String(modelData.connection || ""))
+                    onClicked: dialog.openDevice(modelData)
+                    contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
                         Kirigami.Icon {
                             source: "smartphone"
@@ -843,7 +964,7 @@ Controls.ApplicationWindow {
                         }
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 0
+                            spacing: Kirigami.Units.smallSpacing
                             Controls.Label {
                                 Layout.fillWidth: true
                                 text: dialog.deviceName(deviceRow.modelData)
@@ -853,51 +974,19 @@ Controls.ApplicationWindow {
                             }
                             RowLayout {
                                 spacing: Kirigami.Units.smallSpacing
-                                Controls.Label {
-                                    text: deviceRow.modelData.trust === "trusted" ? qsTr("Emparejado") : qsTr("Confianza no disponible")
-                                    textFormat: Text.PlainText
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Accessible.name: qsTr("Estado de confianza: %1").arg(text)
-                                }
-                                Controls.Label {
-                                    text: "·"
-                                    color: Kirigami.Theme.disabledTextColor
+                                Rectangle {
+                                    implicitWidth: 7
+                                    implicitHeight: 7
+                                    radius: width / 2
+                                    color: dialog.connectionColor(String(deviceRow.modelData.connection || ""))
                                     Accessible.ignored: true
                                 }
                                 Controls.Label {
-                                    text: dialog.connectionLabel(deviceRow.connection)
-                                    color: dialog.connectionColor(deviceRow.connection)
+                                    text: dialog.connectionLabel(String(deviceRow.modelData.connection || ""))
+                                    color: dialog.connectionColor(String(deviceRow.modelData.connection || ""))
                                     textFormat: Text.PlainText
-                                    Accessible.name: qsTr("Estado de conexión: %1").arg(text)
                                 }
                             }
-                            Controls.Label {
-                                Layout.fillWidth: true
-                                visible: deviceRow.connection === "connected"
-                                text: dialog.routeLine(deviceRow.modelData)
-                                textFormat: Text.PlainText
-                                color: Kirigami.Theme.disabledTextColor
-                                elide: Text.ElideRight
-                                Accessible.name: qsTr("Ruta de conexión: %1").arg(text)
-                            }
-                        }
-                        Controls.Button {
-                            visible: !deviceRow.modelData.isActive
-                            text: qsTr("Reconectar")
-                            icon.name: "network-connect"
-                            enabled: !dialog.controller.busy && !dialog.controller.syncBusy && !dialog.controller.sessionActive && deviceRow.modelData.trust === "trusted"
-                            onClicked: {
-                                dialog.reconnectFlow = true;
-                                dialog.controller.selectDevice(deviceRow.index);
-                                dialog.controller.startReconnect();
-                            }
-                        }
-                        Controls.Button {
-                            visible: !!deviceRow.modelData.isActive
-                            text: qsTr("Desconectar")
-                            icon.name: "network-disconnect"
-                            enabled: dialog.controller.statusCode !== "closing"
-                            onClicked: dialog.controller.disconnectPeer(deviceRow.deviceId)
                         }
                         Controls.ToolButton {
                             id: deviceMenuButton
@@ -910,305 +999,42 @@ Controls.ApplicationWindow {
                             Controls.Menu {
                                 id: deviceMenu
                                 Controls.MenuItem {
+                                    text: qsTr("Ver detalles y opciones")
+                                    icon.name: "document-properties"
+                                    onTriggered: dialog.openDevice(deviceRow.modelData)
+                                }
+                                Controls.MenuItem {
+                                    text: deviceRow.modelData.isActive ? qsTr("Desconectar") : qsTr("Reconectar")
+                                    icon.name: deviceRow.modelData.isActive ? "network-disconnect" : "network-connect"
+                                    enabled: !dialog.controller.busy && !dialog.controller.syncBusy && !dialog.controller.maintenanceBusy && dialog.controller.statusCode !== "closing"
+                                    onTriggered: {
+                                        if (deviceRow.modelData.isActive)
+                                            dialog.controller.disconnectPeer(String(deviceRow.modelData.deviceId));
+                                        else
+                                            dialog.reconnectDevice(deviceRow.modelData);
+                                    }
+                                }
+                                Controls.MenuItem {
                                     text: qsTr("Cambiar nombre…")
                                     icon.name: "edit-rename"
                                     enabled: !dialog.controller.aliasBusy && !dialog.controller.busy
                                     onTriggered: dialog.openAliasEditor(deviceRow.modelData)
-                                }
-                                Controls.MenuItem {
-                                    text: deviceRow.expanded ? qsTr("Ocultar identificador") : qsTr("Mostrar identificador")
-                                    icon.name: "dialog-information"
-                                    onTriggered: {
-                                        dialog.expandedDeviceId = deviceRow.expanded ? "" : deviceRow.deviceId;
-                                        dialog.controller.selectDevice(deviceRow.index);
-                                    }
                                 }
                                 Controls.MenuSeparator {}
                                 Controls.MenuItem {
                                     text: qsTr("Olvidar dispositivo…")
                                     icon.name: "edit-delete"
                                     enabled: !dialog.controller.busy && !dialog.controller.aliasBusy
-                                    onTriggered: {
-                                        dialog.forgetTargetId = deviceRow.deviceId;
-                                        dialog.forgetTargetName = dialog.deviceName(deviceRow.modelData);
-                                        dialog.resetRequested = false;
-                                        deleteDialog.open();
-                                    }
+                                    onTriggered: dialog.forgetDevice(deviceRow.modelData)
                                 }
                             }
                         }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: dialog.available && deviceRow.modelData.trust === "trusted"
-                        Controls.ToolButton {
-                            text: deviceRow.syncExpanded ? qsTr("Ocultar prueba de Sync") : qsTr("Prueba sintética de Sync")
-                            icon.name: "network-connect"
-                            enabled: !dialog.controller.syncBusy && !dialog.controller.busy
-                            onClicked: {
-                                dialog.syncExpandedDeviceId = deviceRow.syncExpanded ? "" : deviceRow.deviceId;
-                                dialog.controller.selectDevice(deviceRow.index);
-                            }
-                        }
-                    }
-                    ColumnLayout {
-                        readonly property bool vaultSyncOn: dialog.controller.vaultSyncPeers.indexOf(deviceRow.deviceId) >= 0
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: dialog.available && dialog.controller.vaultKeyFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
-                        spacing: Kirigami.Units.smallSpacing
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: parent.vaultSyncOn
-                                ? qsTr("La bóveda se sincroniza con este teléfono mientras Desktop está desbloqueado y conectado. Solo los elementos cifrados con tu clave principal; carpetas e iconos quedan en Desktop.")
-                                : qsTr("Sincroniza con este teléfono los elementos cifrados con tu clave principal. El teléfono necesita antes tu clave.")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Controls.Button {
-                            text: parent.vaultSyncOn ? qsTr("Dejar de sincronizar la bóveda") : qsTr("Sincronizar bóveda")
-                            icon.name: parent.vaultSyncOn ? "dialog-cancel" : "folder-sync"
-                            enabled: !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                            onClicked: parent.vaultSyncOn ? dialog.controller.disableVaultSync(deviceRow.deviceId) : dialog.controller.enableVaultSync(deviceRow.deviceId)
-                        }
-                        Kirigami.InlineMessage {
-                            Layout.fillWidth: true
-                            visible: dialog.controller.vaultSyncMessage.length > 0
-                            type: Kirigami.MessageType.Information
-                            text: dialog.controller.vaultSyncMessage
-                        }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: dialog.available && dialog.controller.vaultKeyFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
-                        spacing: Kirigami.Units.smallSpacing
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: deviceRow.connection === "connected" && deviceRow.keyTransferVersion < 2
-                                ? qsTr("Actualiza KryptoPass en el teléfono para recibir tu clave OpenPGP.")
-                                : qsTr("El teléfono necesita tu clave OpenPGP para abrir la bóveda. Se envía cifrada por esta conexión y sigue protegida con tu contraseña.")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Button {
-                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase === "ready" && deviceRow.keyTransferVersion >= 2
-                                text: qsTr("Enviar mi clave al teléfono")
-                                icon.name: "document-send"
-                                enabled: !dialog.controller.syntheticTransferPreparing && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                                onClicked: {
-                                    dialog.keyTransferVault = true;
-                                    syntheticTransferApproval.vaultIdentity = true;
-                                    syntheticTransferApproval.deviceId = deviceRow.deviceId;
-                                    syntheticTransferApproval.connectionGeneration = deviceRow.connectionGeneration;
-                                    syntheticTransferApproval.recipient = dialog.deviceName(deviceRow.modelData);
-                                    syntheticTransferApproval.fingerprint = dialog.controller.vaultKeyFingerprint;
-                                    syntheticTransferApproval.approved = false;
-                                    syntheticTransferApproval.open();
-                                }
-                            }
-                            Controls.Button {
-                                visible: dialog.keyTransferVault && ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
-                                text: qsTr("Cancelar transferencia")
-                                icon.name: "dialog-cancel"
-                                onClicked: { console.info("Key transfer cancel from device row cancel button"); dialog.controller.cancelSyntheticKeyTransfer(); }
-                            }
-                            Controls.BusyIndicator {
-                                running: dialog.keyTransferVault && dialog.controller.syntheticTransferPreparing
-                                visible: running
-                                implicitWidth: Kirigami.Units.iconSizes.small
-                                implicitHeight: implicitWidth
-                            }
-                            Controls.Label {
-                                visible: dialog.keyTransferVault && deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
-                                text: dialog.keyTransferLabel(deviceRow.syntheticTransferPhase)
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                        Kirigami.InlineMessage {
-                            Layout.fillWidth: true
-                            visible: dialog.keyTransferVault && dialog.controller.syntheticTransferError.length > 0
-                            type: Kirigami.MessageType.Error
-                            text: dialog.controller.syntheticTransferError
-                        }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: dialog.available && dialog.controller.syntheticTransferFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
-                        spacing: Kirigami.Units.smallSpacing
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: qsTr("Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Button {
-                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase === "ready"
-                                text: qsTr("Enviar clave de prueba")
-                                icon.name: "mail-send"
-                                enabled: !dialog.controller.syntheticTransferPreparing && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                                onClicked: {
-                                    dialog.keyTransferVault = false;
-                                    syntheticTransferApproval.vaultIdentity = false;
-                                    syntheticTransferApproval.deviceId = deviceRow.deviceId;
-                                    syntheticTransferApproval.connectionGeneration = deviceRow.connectionGeneration;
-                                    syntheticTransferApproval.recipient = dialog.deviceName(deviceRow.modelData);
-                                    syntheticTransferApproval.fingerprint = dialog.controller.syntheticTransferFingerprint;
-                                    syntheticTransferApproval.approved = false;
-                                    syntheticTransferApproval.open();
-                                }
-                            }
-                            Controls.Button {
-                                visible: !dialog.keyTransferVault && ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
-                                text: qsTr("Cancelar transferencia")
-                                icon.name: "dialog-cancel"
-                                onClicked: { console.info("Key transfer cancel from device details cancel button"); dialog.controller.cancelSyntheticKeyTransfer(); }
-                            }
-                            Controls.BusyIndicator {
-                                running: !dialog.keyTransferVault && dialog.controller.syntheticTransferPreparing
-                                visible: running
-                                implicitWidth: Kirigami.Units.iconSizes.small
-                                implicitHeight: implicitWidth
-                            }
-                            Controls.Label {
-                                visible: !dialog.keyTransferVault && deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
-                                text: dialog.syntheticTransferLabel(deviceRow.syntheticTransferPhase)
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                        Kirigami.InlineMessage {
-                            Layout.fillWidth: true
-                            visible: !dialog.keyTransferVault && dialog.controller.syntheticTransferError.length > 0
-                            type: Kirigami.MessageType.Error
-                            text: dialog.controller.syntheticTransferError
-                        }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: deviceRow.syncExpanded
-                        spacing: Kirigami.Units.smallSpacing
-
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: qsTr("Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Button {
-                                text: qsTr("Activar prueba de Sync")
-                                icon.name: "media-playback-start"
-                                enabled: !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                                onClicked: {
-                                    dialog.controller.selectDevice(deviceRow.index);
-                                    dialog.controller.activateSyntheticSync();
-                                }
-                            }
-                            Controls.Button {
-                                text: qsTr("Actualizar prueba")
-                                icon.name: "view-refresh"
-                                enabled: dialog.controller.syncConfigured && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                                onClicked: {
-                                    dialog.controller.selectDevice(deviceRow.index);
-                                    dialog.controller.refreshSyntheticSync();
-                                }
-                            }
-                            Controls.Button {
-                                text: qsTr("Crear credencial de prueba")
-                                icon.name: "list-add"
-                                enabled: dialog.controller.syncConfigured && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
-                                onClicked: {
-                                    dialog.controller.selectDevice(deviceRow.index);
-                                    dialog.controller.createSyntheticCredential();
-                                }
-                            }
-                        }
-                        Controls.BusyIndicator {
-                            Layout.alignment: Qt.AlignLeft
-                            running: dialog.controller.syncBusy && dialog.controller.syncPeerId === deviceRow.deviceId
-                            visible: running
+                        Kirigami.Icon {
+                            source: "go-next-symbolic"
                             implicitWidth: Kirigami.Units.iconSizes.small
-                            implicitHeight: implicitWidth
+                            implicitHeight: Kirigami.Units.iconSizes.small
+                            Accessible.ignored: true
                         }
-                        Kirigami.InlineMessage {
-                            Layout.fillWidth: true
-                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncError.length > 0
-                            type: Kirigami.MessageType.Error
-                            text: dialog.controller.syncError
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncStatus.length > 0
-                            text: dialog.controller.syncStatus
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: dialog.controller.syncPeerId === deviceRow.deviceId && dialog.controller.syncConfigured
-                            text: qsTr("Revisiones guardadas en este equipo: %1").arg(dialog.controller.syncLocalRevisionCount)
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Repeater {
-                            model: dialog.controller.syncPeerId === deviceRow.deviceId ? dialog.controller.syncEntries : []
-                            Controls.Label {
-                                required property string modelData
-                                Layout.fillWidth: true
-                                text: "• " + modelData
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
-                        Layout.rightMargin: Kirigami.Units.smallSpacing
-                        visible: deviceRow.expanded
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: deviceRow.deviceId
-                            textFormat: Text.PlainText
-                            font.family: "monospace"
-                            wrapMode: Text.WrapAnywhere
-                            color: Kirigami.Theme.disabledTextColor
-                            Accessible.name: qsTr("Identificador completo del dispositivo")
-                        }
-                        Controls.ToolButton {
-                            text: qsTr("Copiar")
-                            icon.name: "edit-copy"
-                            onClicked: dialog.copyRequested(deviceRow.deviceId)
-                        }
-                    }
-                    Kirigami.Separator {
-                        Layout.fillWidth: true
-                        Layout.topMargin: Kirigami.Units.smallSpacing
                     }
                 }
             }
@@ -1224,8 +1050,8 @@ Controls.ApplicationWindow {
                 explanation: qsTr("Vincula KryptoPass para Android para mantener una conexión segura con este equipo.")
                 helpfulAction: Kirigami.Action {
                     text: qsTr("Vincular dispositivo")
-                    icon.name: "list-add"
-                    enabled: dialog.canPair
+                    icon.name: "network-connect"
+                    enabled: dialog.canPair || dialog.controller.sessionActive
                     onTriggered: dialog.startPairing()
                 }
             }
@@ -1261,8 +1087,9 @@ Controls.ApplicationWindow {
             }
             Controls.Button {
                 text: qsTr("Vincular dispositivo")
-                icon.name: "list-add"
-                enabled: dialog.canPair
+                visible: !dialog.showingDetail
+                icon.name: "network-connect"
+                enabled: dialog.canPair || dialog.controller.sessionActive
                 onClicked: dialog.startPairing()
             }
             Controls.Button {
@@ -1284,7 +1111,7 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: dialog.resetRequested ? qsTr("¿Reiniciar vinculación?") : qsTr("¿Olvidar dispositivo?")
+        title: dialog.resetRequested ? qsTr("¿Borrar todas las vinculaciones?") : qsTr("¿Olvidar dispositivo?")
         width: Math.min(Kirigami.Units.gridUnit * 24, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
         contentItem: Controls.Label {
@@ -1298,7 +1125,7 @@ Controls.ApplicationWindow {
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
             }
             Controls.Button {
-                text: dialog.resetRequested ? qsTr("Reiniciar vinculación") : qsTr("Olvidar dispositivo")
+                text: dialog.resetRequested ? qsTr("Borrar todas las vinculaciones") : qsTr("Olvidar dispositivo")
                 icon.name: "edit-delete"
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.DestructiveRole
                 onClicked: {
@@ -1314,10 +1141,65 @@ Controls.ApplicationWindow {
     }
 
     Controls.Dialog {
+        id: connectionLimit
+        parent: Controls.Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Una conexión a la vez")
+        width: Math.min(Kirigami.Units.gridUnit * 24, dialog.width - Kirigami.Units.gridUnit * 2)
+        contentItem: Controls.Label {
+            text: qsTr("Ahora estás conectado a %1. Para conectar otro dispositivo, abre esta conexión y pulsa Desconectar. Tus dispositivos seguirán vinculados.").arg(dialog.activeDeviceName)
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+        }
+        footer: Controls.DialogButtonBox {
+            Controls.Button {
+                text: qsTr("Volver")
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
+            }
+            Controls.Button {
+                text: qsTr("Ver conexión actual")
+                enabled: dialog.activeDevice !== null
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
+            }
+            onAccepted: {
+                if (dialog.activeDevice)
+                    dialog.openDevice(dialog.activeDevice);
+                connectionLimit.close();
+            }
+            onRejected: connectionLimit.close()
+        }
+    }
+
+    SyncKeysPicker {
+        id: syncKeysPicker
+        parent: Controls.Overlay.overlay
+        anchors.centerIn: parent
+        host: dialog
+        onKeysChosen: function (deviceId, fingerprints) {
+            dialog.controller.enableVaultSync(deviceId, fingerprints);
+        }
+    }
+
+    DeviceKeyPicker {
+        id: keyPicker
+        parent: Controls.Overlay.overlay
+        anchors.centerIn: parent
+        host: dialog
+        onKeyChosen: function (fingerprint, title) {
+            const device = dialog.devices.find(candidate => String(candidate.deviceId) === keyPicker.deviceId);
+            if (device && String(device.connectionGeneration) === keyPicker.connectionGeneration)
+                dialog.approveTransfer(device, true, fingerprint, title);
+        }
+    }
+
+    Controls.Dialog {
         id: syntheticTransferApproval
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
+        padding: Kirigami.Units.largeSpacing
+        spacing: 0
         title: vaultIdentity ? qsTr("Enviar tu clave OpenPGP al teléfono") : qsTr("Confirmar envío de clave de prueba")
         width: Math.min(Kirigami.Units.gridUnit * 26, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
@@ -1325,10 +1207,14 @@ Controls.ApplicationWindow {
         property string connectionGeneration: ""
         property string recipient: ""
         property string fingerprint: ""
+        property string keyTitle: ""
         property bool approved: false
         property bool vaultIdentity: false
         readonly property var transferDevice: dialog.devices.find(device => String(device.deviceId || "") === deviceId) || ({})
         readonly property string transferPhase: String(transferDevice.syntheticTransferPhase || "ready")
+        readonly property var chosenKey: dialog.keyStore.entries.find(key => String(key.id) === fingerprint) || null
+        readonly property bool chosenKeyAvailable: !vaultIdentity || dialog.canTransferKey(chosenKey)
+        readonly property bool canConfirm: transferDevice.connection === "connected" && String(transferDevice.connectionGeneration) === connectionGeneration && transferPhase === "ready" && chosenKeyAvailable && !dialog.controller.busy && !dialog.controller.syncBusy && !dialog.controller.maintenanceBusy && !dialog.controller.syntheticTransferPreparing
         readonly property bool transferPending: dialog.controller.syntheticTransferPreparing || ["waiting_acceptance", "sending", "waiting_receipt"].includes(transferPhase)
 
         onClosed: {
@@ -1340,61 +1226,74 @@ Controls.ApplicationWindow {
         }
         onRejected: close()
 
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.mediumSpacing
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: !syntheticTransferApproval.approved
-                text: qsTr("Destinatario: %1").arg(syntheticTransferApproval.recipient)
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: !syntheticTransferApproval.approved
-                text: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave. Compáralo con el que muestra el teléfono:") : qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: !syntheticTransferApproval.approved
-                text: syntheticTransferApproval.fingerprint
-                textFormat: Text.PlainText
-                font.family: "monospace"
-                wrapMode: Text.WrapAnywhere
-                Accessible.name: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave") : qsTr("Fingerprint completo de la clave de prueba")
-            }
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                visible: !syntheticTransferApproval.approved
-                type: Kirigami.MessageType.Warning
-                text: syntheticTransferApproval.vaultIdentity
-                    ? qsTr("Se enviará la clave privada que abre tu bóveda, solo a este teléfono y solo después de que la aceptes allí. GnuPG te pedirá su contraseña para exportarla; en el teléfono seguirá protegida con esa misma contraseña. Esta confirmación autoriza un único envío en esta sesión.")
-                    : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
-            }
-            Controls.BusyIndicator {
-                Layout.alignment: Qt.AlignHCenter
-                visible: dialog.controller.syntheticTransferPreparing || syntheticTransferApproval.transferPending
-                running: visible
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: syntheticTransferApproval.approved
-                text: dialog.controller.syntheticTransferPreparing
-                    ? (syntheticTransferApproval.vaultIdentity ? qsTr("Exportando tu clave con GnuPG; escribe su contraseña si te la pide…") : qsTr("Preparando la clave de prueba en GnuPG…"))
-                    : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-            }
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                visible: syntheticTransferApproval.approved && dialog.controller.syntheticTransferError.length > 0
-                type: Kirigami.MessageType.Error
-                text: dialog.controller.syntheticTransferError
+        contentItem: Controls.ScrollView {
+            id: approvalScroll
+            contentWidth: availableWidth
+            implicitHeight: Math.min(approvalContent.implicitHeight, Math.max(Kirigami.Units.gridUnit * 6, dialog.height - Kirigami.Units.gridUnit * 9))
+            clip: true
+            ColumnLayout {
+                id: approvalContent
+                width: approvalScroll.availableWidth
+                spacing: Kirigami.Units.largeSpacing
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Destinatario: %1").arg(syntheticTransferApproval.recipient)
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: syntheticTransferApproval.vaultIdentity ? qsTr("Clave elegida: %1\nHuella completa; compárala con el teléfono:").arg(syntheticTransferApproval.keyTitle) : qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
+                        textFormat: Text.PlainText
+                        wrapMode: Text.Wrap
+                    }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: syntheticTransferApproval.fingerprint
+                        textFormat: Text.PlainText
+                        font.family: "monospace"
+                        wrapMode: Text.WrapAnywhere
+                        Accessible.name: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave") : qsTr("Fingerprint completo de la clave de prueba")
+                    }
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: !syntheticTransferApproval.approved
+                    type: Kirigami.MessageType.Warning
+                    text: syntheticTransferApproval.vaultIdentity ? qsTr("Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.") : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: !syntheticTransferApproval.approved && (syntheticTransferApproval.transferDevice.connection !== "connected" || String(syntheticTransferApproval.transferDevice.connectionGeneration) !== syntheticTransferApproval.connectionGeneration || (syntheticTransferApproval.vaultIdentity && !syntheticTransferApproval.chosenKeyAvailable))
+                    type: Kirigami.MessageType.Warning
+                    text: qsTr("La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la clave.")
+                }
+                Controls.BusyIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: dialog.controller.syntheticTransferPreparing || syntheticTransferApproval.transferPending
+                    running: visible
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: syntheticTransferApproval.approved
+                    text: dialog.controller.syntheticTransferPreparing ? (syntheticTransferApproval.vaultIdentity ? qsTr("Exportando tu clave con GnuPG; escribe su contraseña si te la pide…") : qsTr("Preparando la clave de prueba en GnuPG…")) : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: syntheticTransferApproval.approved && dialog.controller.syntheticTransferError.length > 0
+                    type: Kirigami.MessageType.Error
+                    text: dialog.controller.syntheticTransferError
+                }
             }
         }
         footer: Controls.DialogButtonBox {
+            padding: syntheticTransferApproval.padding
+            spacing: Kirigami.Units.smallSpacing * 2
             Controls.Button {
                 text: syntheticTransferApproval.approved ? (syntheticTransferApproval.transferPending ? qsTr("Cancelar transferencia") : qsTr("Cerrar")) : qsTr("Cancelar")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
@@ -1408,13 +1307,21 @@ Controls.ApplicationWindow {
                 }
             }
             Controls.Button {
-                visible: !syntheticTransferApproval.approved
-                text: qsTr("Confirmar y enviar")
-                icon.name: "mail-send"
+                enabled: syntheticTransferApproval.approved ? !syntheticTransferApproval.transferPending : syntheticTransferApproval.canConfirm
+                text: !syntheticTransferApproval.approved ? qsTr("Confirmar y enviar") : dialog.controller.syntheticTransferPreparing ? qsTr("Preparando…") : syntheticTransferApproval.transferPending ? qsTr("Enviando…") : syntheticTransferApproval.canConfirm ? qsTr("Reintentar") : qsTr("Volver al dispositivo")
+                icon.name: syntheticTransferApproval.approved && !syntheticTransferApproval.transferPending ? (syntheticTransferApproval.canConfirm ? "view-refresh" : "go-previous") : "mail-send"
                 // ActionRole keeps the dialog open: AcceptRole would close it, and closing
                 // an approved, pending transfer cancels it in onClosed.
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
                 onClicked: {
+                    if (syntheticTransferApproval.approved && !syntheticTransferApproval.transferPending && !syntheticTransferApproval.canConfirm) {
+                        dialog.selectedDeviceId = syntheticTransferApproval.deviceId;
+                        syntheticTransferApproval.approved = false;
+                        syntheticTransferApproval.close();
+                        return;
+                    }
+                    if (!syntheticTransferApproval.canConfirm)
+                        return;
                     syntheticTransferApproval.approved = true;
                     if (syntheticTransferApproval.vaultIdentity)
                         dialog.controller.startVaultKeyTransfer(syntheticTransferApproval.deviceId, syntheticTransferApproval.connectionGeneration, syntheticTransferApproval.fingerprint);

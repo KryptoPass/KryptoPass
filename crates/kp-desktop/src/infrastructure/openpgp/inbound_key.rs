@@ -259,7 +259,7 @@ pub(crate) fn decrypt_challenge(
     let mut used_offered = false;
     for recipient in result.recipients() {
         let id = recipient.key_id().unwrap_or_default().to_ascii_uppercase();
-        let belongs = subkey_ids.iter().any(|subkey| *subkey == id);
+        let belongs = subkey_ids.contains(&id);
         if recipient.status().is_ok() {
             if belongs {
                 used_offered = true;

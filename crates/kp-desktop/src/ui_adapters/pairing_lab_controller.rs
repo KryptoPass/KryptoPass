@@ -4,6 +4,7 @@ use super::synthetic_sync::{SyntheticSyncAction, SyntheticSyncError, SyntheticSy
 use crate::vault_sync::mirror::{self, MirrorError};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
+use kryptopass_core::KeyFingerprint;
 use kryptopass_devices::{
     ConnectionState, DeviceDirectory, DeviceDirectorySnapshot, KeyTransferPurpose,
     SessionCloseReason, SessionEvent, SessionFailure, SessionOptions,
@@ -19,7 +20,7 @@ use kryptopass_pairing_lab::{
     spawn_resume_process_owner,
 };
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     net::IpAddr,
     path::PathBuf,
     pin::Pin,
@@ -111,6 +112,7 @@ pub mod qobject {
             READ,
             NOTIFY
         )]
+        #[qproperty(QString, vault_sync_keys, cxx_name = "vaultSyncKeys", READ, NOTIFY)]
         #[qproperty(
             QString,
             vault_sync_message,
@@ -118,6 +120,7 @@ pub mod qobject {
             READ,
             NOTIFY
         )]
+        #[qproperty(bool, vault_sync_failed, cxx_name = "vaultSyncFailed", READ, NOTIFY)]
         #[qproperty(
             QString,
             vault_key_fingerprint,
@@ -244,7 +247,7 @@ pub mod qobject {
         fn dismiss_inbound_key_transfer(self: Pin<&mut Self>);
         #[qinvokable]
         #[cxx_name = "enableVaultSync"]
-        fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString);
+        fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString, fingerprints: QString);
         #[qinvokable]
         #[cxx_name = "disableVaultSync"]
         fn disable_vault_sync(self: Pin<&mut Self>, device_id: QString);
@@ -302,7 +305,9 @@ pub struct PairingLabControllerRust {
     synthetic_transfer_fingerprint: QString,
     vault_key_fingerprint: QString,
     vault_sync_peers: QStringList,
+    vault_sync_keys: QString,
     vault_sync_message: QString,
+    vault_sync_failed: bool,
     vault_mirror_running: bool,
     synthetic_transfer_preparing: bool,
     synthetic_transfer_error: QString,
@@ -371,7 +376,9 @@ impl Default for PairingLabControllerRust {
             synthetic_transfer_fingerprint: QString::default(),
             vault_key_fingerprint: QString::default(),
             vault_sync_peers: QStringList::default(),
+            vault_sync_keys: QString::default(),
             vault_sync_message: QString::default(),
+            vault_sync_failed: false,
             vault_mirror_running: false,
             synthetic_transfer_preparing: false,
             synthetic_transfer_error: QString::default(),
@@ -957,7 +964,6 @@ impl qobject::PairingLabController {
                 object
                     .as_mut()
                     .set_vault_key_fingerprint(QString::from(vault_fingerprint));
-                object.as_mut().refresh_vault_sync_peers();
                 match result {
                     Ok(loaded) => {
                         let (ready, aliases) = loaded.map_or_else(|| (None, Ok(BTreeMap::new())), |(ready, aliases)| (Some(ready), aliases));
@@ -973,6 +979,8 @@ impl qobject::PairingLabController {
                             object.as_mut().replace_trusted_devices(Vec::new(), preferred);
                             object.as_mut().rust_mut().devices = None;
                         }
+                        // The peers must be known first: the selection is read per peer.
+                        object.as_mut().refresh_vault_sync_peers();
                         object.as_mut().set_status_code(QString::from("idle"));
                         if let Some(devices) = object.rust().devices.clone() {
                             object.as_mut().apply_devices_snapshot(&devices.snapshot());
@@ -1064,7 +1072,7 @@ impl qobject::PairingLabController {
         );
     }
 
-    /// Local confirmation callback for sending the vault identity to the phone.
+    /// Local confirmation callback for the exact OpenPGP identity chosen for the phone.
     /// GnuPG asks for the key passphrase on the worker before anything is sent.
     pub fn start_vault_key_transfer(
         self: Pin<&mut Self>,
@@ -1114,15 +1122,22 @@ impl qobject::PairingLabController {
             return;
         };
         let approved_fingerprint = approved_fingerprint.to_string();
-        let (offered_fingerprint, minimum_version) = match purpose {
-            KeyTransferPurpose::SyntheticFixture => {
-                (self.rust().synthetic_transfer_fingerprint.to_string(), 1)
-            }
-            KeyTransferPurpose::VaultIdentity => (self.rust().vault_key_fingerprint.to_string(), 2),
+        let (valid_approval, minimum_version) = match purpose {
+            KeyTransferPurpose::SyntheticFixture => (
+                !approved_fingerprint.is_empty()
+                    && approved_fingerprint
+                        == self.rust().synthetic_transfer_fingerprint.to_string(),
+                1,
+            ),
+            KeyTransferPurpose::VaultIdentity => (
+                kryptopass_core::KeyFingerprint::parse(&approved_fingerprint)
+                    .is_ok_and(|fingerprint| fingerprint.as_str().len() == 40),
+                2,
+            ),
         };
-        if approved_fingerprint.is_empty() || approved_fingerprint != offered_fingerprint {
+        if !valid_approval {
             self.as_mut().set_synthetic_transfer_error(QString::from(
-                "La identidad cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.",
+                "La clave elegida no es válida. Vuelve a abrir la selección y revisa su huella.",
             ));
             return;
         }
@@ -1180,7 +1195,7 @@ impl qobject::PairingLabController {
                         super::synthetic_key_transfer::prepare(&approved_fingerprint)?
                     }
                     KeyTransferPurpose::VaultIdentity => {
-                        super::synthetic_key_transfer::prepare_vault_identity(
+                        super::synthetic_key_transfer::prepare_selected_identity(
                             &approved_fingerprint,
                         )?
                     }
@@ -1257,33 +1272,55 @@ impl qobject::PairingLabController {
 
     /// Makes `device_id` sync the active vault. The phone renegotiates the
     /// session when the user enables it there too.
-    pub fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString) {
-        self.change_vault_sync(device_id, true);
+    pub fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString, fingerprints: QString) {
+        let keys: Vec<KeyFingerprint> = fingerprints
+            .to_string()
+            .split(',')
+            .filter(|text| !text.is_empty())
+            .filter_map(|text| KeyFingerprint::parse(text).ok())
+            .collect();
+        self.change_vault_sync(device_id, Some(keys));
     }
 
     /// Stops syncing with `device_id`; the vault and the ledger history stay.
     pub fn disable_vault_sync(self: Pin<&mut Self>, device_id: QString) {
-        self.change_vault_sync(device_id, false);
+        self.change_vault_sync(device_id, None);
     }
 
-    fn change_vault_sync(mut self: Pin<&mut Self>, device_id: QString, enabled: bool) {
+    /// `keys` enables Sync for those vault keys; `None` disables it.
+    fn change_vault_sync(
+        mut self: Pin<&mut Self>,
+        device_id: QString,
+        keys: Option<Vec<KeyFingerprint>>,
+    ) {
+        let enabled = keys.is_some();
         let Some(peer) = parse_device_id(&device_id.to_string()) else {
             return;
         };
         let Ok(directory) = lab_directory() else {
+            self.as_mut().set_vault_sync_failed(true);
             self.as_mut()
                 .set_vault_sync_message(QString::from(MirrorError::Profile.message()));
             return;
         };
+        self.as_mut().set_vault_sync_failed(false);
+        self.as_mut().set_vault_sync_message(QString::default());
+        let declared = self.declared_vault_keys(peer);
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let result = if enabled {
-                mirror::enable(&directory, peer)
+                mirror::enable(
+                    &directory,
+                    peer,
+                    keys.as_deref().unwrap_or_default(),
+                    declared.as_deref(),
+                )
             } else {
                 mirror::disable(&directory, peer)
             };
             tracing::info!(enabled, error = ?result.err(), "Vault sync selection changed");
             let _ = thread.queue(move |mut object| {
+                object.as_mut().set_vault_sync_failed(result.is_err());
                 object.as_mut().set_vault_sync_message(match result {
                     Ok(()) if enabled => QString::from(
                         "Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.",
@@ -1306,9 +1343,15 @@ impl qobject::PairingLabController {
             return;
         };
         self.as_mut().rust_mut().vault_mirror_running = true;
+        let declared: HashMap<DeviceId, Vec<String>> = self
+            .rust()
+            .known_peers
+            .iter()
+            .filter_map(|peer| Some((peer.device_id, self.declared_vault_keys(peer.device_id)?)))
+            .collect();
         let thread = self.qt_thread();
         std::thread::spawn(move || {
-            let result = mirror::run(&directory);
+            let result = mirror::run(&directory, &declared);
             match &result {
                 Ok(outcome) if outcome.pulled + outcome.pushed + outcome.skipped > 0 => {
                     tracing::info!(
@@ -1325,6 +1368,8 @@ impl qobject::PairingLabController {
                 object.as_mut().rust_mut().vault_mirror_running = false;
                 match result {
                     Ok(outcome) => {
+                        let prior_failure = object.rust().vault_sync_failed;
+                        object.as_mut().set_vault_sync_failed(false);
                         if outcome.pulled > 0 {
                             object.as_mut().vault_mirror_pulled();
                         }
@@ -1335,13 +1380,15 @@ impl qobject::PairingLabController {
                                     "Bóveda sincronizada: {} recibidos, {} enviados.",
                                     outcome.pulled, outcome.pushed
                                 )));
-                        } else if object.rust().vault_sync_message.to_string()
-                            == MirrorError::Locked.message()
+                        } else if prior_failure
+                            || object.rust().vault_sync_message.to_string()
+                                == MirrorError::Locked.message()
                         {
                             object.as_mut().set_vault_sync_message(QString::default());
                         }
                     }
                     Err(error) => {
+                        object.as_mut().set_vault_sync_failed(true);
                         object
                             .as_mut()
                             .set_vault_sync_message(QString::from(error.message()));
@@ -1349,6 +1396,20 @@ impl qobject::PairingLabController {
                 }
             });
         });
+    }
+
+    /// Keys (upper-case hex) that `peer` declared holding in this connection;
+    /// `None` while it is offline or runs a version that does not declare them.
+    fn declared_vault_keys(&self, peer: DeviceId) -> Option<Vec<String>> {
+        self.rust()
+            .devices
+            .as_ref()?
+            .peer_vault_keys(&peer)
+            .map(|keys| {
+                keys.iter()
+                    .map(|bytes| bytes.iter().map(|byte| format!("{byte:02X}")).collect())
+                    .collect()
+            })
     }
 
     fn refresh_vault_sync_peers(self: Pin<&mut Self>) {
@@ -1363,12 +1424,24 @@ impl qobject::PairingLabController {
             .collect();
         let thread = self.qt_thread();
         std::thread::spawn(move || {
-            let enabled: QStringList = peers
+            let selections: Vec<(DeviceId, Vec<String>)> = peers
                 .into_iter()
-                .filter(|peer| mirror::is_enabled(&directory, *peer))
-                .map(|peer| QString::from(peer.to_string()))
+                .map(|peer| (peer, mirror::selected_keys(&directory, peer)))
+                .filter(|(_, keys)| !keys.is_empty())
                 .collect();
+            let keys_by_device: serde_json::Map<String, serde_json::Value> = selections
+                .iter()
+                .map(|(peer, keys)| (peer.to_string(), serde_json::json!(keys)))
+                .collect();
+            let enabled: QStringList = selections
+                .iter()
+                .map(|(peer, _)| QString::from(peer.to_string()))
+                .collect();
+            let keys_json = serde_json::Value::Object(keys_by_device).to_string();
             let _ = thread.queue(move |mut object| {
+                object
+                    .as_mut()
+                    .set_vault_sync_keys(QString::from(keys_json));
                 object.as_mut().set_vault_sync_peers(enabled);
             });
         });
@@ -2380,6 +2453,17 @@ impl qobject::PairingLabController {
                     .and_then(|progress| progress.transfer_id)
                     .map(|id| hex_transfer_id(&id))
                     .unwrap_or_default();
+                // Keys the phone declared for this connection; null while unknown.
+                let vault_keys = self
+                    .rust()
+                    .devices
+                    .as_ref()
+                    .and_then(|devices| devices.peer_vault_keys(&device.identity.device_id))
+                    .map(|keys| {
+                        keys.iter()
+                            .map(|bytes| bytes.iter().map(|byte| format!("{byte:02X}")).collect())
+                            .collect::<Vec<String>>()
+                    });
                 serde_json::json!({
                     "route": route,
                     "routeLabel": route_label,
@@ -2395,6 +2479,7 @@ impl qobject::PairingLabController {
                     "syntheticTransferId": synthetic_transfer_id,
                     "keyTransferVersion": synthetic_progress.map_or(0, |progress| progress.version),
                     "alias": alias,
+                    "vaultKeys": vault_keys,
                     "displayName": name,
                     "isActive": self.rust().session_active && id == self.rust().active_device_id.to_string(),
                     "trust": "trusted",
@@ -2461,6 +2546,7 @@ fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
             "No se pudo acceder al llavero del sistema para abrir la identidad de este equipo."
         }
         LabError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
+        LabError::SyncHistoryUntrusted => MirrorError::UntrustedHistory.message(),
         LabError::Session => {
             "La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar."
         }
@@ -2516,6 +2602,7 @@ fn error_code(error: &kryptopass_pairing_lab::LabError) -> &'static str {
         LabError::Expired => "expired",
         LabError::Rejected => "rejected",
         LabError::Profile => "profile_error",
+        LabError::SyncHistoryUntrusted => "sync_history_error",
         LabError::KeyStore => "keystore_error",
         LabError::Authentication => "authentication_error",
         LabError::Link | LabError::Session => "transport_error",
@@ -2767,6 +2854,12 @@ notifying_property!(
     set_synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint,
     synthetic_transfer_fingerprint_changed,
+    QString
+);
+notifying_property!(
+    set_vault_sync_keys,
+    vault_sync_keys,
+    vault_sync_keys_changed,
     QString
 );
 notifying_property!(
@@ -3275,3 +3368,10 @@ impl qobject::PairingLabController {
             .set_inbound_key_transfer(QString::from(value.to_string()));
     }
 }
+
+notifying_property!(
+    set_vault_sync_failed,
+    vault_sync_failed,
+    vault_sync_failed_changed,
+    bool
+);

@@ -963,11 +963,13 @@ impl OwnerRuntime {
                                 .is_none_or(|until| *until <= StdInstant::now())
                     });
                     if !permitted_by_policy {
-                        tracing::info!("LAN resume rejected: policy (suppressed, busy or cooling down)");
+                        tracing::info!(
+                            "LAN resume rejected: policy (suppressed, busy or cooling down)"
+                        );
                         return false;
                     }
                     let snapshot = devices.snapshot();
-                    let connection = snapshot.get(&peer).map(|device| device.connection.clone());
+                    let connection = snapshot.get(&peer).map(|device| device.connection);
                     let trusted_in_directory = connection.as_ref().is_some_and(|connection| {
                         matches!(
                             connection,

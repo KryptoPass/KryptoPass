@@ -1,8 +1,12 @@
 //! Two-way mirror between the Desktop vault and the signed ledger shared with
 //! paired phones.
 //!
-//! Only records encrypted exactly to the vault's primary key take part, because
-//! they are the ones a phone holding that key can open. Desktop owns the folder
+//! Only records with at least one of the keys selected for the phone among their
+//! recipients take part, because those are the ones a phone holding that key can
+//! open. A record shared with more keys keeps all of them on Desktop; the copy
+//! in the ledger is encrypted to the selected key alone. The
+//! phone's binding names those keys; one of them is the anchor that both apps
+//! announce and derive the vault ID from. Desktop owns the folder
 //! tree (phones only see the path) and links stay Desktop-only. Icons travel in
 //! the object: a theme by name, an image by hash, with its PNG published once
 //! as a separate asset record (UUID version 8) that every pass skips as an
@@ -36,7 +40,6 @@ use std::path::{Path, PathBuf};
 const SYNTHETIC_VAULT_ID: Id = [
     0x5c, 0x0a, 0xa3, 0x60, 0x54, 0xc3, 0x4b, 0x7c, 0xaa, 0x4e, 0xdc, 0xf6, 0x3c, 0xdd, 0x8c, 0x27,
 ];
-const VAULT_ID_DOMAIN: &[u8] = b"org.kryptopass.vault-id.v1\0";
 const MAX_STATE_BYTES: u64 = 4 * 1024 * 1024;
 const COPY_SUFFIX: &str = " (copia del teléfono)";
 /// Internal switch for publishing theme and image icons. Phones that predate
@@ -49,8 +52,10 @@ const PUBLISH_ICONS: bool = true;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum MirrorError {
     NoVault,
-    NoVaultKey,
+    NoSyncKeys,
+    PhoneLacksKey,
     Profile,
+    UntrustedHistory,
     OtherVaultSelected,
     Locked,
     Storage,
@@ -60,15 +65,30 @@ impl MirrorError {
     pub(crate) const fn message(self) -> &'static str {
         match self {
             Self::NoVault => "No hay una bóveda abierta en Desktop.",
-            Self::NoVaultKey => {
-                "La bóveda no tiene clave principal. Elígela en Ajustes antes de sincronizar."
+            Self::PhoneLacksKey => {
+                "El teléfono no tiene alguna de las claves elegidas. Elige solo las que tiene."
+            }
+            Self::NoSyncKeys => {
+                "Elige al menos una clave con clave privada en este equipo para sincronizar."
             }
             Self::Profile => "No se pudo abrir el perfil de vinculación de este teléfono.",
+            Self::UntrustedHistory => {
+                "El historial de Sync contiene cambios de un dispositivo que ya no está autorizado. El historial se conserva, pero Sync necesita recuperarlo antes de continuar."
+            }
             Self::OtherVaultSelected => {
                 "Este teléfono ya sincroniza otra bóveda. Desactívala antes de cambiarla."
             }
             Self::Locked => "Desbloquea la bóveda en Desktop para sincronizar los cambios.",
             Self::Storage => "No se pudo leer o guardar la bóveda. Se reintentará.",
+        }
+    }
+}
+
+impl From<kryptopass_pairing_lab::LabError> for MirrorError {
+    fn from(error: kryptopass_pairing_lab::LabError) -> Self {
+        match error {
+            kryptopass_pairing_lab::LabError::SyncHistoryUntrusted => Self::UntrustedHistory,
+            _ => Self::Profile,
         }
     }
 }
@@ -81,40 +101,87 @@ pub(crate) struct MirrorOutcome {
     pub(crate) skipped: usize,
 }
 
-/// The vault ID both apps derive from the key, so no network message selects it.
-pub(crate) fn vault_id_for(fingerprint: &[u8]) -> Id {
-    let mut digest = Sha256::new();
-    digest.update(VAULT_ID_DOMAIN);
-    digest.update(fingerprint);
-    let digest = digest.finalize();
-    let mut id = [0_u8; 16];
-    id.copy_from_slice(&digest[..16]);
-    id
+/// Decodes a 40-hex-digit OpenPGP fingerprint.
+fn fingerprint_bytes(key: &KeyFingerprint) -> Result<Vec<u8>, MirrorError> {
+    let text = key.as_str();
+    if text.len() != 40 {
+        return Err(MirrorError::NoSyncKeys);
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(&text[index..index + 2], 16))
+        .collect::<Result<_, _>>()
+        .map_err(|_| MirrorError::NoSyncKeys)
 }
 
-/// Selects the vault for `peer`, replacing only the synthetic exercise.
-/// The next session with the phone carries Sync.
-pub(crate) fn enable(lab_directory: &Path, peer: DeviceId) -> Result<(), MirrorError> {
-    let vault = ActiveVault::open()?;
+/// Keys of the local keyring that can open records here.
+fn keys_with_secret() -> Result<HashSet<String>, MirrorError> {
+    Ok(crate::keyring::commands::list_keys()
+        .map_err(|_| MirrorError::NoSyncKeys)?
+        .into_iter()
+        .filter(|key| key.has_secret)
+        .map(|key| key.fingerprint.as_str().to_ascii_uppercase())
+        .collect())
+}
+
+/// Selects the vault keys that `peer` shares, replacing only the synthetic exercise.
+/// A first selection creates the binding with a random vault ID that the phone adopts;
+/// later selections on that binding only change which keys take part, so the ledger and
+/// its history stay. The next session with the phone carries Sync.
+pub(crate) fn enable(
+    lab_directory: &Path,
+    peer: DeviceId,
+    keys: &[KeyFingerprint],
+    declared: Option<&[String]>,
+) -> Result<(), MirrorError> {
+    // A phone that declared its keys can only be given records it can open.
+    if declared.is_some_and(|declared| {
+        keys.iter()
+            .any(|key| !declared.contains(&key.as_str().to_ascii_uppercase()))
+    }) {
+        return Err(MirrorError::PhoneLacksKey);
+    }
+    let available = keys_with_secret()?;
+    let mut fingerprints = keys
+        .iter()
+        .map(|key| {
+            if !available.contains(&key.as_str().to_ascii_uppercase()) {
+                return Err(MirrorError::NoSyncKeys);
+            }
+            fingerprint_bytes(key)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    fingerprints.sort_unstable();
+    fingerprints.dedup();
+    if fingerprints.is_empty() {
+        return Err(MirrorError::NoSyncKeys);
+    }
+    ActiveVault::open()?;
     let host =
         LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
-    let fingerprint = vault.fingerprint_bytes()?;
-    let vault_id = vault_id_for(&fingerprint);
     if let Some(info) = host
         .sync_vault_info(peer)
         .map_err(|_| MirrorError::Profile)?
     {
-        if info.vault_id == vault_id && info.fingerprint == fingerprint {
+        if info.vault_id == SYNTHETIC_VAULT_ID {
+            host.remove_sync_vault(peer)
+                .map_err(|_| MirrorError::Profile)?;
+        } else if info.key_agnostic {
+            if info.fingerprints == fingerprints {
+                return Ok(());
+            }
+            return host
+                .update_sync_keys(peer, &fingerprints)
+                .map_err(MirrorError::from);
+        } else if info.fingerprints == fingerprints {
             return Ok(());
-        }
-        if info.vault_id != SYNTHETIC_VAULT_ID {
+        } else {
             return Err(MirrorError::OtherVaultSelected);
         }
-        host.remove_sync_vault(peer)
-            .map_err(|_| MirrorError::Profile)?;
     }
-    host.configure_sync_vault(peer, vault_id, &fingerprint)
-        .map_err(|_| MirrorError::Profile)
+    host.create_sync_vault(peer, &fingerprints)
+        .map(|_| ())
+        .map_err(MirrorError::from)
 }
 
 /// Stops syncing with `peer`. The ledger stays, as the history of the vault.
@@ -125,70 +192,108 @@ pub(crate) fn disable(lab_directory: &Path, peer: DeviceId) -> Result<(), Mirror
         .map_err(|_| MirrorError::Profile)
 }
 
-/// Whether `peer` syncs the active vault.
-pub(crate) fn is_enabled(lab_directory: &Path, peer: DeviceId) -> bool {
-    let Ok(vault) = ActiveVault::open() else {
-        return false;
-    };
-    let Ok(fingerprint) = vault.fingerprint_bytes() else {
-        return false;
-    };
+/// Fingerprints (upper-case hex) that `peer` syncs, or none while it does not.
+pub(crate) fn selected_keys(lab_directory: &Path, peer: DeviceId) -> Vec<String> {
     LabHost::open_existing_system_profile(lab_directory)
         .ok()
         .and_then(|host| host.sync_vault_info(peer).ok().flatten())
-        .is_some_and(|info| {
-            info.vault_id == vault_id_for(&fingerprint) && info.fingerprint == fingerprint
+        .filter(|info| info.vault_id != SYNTHETIC_VAULT_ID)
+        .map(|info| {
+            info.fingerprints
+                .iter()
+                .map(|bytes| bytes.iter().map(|byte| format!("{byte:02X}")).collect())
+                .collect()
         })
+        .unwrap_or_default()
 }
 
 /// Exchanges every change since the last run between the vault and the ledger.
 /// Does nothing while no trusted phone syncs the active vault.
-pub(crate) fn run(lab_directory: &Path) -> Result<MirrorOutcome, MirrorError> {
+pub(crate) fn run(
+    lab_directory: &Path,
+    declared: &HashMap<DeviceId, Vec<String>>,
+) -> Result<MirrorOutcome, MirrorError> {
     let mut vault = ActiveVault::open()?;
-    let fingerprint_bytes = vault.fingerprint_bytes()?;
-    let vault_id = vault_id_for(&fingerprint_bytes);
     let host =
         LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
     let peers = host.trusted_peers().map_err(|_| MirrorError::Profile)?;
-    let Some((peer, ledger_path)) = peers.iter().find_map(|peer| {
-        host.sync_vault_info(peer.device_id)
+    let mut total = MirrorOutcome::default();
+    let mut selected = 0_usize;
+    for peer in &peers {
+        let Some(info) = host
+            .sync_vault_info(peer.device_id)
             .ok()
             .flatten()
-            .filter(|info| info.vault_id == vault_id && info.fingerprint == fingerprint_bytes)
-            .map(|info| (peer.device_id, info.ledger_path))
-    }) else {
+            .filter(|info| info.vault_id != SYNTHETIC_VAULT_ID)
+        else {
+            continue;
+        };
+        let keys = info
+            .fingerprints
+            .iter()
+            .map(|bytes| {
+                let text: String = bytes.iter().map(|byte| format!("{byte:02X}")).collect();
+                KeyFingerprint::parse(&text).map_err(|_| MirrorError::Profile)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        // While the phone is connected, only keys it declared holding take part.
+        let keys: Vec<KeyFingerprint> = match declared.get(&peer.device_id) {
+            Some(declared) => keys
+                .into_iter()
+                .filter(|key| declared.contains(&key.as_str().to_ascii_uppercase()))
+                .collect(),
+            None => keys,
+        };
+        if keys.is_empty() {
+            tracing::debug!("Vault mirror idle: the phone holds none of the selected keys");
+            continue;
+        }
+        selected += 1;
+        let state_path = info.ledger_path.with_extension("mirror.json");
+        let outcome = host
+            .with_sync_vault(peer.device_id, |ledger, identity, trust, _| {
+                Ok(Mirror {
+                    ledger,
+                    identity,
+                    trust,
+                    vault: &mut vault,
+                    keys: &keys,
+                    crypto: NonInteractiveGnuPgOpenPgp,
+                    state_path: &state_path,
+                    folder_paths: HashMap::new(),
+                    asset_hashes: None,
+                    pending_icons: HashSet::new(),
+                }
+                .run())
+            })
+            .map_err(|error| {
+                tracing::warn!(error = ?error, "Vault mirror could not open the selected ledger");
+                if matches!(
+                    error,
+                    kryptopass_pairing_lab::LabError::SyncHistoryUntrusted
+                ) {
+                    MirrorError::UntrustedHistory
+                } else {
+                    MirrorError::Storage
+                }
+            })??;
+        total.pulled += outcome.pulled;
+        total.pushed += outcome.pushed;
+        total.skipped += outcome.skipped;
+    }
+    if selected == 0 {
         tracing::debug!(
             trusted_peers = peers.len(),
-            "Vault mirror idle: no trusted phone syncs the active vault key"
+            "Vault mirror idle: no trusted phone syncs vault keys"
         );
-        return Ok(MirrorOutcome::default());
-    };
-    let state_path = ledger_path.with_extension("mirror.json");
-    host.with_sync_vault(peer, |ledger, identity, trust, _| {
-        Ok(Mirror {
-            ledger,
-            identity,
-            trust,
-            vault: &mut vault,
-            crypto: NonInteractiveGnuPgOpenPgp,
-            state_path: &state_path,
-            folder_paths: HashMap::new(),
-            asset_hashes: None,
-            pending_icons: HashSet::new(),
-        }
-        .run())
-    })
-    .map_err(|error| {
-        tracing::warn!(error = ?error, "Vault mirror could not open the selected ledger");
-        MirrorError::Storage
-    })?
+    }
+    Ok(total)
 }
 
-/// The active Desktop vault and its primary key.
+/// The active Desktop vault.
 struct ActiveVault {
     path: PathBuf,
     storage: SqliteStorage,
-    primary: KeyFingerprint,
 }
 
 impl ActiveVault {
@@ -202,28 +307,7 @@ impl ActiveVault {
             return Err(MirrorError::NoVault);
         }
         let storage = SqliteStorage::open_existing(&path).map_err(|_| MirrorError::NoVault)?;
-        let primary = storage
-            .primary_key()
-            .map_err(|_| MirrorError::Storage)?
-            .ok_or(MirrorError::NoVaultKey)?
-            .fingerprint;
-        Ok(Self {
-            path,
-            storage,
-            primary,
-        })
-    }
-
-    fn fingerprint_bytes(&self) -> Result<Vec<u8>, MirrorError> {
-        let text = self.primary.as_str();
-        if text.len() != 40 {
-            return Err(MirrorError::NoVaultKey);
-        }
-        (0..text.len())
-            .step_by(2)
-            .map(|index| u8::from_str_radix(&text[index..index + 2], 16))
-            .collect::<Result<_, _>>()
-            .map_err(|_| MirrorError::NoVaultKey)
+        Ok(Self { path, storage })
     }
 }
 
@@ -301,6 +385,8 @@ struct Mirror<'a> {
     identity: &'a DeviceIdentity,
     trust: &'a dyn TrustSource,
     vault: &'a mut ActiveVault,
+    /// Keys selected for this phone, anchor included.
+    keys: &'a [KeyFingerprint],
     crypto: NonInteractiveGnuPgOpenPgp,
     state_path: &'a Path,
     /// Folder names from the root for every Desktop folder, sent with each record.
@@ -325,6 +411,12 @@ struct MainRecord {
 }
 
 impl Mirror<'_> {
+    /// The key a record is shared under with the phone: its first recipient that is
+    /// one of the selected keys.
+    fn shared_key<'k>(&'k self, recipients: &'k [KeyFingerprint]) -> Option<&'k KeyFingerprint> {
+        self.keys.iter().find(|key| recipients.contains(key))
+    }
+
     fn run(mut self) -> Result<MirrorOutcome, MirrorError> {
         let mut state = MirrorState::load(self.state_path, &self.vault.path)?;
         self.folder_paths = folder_paths(
@@ -370,10 +462,8 @@ impl Mirror<'_> {
         let mut changed = false;
         for id in ids {
             let meta = main.get(&id);
-            // Records shared with other keys stay Desktop-only; a phone could not open them.
-            if meta.is_some_and(|meta| {
-                meta.recipients.as_slice() != std::slice::from_ref(&self.vault.primary)
-            }) {
+            // Records the phone could not open stay Desktop-only: none of its keys is a recipient.
+            if meta.is_some_and(|meta| self.shared_key(meta.recipients.as_slice()).is_none()) {
                 not_primary_only += 1;
                 continue;
             }
@@ -580,13 +670,21 @@ impl Mirror<'_> {
         expected: &[Id],
         outcome: &mut MirrorOutcome,
     ) -> Result<RecordState, Failure> {
-        let fingerprint = self.vault.primary.clone();
-        let main = match self
+        let stored = self
             .vault
             .storage
             .find_secret(id)
-            .map_err(|_| Failure::Record(line!()))?
-        {
+            .map_err(|_| Failure::Record(line!()))?;
+        // A record travels encrypted to one key the phone holds and Desktop shares with it;
+        // a tombstone has none, so the anchor stands in.
+        let fingerprint = match stored.as_ref().map(|secret| secret.recipients.as_slice()) {
+            Some(recipients) => self
+                .shared_key(recipients)
+                .ok_or(Failure::Record(line!()))?
+                .clone(),
+            None => self.keys.first().ok_or(Failure::Record(line!()))?.clone(),
+        };
+        let main = match stored {
             Some(_) => Some(self.read_main(id)?),
             None => None,
         };
@@ -752,13 +850,16 @@ impl Mirror<'_> {
         }
         // Desktop records detect a locked vault; an unreadable ledger revision
         // only skips its own record so it cannot block the others.
-        let plaintext = self
-            .crypto
-            .decrypt(&revision.ciphertext)
-            .map_err(|_| Failure::Record(line!()))?;
-        decode_vault_object(plaintext.as_slice(), id, &self.vault.primary)
+        let plaintext = self.crypto.decrypt(&revision.ciphertext).map_err(|error| {
+            tracing::warn!(error = %error, "Vault mirror could not decrypt a ledger record; the key may be missing here or locked");
+            Failure::Record(line!())
+        })?;
+        // The envelope names its key, so the first selected key that matches decodes it.
+        self.keys
+            .iter()
+            .find_map(|key| decode_vault_object(plaintext.as_slice(), id, key).ok())
             .map(Some)
-            .map_err(|_| Failure::Record(line!()))
+            .ok_or(Failure::Record(line!()))
     }
 
     /// Creates or replaces the Desktop record, keeping its folder. The icon follows
@@ -771,18 +872,38 @@ impl Mirror<'_> {
         object: VaultObject,
         expected: Option<u64>,
     ) -> Result<u64, Failure> {
-        let recipients = RecipientSet::new(vec![self.vault.primary.clone()])
-            .map_err(|_| Failure::Record(line!()))?;
-        let plaintext = encode_content(&object.content).map_err(|_| Failure::Record(line!()))?;
-        let ciphertext = self
-            .crypto
-            .encrypt(plaintext.as_slice(), &recipients)
-            .map_err(|_| Failure::Record(line!()))?;
+        if !self.keys.contains(&object.key_fingerprint) {
+            return Err(Failure::Record(line!()));
+        }
         let existing = self
             .vault
             .storage
             .find_secret(id)
             .map_err(|_| Failure::Record(line!()))?;
+        // An existing record keeps every recipient it has, as long as it includes the
+        // key the phone used; a new one is encrypted to that key alone.
+        let recipients = match &existing {
+            Some(secret)
+                if secret
+                    .recipients
+                    .as_slice()
+                    .contains(&object.key_fingerprint) =>
+            {
+                secret.recipients.clone()
+            }
+            Some(_) => return Err(Failure::Record(line!())),
+            None => RecipientSet::new(vec![object.key_fingerprint.clone()])
+                .map_err(|_| Failure::Record(line!()))?,
+        };
+        let plaintext = encode_content(&object.content).map_err(|_| Failure::Record(line!()))?;
+        let ciphertext = self
+            .crypto
+            .encrypt(plaintext.as_slice(), &recipients)
+            .map_err(|error| {
+                // The error text already names the key and what the user can do about it.
+                tracing::warn!(error = %error, "Vault mirror could not encrypt a record received from the phone");
+                Failure::Record(line!())
+            })?;
         if existing.as_ref().map(|secret| secret.revision) != expected {
             return Err(Failure::Record(line!()));
         }

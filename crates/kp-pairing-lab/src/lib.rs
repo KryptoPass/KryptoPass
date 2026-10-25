@@ -154,6 +154,8 @@ impl PeerTransport for LabTransport {
 pub enum LabError {
     #[error("the isolated pairing profile could not be opened")]
     Profile,
+    #[error("stored sync history has an author that is no longer trusted")]
+    SyncHistoryUntrusted,
     #[error("the operating-system key store is unavailable or denied access")]
     KeyStore,
     #[error("the local pairing link failed")]
@@ -255,9 +257,10 @@ impl LabHost {
     pub fn forget_peer(&self, peer: DeviceId) -> Result<(), LabError> {
         let mut store = SqliteTrustStore::open_existing(&self.directory, self.identity.device_id())
             .map_err(|_| LabError::Profile)?;
-        store
+        let identity = store
             .lookup_trusted_peer(&peer)
             .map_err(map_forget_trust_error)?;
+        vault_binding::keep_forgotten_author(&self.directory, &identity)?;
         internet_routes::write(&self.directory, self.identity.device_id(), peer, None)?;
         self.remove_sync_vault(peer)?;
         aliases::forget(&self.directory, self.identity.device_id(), peer)
