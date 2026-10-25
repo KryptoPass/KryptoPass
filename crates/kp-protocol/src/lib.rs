@@ -1103,6 +1103,11 @@ fn validate_synthetic_key_offer(value: &proto::SyntheticKeyOffer) -> Result<(), 
             field: "encrypted_challenge",
         });
     }
+    if value.key_purpose > 1 {
+        return Err(ProtocolError::InvalidField {
+            field: "key_purpose",
+        });
+    }
     Ok(())
 }
 

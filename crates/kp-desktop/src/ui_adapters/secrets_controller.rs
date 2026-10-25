@@ -539,6 +539,7 @@ impl qobject::SecretsController {
             state.load_operation = state.load_operation.wrapping_add(1);
             state.active_vault_operation
         };
+        self.as_mut().cancel_unlock();
         self.as_mut().clear_sensitive_state_contents();
         self.as_mut().set_locked(true);
         self.as_mut().vault_locked();

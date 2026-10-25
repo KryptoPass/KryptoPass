@@ -106,9 +106,12 @@ message RevisionHead {
   bytes revision_hash = 3;         // 32 bytes
 }
 
+// The manifest is streamed in pages; every page fits one protocol payload.
 message SyncManifest {
-  bytes snapshot_id = 1;           // 16 bytes
-  repeated RevisionHead heads = 2; // at most 1024
+  bytes snapshot_id = 1;           // 16 bytes, equal on every page
+  repeated RevisionHead heads = 2; // at most 256 per page, sorted across pages
+  uint32 page_index = 3;           // zero-based, consecutive
+  bool last_page = 4;              // true on the final page
 }
 
 message RequestedRevision {
@@ -211,7 +214,7 @@ message SessionHello {
   uint32 session_version = 1;     // required; active-session extension version 1
   bytes device_id = 2;            // 32 bytes; must equal the authenticated peer
   uint32 reconnect_port = 3;      // optional LAN resume endpoint; 0 absent, 1..65535 valid
-  uint32 synthetic_key_transfer_version = 4; // 0 disabled, 1 debug synthetic extension
+  uint32 synthetic_key_transfer_version = 4; // 0 disabled, 1 debug synthetic extension, 2 also vault identity, 3 also phone → Desktop vault identity
   uint32 sync_version = 5;        // 0 disabled; 1 explicitly bound revision-sync v1
   uint32 sync_rounds_version = 6; // 0 single round; 1 repeat rounds on this Noise session
 }
@@ -237,6 +240,7 @@ message SyntheticKeyOffer {
   uint64 total_size = 3;           // 1..1 MiB
   bytes sha256_digest = 4;         // 32 bytes; exact fixed fixture digest
   bytes encrypted_challenge = 5;   // 1..16 KiB; fresh 32-byte challenge encrypted by GnuPG
+  uint32 key_purpose = 6;          // 0 synthetic fixture; 1 sender vault identity, requires version 2 (3 for phone → Desktop, purpose 1 only)
 }
 
 message SyntheticKeyDecision {

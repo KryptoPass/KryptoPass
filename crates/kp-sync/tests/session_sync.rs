@@ -815,6 +815,225 @@ fn replayed_hello_and_unsolicited_chunk_fail_closed() {
 }
 
 #[test]
+fn sqlite_hello_snapshot_stays_consistent_and_next_continuous_round_catches_up() {
+    let (small_identity, large_identity) = identities_in_device_order();
+    let trust = TestTrust::for_pair(&small_identity, &large_identity);
+    let directory = TempDirectory::new("hello-snapshot-consistency");
+    let small_path = directory.file("small.sqlite");
+    let large_path = directory.file("large.sqlite");
+    let small_ledger = Ledger::create(&small_path, VAULT).expect("create empty small ledger");
+    let mut small_writer = Ledger::open_existing(&small_path, VAULT, &trust)
+        .expect("open a second handle to the small ledger");
+    let large_ledger = Ledger::create(&large_path, VAULT).expect("create empty large ledger");
+    let large_observer = Ledger::open_existing(&large_path, VAULT, &trust)
+        .expect("open a second handle to the large ledger");
+    let now = Instant::now();
+    let mut small = SyncSession::new(
+        small_ledger,
+        Box::new(trust.clone()),
+        small_identity.device_id(),
+        large_identity.public_identity(),
+        FINGERPRINT.to_vec(),
+        now,
+    )
+    .expect("bind the small Sync session to its empty ledger");
+    let mut large = SyncSession::new(
+        large_ledger,
+        Box::new(trust.clone()),
+        large_identity.device_id(),
+        small_identity.public_identity(),
+        FINGERPRINT.to_vec(),
+        now,
+    )
+    .expect("bind the large Sync session to its empty ledger");
+    small
+        .enable_continuous_rounds()
+        .expect("enable rounds before exchanging SyncHello");
+    large
+        .enable_continuous_rounds()
+        .expect("enable rounds before exchanging SyncHello");
+
+    let small_hello = small
+        .poll_output(now)
+        .expect("poll small SyncHello")
+        .expect("small announces its empty ledger");
+    let (small_hello_type, small_hello_payload) = small_hello.into_message();
+    assert!(small_hello_type == proto::MessageType::SyncHello);
+    assert!(matches!(
+        &small_hello_payload,
+        MessagePayload::SyncHello(hello) if hello.known_revision_count == 0
+    ));
+    let large_hello = large
+        .poll_output(now)
+        .expect("poll large SyncHello")
+        .expect("large announces its empty ledger");
+    let (large_hello_type, large_hello_payload) = large_hello.into_message();
+    assert!(large_hello_type == proto::MessageType::SyncHello);
+
+    // Commit through another SQLite connection after Hello reports zero, but before the
+    // peer's Hello causes this session to publish its manifest.
+    let late_revision = small_writer
+        .append_local(
+            &small_identity,
+            [0x67; 16],
+            &[],
+            Operation::Write,
+            b"synthetic write between SyncHello and peer SyncHello".to_vec(),
+            &trust,
+        )
+        .expect("commit a signed local revision through the second SQLite handle");
+    assert_eq!(
+        small_writer.revision_count().expect("small writer count"),
+        1
+    );
+
+    large
+        .handle_message(small_hello_type, small_hello_payload, now)
+        .expect("large accepts the initial small Hello");
+    small
+        .handle_message(large_hello_type, large_hello_payload, now)
+        .expect("small accepts the peer Hello after its concurrent local write");
+
+    let first_small_manifest = small
+        .poll_output(now)
+        .expect("poll the first small manifest")
+        .expect("small publishes the snapshot named by its zero-count Hello");
+    let (first_small_manifest_type, first_small_manifest_payload) =
+        first_small_manifest.into_message();
+    assert!(first_small_manifest_type == proto::MessageType::SyncManifest);
+    let first_small_snapshot_id = match &first_small_manifest_payload {
+        MessagePayload::SyncManifest(manifest) => {
+            assert_eq!(manifest.page_index, 0);
+            assert!(
+                manifest.last_page,
+                "the empty Hello snapshot has one final page"
+            );
+            assert!(
+                manifest.heads.is_empty(),
+                "a Hello with known_revision_count=0 must not advertise a revision committed later"
+            );
+            manifest.snapshot_id.clone()
+        }
+        _ => panic!("small emits a manifest, not another protocol frame"),
+    };
+
+    let first_large_manifest = large
+        .poll_output(now)
+        .expect("poll the first large manifest")
+        .expect("large publishes its empty snapshot");
+    let (first_large_manifest_type, first_large_manifest_payload) =
+        first_large_manifest.into_message();
+    assert!(first_large_manifest_type == proto::MessageType::SyncManifest);
+    assert!(matches!(
+        &first_large_manifest_payload,
+        MessagePayload::SyncManifest(manifest)
+            if manifest.heads.is_empty() && manifest.last_page && manifest.page_index == 0
+    ));
+    small
+        .handle_message(first_large_manifest_type, first_large_manifest_payload, now)
+        .expect("small accepts the large empty manifest");
+    large
+        .handle_message(first_small_manifest_type, first_small_manifest_payload, now)
+        .expect("large accepts the small Hello-consistent manifest");
+
+    pump_sessions_to_completion(&mut small, &mut large, now);
+    assert!(small.is_complete() && large.is_complete());
+    assert_eq!(
+        large_observer
+            .revision_count()
+            .expect("large first-round count"),
+        0
+    );
+    assert!(
+        small
+            .has_uncovered_local_revisions()
+            .expect("detect the revision committed after the Hello snapshot")
+    );
+    assert!(
+        small.request_round(),
+        "the late write requests one follow-up round"
+    );
+
+    let next_round_at = now + Duration::from_secs(1);
+    let next_small_hello = small
+        .poll_output(next_round_at)
+        .expect("poll the debounced follow-up SyncHello")
+        .expect("follow-up round announces the late revision");
+    let (next_small_hello_type, next_small_hello_payload) = next_small_hello.into_message();
+    assert!(next_small_hello_type == proto::MessageType::SyncHello);
+    assert!(matches!(
+        &next_small_hello_payload,
+        MessagePayload::SyncHello(hello) if hello.known_revision_count == 1
+    ));
+    large
+        .handle_message(
+            next_small_hello_type,
+            next_small_hello_payload,
+            next_round_at,
+        )
+        .expect("large accepts the requested follow-up round");
+    let next_large_hello = large
+        .poll_output(next_round_at)
+        .expect("poll large's follow-up Hello")
+        .expect("large answers with its continuous-round Hello");
+    let (next_large_hello_type, next_large_hello_payload) = next_large_hello.into_message();
+    assert!(next_large_hello_type == proto::MessageType::SyncHello);
+    small
+        .handle_message(
+            next_large_hello_type,
+            next_large_hello_payload,
+            next_round_at,
+        )
+        .expect("small accepts the follow-up peer Hello");
+
+    let next_small_manifest = small
+        .poll_output(next_round_at)
+        .expect("poll the follow-up small manifest")
+        .expect("follow-up snapshot contains the late revision");
+    let (next_small_manifest_type, next_small_manifest_payload) =
+        next_small_manifest.into_message();
+    assert!(next_small_manifest_type == proto::MessageType::SyncManifest);
+    assert!(matches!(
+        &next_small_manifest_payload,
+        MessagePayload::SyncManifest(manifest)
+            if manifest.snapshot_id != first_small_snapshot_id
+                && manifest.last_page
+                && manifest.heads.len() == 1
+                && manifest.heads[0].revision_id == late_revision.revision_id
+    ));
+    let next_large_manifest = large
+        .poll_output(next_round_at)
+        .expect("poll the follow-up large manifest")
+        .expect("large publishes its empty follow-up snapshot");
+    let (next_large_manifest_type, next_large_manifest_payload) =
+        next_large_manifest.into_message();
+    assert!(next_large_manifest_type == proto::MessageType::SyncManifest);
+    small
+        .handle_message(
+            next_large_manifest_type,
+            next_large_manifest_payload,
+            next_round_at,
+        )
+        .expect("small accepts the large follow-up manifest");
+    large
+        .handle_message(
+            next_small_manifest_type,
+            next_small_manifest_payload,
+            next_round_at,
+        )
+        .expect("large accepts the newly published revision");
+
+    pump_sessions_to_completion(&mut small, &mut large, next_round_at);
+    assert!(small.is_complete() && large.is_complete());
+    assert_eq!(
+        large_observer
+            .revision_count()
+            .expect("large received the late revision"),
+        1
+    );
+}
+
+#[test]
 fn continuous_rounds_defer_a_busy_local_write_and_do_not_echo_received_revisions() {
     let (small_identity, large_identity) = identities_in_device_order();
     let trust = TestTrust::for_pair(&small_identity, &large_identity);

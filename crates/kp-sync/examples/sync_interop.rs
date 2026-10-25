@@ -105,6 +105,9 @@ fn main() -> std::process::ExitCode {
         Some("export-synthetic") => export_synthetic(&identity),
         Some("accept-synthetic") => accept_synthetic(&identity),
         Some("session-synthetic") => session_interop::run(&identity),
+        Some("session-continuous-empty-synthetic") => {
+            session_interop::run_continuous_empty(&identity)
+        }
         _ => Err(SyncError::Decode),
     };
     match result {

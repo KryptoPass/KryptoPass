@@ -9,6 +9,11 @@ Vaciar propiedades QML no garantiza borrar todas las copias de memoria Qt/JS.
 
 ## Puertas: just manda, bacon vigila
 
+Petición posterior vigente del usuario (2026-10-24): no desarrollar ni ejecutar
+tests. Para estos arreglos, compilar las apps, conservar sus datos al actualizar,
+dejar que el usuario pruebe y corregir con los logs. Sustituye la reactivación
+del agente de tests y la ejecución de suites descritas más abajo.
+
 ```bash
 just quick    # fmt + clippy: lo corre el usuario; el agente usa `cargo check` al editar
 just verify   # puerta completa: clippy, lint QML, tests, packaging (la corre el usuario)
@@ -85,9 +90,13 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
 
 - La integración LAN Desktop ↔ Android, el pairing y la reconexión son
   laboratorio: no declarar aceptada su seguridad ni sus suites. Los agentes de
-  tests y seguridad siguen pausados hasta que el usuario los reactive; solo
-  implementación y comprobaciones de compilación/apertura. No habilitar
-  transferencia privada GPG.
+  tests y seguridad fueron reactivados por el usuario el 2026-10-24 con
+  `gpt-6-luna`, esfuerzo `max`; esta petición sustituye sus pausas anteriores.
+  El agente de tests toma `crates/kp-keyring/tests/flows.rs`, `hostile_input.rs`
+  y `support/mod.rs` como referencia de pruebas realistas y útiles: operaciones
+  reales, perfiles aislados y efectos observables. Seguridad revisa y reporta
+  sin editar producto. La reactivación no supone aceptar la seguridad del
+  laboratorio ni habilita transferencia privada GPG de producción.
 - El agente implementa la UI/UX de dispositivos en Desktop; el usuario
   implementa Android. Los ajustes comunes y contratos de UI se registran
   también en la documentación Android.
@@ -99,6 +108,13 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   escucha local de proceso y metadatos de routing persistentes; nunca generar
   identidades/trust al reanudar. La desconexión humana detiene la recuperación;
   olvidar/reset eliminan su estado antes de borrar claves.
+- `just dev-reset` aparta los datos y conserva el llavero del sistema. Deja un
+  marcador explícito de reset para que la siguiente vinculación pueda crear
+  confianza vacía con la misma identidad. Solo ese estado validado permite
+  recrear la base; sin marcador no se repara trust ausente ni se sustituyen claves.
+  Abrir Dispositivos en ese estado muestra la lista vacía, sin error y sin
+  crear claves o trust. Solo «Vincular dispositivo» consume el marcador. La
+  comprobación debe incluir la ventana real, no solo abrir el backend explícitamente.
 - Internet: relay de señalización no confiable (Cloudflare Tunnel,
   signal.kryptopass.org, proyecto separado), STUN/TURN configurables, sin
   transferencia GPG ni sincronización. Mantener LAN, Noise/SAS, pinning de
@@ -132,3 +148,13 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   claves de laboratorio. No regenerar silenciosamente una fixture existente ni
   borrar ledgers para cambiarla. La revisión independiente y la habilitación de
   claves privadas reales siguen pendientes.
+- 2026-10-24: el usuario habilitó en debug el envío de la identidad real de la
+  bóveda al teléfono (extensión v2, `key_purpose = 1`) y el espejo bóveda ⇄
+  ledger (`vault_sync/mirror.rs`). Sustituye la prohibición de transferencia
+  privada real para este flujo; se mantienen la confirmación local, la
+  contraseña de GnuPG al exportar, la aceptación en el teléfono y el recibo con
+  desafío. Pidió revisión de seguridad independiente de solo lectura.
+- Pendiente (2026-10-24): la transferencia de la identidad OpenPGP debe ser
+  bidireccional; falta teléfono → Desktop con importación create-only en
+  GnuPG, aceptación local y recibo con desafío. Va después de validar Sync.
+  Detalle en `../kryptopass-android/docs/key-provisioning-flow.md`.

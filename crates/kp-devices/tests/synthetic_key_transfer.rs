@@ -352,7 +352,7 @@ async fn owner_roundtrips_transfer_only_after_acceptance_and_valid_receipt() {
         .expect("receive the owner's authenticated session hello");
     assert!(matches!(
         owner_hello.payload,
-        MessagePayload::SessionHello(ref hello) if hello.synthetic_key_transfer_version == 1
+        MessagePayload::SessionHello(ref hello) if hello.synthetic_key_transfer_version == 2
     ));
     peer_session
         .send_message(

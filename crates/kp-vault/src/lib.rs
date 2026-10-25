@@ -2,8 +2,10 @@
 //! No Qt, network transport, or GnuPG runtime is required; crypto is injected.
 
 use kryptopass_core::{
-    KeyFingerprint, MAX_VAULT_OBJECT_BYTES, OpenPgp, RecipientSet, SecretContent, SecretId,
-    VaultObject, decode_vault_object, encode_vault_object,
+    IconState, KeyFingerprint, MAX_LEDGER_ASSET_CIPHERTEXT_BYTES, MAX_LEDGER_ASSETS,
+    MAX_VAULT_ASSET_BYTES, MAX_VAULT_OBJECT_BYTES, OpenPgp, RecipientSet, SecretContent, SecretId,
+    VaultObject, asset_record_id, decode_vault_asset, decode_vault_object, encode_vault_asset,
+    encode_vault_object, is_asset_record_id, png_sha256,
 };
 use kryptopass_identity::DeviceIdentity;
 use kryptopass_sync::{
@@ -79,6 +81,17 @@ pub struct RevisionReceipt {
     pub operation: Operation,
 }
 
+/// Result of publishing one image asset.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AssetWrite {
+    /// The asset was appended to the ledger.
+    Written(RevisionReceipt),
+    /// The ledger already holds this exact asset; nothing was written.
+    Present,
+    /// Adding it would exceed the ledger's asset budget; nothing was written.
+    OverBudget,
+}
+
 /// Vault operations backed by the immutable signed ledger and the existing
 /// local OpenPGP implementation.
 pub struct SyncedVault<'a> {
@@ -123,6 +136,10 @@ impl<'a> SyncedVault<'a> {
         let mut result = Vec::with_capacity(heads.len());
         let mut plaintext_bytes = 0usize;
         for head in heads {
+            // Image assets are separate records, read on demand by hash.
+            if is_asset_record_id(&uuid::Uuid::from_bytes(head.record_id)) {
+                continue;
+            }
             let revision = self
                 .ledger
                 .get(head.revision_id)
@@ -173,6 +190,7 @@ impl<'a> SyncedVault<'a> {
 
     /// Creates or updates one encrypted object if its full expected head set is
     /// still current. Passing an empty set creates a new record.
+    #[allow(clippy::too_many_arguments)]
     pub fn save(
         &mut self,
         record_id: SecretId,
@@ -180,14 +198,21 @@ impl<'a> SyncedVault<'a> {
         title: String,
         favorite: bool,
         trashed: bool,
+        folder: Vec<String>,
+        icon: IconState,
         content: SecretContent,
     ) -> Result<RevisionReceipt, VaultSyncError> {
+        if is_asset_record_id(&record_id.0) {
+            return Err(VaultSyncError::InvalidInput);
+        }
         let object = VaultObject {
             record_id,
             key_fingerprint: self.fingerprint.clone(),
             title,
             favorite,
             trashed,
+            folder,
+            icon,
             content,
         };
         let plaintext = encode_vault_object(&object).map_err(map_object_error)?;
@@ -235,9 +260,126 @@ impl<'a> SyncedVault<'a> {
         receipt(&revision)
     }
 
+    /// Publishes one normalized PNG as an immutable asset record, unless the
+    /// ledger already holds it. A tombstoned asset is written again over its
+    /// tombstone; the content is addressed by hash, so this is always safe.
+    pub fn write_asset(&mut self, png: &[u8]) -> Result<AssetWrite, VaultSyncError> {
+        let sha256 = png_sha256(png);
+        let record_id = asset_record_id(&self.ledger.vault_id(), &sha256);
+        let heads = self
+            .ledger
+            .heads(*record_id.as_bytes())
+            .map_err(map_sync_error)?;
+        let mut tombstones = Vec::with_capacity(heads.len());
+        for head in &heads {
+            let revision = self
+                .ledger
+                .get(head.revision_id)
+                .map_err(map_sync_error)?
+                .ok_or(VaultSyncError::Ledger)?;
+            if revision.operation == Operation::Write {
+                return Ok(AssetWrite::Present);
+            }
+            tombstones.push(head.revision_id);
+        }
+        let plaintext = encode_vault_asset(png).map_err(|error| match error {
+            kryptopass_core::VaultAssetError::LimitExceeded => VaultSyncError::LimitExceeded,
+            kryptopass_core::VaultAssetError::Invalid => VaultSyncError::InvalidObject,
+        })?;
+        let recipients = self.encryption_recipients()?;
+        let ciphertext = self
+            .crypto
+            .encrypt(&plaintext, &recipients)
+            .map_err(|_| VaultSyncError::Crypto)?;
+        validate_ciphertext(&ciphertext)?;
+        let (count, bytes) = self.asset_usage()?;
+        if count >= MAX_LEDGER_ASSETS
+            || bytes.saturating_add(ciphertext.len()) > MAX_LEDGER_ASSET_CIPHERTEXT_BYTES
+        {
+            return Ok(AssetWrite::OverBudget);
+        }
+        let revision = self
+            .ledger
+            .append_local(
+                self.identity,
+                *record_id.as_bytes(),
+                &tombstones,
+                Operation::Write,
+                ciphertext,
+                self.trust,
+            )
+            .map_err(map_sync_error)?;
+        receipt(&revision).map(AssetWrite::Written)
+    }
+
+    /// Reads the asset with this hash; None while the ledger holds no copy.
+    pub fn read_asset(&self, sha256: &[u8; 32]) -> Result<Option<Vec<u8>>, VaultSyncError> {
+        read_vault_asset(self.ledger, self.crypto, sha256)
+    }
+
+    /// Live assets and their total ciphertext size.
+    fn asset_usage(&self) -> Result<(usize, usize), VaultSyncError> {
+        let mut count = 0_usize;
+        let mut bytes = 0_usize;
+        for head in self.ledger.manifest().map_err(map_sync_error)? {
+            if !is_asset_record_id(&uuid::Uuid::from_bytes(head.record_id)) {
+                continue;
+            }
+            let revision = self
+                .ledger
+                .get(head.revision_id)
+                .map_err(map_sync_error)?
+                .ok_or(VaultSyncError::Ledger)?;
+            if revision.operation == Operation::Write {
+                count += 1;
+                bytes = bytes.saturating_add(revision.ciphertext.len());
+            }
+        }
+        Ok((count, bytes))
+    }
+
     fn encryption_recipients(&self) -> Result<RecipientSet, VaultSyncError> {
         RecipientSet::new(vec![self.fingerprint.clone()]).map_err(|_| VaultSyncError::InvalidInput)
     }
+}
+
+/// Reads and fully validates the asset with this hash from `ledger`. Returns
+/// None while no write head holds it; a head that fails validation is skipped.
+pub fn read_vault_asset(
+    ledger: &Ledger,
+    crypto: &dyn OpenPgp,
+    sha256: &[u8; 32],
+) -> Result<Option<Vec<u8>>, VaultSyncError> {
+    let record_id = asset_record_id(&ledger.vault_id(), sha256);
+    let mut last_error = None;
+    for head in ledger
+        .heads(*record_id.as_bytes())
+        .map_err(map_sync_error)?
+    {
+        let revision = ledger
+            .get(head.revision_id)
+            .map_err(map_sync_error)?
+            .ok_or(VaultSyncError::Ledger)?;
+        if revision.operation != Operation::Write {
+            continue;
+        }
+        let plaintext = match crypto.decrypt(&revision.ciphertext) {
+            Ok(plaintext) => plaintext,
+            Err(_) => {
+                last_error = Some(VaultSyncError::Crypto);
+                continue;
+            }
+        };
+        if plaintext.len() > MAX_VAULT_ASSET_BYTES {
+            last_error = Some(VaultSyncError::LimitExceeded);
+            continue;
+        }
+        match decode_vault_asset(plaintext.as_slice(), sha256) {
+            Ok(asset) => return Ok(Some(asset.png)),
+            Err(_) => last_error = Some(VaultSyncError::InvalidObject),
+        }
+    }
+    last_error.map_or(Ok(None), Err)
 }
 
 fn validate_ciphertext(ciphertext: &[u8]) -> Result<(), VaultSyncError> {

@@ -89,6 +89,8 @@ fn synthetic_transfer_vectors() -> Vec<(proto::MessageType, Vec<u8>, String, Cha
         total_size: 3,
         sha256_digest: digest.clone(),
         encrypted_challenge: vec![0x43],
+
+        key_purpose: 0,
     };
     let decision = proto::SyntheticKeyDecision {
         transfer_id: transfer_id.clone(),
@@ -1002,6 +1004,8 @@ fn synthetic_transfer_field_limits_reject_malformed_ids_chunks_and_challenges() 
         total_size: 1,
         sha256_digest: bytes(32, 3),
         encrypted_challenge: vec![4],
+
+        key_purpose: 0,
     };
     assert!(decode_as(Type::SyntheticKeyOffer, &offer).is_ok());
     offer.total_size = 1024 * 1024;
@@ -1305,6 +1309,8 @@ fn synthetic_transfer_wire_debug_output_redacts_payload_bytes()
         total_size: 1,
         sha256_digest: bytes(32, 3),
         encrypted_challenge: marker.to_vec(),
+
+        key_purpose: 0,
     };
     let decoded = decode_as(proto::MessageType::SyntheticKeyOffer, &offer)?;
     let debug = format!("{decoded:?}");

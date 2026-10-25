@@ -6,9 +6,9 @@
 //! responsible for keepalives, closure, revocation and transport I/O.
 
 use crate::{
-    Digest, Id, Ledger, RevisionHead, RevisionMeta, SYNC_MAX_BATCH_BYTES,
-    SYNC_MAX_LEDGER_REVISIONS, SYNC_MAX_MANIFEST_HEADS, SYNC_MAX_REVISIONS_PER_BATCH, SyncError,
-    TrustSource, decode_batch, encode_batch, fresh_id, is_zero_id, topological_meta_order,
+    Digest, Id, Ledger, RevisionHead, RevisionMeta, SYNC_MANIFEST_PAGE_HEADS, SYNC_MAX_BATCH_BYTES,
+    SYNC_MAX_LEDGER_REVISIONS, SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, decode_batch,
+    encode_batch, fresh_id, is_zero_id, topological_meta_order,
 };
 use kryptopass_identity::{DeviceId, PublicIdentity};
 use kryptopass_protocol::{MessagePayload, proto};
@@ -17,6 +17,7 @@ use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::fmt;
 use std::time::{Duration, Instant};
+use tracing::{debug, info, trace, warn};
 
 /// Maximum metadata count advertised by one endpoint.
 pub const SESSION_MAX_KNOWN_REVISIONS: usize = SYNC_MAX_LEDGER_REVISIONS;
@@ -231,10 +232,14 @@ pub struct SyncSession {
     local_hello_sent: bool,
     round_requested: bool,
     round_starts: VecDeque<Instant>,
+    round_number: u64,
     baseline_revision_count: Option<usize>,
     round_inserted_count: usize,
     remote_hello_received: bool,
+    remote_known_revision_count: usize,
     remote_manifest_received: bool,
+    /// Index of the next streamed manifest page expected from the peer.
+    remote_manifest_next_page: u32,
     local_is_smaller: bool,
     local_snapshot: Option<FrozenSnapshot>,
     remote_snapshot_id: Option<Id>,
@@ -284,6 +289,36 @@ impl SyncSession {
         expected_openpgp_fingerprint: Vec<u8>,
         now: Instant,
     ) -> Result<Self, SyncSessionError> {
+        match Self::new_inner(
+            ledger,
+            trust,
+            local_device_id,
+            expected_peer,
+            expected_openpgp_fingerprint,
+            now,
+        ) {
+            Ok(session) => {
+                debug!(
+                    local_serves_first = session.local_is_smaller,
+                    "Sync session created"
+                );
+                Ok(session)
+            }
+            Err(error) => {
+                warn!(error = %error, "Sync session could not start");
+                Err(error)
+            }
+        }
+    }
+
+    fn new_inner(
+        ledger: Ledger,
+        trust: Box<dyn TrustSource + Send>,
+        local_device_id: DeviceId,
+        expected_peer: PublicIdentity,
+        expected_openpgp_fingerprint: Vec<u8>,
+        now: Instant,
+    ) -> Result<Self, SyncSessionError> {
         if local_device_id.as_bytes().iter().all(|byte| *byte == 0)
             || expected_peer.device_id == local_device_id
             || !matches!(expected_openpgp_fingerprint.len(), 20 | 32)
@@ -304,20 +339,7 @@ impl SyncSession {
         {
             return Err(SyncSessionError::TrustRevoked);
         }
-        let known_revision_count = ledger.revision_count().map_err(map_sync_error)?;
-        if known_revision_count > SESSION_MAX_KNOWN_REVISIONS {
-            return Err(SyncSessionError::Capacity);
-        }
-
-        let hello = proto::SyncHello {
-            vault_id: ledger.vault_id().to_vec(),
-            device_id: local_device_id.as_bytes().to_vec(),
-            known_revision_count: known_revision_count as u64,
-            openpgp_fingerprint: expected_openpgp_fingerprint.clone(),
-        };
-        let mut control_queue = VecDeque::with_capacity(MAX_PENDING_CONTROL);
-        control_queue.push_back(SyncOutbound::Hello(hello));
-        Ok(Self {
+        let mut session = Self {
             ledger,
             trust,
             local_identity: local,
@@ -329,16 +351,19 @@ impl SyncSession {
             local_hello_sent: false,
             round_requested: false,
             round_starts: VecDeque::from([now]),
+            round_number: 1,
             baseline_revision_count: None,
             round_inserted_count: 0,
             remote_hello_received: false,
+            remote_known_revision_count: 0,
             remote_manifest_received: false,
+            remote_manifest_next_page: 0,
             local_is_smaller: local_device_id.as_bytes() < expected_peer.device_id.as_bytes(),
             local_snapshot: None,
             remote_snapshot_id: None,
             remote_manifest: Vec::new(),
             remote_heads_by_revision: BTreeMap::new(),
-            control_queue,
+            control_queue: VecDeque::with_capacity(MAX_PENDING_CONTROL),
             receive_started: false,
             receive_done: false,
             active_window: Vec::new(),
@@ -358,7 +383,9 @@ impl SyncSession {
             failed: false,
             failure: None,
             complete: false,
-        })
+        };
+        session.queue_snapshot_hello()?;
+        Ok(session)
     }
 
     /// Enables continuous rounds after bilateral authenticated `SessionHello`
@@ -369,12 +396,13 @@ impl SyncSession {
             || self.complete
             || self.remote_hello_received
             || self.local_hello_sent
-            || self.local_snapshot.is_some()
             || self.round_starts.len() != 1
         {
+            warn!(reason = "invalid_state", "Sync continuous rounds rejected");
             return Err(SyncSessionError::Protocol);
         }
         self.continuous_rounds = true;
+        debug!("Sync continuous rounds enabled");
         Ok(())
     }
 
@@ -393,13 +421,18 @@ impl SyncSession {
             return false;
         }
         self.round_requested = true;
+        debug!(round = self.round_number, "Sync next round requested");
         true
     }
 
     /// Returns whether revisions committed after this round's frozen snapshot
     /// remain uncovered after accounting for inserts received in this round.
     pub fn has_uncovered_local_revisions(&self) -> Result<bool, SyncSessionError> {
-        self.has_uncovered_local_revisions_inner()
+        let result = self.has_uncovered_local_revisions_inner();
+        if let Err(error) = &result {
+            warn!(error = %error, "Sync local change check failed");
+        }
+        result
     }
 
     /// Pulls at most one outbound frame. Chunks and batches are generated lazily.
@@ -475,6 +508,12 @@ impl SyncSession {
                 data: transfer.encoded[start..end].to_vec(),
             };
             transfer.next_chunk += 1;
+            trace!(
+                index,
+                chunks = transfer.chunk_count,
+                bytes = payload.data.len(),
+                "Sync outbound chunk"
+            );
             self.last_activity = now;
             return Ok(Some(SyncOutbound::Chunk(payload)));
         }
@@ -485,6 +524,11 @@ impl SyncSession {
             };
             transfer.commit_sent = true;
             self.awaiting_ack = Some(transfer.transfer_id);
+            debug!(
+                chunks = transfer.chunk_count,
+                bytes = transfer.encoded.len(),
+                "Sync outbound transfer complete"
+            );
             self.last_activity = now;
             return Ok(Some(SyncOutbound::Commit(payload)));
         }
@@ -596,6 +640,43 @@ impl SyncSession {
         }
     }
 
+    /// Payload-free phase flags and counters for debug logging by the connection owner.
+    #[must_use]
+    pub fn diagnostics(&self, now: Instant) -> String {
+        format!(
+            "round={} state={:?} local_heads={} remote_heads={} manifest_pages={} \
+             hello_sent={} hello_received={} manifest_received={} queued={} \
+             receive_done={} serve_done={} awaiting_ack={} inbound_chunks={} \
+             outbound_chunks={} received={} acknowledged={} pending_round={} idle_ms={} age_ms={}",
+            self.round_number,
+            self.progress().state,
+            self.local_snapshot
+                .as_ref()
+                .map_or(0, |snapshot| snapshot.manifest.len()),
+            self.remote_manifest.len(),
+            self.remote_manifest_next_page,
+            self.local_hello_sent,
+            self.remote_hello_received,
+            self.remote_manifest_received,
+            self.control_queue.len(),
+            self.receive_done,
+            self.serve_done,
+            self.awaiting_ack.is_some(),
+            self.inbound_transfer
+                .as_ref()
+                .map_or(0, |transfer| transfer.next_chunk),
+            self.outbound_transfer
+                .as_ref()
+                .map_or(0, |transfer| transfer.next_chunk),
+            self.received_revision_count,
+            self.acknowledged_revision_count,
+            self.round_requested,
+            now.saturating_duration_since(self.last_activity)
+                .as_millis(),
+            now.saturating_duration_since(self.started_at).as_millis(),
+        )
+    }
+
     /// Indicates that both directed phases have ended successfully.
     #[must_use]
     pub const fn is_complete(&self) -> bool {
@@ -604,12 +685,16 @@ impl SyncSession {
 
     /// Cancels the round and discards every queued or partial transfer buffer.
     pub fn cancel(&mut self) {
+        let was_failed = self.failed;
         self.failed = true;
         self.control_queue.clear();
         self.outbound_plan.clear();
         self.outbound_transfer = None;
         self.inbound_transfer = None;
         self.active_window.clear();
+        if !was_failed {
+            info!(round = self.round_number, "Sync session cancelled");
+        }
     }
 
     fn on_hello(&mut self, hello: proto::SyncHello) -> Result<(), SyncSessionError> {
@@ -624,30 +709,73 @@ impl SyncSession {
             return Err(SyncSessionError::InvalidBinding);
         }
         self.remote_hello_received = true;
-        let snapshot = self.freeze_local_snapshot()?;
-        let manifest = proto::SyncManifest {
-            snapshot_id: snapshot.snapshot_id.to_vec(),
-            heads: snapshot
-                .manifest
-                .iter()
-                .map(|head| proto::RevisionHead {
-                    record_id: head.record_id.to_vec(),
-                    revision_id: head.revision_id.to_vec(),
-                    revision_hash: head.revision_hash.to_vec(),
-                })
-                .collect(),
-        };
-        self.baseline_revision_count = Some(snapshot.revision_count);
-        self.local_snapshot = Some(snapshot);
-        self.queue_control(SyncOutbound::Manifest(manifest))?;
+        self.remote_known_revision_count =
+            usize::try_from(hello.known_revision_count).map_err(|_| SyncSessionError::Capacity)?;
+        let snapshot = self
+            .local_snapshot
+            .as_ref()
+            .ok_or(SyncSessionError::Protocol)?;
+        let snapshot_id = snapshot.snapshot_id;
+        debug!(
+            remote_revisions = self.remote_known_revision_count,
+            local_revisions = snapshot.revision_count,
+            local_serves_first = self.local_is_smaller,
+            "Sync hello accepted"
+        );
+        // Stream the manifest in fixed-size pages so no message grows with the
+        // vault. An empty ledger still sends one empty final page.
+        let mut pages = snapshot
+            .manifest
+            .chunks(SYNC_MANIFEST_PAGE_HEADS)
+            .map(|heads| {
+                heads
+                    .iter()
+                    .map(|head| proto::RevisionHead {
+                        record_id: head.record_id.to_vec(),
+                        revision_id: head.revision_id.to_vec(),
+                        revision_hash: head.revision_hash.to_vec(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        if pages.is_empty() {
+            pages.push(Vec::new());
+        }
+        let last_index = pages.len() - 1;
+        for (index, heads) in pages.into_iter().enumerate() {
+            let page = proto::SyncManifest {
+                snapshot_id: snapshot_id.to_vec(),
+                heads,
+                page_index: u32::try_from(index).map_err(|_| SyncSessionError::Capacity)?,
+                last_page: index == last_index,
+            };
+            self.queue_manifest_page(page)?;
+        }
         Ok(())
     }
 
+    fn queue_snapshot_hello(&mut self) -> Result<(), SyncSessionError> {
+        // A concurrent mirror write belongs to the next round. Both this greeting and
+        // its manifest must describe the same frozen history, even if the peer is slow.
+        let snapshot = self.freeze_local_snapshot()?;
+        info!(
+            round = self.round_number,
+            revisions = snapshot.revision_count,
+            heads = snapshot.manifest.len(),
+            local_serves_first = self.local_is_smaller,
+            "Sync round started"
+        );
+        self.baseline_revision_count = Some(snapshot.revision_count);
+        self.local_snapshot = Some(snapshot);
+        self.queue_control(SyncOutbound::Hello(self.local_hello()?))
+    }
+
     fn local_hello(&self) -> Result<proto::SyncHello, SyncSessionError> {
-        let known_revision_count = self.ledger.revision_count().map_err(map_sync_error)?;
-        if known_revision_count > SESSION_MAX_KNOWN_REVISIONS {
-            return Err(SyncSessionError::Capacity);
-        }
+        let known_revision_count = self
+            .local_snapshot
+            .as_ref()
+            .ok_or(SyncSessionError::Protocol)?
+            .revision_count;
         Ok(proto::SyncHello {
             vault_id: self.ledger.vault_id().to_vec(),
             device_id: self.local_identity.device_id.as_bytes().to_vec(),
@@ -665,9 +793,14 @@ impl SyncSession {
             return self.fail(SyncSessionError::Capacity);
         }
         self.ensure_session_trusted()?;
+        debug!(
+            round = self.round_number.saturating_add(1),
+            trigger = "peer",
+            "Sync starting next round"
+        );
         self.reset_round_state(now);
         self.round_starts.push_back(now);
-        self.queue_control(SyncOutbound::Hello(self.local_hello()?))?;
+        self.queue_snapshot_hello()?;
         Ok(())
     }
 
@@ -685,9 +818,14 @@ impl SyncSession {
             return Ok(false);
         }
         self.ensure_session_trusted()?;
+        debug!(
+            round = self.round_number.saturating_add(1),
+            trigger = "local",
+            "Sync starting next round"
+        );
         self.reset_round_state(now);
         self.round_starts.push_back(now);
-        self.queue_control(SyncOutbound::Hello(self.local_hello()?))?;
+        self.queue_snapshot_hello()?;
         Ok(true)
     }
 
@@ -700,13 +838,16 @@ impl SyncSession {
     }
 
     fn reset_round_state(&mut self, now: Instant) {
+        self.round_number = self.round_number.saturating_add(1);
         self.started_at = now;
         self.last_activity = now;
         self.round_requested = false;
         self.baseline_revision_count = None;
         self.round_inserted_count = 0;
         self.remote_hello_received = false;
+        self.remote_known_revision_count = 0;
         self.remote_manifest_received = false;
+        self.remote_manifest_next_page = 0;
         self.local_snapshot = None;
         self.remote_snapshot_id = None;
         self.remote_manifest.clear();
@@ -754,25 +895,56 @@ impl SyncSession {
             || self.remote_manifest_received
             || manifest.snapshot_id.len() != 16
             || manifest.snapshot_id.iter().all(|byte| *byte == 0)
-            || manifest.heads.len() > SYNC_MAX_MANIFEST_HEADS
+            || manifest.heads.len() > SYNC_MANIFEST_PAGE_HEADS
+            || manifest.page_index != self.remote_manifest_next_page
+            || (manifest.heads.is_empty() && !(manifest.page_index == 0 && manifest.last_page))
         {
             return Err(SyncSessionError::Protocol);
         }
-        let mut remote_heads = Vec::new();
-        remote_heads
-            .try_reserve_exact(manifest.heads.len())
+        trace!(
+            page = manifest.page_index,
+            heads = manifest.heads.len(),
+            last = manifest.last_page,
+            "Sync manifest page received"
+        );
+        let snapshot_id = fixed::<16>(&manifest.snapshot_id)?;
+        match self.remote_snapshot_id {
+            None => self.remote_snapshot_id = Some(snapshot_id),
+            Some(expected) if expected == snapshot_id => {}
+            Some(_) => return Err(SyncSessionError::Protocol),
+        }
+        // Pages accumulate into the remote manifest, bounded by the ledger
+        // storage limit the peer cannot exceed.
+        if self
+            .remote_manifest
+            .len()
+            .checked_add(manifest.heads.len())
+            .is_none_or(|total| total > self.remote_known_revision_count)
+        {
+            return Err(SyncSessionError::Capacity);
+        }
+        self.remote_manifest
+            .try_reserve(manifest.heads.len())
             .map_err(|_| SyncSessionError::Capacity)?;
-        let mut by_revision = BTreeMap::new();
         for head in manifest.heads {
             let parsed = RevisionHead {
                 record_id: fixed::<16>(&head.record_id)?,
                 revision_id: fixed::<16>(&head.revision_id)?,
                 revision_hash: fixed::<32>(&head.revision_hash)?,
             };
-            if is_zero_id(&parsed.record_id)
+            // Heads are strictly increasing across pages, which rejects
+            // duplicates and reordering without rescanning earlier pages.
+            let in_order = self.remote_manifest.last().is_none_or(|previous| {
+                (previous.record_id, previous.revision_id) < (parsed.record_id, parsed.revision_id)
+            });
+            if !in_order
+                || is_zero_id(&parsed.record_id)
                 || is_zero_id(&parsed.revision_id)
                 || parsed.revision_hash.iter().all(|byte| *byte == 0)
-                || by_revision.insert(parsed.revision_id, parsed).is_some()
+                || self
+                    .remote_heads_by_revision
+                    .insert(parsed.revision_id, parsed)
+                    .is_some()
             {
                 return Err(SyncSessionError::Protocol);
             }
@@ -787,12 +959,21 @@ impl SyncSession {
                     return Err(SyncSessionError::Protocol);
                 }
             }
-            remote_heads.push(parsed);
+            self.remote_manifest.push(parsed);
         }
-        self.remote_snapshot_id = Some(fixed::<16>(&manifest.snapshot_id)?);
-        self.remote_manifest = remote_heads;
-        self.remote_heads_by_revision = by_revision;
+        self.remote_manifest_next_page = self
+            .remote_manifest_next_page
+            .checked_add(1)
+            .ok_or(SyncSessionError::Capacity)?;
+        if !manifest.last_page {
+            return Ok(());
+        }
         self.remote_manifest_received = true;
+        debug!(
+            heads = self.remote_manifest.len(),
+            pages = self.remote_manifest_next_page,
+            "Sync remote manifest complete"
+        );
 
         if self.local_is_smaller {
             self.serve_started = true;
@@ -825,6 +1006,7 @@ impl SyncSession {
         if request.revisions.is_empty() {
             self.serve_done = true;
             self.request_record_ids.clear();
+            debug!("Sync serve phase complete");
             if self.local_is_smaller {
                 self.begin_receive_phase()?;
             }
@@ -832,6 +1014,7 @@ impl SyncSession {
             return Ok(());
         }
 
+        let requested_count = request.revisions.len();
         let mut requested_ids = BTreeSet::new();
         let mut requested_records = BTreeSet::new();
         for requested in request.revisions {
@@ -856,6 +1039,11 @@ impl SyncSession {
         if plan.is_empty() {
             return Err(SyncSessionError::Protocol);
         }
+        debug!(
+            requested = requested_count,
+            planned = plan.len(),
+            "Sync serve request accepted"
+        );
         self.outbound_plan = plan.into();
         self.request_record_ids = requested_records;
         self.prepare_next_outbound_batch()?;
@@ -927,12 +1115,35 @@ impl SyncSession {
         {
             return Err(SyncSessionError::Protocol);
         }
+        let chunk_index = chunk.chunk_index;
+        let chunk_bytes = chunk.data.len();
+        let is_first_chunk = transfer.next_chunk == 0;
+        let is_last_chunk = transfer.next_chunk.saturating_add(1) == transfer.chunk_count;
         transfer
             .encoded
-            .try_reserve(chunk.data.len())
+            .try_reserve(chunk_bytes)
             .map_err(|_| SyncSessionError::Capacity)?;
         transfer.encoded.extend_from_slice(&chunk.data);
         transfer.next_chunk += 1;
+        if is_first_chunk {
+            debug!(
+                chunks = transfer.chunk_count,
+                total_bytes = transfer.total_size,
+                "Sync inbound transfer started"
+            );
+        }
+        if is_last_chunk {
+            debug!(
+                chunks = transfer.chunk_count,
+                total_bytes = transfer.total_size,
+                "Sync inbound transfer complete"
+            );
+        }
+        trace!(
+            index = chunk_index,
+            bytes = chunk_bytes,
+            "Sync inbound chunk accepted"
+        );
         Ok(())
     }
 
@@ -1000,6 +1211,13 @@ impl SyncSession {
             .checked_add(outcome.inserted)
             .ok_or(SyncSessionError::Capacity)?;
         self.inbound_revision_ids.extend(new_ids);
+        debug!(
+            revisions = revisions.len(),
+            inserted = outcome.inserted,
+            duplicates = outcome.duplicates,
+            received_total = self.received_revision_count,
+            "Sync batch committed"
+        );
         self.queue_control(SyncOutbound::Ack(proto::SyncAck {
             transfer_id: transfer_id.to_vec(),
             status: proto::AckStatus::Accepted as i32,
@@ -1025,6 +1243,7 @@ impl SyncSession {
         if transfer.transfer_id != transfer_id || !transfer.commit_sent {
             return Err(SyncSessionError::Protocol);
         }
+        let acknowledged_count = transfer.revision_ids.len();
         for revision_id in transfer.revision_ids {
             if self.acknowledged_revision_ids.insert(revision_id) {
                 self.acknowledged_revision_count =
@@ -1032,6 +1251,11 @@ impl SyncSession {
             }
         }
         self.awaiting_ack = None;
+        debug!(
+            revisions = acknowledged_count,
+            acknowledged_total = self.acknowledged_revision_count,
+            "Sync batch acknowledged"
+        );
         if !self.outbound_plan.is_empty() {
             self.prepare_next_outbound_batch()?;
         }
@@ -1072,9 +1296,6 @@ impl SyncSession {
                 .cmp(&right.record_id)
                 .then_with(|| left.revision_id.cmp(&right.revision_id))
         });
-        if manifest.len() > SYNC_MAX_MANIFEST_HEADS {
-            return Err(SyncSessionError::Capacity);
-        }
         let mut heads_by_revision = BTreeMap::new();
         for head in &manifest {
             if is_zero_id(&head.record_id)
@@ -1096,6 +1317,11 @@ impl SyncSession {
         if topological_ids.len() != index.len() {
             return Err(SyncSessionError::Protocol);
         }
+        debug!(
+            revisions = revision_count,
+            heads = manifest.len(),
+            "Sync local snapshot frozen"
+        );
         Ok(FrozenSnapshot {
             snapshot_id: fresh_id().map_err(map_sync_error)?,
             revision_count,
@@ -1232,11 +1458,13 @@ impl SyncSession {
         }
         let transfer_id = fresh_transfer_id.ok_or(SyncSessionError::Randomness)?;
         let digest: Digest = Sha256::digest(&encoded).into();
+        let encoded_len = encoded.len();
         let chunk_count = encoded
             .len()
             .checked_add(SESSION_CHUNK_BYTES - 1)
             .ok_or(SyncSessionError::Capacity)?
             / SESSION_CHUNK_BYTES;
+        let revision_count = revision_ids.len();
         self.outbound_transfer = Some(OutboundTransfer {
             transfer_id,
             digest,
@@ -1247,6 +1475,13 @@ impl SyncSession {
             revision_ids,
             author_device_ids,
         });
+        debug!(
+            revisions = revision_count,
+            bytes = encoded_len,
+            chunks = chunk_count,
+            remaining = self.outbound_plan.len(),
+            "Sync outbound batch prepared"
+        );
         Ok(())
     }
 
@@ -1325,6 +1560,16 @@ impl SyncSession {
         Ok(true)
     }
 
+    /// Manifest pages bypass the small control backlog: all of them are queued
+    /// at once, in order, before any request that depends on them.
+    fn queue_manifest_page(&mut self, page: proto::SyncManifest) -> Result<(), SyncSessionError> {
+        if page.encoded_len() > kryptopass_protocol::MAX_PAYLOAD_SIZE {
+            return Err(SyncSessionError::Capacity);
+        }
+        self.control_queue.push_back(SyncOutbound::Manifest(page));
+        Ok(())
+    }
+
     fn queue_control(&mut self, message: SyncOutbound) -> Result<(), SyncSessionError> {
         let encoded_len = match &message {
             SyncOutbound::Hello(payload) => payload.encoded_len(),
@@ -1337,7 +1582,12 @@ impl SyncSession {
         if encoded_len > kryptopass_protocol::MAX_PAYLOAD_SIZE {
             return Err(SyncSessionError::Capacity);
         }
-        if self.control_queue.len() >= MAX_PENDING_CONTROL {
+        let pending = self
+            .control_queue
+            .iter()
+            .filter(|queued| !matches!(queued, SyncOutbound::Manifest(_)))
+            .count();
+        if pending >= MAX_PENDING_CONTROL {
             return Err(SyncSessionError::Capacity);
         }
         self.control_queue.push_back(message);
@@ -1378,6 +1628,7 @@ impl SyncSession {
     }
 
     fn refresh_completion(&mut self) {
+        let was_complete = self.complete;
         self.complete = self.receive_done && self.serve_done;
         if self.complete {
             self.control_queue.clear();
@@ -1385,10 +1636,25 @@ impl SyncSession {
             self.outbound_transfer = None;
             self.inbound_transfer = None;
             self.active_window.clear();
+            if !was_complete {
+                info!(
+                    round = self.round_number,
+                    received = self.received_revision_count,
+                    acknowledged = self.acknowledged_revision_count,
+                    local_heads = self
+                        .local_snapshot
+                        .as_ref()
+                        .map_or(0, |snapshot| snapshot.manifest.len()),
+                    remote_heads = self.remote_manifest.len(),
+                    "Sync round complete"
+                );
+            }
         }
     }
 
     fn fail<T>(&mut self, error: SyncSessionError) -> Result<T, SyncSessionError> {
+        let first_failure = !self.failed;
+        let state = self.progress().state;
         self.failed = true;
         self.failure = Some(error);
         self.control_queue.clear();
@@ -1396,6 +1662,21 @@ impl SyncSession {
         self.outbound_transfer = None;
         self.inbound_transfer = None;
         self.active_window.clear();
+        if first_failure {
+            warn!(
+                error = %error,
+                round = self.round_number,
+                state = ?state,
+                received = self.received_revision_count,
+                acknowledged = self.acknowledged_revision_count,
+                local_heads = self
+                    .local_snapshot
+                    .as_ref()
+                    .map_or(0, |snapshot| snapshot.manifest.len()),
+                remote_heads = self.remote_manifest.len(),
+                "Sync round failed"
+            );
+        }
         Err(error)
     }
 }

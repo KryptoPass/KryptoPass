@@ -5,6 +5,7 @@ use crate::{
     TrustSource, decode_batch, encode_batch, topological_meta_order,
 };
 use std::collections::BTreeMap;
+use tracing::{debug, info, warn};
 
 /// Counts for one directed source-to-destination reconciliation.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -30,6 +31,33 @@ pub fn reconcile(
     destination: &mut Ledger,
     trust: &dyn TrustSource,
 ) -> Result<ReconcileOutcome, SyncError> {
+    match reconcile_inner(source, destination, trust) {
+        Ok(outcome) => {
+            if outcome.revisions_sent > 0 {
+                info!(
+                    batches = outcome.batches_sent,
+                    revisions = outcome.revisions_sent,
+                    duplicates = outcome.duplicates,
+                    acknowledged = outcome.acknowledged,
+                    "Sync reconciliation complete"
+                );
+            } else {
+                debug!("Sync reconciliation found no missing revisions");
+            }
+            Ok(outcome)
+        }
+        Err(error) => {
+            warn!(error = %error, "Sync reconciliation failed");
+            Err(error)
+        }
+    }
+}
+
+fn reconcile_inner(
+    source: &Ledger,
+    destination: &mut Ledger,
+    trust: &dyn TrustSource,
+) -> Result<ReconcileOutcome, SyncError> {
     if source.vault_id() != destination.vault_id() {
         return Err(SyncError::VaultMismatch);
     }
@@ -51,6 +79,12 @@ pub fn reconcile(
             }
         }
     }
+    debug!(
+        source_revisions = source_history.len(),
+        destination_revisions = destination_history.len(),
+        missing = missing.len(),
+        "Sync reconciliation started"
+    );
 
     let topological_ids = topological_meta_order(&source_history)?;
     let mut pending = Vec::<Revision>::new();
@@ -107,6 +141,13 @@ fn commit_batch(
         return Err(SyncError::VaultMismatch);
     }
     let applied = destination.insert_batch(&decoded_revisions, trust)?;
+    debug!(
+        revisions = decoded_revisions.len(),
+        bytes = encoded.len(),
+        inserted = applied.inserted,
+        duplicates = applied.duplicates,
+        "Sync reconciliation batch committed"
+    );
 
     // `insert_batch` returns only after SQLite commit, so these counters are an
     // explicit per-call commit receipt, never a durable or unauthenticated peer ACK.

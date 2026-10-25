@@ -3,9 +3,8 @@
 use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity};
 use kryptopass_sync::{
     Id, Ledger, Operation, Revision, SYNC_MAX_BATCH_BYTES, SYNC_MAX_CIPHERTEXT_BYTES,
-    SYNC_MAX_HEADS, SYNC_MAX_LEDGER_CIPHERTEXT_BYTES, SYNC_MAX_LEDGER_REVISIONS,
-    SYNC_MAX_MANIFEST_HEADS, SYNC_MAX_PARENTS, SYNC_MAX_REVISIONS_PER_BATCH, SyncError,
-    TrustSource, encode_batch,
+    SYNC_MAX_HEADS, SYNC_MAX_LEDGER_CIPHERTEXT_BYTES, SYNC_MAX_LEDGER_REVISIONS, SYNC_MAX_PARENTS,
+    SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, encode_batch,
 };
 
 const VAULT: Id = [0x28; 16];
@@ -132,11 +131,10 @@ fn batch_revision_count_and_encoded_byte_limits_are_enforced() {
 
 #[test]
 #[ignore = "inserts 10,000 signed rows; run through the opt-in sync stress target"]
-fn ledger_revision_cap_accepts_ten_thousand_and_rejects_one_more() {
+fn ledger_revision_cap_accepts_ten_thousand_independent_heads_and_rejects_one_more() {
     let identity = identity();
     let trust = Trust(identity.public_identity());
     let mut ledger = Ledger::in_memory(VAULT).expect("isolated ledger");
-    let mut parent = None;
     let mut inserted = 0_u32;
 
     while inserted < SYNC_MAX_LEDGER_REVISIONS as u32 {
@@ -146,23 +144,29 @@ fn ledger_revision_cap_accepts_ten_thousand_and_rejects_one_more() {
             let number = inserted + offset + 1;
             let current = revision(
                 &identity,
-                40_000,
+                number,
                 number + SYNC_MAX_LEDGER_REVISIONS as u32,
-                parent.into_iter().collect(),
+                Vec::new(),
                 vec![number as u8],
             )
-            .expect("bounded chain revision signs");
-            parent = Some(current.revision_id);
+            .expect("independent head signs");
             batch.push(current);
         }
         ledger
             .insert_batch(&batch, &trust)
-            .expect("batch fits remaining revision capacity");
+            .expect("batch of independent heads fits remaining storage capacity");
         inserted += batch_size;
     }
 
     assert_eq!(
         ledger.revision_count().expect("maximum row count"),
+        SYNC_MAX_LEDGER_REVISIONS
+    );
+    assert_eq!(
+        ledger
+            .manifest()
+            .expect("maximum stored head manifest")
+            .len(),
         SYNC_MAX_LEDGER_REVISIONS
     );
     let overflow = revision(
@@ -181,6 +185,13 @@ fn ledger_revision_cap_accepts_ten_thousand_and_rejects_one_more() {
         ledger.revision_count().expect("overflow rolled back"),
         SYNC_MAX_LEDGER_REVISIONS
     );
+    assert_eq!(
+        ledger
+            .manifest()
+            .expect("overflow leaves every stored head intact")
+            .len(),
+        SYNC_MAX_LEDGER_REVISIONS
+    );
 }
 
 #[test]
@@ -192,11 +203,12 @@ fn ledger_revision_manifest_and_total_ciphertext_caps_are_enforced() {
     // for the focused sync check.
     assert_eq!(SYNC_MAX_LEDGER_REVISIONS, 10_000);
 
-    // The 1024-head snapshot cap is also enforced on writes, so a committed
-    // ledger can always return a complete manifest without truncation.
-    let mut heads_ledger = Ledger::in_memory(VAULT).expect("head capacity ledger");
+    // A realistic vault can exceed the former 1024-head manifest cap. Build
+    // independent roots in small batches; the global storage cap is 10,000.
+    const REALISTIC_HEAD_COUNT: u32 = 1_114;
+    let mut heads_ledger = Ledger::in_memory(VAULT).expect("realistic manifest ledger");
     let mut roots = Vec::new();
-    for number in 1..=SYNC_MAX_MANIFEST_HEADS as u32 {
+    for number in 1..=REALISTIC_HEAD_COUNT {
         roots.push(
             revision(
                 &identity,
@@ -220,26 +232,11 @@ fn ledger_revision_manifest_and_total_ciphertext_caps_are_enforced() {
             .expect("last head batch");
     }
     assert_eq!(
-        heads_ledger.manifest().expect("maximum manifest").len(),
-        SYNC_MAX_MANIFEST_HEADS
-    );
-    let extra_head = revision(
-        &identity,
-        SYNC_MAX_MANIFEST_HEADS as u32 + 1,
-        30_000,
-        Vec::new(),
-        vec![1],
-    )
-    .expect("extra head signs");
-    assert!(matches!(
-        heads_ledger.insert_batch(std::slice::from_ref(&extra_head), &trust),
-        Err(SyncError::LimitExceeded)
-    ));
-    assert_eq!(
         heads_ledger
-            .revision_count()
-            .expect("extra head rolled back"),
-        SYNC_MAX_MANIFEST_HEADS
+            .manifest()
+            .expect("manifest includes every realistic root")
+            .len(),
+        REALISTIC_HEAD_COUNT as usize
     );
 
     let mut ledger = Ledger::in_memory(VAULT).expect("ciphertext capacity ledger");

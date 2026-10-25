@@ -1,8 +1,7 @@
 use crate::{
     Digest, Id, Operation, Revision, RevisionHead, SYNC_MAX_BATCH_BYTES, SYNC_MAX_CIPHERTEXT_BYTES,
-    SYNC_MAX_HEADS, SYNC_MAX_LEDGER_CIPHERTEXT_BYTES, SYNC_MAX_LEDGER_REVISIONS,
-    SYNC_MAX_MANIFEST_HEADS, SYNC_MAX_PARENTS, SYNC_MAX_REVISIONS_PER_BATCH, SyncError,
-    TrustSource, encode_batch, fresh_id,
+    SYNC_MAX_HEADS, SYNC_MAX_LEDGER_CIPHERTEXT_BYTES, SYNC_MAX_LEDGER_REVISIONS, SYNC_MAX_PARENTS,
+    SYNC_MAX_REVISIONS_PER_BATCH, SyncError, TrustSource, encode_batch, fresh_id,
 };
 use kryptopass_identity::{DeviceId, DeviceIdentity};
 use rusqlite::{Connection, OpenFlags, OptionalExtension, TransactionBehavior, params};
@@ -10,6 +9,7 @@ use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, OpenOptions};
 use std::path::Path;
+use tracing::{debug, info, warn};
 
 const APPLICATION_ID: i64 = 0x4b50_5359; // "KPSY"
 const SCHEMA_VERSION: i64 = 1;
@@ -68,23 +68,46 @@ impl Ledger {
             let connection = open_connection(path)?;
             initialize_connection(connection, vault_id)
         })();
-        if initialized.is_err() {
-            let _ = fs::remove_file(path);
-            let _ = remove_sidecars(path);
+        match initialized {
+            Ok(ledger) => {
+                info!(revisions = 0, "Sync ledger created");
+                Ok(ledger)
+            }
+            Err(error) => {
+                let _ = fs::remove_file(path);
+                let _ = remove_sidecars(path);
+                warn!(error = %error, "Sync ledger could not be created");
+                Err(error)
+            }
         }
-        initialized
     }
 
     /// Creates an isolated in-memory ledger for offline operation and protocol tests.
     pub fn in_memory(vault_id: Id) -> Result<Self, SyncError> {
         validate_vault_id(vault_id)?;
         let connection = Connection::open_in_memory().map_err(map_sqlite_error)?;
-        initialize_connection(connection, vault_id)
+        let ledger = initialize_connection(connection, vault_id)?;
+        debug!("Sync in-memory ledger created");
+        Ok(ledger)
     }
 
     /// Opens an existing private ledger and verifies all stored history against trust.
     /// This method never creates a file, identity, or trust record.
     pub fn open_existing(
+        path: impl AsRef<Path>,
+        vault_id: Id,
+        trust: &dyn TrustSource,
+    ) -> Result<Self, SyncError> {
+        match Self::open_existing_inner(path, vault_id, trust) {
+            Ok(ledger) => Ok(ledger),
+            Err(error) => {
+                warn!(error = %error, "Sync ledger could not be opened");
+                Err(error)
+            }
+        }
+    }
+
+    fn open_existing_inner(
         path: impl AsRef<Path>,
         vault_id: Id,
         trust: &dyn TrustSource,
@@ -120,6 +143,7 @@ impl Ledger {
             })?;
         }
         ledger.validate_limits()?;
+        debug!(revisions = history.len(), "Sync ledger opened");
         Ok(ledger)
     }
 
@@ -156,9 +180,6 @@ impl Ledger {
                 revision_id: fixed::<16>(&revision_id).ok_or(SyncError::InvalidLedger)?,
                 revision_hash: fixed::<32>(&revision_hash).ok_or(SyncError::InvalidLedger)?,
             });
-            if heads.len() > SYNC_MAX_MANIFEST_HEADS {
-                return Err(SyncError::LimitExceeded);
-            }
         }
         Ok(heads)
     }
@@ -222,6 +243,34 @@ impl Ledger {
     /// Validates and atomically inserts a bounded batch of remote revisions.
     /// Exact replays are idempotent; any invalid graph edge rejects the full batch.
     pub fn insert_batch(
+        &mut self,
+        revisions: &[Revision],
+        trust: &dyn TrustSource,
+    ) -> Result<InsertOutcome, SyncError> {
+        match self.insert_batch_inner(revisions, trust) {
+            Ok(outcome) => {
+                if !revisions.is_empty() {
+                    debug!(
+                        revisions = revisions.len(),
+                        inserted = outcome.inserted,
+                        duplicates = outcome.duplicates,
+                        "Sync revision batch committed"
+                    );
+                }
+                Ok(outcome)
+            }
+            Err(error) => {
+                warn!(
+                    revisions = revisions.len(),
+                    error = %error,
+                    "Sync revision batch rejected"
+                );
+                Err(error)
+            }
+        }
+    }
+
+    fn insert_batch_inner(
         &mut self,
         revisions: &[Revision],
         trust: &dyn TrustSource,
@@ -292,6 +341,51 @@ impl Ledger {
 
     /// Signs and commits a local revision only when the current heads match exactly.
     pub fn append_local(
+        &mut self,
+        identity: &DeviceIdentity,
+        record_id: Id,
+        expected_heads: &[Id],
+        operation: Operation,
+        ciphertext: Vec<u8>,
+        trust: &dyn TrustSource,
+    ) -> Result<Revision, SyncError> {
+        let ciphertext_len = ciphertext.len();
+        match self.append_local_inner(
+            identity,
+            record_id,
+            expected_heads,
+            operation,
+            ciphertext,
+            trust,
+        ) {
+            Ok(revision) => {
+                debug!(
+                    operation = ?operation,
+                    ciphertext_bytes = ciphertext_len,
+                    "Sync local revision committed"
+                );
+                Ok(revision)
+            }
+            Err(error) if error == SyncError::HeadConflict => {
+                debug!(
+                    operation = ?operation,
+                    reason = "head_conflict",
+                    "Sync local revision rejected"
+                );
+                Err(error)
+            }
+            Err(error) => {
+                warn!(
+                    operation = ?operation,
+                    error = %error,
+                    "Sync local revision rejected"
+                );
+                Err(error)
+            }
+        }
+    }
+
+    fn append_local_inner(
         &mut self,
         identity: &DeviceIdentity,
         record_id: Id,
@@ -999,9 +1093,6 @@ fn validate_history_graph(vault_id: Id, revisions: &[RevisionMeta]) -> Result<()
             }
         }
     }
-    if heads_by_record.values().copied().sum::<usize>() > SYNC_MAX_MANIFEST_HEADS {
-        return Err(SyncError::LimitExceeded);
-    }
     Ok(())
 }
 
@@ -1148,7 +1239,6 @@ fn validate_final_heads(connection: &Connection) -> Result<(), SyncError> {
             Ok((row.get::<_, Vec<u8>>(0)?, row.get::<_, i64>(1)?))
         })
         .map_err(map_sqlite_error)?;
-    let mut total_heads = 0_usize;
     for row in rows {
         let (record_id, count) = row.map_err(map_sqlite_error)?;
         if fixed::<16>(&record_id).is_none() {
@@ -1158,12 +1248,6 @@ fn validate_final_heads(connection: &Connection) -> Result<(), SyncError> {
         if count > SYNC_MAX_HEADS {
             return Err(SyncError::LimitExceeded);
         }
-        total_heads = total_heads
-            .checked_add(count)
-            .ok_or(SyncError::LimitExceeded)?;
-    }
-    if total_heads > SYNC_MAX_MANIFEST_HEADS {
-        return Err(SyncError::LimitExceeded);
     }
     Ok(())
 }

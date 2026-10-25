@@ -4,12 +4,20 @@
 //! Applications feed it validated trusted identities and retain the returned
 //! session handle for the lifetime of a connection.
 
+/// Phone → Desktop vault-identity receiver (extension version 3).
+pub mod synthetic_receive;
 /// Explicit synthetic provisioning sender, independent of UI and OpenPGP engines.
 pub mod synthetic_transfer;
+pub use synthetic_receive::{
+    INBOUND_KEY_TIMEOUT, INBOUND_KEY_TRANSFER_VERSION, InboundKeyMaterial, InboundTransferFailure,
+    InboundTransferPhase, InboundTransferProgress,
+};
+use synthetic_receive::{InboundMaterialSlot, SyntheticTransferReceiver};
 pub use synthetic_transfer::{
-    SYNTHETIC_KEY_CHUNK_BYTES, SYNTHETIC_KEY_MAX_BYTES, SYNTHETIC_KEY_TIMEOUT,
-    SyntheticKeyTransferSend, SyntheticTransferError, SyntheticTransferOutbound,
-    SyntheticTransferPhase, SyntheticTransferProgress, SyntheticTransferSender,
+    KEY_TRANSFER_VERSION, KeyTransferPurpose, SYNTHETIC_KEY_CHUNK_BYTES, SYNTHETIC_KEY_MAX_BYTES,
+    SYNTHETIC_KEY_TIMEOUT, SyntheticKeyTransferSend, SyntheticTransferError,
+    SyntheticTransferOutbound, SyntheticTransferPhase, SyntheticTransferProgress,
+    SyntheticTransferSender,
 };
 
 use std::collections::{HashSet, VecDeque};
@@ -593,6 +601,10 @@ pub enum SessionCommandError {
 
 enum SyntheticCommand {
     Start(Box<SyntheticKeyTransferSend>),
+    /// Local decision on the inbound offer with this id.
+    InboundDecision([u8; 16], bool),
+    /// Application result of import + challenge decryption; `None` is a failure.
+    InboundFinished([u8; 16], Option<[u8; 32]>),
 }
 
 enum SessionCommand {
@@ -610,6 +622,7 @@ pub struct SessionHandle {
     synthetic_commands: mpsc::Sender<SyntheticCommand>,
     synthetic_cancel: watch::Sender<Option<[u8; 16]>>,
     synthetic_progress: watch::Receiver<SyntheticTransferProgress>,
+    inbound_material: InboundMaterialSlot,
     closed: watch::Receiver<bool>,
     generation: u64,
 }
@@ -624,6 +637,7 @@ pub struct SyntheticTransferControl {
     synthetic_commands: mpsc::Sender<SyntheticCommand>,
     synthetic_cancel: watch::Sender<Option<[u8; 16]>>,
     synthetic_progress: watch::Receiver<SyntheticTransferProgress>,
+    inbound_material: InboundMaterialSlot,
 }
 
 impl SyntheticTransferControl {
@@ -644,10 +658,18 @@ impl SyntheticTransferControl {
         prepared: SyntheticKeyTransferSend,
     ) -> Result<(), SyntheticTransferError> {
         self.check_synthetic_session(expected_generation)?;
-        match self.synthetic_progress.borrow().phase {
+        let progress = *self.synthetic_progress.borrow();
+        match progress.phase {
             SyntheticTransferPhase::Unsupported => return Err(SyntheticTransferError::Unsupported),
             SyntheticTransferPhase::Ready => {}
             _ => return Err(SyntheticTransferError::Busy),
+        }
+        // One operation per session counting both directions.
+        if progress
+            .inbound
+            .is_some_and(|inbound| inbound.phase.is_active())
+        {
+            return Err(SyntheticTransferError::Busy);
         }
         self.synthetic_commands
             .try_send(SyntheticCommand::Start(Box::new(prepared)))
@@ -672,6 +694,68 @@ impl SyntheticTransferControl {
         self.synthetic_cancel
             .send(Some(transfer_id))
             .map_err(|_| SyntheticTransferError::WrongSession)
+    }
+
+    /// Sends the local user's decision for the inbound offer `transfer_id`.
+    pub fn decide_inbound_key_transfer(
+        &self,
+        expected_generation: u64,
+        transfer_id: [u8; 16],
+        accepted: bool,
+    ) -> Result<(), SyntheticTransferError> {
+        self.check_synthetic_session(expected_generation)?;
+        let awaiting = self
+            .synthetic_progress
+            .borrow()
+            .inbound
+            .is_some_and(|inbound| {
+                inbound.transfer_id == transfer_id
+                    && inbound.phase == InboundTransferPhase::AwaitingDecision
+            });
+        if !awaiting {
+            return Err(SyntheticTransferError::WrongSession);
+        }
+        self.synthetic_commands
+            .try_send(SyntheticCommand::InboundDecision(transfer_id, accepted))
+            .map_err(|_| SyntheticTransferError::Busy)
+    }
+
+    /// Takes the verified protected key block once the inbound operation
+    /// reached the import stage. Only one caller can obtain it.
+    pub fn take_inbound_key_material(
+        &self,
+        expected_generation: u64,
+        transfer_id: [u8; 16],
+    ) -> Result<InboundKeyMaterial, SyntheticTransferError> {
+        self.check_synthetic_session(expected_generation)?;
+        let mut slot = self
+            .inbound_material
+            .lock()
+            .map_err(|_| SyntheticTransferError::Invalid)?;
+        if slot
+            .as_ref()
+            .is_none_or(|material| material.transfer_id() != transfer_id)
+        {
+            return Err(SyntheticTransferError::WrongSession);
+        }
+        slot.take().ok_or(SyntheticTransferError::WrongSession)
+    }
+
+    /// Reports the application's import result: the SHA-256 of the decrypted
+    /// challenge sends the receipt; `None` aborts with code 4.
+    pub fn finish_inbound_key_transfer(
+        &self,
+        expected_generation: u64,
+        transfer_id: [u8; 16],
+        challenge_sha256: Option<[u8; 32]>,
+    ) -> Result<(), SyntheticTransferError> {
+        self.check_synthetic_session(expected_generation)?;
+        self.synthetic_commands
+            .try_send(SyntheticCommand::InboundFinished(
+                transfer_id,
+                challenge_sha256,
+            ))
+            .map_err(|_| SyntheticTransferError::Busy)
     }
 
     fn check_synthetic_session(
@@ -750,6 +834,7 @@ impl SessionHandle {
             synthetic_commands: self.synthetic_commands.clone(),
             synthetic_cancel: self.synthetic_cancel.clone(),
             synthetic_progress: self.synthetic_progress.clone(),
+            inbound_material: Arc::clone(&self.inbound_material),
         }
     }
 
@@ -858,15 +943,47 @@ struct SyncRuntime {
 
 struct SyntheticRuntime {
     actor: SyntheticTransferSender,
+    receiver: SyntheticTransferReceiver,
     commands: mpsc::Receiver<SyntheticCommand>,
     cancel: watch::Receiver<Option<[u8; 16]>>,
     progress: watch::Sender<SyntheticTransferProgress>,
 }
 
+impl SyntheticRuntime {
+    /// Combined secret-free state of both directions.
+    fn snapshot(&self) -> SyntheticTransferProgress {
+        let mut progress = self.actor.progress();
+        progress.inbound = self.receiver.progress();
+        progress
+    }
+
+    fn publish(&self) {
+        let current = self.snapshot();
+        self.progress.send_if_modified(|value| {
+            if *value == current {
+                false
+            } else {
+                *value = current;
+                true
+            }
+        });
+    }
+
+    fn sender_active(&self) -> bool {
+        matches!(
+            self.actor.progress().phase,
+            SyntheticTransferPhase::WaitingAcceptance
+                | SyntheticTransferPhase::Sending
+                | SyntheticTransferPhase::WaitingReceipt
+        )
+    }
+}
+
 impl Drop for SyntheticRuntime {
     fn drop(&mut self) {
         self.actor.disconnected();
-        self.progress.send_replace(self.actor.progress());
+        self.receiver.disconnected();
+        self.progress.send_replace(self.snapshot());
     }
 }
 
@@ -910,6 +1027,9 @@ fn spawn_sync_worker(
             }
         }
         let mut last_progress = engine.progress();
+        if cfg!(debug_assertions) {
+            tracing::info!(continuous_rounds, diagnostics = %engine.diagnostics(std::time::Instant::now()), "Sync started");
+        }
         let mut round_complete_reported = false;
         let mut next_local_change_check = std::time::Instant::now();
         if output_tx
@@ -970,11 +1090,42 @@ fn spawn_sync_worker(
                 next_local_change_check = now + kryptopass_sync::SESSION_LOCAL_CHANGE_POLL;
             }
             if let Err(error) = engine.check_time(now) {
+                if cfg!(debug_assertions) {
+                    tracing::warn!(error = %error, diagnostics = %engine.diagnostics(now), "Sync deadline or trust check failed");
+                }
                 let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
                 return;
             }
             match engine.poll_output(now) {
                 Ok(Some(outbound)) => {
+                    if cfg!(debug_assertions) {
+                        let counts = match &outbound {
+                            SyncOutbound::Hello(message) => {
+                                format!("hello revisions={}", message.known_revision_count)
+                            }
+                            SyncOutbound::Manifest(message) => format!(
+                                "manifest page={} last={} heads={}",
+                                message.page_index,
+                                message.last_page,
+                                message.heads.len()
+                            ),
+                            SyncOutbound::Request(message) => {
+                                format!("request revisions={}", message.revisions.len())
+                            }
+                            SyncOutbound::Chunk(message) => format!(
+                                "chunk index={} chunks={} bytes={}",
+                                message.chunk_index,
+                                message.chunk_count,
+                                message.data.len()
+                            ),
+                            SyncOutbound::Commit(_) => "commit".to_owned(),
+                            SyncOutbound::Ack(message) => format!("ack status={}", message.status),
+                        };
+                        if !matches!(&outbound, SyncOutbound::Chunk(message) if message.chunk_index != 0 && message.chunk_index + 1 != message.chunk_count)
+                        {
+                            tracing::debug!(message = %counts, diagnostics = %engine.diagnostics(now), "Sync tx_queued");
+                        }
+                    }
                     if output_tx
                         .blocking_send(SyncWorkerOutput::Outbound(outbound))
                         .is_err()
@@ -998,6 +1149,9 @@ fn spawn_sync_worker(
                 }
                 Ok(None) => {}
                 Err(error) => {
+                    if cfg!(debug_assertions) {
+                        tracing::warn!(error = %error, diagnostics = %engine.diagnostics(now), "Sync output failed");
+                    }
                     let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
                     return;
                 }
@@ -1028,6 +1182,36 @@ fn spawn_sync_worker(
             }
             let result = match input {
                 SyncWorkerInput::Message(message_type, payload) => {
+                    if cfg!(debug_assertions) {
+                        let counts = match &payload {
+                            MessagePayload::SyncHello(message) => {
+                                format!("revisions={}", message.known_revision_count)
+                            }
+                            MessagePayload::SyncManifest(message) => format!(
+                                "page={} last={} heads={}",
+                                message.page_index,
+                                message.last_page,
+                                message.heads.len()
+                            ),
+                            MessagePayload::SyncRequest(message) => {
+                                format!("revisions={}", message.revisions.len())
+                            }
+                            MessagePayload::SyncChunk(message) => format!(
+                                "chunk={} chunks={} bytes={}",
+                                message.chunk_index,
+                                message.chunk_count,
+                                message.data.len()
+                            ),
+                            MessagePayload::SyncAck(message) => {
+                                format!("status={}", message.status)
+                            }
+                            _ => String::new(),
+                        };
+                        if !matches!(&payload, MessagePayload::SyncChunk(message) if message.chunk_index != 0 && message.chunk_index + 1 != message.chunk_count)
+                        {
+                            tracing::debug!(message_type = message_type.as_str_name(), message = %counts, diagnostics = %engine.diagnostics(std::time::Instant::now()), "Sync rx");
+                        }
+                    }
                     engine.handle_message(message_type, payload, std::time::Instant::now())
                 }
                 SyncWorkerInput::Cancel => {
@@ -1036,11 +1220,17 @@ fn spawn_sync_worker(
                 }
             };
             if let Err(error) = result {
+                if cfg!(debug_assertions) {
+                    tracing::warn!(error = %error, diagnostics = %engine.diagnostics(std::time::Instant::now()), "Sync input rejected");
+                }
                 let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
                 return;
             }
             let progress = engine.progress();
             if progress != last_progress {
+                if cfg!(debug_assertions) {
+                    tracing::info!(diagnostics = %engine.diagnostics(std::time::Instant::now()), "Sync progress");
+                }
                 last_progress = progress;
                 if output_tx
                     .blocking_send(SyncWorkerOutput::Progress(progress))
@@ -1209,6 +1399,8 @@ fn start_session_internal<T: PeerTransport + 'static>(
     let (synthetic_cancel_tx, synthetic_cancel_rx) = watch::channel(None);
     let (synthetic_progress_tx, synthetic_progress_rx) =
         watch::channel(SyntheticTransferSender::new(false).progress());
+    let inbound_material: InboundMaterialSlot = Arc::new(Mutex::new(None));
+    let owner_inbound_material = Arc::clone(&inbound_material);
     let owner_directory = directory.clone();
     let owner_events = event_tx.clone();
     let mut directory_changes = directory.subscribe();
@@ -1224,7 +1416,11 @@ fn start_session_internal<T: PeerTransport + 'static>(
             options,
             sync_version: u32::from(sync_binding.is_some()),
             sync_rounds_version: local_sync_rounds_version,
-            synthetic_key_transfer_version: u32::from(synthetic_key_transfer),
+            synthetic_key_transfer_version: if synthetic_key_transfer {
+                KEY_TRANSFER_VERSION
+            } else {
+                0
+            },
             expected_peer,
             generation,
             directory: &owner_directory,
@@ -1273,6 +1469,15 @@ fn start_session_internal<T: PeerTransport + 'static>(
                     let continuous_rounds = sync_enabled
                         && local_sync_rounds_version == 1
                         && remote_sync_rounds_version == 1;
+                    tracing::info!(
+                        local_binding = sync_binding.is_some(),
+                        remote_sync_version,
+                        local_sync_rounds_version,
+                        remote_sync_rounds_version,
+                        sync_enabled,
+                        continuous_rounds,
+                        "Sync negotiation"
+                    );
                     let sync_worker = if sync_enabled {
                         sync_binding.map(|binding| {
                             spawn_sync_worker(
@@ -1285,8 +1490,23 @@ fn start_session_internal<T: PeerTransport + 'static>(
                     } else {
                         None
                     };
-                    let synthetic_actor = SyntheticTransferSender::new(
-                        synthetic_key_transfer && remote_synthetic_version == 1,
+                    let effective_synthetic_version = if synthetic_key_transfer {
+                        remote_synthetic_version.min(KEY_TRANSFER_VERSION)
+                    } else {
+                        0
+                    };
+                    tracing::info!(
+                        local_enabled = synthetic_key_transfer,
+                        local_version = KEY_TRANSFER_VERSION,
+                        remote_synthetic_version,
+                        effective_synthetic_version,
+                        "Key transfer negotiation"
+                    );
+                    let synthetic_actor =
+                        SyntheticTransferSender::with_version(effective_synthetic_version);
+                    let synthetic_receiver = SyntheticTransferReceiver::new(
+                        effective_synthetic_version,
+                        owner_inbound_material,
                     );
                     synthetic_progress_tx.send_replace(synthetic_actor.progress());
                     run_connected_session(
@@ -1301,6 +1521,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                             progress: sync_progress_tx.clone(),
                             synthetic: SyntheticRuntime {
                                 actor: synthetic_actor,
+                                receiver: synthetic_receiver,
                                 commands: synthetic_rx,
                                 cancel: synthetic_cancel_rx,
                                 progress: synthetic_progress_tx.clone(),
@@ -1349,6 +1570,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
         synthetic_commands: synthetic_tx,
         synthetic_cancel: synthetic_cancel_tx,
         synthetic_progress: synthetic_progress_rx,
+        inbound_material,
         closed: closed_rx,
         generation,
     })
@@ -1497,6 +1719,28 @@ async fn run_connected_session<T: PeerTransport>(
     // Keep draining worker output and observing cancellation instead of treating
     // an ordinary scheduler/SQLite delay as a malformed peer message.
     let mut pending_sync_input: Option<(SyncWorkerInput, Instant)> = None;
+    // A Sync failure suspends Sync for the rest of this session instead of
+    // closing it; only revoked trust still ends the authenticated connection.
+    let mut sync_suspended = false;
+    let suspend_sync = |worker: &mut Option<SyncWorker>,
+                        pending: &mut Option<(SyncWorkerInput, Instant)>,
+                        suspended: &mut bool,
+                        reason: &'static str| {
+        if !*suspended {
+            tracing::warn!(
+                reason,
+                "Sync suspended for this session; the connection stays up"
+            );
+        }
+        *worker = None;
+        *pending = None;
+        *suspended = true;
+        sync_progress.send_modify(|progress| {
+            if let Some(progress) = progress {
+                progress.state = kryptopass_sync::SyncProgressState::Failed;
+            }
+        });
+    };
 
     loop {
         if !directory.session_is_current(&expected_peer, generation) {
@@ -1548,25 +1792,29 @@ async fn run_connected_session<T: PeerTransport>(
             Ok(None) => {}
             Err(_) => return SessionExit::Failed(SessionFailure::Protocol),
         }
-        synthetic.progress.send_if_modified(|value| {
-            let current = synthetic.actor.progress();
-            if *value == current {
-                false
-            } else {
-                *value = current;
-                true
+        if let Some(abort) = synthetic.receiver.expire(Instant::now()) {
+            if let Err(error) = send_synthetic_outbound_bounded(session, abort).await {
+                return SessionExit::Failed(error);
             }
-        });
+        }
+        synthetic.publish();
         if let Some((input, deadline)) = pending_sync_input.take() {
-            let Some(worker) = sync_worker.as_ref() else {
-                return SessionExit::Failed(SessionFailure::Sync);
-            };
-            match worker.input.try_send(input) {
-                Ok(()) => {}
-                Err(StdTrySendError::Full(input)) if Instant::now() < deadline => {
-                    pending_sync_input = Some((input, deadline));
+            if let Some(worker) = sync_worker.as_ref() {
+                match worker.input.try_send(input) {
+                    Ok(()) => {}
+                    Err(StdTrySendError::Full(input)) if Instant::now() < deadline => {
+                        pending_sync_input = Some((input, deadline));
+                    }
+                    Err(_) => suspend_sync(
+                        &mut sync_worker,
+                        &mut pending_sync_input,
+                        &mut sync_suspended,
+                        "worker input queue full past its deadline or closed",
+                    ),
                 }
-                Err(_) => return SessionExit::Failed(SessionFailure::Sync),
+            } else if !sync_suspended {
+                tracing::warn!("Sync input arrived without a sync worker");
+                return SessionExit::Failed(SessionFailure::Sync);
             }
         }
         let ping_deadline = outstanding
@@ -1578,7 +1826,7 @@ async fn run_connected_session<T: PeerTransport>(
             command = synthetic.commands.recv() => SelectedSessionEvent::SyntheticCommand(command),
             _ = synthetic.cancel.changed() => SelectedSessionEvent::SyntheticTick,
             () = tokio::time::sleep(Duration::from_millis(if synthetic.actor.progress().phase == SyntheticTransferPhase::Sending { 1 } else { 100 })),
-                if matches!(synthetic.actor.progress().phase, SyntheticTransferPhase::Sending | SyntheticTransferPhase::WaitingAcceptance | SyntheticTransferPhase::WaitingReceipt) => SelectedSessionEvent::SyntheticTick,
+                if synthetic.sender_active() || synthetic.receiver.is_active() => SelectedSessionEvent::SyntheticTick,
             changed = directory_changes.changed() => SelectedSessionEvent::DirectoryChanged(changed),
             message = session.receive_message(), if pending_sync_input.is_none() => SelectedSessionEvent::Message(message),
             output = receive_sync_worker_output(&mut sync_worker), if sync_worker.is_some() => {
@@ -1653,34 +1901,55 @@ async fn run_connected_session<T: PeerTransport>(
                 return SessionExit::Failed(SessionFailure::PingTimeout);
             }
             SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Outbound(outbound))) => {
+                let kind = match &outbound {
+                    SyncOutbound::Hello(_) => Some("hello"),
+                    SyncOutbound::Manifest(_) => Some("manifest"),
+                    SyncOutbound::Request(_) => Some("request"),
+                    SyncOutbound::Chunk(message)
+                        if message.chunk_index == 0
+                            || message.chunk_index + 1 == message.chunk_count =>
+                    {
+                        Some("chunk")
+                    }
+                    SyncOutbound::Chunk(_) => None,
+                    SyncOutbound::Commit(_) => Some("commit"),
+                    SyncOutbound::Ack(_) => Some("ack"),
+                };
                 if let Err(failure) = send_sync_outbound_bounded(session, outbound).await {
                     return SessionExit::Failed(failure);
+                }
+                if cfg!(debug_assertions) {
+                    if let Some(kind) = kind {
+                        tracing::debug!(message_type = kind, "Sync tx_sent");
+                    }
                 }
             }
             SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Progress(progress))) => {
                 sync_progress.send_replace(Some(progress));
             }
             SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Failed(error))) => {
-                return match error {
-                    SyncSessionError::TrustRevoked => {
-                        SessionExit::Disconnected(SessionCloseReason::TrustRevoked, true)
-                    }
-                    SyncSessionError::Storage | SyncSessionError::Randomness => {
-                        SessionExit::Failed(SessionFailure::SyncStorage)
-                    }
-                    SyncSessionError::Timeout => SessionExit::Failed(SessionFailure::SyncTimeout),
-                    SyncSessionError::InvalidBinding
-                    | SyncSessionError::Protocol
-                    | SyncSessionError::Capacity
-                    | SyncSessionError::UnknownAuthor => SessionExit::Failed(SessionFailure::Sync),
-                };
+                tracing::warn!(error = %error, "Sync worker failed");
+                if matches!(error, SyncSessionError::TrustRevoked) {
+                    return SessionExit::Disconnected(SessionCloseReason::TrustRevoked, true);
+                }
+                suspend_sync(
+                    &mut sync_worker,
+                    &mut pending_sync_input,
+                    &mut sync_suspended,
+                    "worker failed",
+                );
             }
             SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::Complete)) => {
                 sync_worker = None;
             }
             SelectedSessionEvent::SyncOutput(Some(SyncWorkerOutput::RoundComplete)) => {}
             SelectedSessionEvent::SyncOutput(None) => {
-                return SessionExit::Failed(SessionFailure::Sync);
+                suspend_sync(
+                    &mut sync_worker,
+                    &mut pending_sync_input,
+                    &mut sync_suspended,
+                    "worker stopped without a result",
+                );
             }
             SelectedSessionEvent::Message(Err(error)) => {
                 return SessionExit::Failed(classify_pairing_error(error));
@@ -1739,6 +2008,62 @@ async fn run_connected_session<T: PeerTransport>(
                         return SessionExit::Disconnected(reason, false);
                     }
                     (
+                        proto::MessageType::SyntheticKeyOffer
+                        | proto::MessageType::SyntheticKeyChunk
+                        | proto::MessageType::SyntheticKeyComplete,
+                        payload,
+                    ) => {
+                        // Offer, Chunk and Complete always target the local receiver.
+                        // Failures are transfer errors answered with an abort; the
+                        // authenticated session and Sync stay up.
+                        let now = Instant::now();
+                        let outbound = match &payload {
+                            MessagePayload::SyntheticKeyOffer(offer) => {
+                                let busy = synthetic.sender_active();
+                                match synthetic.receiver.offer(offer, busy, now) {
+                                    Ok(()) => None,
+                                    Err(refusal) => {
+                                        tracing::warn!(
+                                            refusal = ?refusal,
+                                            "Inbound key transfer: answering offer with abort code 4"
+                                        );
+                                        Some(SyntheticTransferOutbound::Abort(
+                                            proto::SyntheticKeyAbort {
+                                                transfer_id: offer.transfer_id.clone(),
+                                                code: 4,
+                                            },
+                                        ))
+                                    }
+                                }
+                            }
+                            MessagePayload::SyntheticKeyChunk(chunk) => {
+                                synthetic.receiver.chunk(chunk, now)
+                            }
+                            MessagePayload::SyntheticKeyComplete(complete) => {
+                                synthetic.receiver.complete(complete, now)
+                            }
+                            _ => None,
+                        };
+                        if let MessagePayload::SyntheticKeyChunk(mut chunk) = payload {
+                            chunk.data.zeroize();
+                        }
+                        if let Some(outbound) = outbound {
+                            if let Err(failure) =
+                                send_synthetic_outbound_bounded(session, outbound).await
+                            {
+                                return SessionExit::Failed(failure);
+                            }
+                        }
+                        synthetic.publish();
+                    }
+                    (
+                        proto::MessageType::SyntheticKeyAbort,
+                        MessagePayload::SyntheticKeyAbort(abort),
+                    ) if synthetic.receiver.knows(&abort.transfer_id) => {
+                        synthetic.receiver.remote_abort(&abort);
+                        synthetic.publish();
+                    }
+                    (
                         proto::MessageType::SyntheticKeyDecision
                         | proto::MessageType::SyntheticKeyReceipt
                         | proto::MessageType::SyntheticKeyAbort,
@@ -1774,15 +2099,37 @@ async fn run_connected_session<T: PeerTransport>(
                         {
                             continue;
                         }
-                        if synthetic.actor.receive(payload, Instant::now()).is_err() {
-                            synthetic.progress.send_replace(synthetic.actor.progress());
-                            return SessionExit::Failed(SessionFailure::Protocol);
+                        // A frame for no active outbound operation, or for another id,
+                        // is a transfer error; it never tears down the session.
+                        if !synthetic.sender_active()
+                            || progress
+                                .transfer_id
+                                .as_ref()
+                                .is_none_or(|id| supplied_id != id)
+                        {
+                            tracing::warn!(
+                                message_type = message.message_type.as_str_name(),
+                                phase = ?progress.phase,
+                                "Key transfer: frame for an unknown outbound operation ignored"
+                            );
+                            continue;
                         }
-                        synthetic.progress.send_replace(synthetic.actor.progress());
+                        if let Err(error) = synthetic.actor.receive(payload, Instant::now()) {
+                            tracing::warn!(
+                                error = ?error,
+                                phase = ?synthetic.actor.progress().phase,
+                                "Key transfer: outbound operation failed on a peer frame"
+                            );
+                        }
+                        synthetic.publish();
                     }
                     (message_type, payload)
                         if is_sync_message(message_type) && message.channel == Channel::Control =>
                     {
+                        // The peer may still send its pending round after a local failure.
+                        if sync_suspended {
+                            continue;
+                        }
                         let Some(worker) = sync_worker.as_ref() else {
                             return SessionExit::Failed(SessionFailure::Protocol);
                         };
@@ -1795,14 +2142,20 @@ async fn run_connected_session<T: PeerTransport>(
                                 pending_sync_input =
                                     Some((input, Instant::now() + Duration::from_secs(2)));
                             }
-                            Err(StdTrySendError::Disconnected(_)) => {
-                                return SessionExit::Failed(SessionFailure::Sync);
-                            }
+                            Err(StdTrySendError::Disconnected(_)) => suspend_sync(
+                                &mut sync_worker,
+                                &mut pending_sync_input,
+                                &mut sync_suspended,
+                                "worker closed",
+                            ),
                         }
                     }
                     (proto::MessageType::SyncChunk, payload)
                         if message.channel == Channel::Data =>
                     {
+                        if sync_suspended {
+                            continue;
+                        }
                         let Some(worker) = sync_worker.as_ref() else {
                             return SessionExit::Failed(SessionFailure::Protocol);
                         };
@@ -1815,9 +2168,12 @@ async fn run_connected_session<T: PeerTransport>(
                                 pending_sync_input =
                                     Some((input, Instant::now() + Duration::from_secs(2)));
                             }
-                            Err(StdTrySendError::Disconnected(_)) => {
-                                return SessionExit::Failed(SessionFailure::Sync);
-                            }
+                            Err(StdTrySendError::Disconnected(_)) => suspend_sync(
+                                &mut sync_worker,
+                                &mut pending_sync_input,
+                                &mut sync_suspended,
+                                "worker closed",
+                            ),
                         }
                     }
                     _ => return SessionExit::Failed(SessionFailure::Protocol),
@@ -1865,13 +2221,24 @@ async fn process_synthetic_command<T: PeerTransport>(
     runtime: &mut SyntheticRuntime,
     command: SyntheticCommand,
 ) -> Result<(), SessionFailure> {
+    let now = Instant::now();
     let outbound = match command {
-        SyntheticCommand::Start(prepared) => runtime.actor.start(*prepared, Instant::now()),
+        SyntheticCommand::Start(_) if runtime.receiver.is_active() => {
+            tracing::warn!("Key transfer: start refused, an inbound operation is active");
+            None
+        }
+        SyntheticCommand::Start(prepared) => runtime.actor.start(*prepared, now).ok(),
+        SyntheticCommand::InboundDecision(transfer_id, accepted) => {
+            runtime.receiver.decide(transfer_id, accepted, now)
+        }
+        SyntheticCommand::InboundFinished(transfer_id, challenge_sha256) => runtime
+            .receiver
+            .finish_import(transfer_id, challenge_sha256, now),
     };
-    if let Ok(outbound) = outbound {
+    if let Some(outbound) = outbound {
         send_synthetic_outbound_bounded(session, outbound).await?;
     }
-    runtime.progress.send_replace(runtime.actor.progress());
+    runtime.progress.send_replace(runtime.snapshot());
     Ok(())
 }
 
@@ -1900,6 +2267,12 @@ async fn send_synthetic_outbound_bounded<T: PeerTransport>(
         }
         SyntheticTransferOutbound::Abort(payload) => {
             send_control_bounded(session, proto::MessageType::SyntheticKeyAbort, &payload).await
+        }
+        SyntheticTransferOutbound::Decision(payload) => {
+            send_control_bounded(session, proto::MessageType::SyntheticKeyDecision, &payload).await
+        }
+        SyntheticTransferOutbound::Receipt(payload) => {
+            send_control_bounded(session, proto::MessageType::SyntheticKeyReceipt, &payload).await
         }
     }
 }

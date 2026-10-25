@@ -18,8 +18,8 @@ pub const SYNC_MAX_PARENTS: usize = 16;
 /// Maximum number of current heads that can be merged into one revision.
 pub const SYNC_MAX_HEADS: usize = 16;
 
-/// Maximum number of heads advertised in one manifest.
-pub const SYNC_MAX_MANIFEST_HEADS: usize = 1024;
+/// Maximum heads in one streamed manifest page; 256 fixed-size heads fit one payload.
+pub const SYNC_MANIFEST_PAGE_HEADS: usize = 256;
 
 /// Maximum revisions in one protobuf batch.
 pub const SYNC_MAX_REVISIONS_PER_BATCH: usize = 32;

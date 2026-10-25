@@ -1,12 +1,13 @@
 //! OpenPGP operations backed by the user's GnuPG keyring.
 
 use anyhow::{Result, bail};
-use gpgme::{Context, Data, EncryptFlags, Key, PassphraseRequest, PinentryMode, Protocol};
+use gpgme::{
+    Context, Data, EncryptFlags, ExportMode, Key, PassphraseRequest, PinentryMode, Protocol,
+};
 use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, OpenPgp, RecipientSet};
 use kryptopass_secure_memory::{ProtectedBytes, SensitiveBytes};
 #[cfg(debug_assertions)]
 use serde::Deserialize;
-#[cfg(debug_assertions)]
 use sha2::{Digest, Sha256};
 use std::io::{self, Write};
 #[cfg(debug_assertions)]
@@ -119,6 +120,36 @@ impl OpenPgp for GnuPgOpenPgp {
     }
 }
 
+/// GnuPG adapter for background work. It never opens pinentry, so decryption
+/// succeeds only while gpg-agent still caches the passphrase, as it does while
+/// the user keeps the vault unlocked.
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct NonInteractiveGnuPgOpenPgp;
+
+impl OpenPgp for NonInteractiveGnuPgOpenPgp {
+    fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
+        GnuPgOpenPgp.validate_recipients(recipients)
+    }
+
+    fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
+        GnuPgOpenPgp.encrypt(plaintext, recipients)
+    }
+
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
+        let mut context = open_context()?;
+        context
+            .set_pinentry_mode(PinentryMode::Error)
+            .map_err(|_| anyhow::anyhow!("could not configure background decryption"))?;
+        decrypt_bounded_in_context(
+            &mut context,
+            ciphertext,
+            MAX_CIPHERTEXT_BYTES,
+            MAX_CONTENT_BYTES,
+            None,
+        )
+    }
+}
+
 /// OpenPGP adapter pinned to one private, isolated keyring directory.
 /// Used only by the public synthetic Sync fixture; never points at the user's
 /// normal GnuPG home.
@@ -142,15 +173,91 @@ pub(crate) struct SyntheticFixture {
     passphrase: Vec<u8>,
 }
 
-/// Backend-only, debug-build material for the explicitly synthetic transfer.
-/// This type intentionally has no `Debug` implementation and is never exposed
-/// through a CXX/QML property.
-#[cfg(debug_assertions)]
+/// Backend-only material for one key transfer: the synthetic fixture or the
+/// vault identity. This type intentionally has no `Debug` implementation and
+/// is never exposed through a CXX/QML property.
 pub(crate) struct SyntheticTransferMaterial {
     pub(crate) fingerprint: Vec<u8>,
     pub(crate) protected_secret_key: zeroize::Zeroizing<Vec<u8>>,
     pub(crate) encrypted_challenge: Vec<u8>,
     pub(crate) challenge_sha256: [u8; 32],
+}
+
+/// Largest protected secret key accepted for a transfer, equal to the wire limit.
+const MAX_TRANSFER_KEY_BYTES: usize = 1024 * 1024;
+/// Largest encrypted challenge accepted by the offer.
+const MAX_TRANSFER_CHALLENGE_BYTES: usize = 16 * 1024;
+
+/// Exports the protected secret key of the vault identity from the user's
+/// GnuPG keyring and encrypts a fresh challenge to it.
+///
+/// The cached passphrase is forgotten first, so gpg-agent always asks for it in
+/// pinentry before exporting: the export needs the owner at this desk even
+/// while the vault is unlocked. Afterwards the vault asks for the passphrase
+/// again on its next decryption. The exported block stays protected by that
+/// same passphrase; no temporary export file is created.
+pub(crate) fn prepare_vault_identity_transfer(
+    fingerprint: &KeyFingerprint,
+) -> Result<SyntheticTransferMaterial> {
+    let fingerprint_bytes = decode_fingerprint(fingerprint.as_str())?;
+    if fingerprint_bytes.len() != 20 {
+        bail!("only OpenPGP v4 identities can be sent to the phone");
+    }
+    let mut context = open_context()?;
+    let key = context
+        .get_secret_key(fingerprint.as_str())
+        .map_err(|_| anyhow::anyhow!("the vault identity has no secret key in GnuPG"))?;
+    let stored = key
+        .fingerprint()
+        .map_err(|_| anyhow::anyhow!("the vault identity is invalid"))?;
+    if !stored.eq_ignore_ascii_case(fingerprint.as_str())
+        || key.protocol() != Protocol::OpenPgp
+        || key.is_bad()
+        || key.is_invalid()
+        || !key.can_encrypt()
+        || !key
+            .subkeys()
+            .any(|subkey| subkey.can_encrypt() && !subkey.is_bad())
+    {
+        bail!("the vault identity cannot be sent");
+    }
+    // Fail closed: without a fresh prompt the export would not prove presence.
+    GnuPgOpenPgp.forget_cached_passphrase(fingerprint)?;
+
+    let mut exported = BoundedWriter::with_capacity(MAX_TRANSFER_KEY_BYTES, MAX_TRANSFER_KEY_BYTES);
+    {
+        let mut output = Data::from_writer(&mut exported)
+            .map_err(|_| anyhow::anyhow!("could not prepare the key export"))?;
+        context
+            .export_keys([&key], ExportMode::SECRET, &mut output)
+            .map_err(|_| anyhow::anyhow!("GnuPG did not export the vault identity"))?;
+    }
+    if exported.is_empty() {
+        bail!("GnuPG did not export the vault identity");
+    }
+    let protected_secret_key = zeroize::Zeroizing::new(exported.into_bytes());
+
+    let mut challenge = zeroize::Zeroizing::new([0_u8; 32]);
+    getrandom::fill(&mut challenge[..])
+        .map_err(|_| anyhow::anyhow!("could not create the transfer challenge"))?;
+    let recipients = RecipientSet::new(vec![fingerprint.clone()])
+        .map_err(|_| anyhow::anyhow!("the vault identity is not a valid recipient"))?;
+    let encrypted_challenge = encrypt_bounded_in_context(
+        &mut context,
+        &challenge[..],
+        &recipients,
+        challenge.len(),
+        MAX_TRANSFER_CHALLENGE_BYTES,
+        EncryptFlags::NO_ENCRYPT_TO,
+    )?;
+    let challenge_sha256 = Sha256::digest(&challenge[..]).into();
+
+    Ok(SyntheticTransferMaterial {
+        fingerprint: fingerprint_bytes,
+        protected_secret_key,
+        encrypted_challenge,
+        challenge_sha256,
+    })
 }
 
 /// Returns the validated public identity of the local debug fixture.
@@ -760,16 +867,15 @@ fn read_private_fixture_file(path: &std::path::Path) -> Result<Vec<u8>> {
     fs::read(path).map_err(|_| anyhow::anyhow!("could not read synthetic OpenPGP fixture file"))
 }
 
-#[cfg(debug_assertions)]
 fn decode_fingerprint(fingerprint: &str) -> Result<Vec<u8>> {
     fingerprint
         .as_bytes()
         .chunks_exact(2)
         .map(|pair| {
             let byte = std::str::from_utf8(pair)
-                .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture fingerprint is invalid"))?;
+                .map_err(|_| anyhow::anyhow!("OpenPGP fingerprint is invalid"))?;
             u8::from_str_radix(byte, 16)
-                .map_err(|_| anyhow::anyhow!("synthetic OpenPGP fixture fingerprint is invalid"))
+                .map_err(|_| anyhow::anyhow!("OpenPGP fingerprint is invalid"))
         })
         .collect()
 }
@@ -798,3 +904,6 @@ fn load_encryption_key(context: &mut Context, fingerprint: &KeyFingerprint) -> R
 
     Ok(key)
 }
+
+/// Receiving the vault identity from a paired phone (key transfer v3).
+pub(crate) mod inbound_key;

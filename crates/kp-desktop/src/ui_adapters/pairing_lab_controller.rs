@@ -1,14 +1,17 @@
 //! Explicit emulator pairing UI. Private identities remain in the worker/OS store.
 
 use super::synthetic_sync::{SyntheticSyncAction, SyntheticSyncError, SyntheticSyncSnapshot};
+use crate::vault_sync::mirror::{self, MirrorError};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
 use kryptopass_devices::{
-    ConnectionState, DeviceDirectory, DeviceDirectorySnapshot, SessionCloseReason, SessionEvent,
-    SessionFailure, SessionOptions,
+    ConnectionState, DeviceDirectory, DeviceDirectorySnapshot, KeyTransferPurpose,
+    SessionCloseReason, SessionEvent, SessionFailure, SessionOptions,
 };
 use kryptopass_identity::{DeviceId, PublicIdentity};
-use kryptopass_lan::{NetworkPolicyError, NetworkPolicyGuard, NetworkPrivacyPolicy, VpnMode};
+use kryptopass_lan::{
+    NetworkPolicyError, NetworkPolicyGuard, NetworkPrivacyPolicy, VpnMode, VpnStatus,
+};
 use kryptopass_pairing::LocalDecision;
 use kryptopass_pairing_lab::{
     HostEvent, LabHost, LabNetwork, NetworkPrivacySettings, ResumeOwnerSnapshot,
@@ -102,6 +105,27 @@ pub mod qobject {
             NOTIFY
         )]
         #[qproperty(
+            QStringList,
+            vault_sync_peers,
+            cxx_name = "vaultSyncPeers",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            QString,
+            vault_sync_message,
+            cxx_name = "vaultSyncMessage",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            QString,
+            vault_key_fingerprint,
+            cxx_name = "vaultKeyFingerprint",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
             bool,
             synthetic_transfer_preparing,
             cxx_name = "syntheticTransferPreparing",
@@ -112,6 +136,13 @@ pub mod qobject {
             QString,
             synthetic_transfer_error,
             cxx_name = "syntheticTransferError",
+            READ,
+            NOTIFY
+        )]
+        #[qproperty(
+            QString,
+            inbound_key_transfer,
+            cxx_name = "inboundKeyTransfer",
             READ,
             NOTIFY
         )]
@@ -192,11 +223,41 @@ pub mod qobject {
             approved_fingerprint: QString,
         );
         #[qinvokable]
+        #[cxx_name = "startVaultKeyTransfer"]
+        fn start_vault_key_transfer(
+            self: Pin<&mut Self>,
+            device_id: QString,
+            connection_generation: QString,
+            approved_fingerprint: QString,
+        );
+        #[qinvokable]
         #[cxx_name = "cancelSyntheticKeyTransfer"]
         fn cancel_synthetic_key_transfer(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "acceptInboundKeyTransfer"]
+        fn accept_inbound_key_transfer(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "rejectInboundKeyTransfer"]
+        fn reject_inbound_key_transfer(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "dismissInboundKeyTransfer"]
+        fn dismiss_inbound_key_transfer(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "enableVaultSync"]
+        fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString);
+        #[qinvokable]
+        #[cxx_name = "disableVaultSync"]
+        fn disable_vault_sync(self: Pin<&mut Self>, device_id: QString);
+        #[qinvokable]
+        #[cxx_name = "runVaultMirror"]
+        fn run_vault_mirror(self: Pin<&mut Self>);
         #[qsignal]
         #[cxx_name = "aliasSaved"]
         fn alias_saved(self: Pin<&mut Self>, device_id: &QString);
+        /// The mirror wrote phone changes into the vault; views should reload it.
+        #[qsignal]
+        #[cxx_name = "vaultMirrorPulled"]
+        fn vault_mirror_pulled(self: Pin<&mut Self>);
     }
     impl cxx_qt::Threading for PairingLabController {}
 }
@@ -239,6 +300,10 @@ pub struct PairingLabControllerRust {
     sync_entries: QStringList,
     sync_configured: bool,
     synthetic_transfer_fingerprint: QString,
+    vault_key_fingerprint: QString,
+    vault_sync_peers: QStringList,
+    vault_sync_message: QString,
+    vault_mirror_running: bool,
     synthetic_transfer_preparing: bool,
     synthetic_transfer_error: QString,
     synthetic_transfer_progress:
@@ -247,6 +312,8 @@ pub struct PairingLabControllerRust {
     synthetic_transfer_generation: u64,
     synthetic_transfer_preparing_peer: Option<(DeviceId, u64)>,
     synthetic_transfer_target: Option<(DeviceId, u64, [u8; 16])>,
+    inbound_key_transfer: QString,
+    inbound_transfer: Option<InboundTransferUi>,
     aliases: BTreeMap<DeviceId, String>,
     pending: Option<PendingOperation>,
     active: Option<PendingOperation>,
@@ -272,7 +339,7 @@ impl Default for PairingLabControllerRust {
             device_ids: QStringList::default(),
             selected_index: -1,
             lan_enabled: true,
-            internet_enabled: false,
+            internet_enabled: true,
             require_vpn: false,
             allow_lan_exception: false,
             relay_only: false,
@@ -302,6 +369,10 @@ impl Default for PairingLabControllerRust {
             sync_entries: QStringList::default(),
             sync_configured: false,
             synthetic_transfer_fingerprint: QString::default(),
+            vault_key_fingerprint: QString::default(),
+            vault_sync_peers: QStringList::default(),
+            vault_sync_message: QString::default(),
+            vault_mirror_running: false,
             synthetic_transfer_preparing: false,
             synthetic_transfer_error: QString::default(),
             synthetic_transfer_progress: BTreeMap::new(),
@@ -309,6 +380,8 @@ impl Default for PairingLabControllerRust {
             synthetic_transfer_generation: 0,
             synthetic_transfer_preparing_peer: None,
             synthetic_transfer_target: None,
+            inbound_key_transfer: QString::from("{\"visible\":false}"),
+            inbound_transfer: None,
             aliases: BTreeMap::new(),
             pending: None,
             active: None,
@@ -442,7 +515,9 @@ impl qobject::PairingLabController {
             };
             runtime.block_on(async move {
                 let mut updates = owner.subscribe();
-                let _ = owner.ensure_ready().await;
+                if matches!(LabHost::system_profile_needs_pairing(&directory), Ok(false)) {
+                    let _ = owner.ensure_ready().await;
+                }
                 let initial = updates.borrow().clone();
                 if initial.ready.is_some() || initial.profile_error {
                     let _ = thread.queue(move |mut object| {
@@ -500,7 +575,20 @@ impl qobject::PairingLabController {
         if self.rust().resume_owner_generation != owner_generation {
             return;
         }
+        // Log each phase change once; progress carries phases and versions, never key bytes.
+        for (peer, (generation, progress)) in &state.synthetic_transfers {
+            let previous = self
+                .rust()
+                .synthetic_transfer_progress
+                .get(peer)
+                .map(|(previous_generation, previous)| (*previous_generation, previous.phase));
+            if previous != Some((*generation, progress.phase)) {
+                tracing::info!(phase = ?progress.phase, version = progress.version, "Key transfer: phase changed");
+            }
+        }
         self.as_mut().rust_mut().synthetic_transfer_progress = state.synthetic_transfers.clone();
+        self.as_mut()
+            .track_inbound_key_transfer(&state.synthetic_transfers);
         if let Some(ready) = state.ready {
             let preferred = parse_device_id(&self.rust().active_device_id.to_string())
                 .or_else(|| self.rust().selected_peer().map(|peer| peer.device_id));
@@ -538,7 +626,7 @@ impl qobject::PairingLabController {
             self.as_mut()
                 .set_status_code(QString::from("profile_error"));
             self.as_mut().set_status(QString::from(
-                "No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.",
+                "No se pudieron cargar los dispositivos guardados.",
             ));
         }
     }
@@ -579,20 +667,14 @@ impl qobject::PairingLabController {
                 owner.refresh_network_policy();
             }
         }
-        self.as_mut().rust_mut().require_vpn = settings.policy.vpn_mode == VpnMode::RequireVpn;
         self.as_mut()
             .set_require_vpn(settings.policy.vpn_mode == VpnMode::RequireVpn);
-        self.as_mut().rust_mut().allow_lan_exception = settings.policy.allow_lan_exception;
         self.as_mut()
             .set_allow_lan_exception(settings.policy.allow_lan_exception);
-        self.as_mut().rust_mut().relay_only = settings.policy.relay_only;
         self.as_mut().set_relay_only(settings.policy.relay_only);
         self.as_mut()
-            .set_vpn_status(if settings.policy.vpn_mode == VpnMode::RequireVpn {
-                1
-            } else {
-                0
-            });
+            .set_vpn_status(vpn_status_code(settings.policy));
+        self.as_mut().align_pairing_method_with_policy();
         let previous = usize::try_from(self.rust().network_index)
             .ok()
             .and_then(|index| self.rust().network_ips.get(index))
@@ -665,6 +747,20 @@ impl qobject::PairingLabController {
             self.as_mut().set_lan_enabled(false);
             return;
         }
+        // The UI disables this choice too; the backend still refuses it so a
+        // stale binding can never enable LAN against the saved privacy policy.
+        if !lan_permitted(
+            self.rust().require_vpn,
+            self.rust().allow_lan_exception,
+            self.rust().relay_only,
+        ) {
+            self.as_mut()
+                .set_status_code(QString::from("network_policy_blocked"));
+            self.as_mut().set_status(QString::from(
+                "La red local no está disponible con la privacidad elegida.",
+            ));
+            return;
+        }
         if usize::try_from(index)
             .ok()
             .is_some_and(|index| index < self.rust().network_ips.len())
@@ -710,6 +806,9 @@ impl qobject::PairingLabController {
             .ok()
             .and_then(|directory| load_network_privacy_settings(&directory).ok())
             .and_then(|settings| settings.lan_bind_ip);
+        // Save only meaningful combinations: the LAN exception exists only
+        // while VPN is required, and relay-only excludes every LAN path.
+        let allow_lan_exception = require_vpn && allow_lan_exception && !relay_only;
         let policy = NetworkPrivacyPolicy {
             vpn_mode: if require_vpn {
                 VpnMode::RequireVpn
@@ -752,14 +851,11 @@ impl qobject::PairingLabController {
         if let Some(guard) = self.as_mut().rust_mut().active_network_guard.take() {
             guard.invalidate();
         }
-        self.as_mut().rust_mut().require_vpn = require_vpn;
         self.as_mut().set_require_vpn(require_vpn);
-        self.as_mut().rust_mut().allow_lan_exception = allow_lan_exception;
         self.as_mut().set_allow_lan_exception(allow_lan_exception);
-        self.as_mut().rust_mut().relay_only = relay_only;
         self.as_mut().set_relay_only(relay_only);
-        self.as_mut()
-            .set_vpn_status(if require_vpn { 1 } else { 0 });
+        self.as_mut().set_vpn_status(vpn_status_code(policy));
+        self.as_mut().align_pairing_method_with_policy();
         if let Some(owner) = self.rust().resume_owner.as_ref() {
             owner.refresh_network_policy();
         }
@@ -799,8 +895,9 @@ impl qobject::PairingLabController {
         let directory = match lab_directory() {
             Ok(path) => path,
             Err(()) => {
-                self.as_mut()
-                    .set_status(QString::from("No se pudo localizar el perfil de pruebas."));
+                self.as_mut().set_status(QString::from(
+                    "No se pudieron localizar los datos de vinculación.",
+                ));
                 return;
             }
         };
@@ -824,21 +921,18 @@ impl qobject::PairingLabController {
         });
         self.as_mut().set_busy(true);
         self.as_mut().set_status_code(QString::from("loading"));
-        self.as_mut().set_status(QString::from(
-            "Cargando dispositivos autorizados del perfil…",
-        ));
+        self.as_mut()
+            .set_status(QString::from("Cargando dispositivos vinculados…"));
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let _completed = WorkerCompletion(worker_completed);
             let transfer_fingerprint = super::synthetic_key_transfer::fingerprint();
+            let vault_fingerprint = super::synthetic_key_transfer::vault_identity_fingerprint();
             let result = (|| {
                 if *cancelled.borrow() {
                     return Err(kryptopass_pairing_lab::LabError::Cancelled);
                 }
-                if !directory
-                    .try_exists()
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Profile)?
-                {
+                if LabHost::system_profile_needs_pairing(&directory)? {
                     return Ok(None);
                 }
                 let runtime = tokio::runtime::Builder::new_current_thread()
@@ -860,6 +954,10 @@ impl qobject::PairingLabController {
                 object.as_mut().set_synthetic_transfer_fingerprint(
                     QString::from(transfer_fingerprint),
                 );
+                object
+                    .as_mut()
+                    .set_vault_key_fingerprint(QString::from(vault_fingerprint));
+                object.as_mut().refresh_vault_sync_peers();
                 match result {
                     Ok(loaded) => {
                         let (ready, aliases) = loaded.map_or_else(|| (None, Ok(BTreeMap::new())), |(ready, aliases)| (Some(ready), aliases));
@@ -953,9 +1051,40 @@ impl qobject::PairingLabController {
     /// Local confirmation callback for the explicitly synthetic fixture.
     /// GnuPG preparation starts only after this invocation and stays on a worker.
     pub fn start_synthetic_key_transfer(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         device_id: QString,
         connection_generation: QString,
+        approved_fingerprint: QString,
+    ) {
+        self.start_key_transfer(
+            KeyTransferPurpose::SyntheticFixture,
+            &device_id,
+            &connection_generation,
+            approved_fingerprint,
+        );
+    }
+
+    /// Local confirmation callback for sending the vault identity to the phone.
+    /// GnuPG asks for the key passphrase on the worker before anything is sent.
+    pub fn start_vault_key_transfer(
+        self: Pin<&mut Self>,
+        device_id: QString,
+        connection_generation: QString,
+        approved_fingerprint: QString,
+    ) {
+        self.start_key_transfer(
+            KeyTransferPurpose::VaultIdentity,
+            &device_id,
+            &connection_generation,
+            approved_fingerprint,
+        );
+    }
+
+    fn start_key_transfer(
+        mut self: Pin<&mut Self>,
+        purpose: KeyTransferPurpose,
+        device_id: &QString,
+        connection_generation: &QString,
         approved_fingerprint: QString,
     ) {
         if !cfg!(debug_assertions) {
@@ -985,11 +1114,15 @@ impl qobject::PairingLabController {
             return;
         };
         let approved_fingerprint = approved_fingerprint.to_string();
-        if approved_fingerprint.is_empty()
-            || approved_fingerprint != self.rust().synthetic_transfer_fingerprint.to_string()
-        {
+        let (offered_fingerprint, minimum_version) = match purpose {
+            KeyTransferPurpose::SyntheticFixture => {
+                (self.rust().synthetic_transfer_fingerprint.to_string(), 1)
+            }
+            KeyTransferPurpose::VaultIdentity => (self.rust().vault_key_fingerprint.to_string(), 2),
+        };
+        if approved_fingerprint.is_empty() || approved_fingerprint != offered_fingerprint {
             self.as_mut().set_synthetic_transfer_error(QString::from(
-                "La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.",
+                "La identidad cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.",
             ));
             return;
         }
@@ -1006,10 +1139,11 @@ impl qobject::PairingLabController {
             .is_some_and(|(generation, progress)| {
                 *generation == expected_generation
                     && progress.phase == kryptopass_devices::SyntheticTransferPhase::Ready
+                    && progress.version >= minimum_version
             });
-        if !connected || !ready || self.rust().synthetic_transfer_fingerprint.is_empty() {
+        if !connected || !ready {
             self.as_mut().set_synthetic_transfer_error(QString::from(
-                "El teléfono ya no está conectado con la sesión preparada para la prueba.",
+                "El teléfono ya no está conectado o no admite recibir esta clave.",
             ));
             return;
         }
@@ -1040,8 +1174,18 @@ impl qobject::PairingLabController {
                 if *cancelled.borrow() {
                     return Ok(None);
                 }
-                let (transfer_id, prepared) =
-                    super::synthetic_key_transfer::prepare(&approved_fingerprint)?;
+                tracing::info!(purpose = ?purpose, "Key transfer: preparing export");
+                let (transfer_id, prepared) = match purpose {
+                    KeyTransferPurpose::SyntheticFixture => {
+                        super::synthetic_key_transfer::prepare(&approved_fingerprint)?
+                    }
+                    KeyTransferPurpose::VaultIdentity => {
+                        super::synthetic_key_transfer::prepare_vault_identity(
+                            &approved_fingerprint,
+                        )?
+                    }
+                };
+                tracing::info!(purpose = ?purpose, "Key transfer: export ready, sending offer");
                 if *cancelled.borrow() {
                     return Ok(None);
                 }
@@ -1068,6 +1212,7 @@ impl qobject::PairingLabController {
             })();
             let _ = thread.queue(move |mut object| {
                 if object.rust().synthetic_transfer_generation != operation_generation {
+                    tracing::info!(purpose = ?purpose, "Key transfer: result superseded by a newer operation");
                     return;
                 }
                 let exact_session_current = object.rust().devices.as_ref().is_some_and(|devices| {
@@ -1077,6 +1222,7 @@ impl qobject::PairingLabController {
                     })
                 });
                 if !exact_session_current && matches!(&result, Ok(Some(_))) {
+                    tracing::warn!(purpose = ?purpose, "Key transfer: session changed before the offer was activated");
                     object.as_mut().rust_mut().synthetic_transfer_cancel = None;
                     object.as_mut().rust_mut().synthetic_transfer_preparing_peer = None;
                     object.as_mut().set_synthetic_transfer_preparing(false);
@@ -1090,6 +1236,7 @@ impl qobject::PairingLabController {
                 object.as_mut().set_synthetic_transfer_preparing(false);
                 match result {
                     Ok(Some((transfer_id, mut cancel_guard))) => {
+                        tracing::info!(purpose = ?purpose, "Key transfer: offer sent");
                         object.as_mut().rust_mut().synthetic_transfer_target =
                             Some((peer, expected_generation, transfer_id));
                         cancel_guard.disarm();
@@ -1098,11 +1245,131 @@ impl qobject::PairingLabController {
                     }
                     Ok(None) => {}
                     Err(error) => {
+                        tracing::warn!(purpose = ?purpose, error = ?error, "Key transfer could not start");
                         object.as_mut().set_synthetic_transfer_error(QString::from(
-                            synthetic_transfer_error_message(error),
+                            synthetic_transfer_error_message(purpose, error),
                         ));
                     }
                 }
+            });
+        });
+    }
+
+    /// Makes `device_id` sync the active vault. The phone renegotiates the
+    /// session when the user enables it there too.
+    pub fn enable_vault_sync(self: Pin<&mut Self>, device_id: QString) {
+        self.change_vault_sync(device_id, true);
+    }
+
+    /// Stops syncing with `device_id`; the vault and the ledger history stay.
+    pub fn disable_vault_sync(self: Pin<&mut Self>, device_id: QString) {
+        self.change_vault_sync(device_id, false);
+    }
+
+    fn change_vault_sync(mut self: Pin<&mut Self>, device_id: QString, enabled: bool) {
+        let Some(peer) = parse_device_id(&device_id.to_string()) else {
+            return;
+        };
+        let Ok(directory) = lab_directory() else {
+            self.as_mut()
+                .set_vault_sync_message(QString::from(MirrorError::Profile.message()));
+            return;
+        };
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = if enabled {
+                mirror::enable(&directory, peer)
+            } else {
+                mirror::disable(&directory, peer)
+            };
+            tracing::info!(enabled, error = ?result.err(), "Vault sync selection changed");
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().set_vault_sync_message(match result {
+                    Ok(()) if enabled => QString::from(
+                        "Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.",
+                    ),
+                    Ok(()) => QString::from("Sincronización desactivada. La bóveda no cambió."),
+                    Err(error) => QString::from(error.message()),
+                });
+                object.as_mut().refresh_vault_sync_peers();
+            });
+        });
+    }
+
+    /// Exchanges vault changes with the ledger the phone syncs. QML calls it
+    /// periodically; overlapping calls are ignored.
+    pub fn run_vault_mirror(mut self: Pin<&mut Self>) {
+        if self.rust().vault_mirror_running || self.rust().vault_sync_peers.is_empty() {
+            return;
+        }
+        let Ok(directory) = lab_directory() else {
+            return;
+        };
+        self.as_mut().rust_mut().vault_mirror_running = true;
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = mirror::run(&directory);
+            match &result {
+                Ok(outcome) if outcome.pulled + outcome.pushed + outcome.skipped > 0 => {
+                    tracing::info!(
+                        pulled = outcome.pulled,
+                        pushed = outcome.pushed,
+                        skipped = outcome.skipped,
+                        "Vault mirror run"
+                    )
+                }
+                Ok(_) => {}
+                Err(error) => tracing::warn!(error = ?error, "Vault mirror run failed"),
+            }
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().rust_mut().vault_mirror_running = false;
+                match result {
+                    Ok(outcome) => {
+                        if outcome.pulled > 0 {
+                            object.as_mut().vault_mirror_pulled();
+                        }
+                        if outcome.pulled > 0 || outcome.pushed > 0 {
+                            object
+                                .as_mut()
+                                .set_vault_sync_message(QString::from(format!(
+                                    "Bóveda sincronizada: {} recibidos, {} enviados.",
+                                    outcome.pulled, outcome.pushed
+                                )));
+                        } else if object.rust().vault_sync_message.to_string()
+                            == MirrorError::Locked.message()
+                        {
+                            object.as_mut().set_vault_sync_message(QString::default());
+                        }
+                    }
+                    Err(error) => {
+                        object
+                            .as_mut()
+                            .set_vault_sync_message(QString::from(error.message()));
+                    }
+                }
+            });
+        });
+    }
+
+    fn refresh_vault_sync_peers(self: Pin<&mut Self>) {
+        let Ok(directory) = lab_directory() else {
+            return;
+        };
+        let peers: Vec<DeviceId> = self
+            .rust()
+            .known_peers
+            .iter()
+            .map(|peer| peer.device_id)
+            .collect();
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let enabled: QStringList = peers
+                .into_iter()
+                .filter(|peer| mirror::is_enabled(&directory, *peer))
+                .map(|peer| QString::from(peer.to_string()))
+                .collect();
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().set_vault_sync_peers(enabled);
             });
         });
     }
@@ -1113,7 +1380,33 @@ impl qobject::PairingLabController {
         self.as_mut().cancel_synthetic_key_transfer_operation();
     }
 
+    /// Keep the pairing method on a route the saved privacy choices allow, so
+    /// the window never opens with LAN selected while LAN is disabled.
+    fn align_pairing_method_with_policy(mut self: Pin<&mut Self>) {
+        let allowed = lan_permitted(
+            self.rust().require_vpn,
+            self.rust().allow_lan_exception,
+            self.rust().relay_only,
+        );
+        if allowed || self.rust().internet_enabled {
+            return;
+        }
+        self.as_mut().set_lan_enabled(false);
+        if !self.rust().relay_origin.is_empty() {
+            self.as_mut().set_internet_enabled(true);
+        }
+    }
+
+    #[track_caller]
     fn cancel_synthetic_key_transfer_operation(mut self: Pin<&mut Self>) {
+        if self.rust().synthetic_transfer_preparing_peer.is_some()
+            || self.rust().synthetic_transfer_target.is_some()
+        {
+            tracing::info!(
+                caller_line = std::panic::Location::caller().line(),
+                "Key transfer: cancelled"
+            );
+        }
         if let Some(cancel) = self.as_mut().rust_mut().synthetic_transfer_cancel.take() {
             let _ = cancel.send(true);
         }
@@ -1244,7 +1537,7 @@ impl qobject::PairingLabController {
         self.start(false);
     }
     pub fn start_reconnect(mut self: Pin<&mut Self>) {
-        if *self.lan_enabled() && !*self.internet_enabled() {
+        if *self.lan_enabled() {
             self.as_mut().start_durable_reconnect();
         } else {
             // The emulator's TCP harness still uses the explicit legacy flow.
@@ -1432,7 +1725,49 @@ impl qobject::PairingLabController {
             // A local reconnect action explicitly clears a prior local-disconnect block.
             owner.allow_peer(peer.device_id);
         }
-        let network = if *self.internet_enabled() {
+        // Without an explicit choice (e.g. after a reset), use the address the
+        // system would pick for LAN, the same rule the recovery listener uses.
+        let lan_bind_ip = usize::try_from(self.rust().network_index)
+            .ok()
+            .and_then(|index| self.rust().network_ips.get(index))
+            .copied()
+            .or_else(|| {
+                kryptopass_lan::select_local_bind_address(
+                    None,
+                    &kryptopass_lan::local_addresses().unwrap_or_default(),
+                    kryptopass_lan::os_selected_local_address(),
+                )
+            })
+            .filter(|_| {
+                *self.lan_enabled()
+                    && lan_permitted(
+                        self.rust().require_vpn,
+                        self.rust().allow_lan_exception,
+                        self.rust().relay_only,
+                    )
+            });
+        tracing::info!(
+            lan = lan_bind_ip.is_some(),
+            internet = *self.internet_enabled(),
+            "Pairing carrier selected"
+        );
+        let network = if *self.internet_enabled() && lan_bind_ip.is_some() {
+            // One invitation with both routes: the phone tries LAN, then the relay.
+            match LabNetwork::auto(
+                lan_bind_ip.unwrap_or(std::net::Ipv4Addr::UNSPECIFIED.into()),
+                self.rust().relay_origin.to_string().trim(),
+            ) {
+                Ok(network) => network,
+                Err(_) => {
+                    self.as_mut()
+                        .set_status_code(QString::from("network_error"));
+                    self.as_mut().set_status(QString::from(
+                        "No se pudo preparar el servidor de conexión por Internet.",
+                    ));
+                    return;
+                }
+            }
+        } else if *self.internet_enabled() {
             match LabNetwork::internet(self.rust().relay_origin.to_string().trim()) {
                 Ok(network) => network,
                 Err(_) => {
@@ -1485,13 +1820,21 @@ impl qobject::PairingLabController {
         std::thread::spawn(move || {
             let _completed = WorkerCompletion(worker_completed);
             let result = (|| {
-                let host = if reconnect {
-                    LabHost::open_existing_system_profile(&directory)?
+                let host = (if reconnect {
+                    LabHost::open_existing_system_profile(&directory)
                 } else {
                     // This is the only path that may initialize a profile, and it
                     // is reached only after the user explicitly starts pairing.
-                    LabHost::open_system_profile(&directory)?
-                };
+                    LabHost::open_system_profile(&directory)
+                })
+                .inspect_err(|error| {
+                    tracing::warn!(
+                        phase = "open_pairing_profile",
+                        reason = error_code(error),
+                        reconnect,
+                        "Device link setup failed"
+                    );
+                })?;
                 let runtime = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
@@ -1544,7 +1887,7 @@ impl qobject::PairingLabController {
                     if !ready.trusted_peers.contains(&peer) {
                         return Err(kryptopass_pairing_lab::LabError::Authentication);
                     }
-                    let reconnect_port = if matches!(&network, LabNetwork::Lan { .. }) {
+                    let reconnect_port = if matches!(&network, LabNetwork::Lan { .. } | LabNetwork::Auto { .. }) {
                         ready.reconnect_port
                     } else {
                         0
@@ -1851,6 +2194,7 @@ impl qobject::PairingLabController {
             .iter()
             .any(|peer| peer.device_id == id)
         {
+            tracing::warn!(reason = "unknown_peer", "Forget device ignored");
             return;
         }
         self.as_mut().maintain_profile(Some(id));
@@ -1862,6 +2206,14 @@ impl qobject::PairingLabController {
     }
 
     fn maintain_profile(mut self: Pin<&mut Self>, forget: Option<DeviceId>) {
+        tracing::info!(
+            forget = forget.is_some(),
+            maintenance_busy = self.rust().maintenance_busy,
+            alias_busy = self.rust().alias_busy,
+            sync_busy = self.rust().sync_busy,
+            busy = self.rust().busy,
+            "Pairing profile maintenance requested"
+        );
         if !cfg!(debug_assertions) || self.rust().maintenance_busy || self.rust().alias_busy {
             return;
         }
@@ -1962,7 +2314,8 @@ impl qobject::PairingLabController {
                         object.as_mut().set_status_code(QString::from("idle"));
                         object.as_mut().set_status(QString::from("Perfil de vinculación eliminado. Crea una invitación para empezar de cero. La bóveda y OpenPGP se conservan."));
                     }
-                    Err(_) => {
+                    Err(error) => {
+                        tracing::warn!(reason = error_code(&error), "Pairing profile maintenance failed");
                         object.as_mut().set_status_code(QString::from("profile_error"));
                         object.as_mut().set_status(QString::from("No se completó el borrado. No se creó otra identidad. Puedes reintentar el reinicio del perfil."));
                     }
@@ -2040,6 +2393,7 @@ impl qobject::PairingLabController {
                     "connectionGeneration": device.connection_generation.to_string(),
                     "syntheticTransferPhase": synthetic_progress.map_or("unsupported", |progress| synthetic_transfer_phase_code(progress.phase)),
                     "syntheticTransferId": synthetic_transfer_id,
+                    "keyTransferVersion": synthetic_progress.map_or(0, |progress| progress.version),
                     "alias": alias,
                     "displayName": name,
                     "isActive": self.rust().session_active && id == self.rust().active_device_id.to_string(),
@@ -2104,11 +2458,9 @@ fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
         LabError::Expired => "La invitación o conexión caducó. Genera otro código.",
         LabError::Rejected => "Emparejamiento rechazado. No se concedió confianza.",
         LabError::KeyStore => {
-            "El llavero del sistema no permitió abrir la identidad. No se creó un sustituto."
+            "No se pudo acceder al llavero del sistema para abrir la identidad de este equipo."
         }
-        LabError::Profile => {
-            "El perfil de pruebas falta o no es válido. No se reparó automáticamente."
-        }
+        LabError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
         LabError::Session => {
             "La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar."
         }
@@ -2119,13 +2471,16 @@ fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
             "La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva."
         }
         LabError::NetworkPrivacyBlocked(NetworkPolicyError::VpnUnverifiable) => {
-            "Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red."
+            "No se puede comprobar si la conexión a Internet pasa por una VPN en este sistema, así que quedó en pausa."
+        }
+        LabError::NetworkPrivacyBlocked(NetworkPolicyError::VpnInactive) => {
+            "Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar."
         }
         LabError::NetworkPrivacyBlocked(NetworkPolicyError::LanExceptionRequired) => {
-            "La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida."
+            "La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas."
         }
         LabError::NetworkPrivacyBlocked(NetworkPolicyError::RelayRequired) => {
-            "Solo retransmisión está activo y bloquea las conexiones LAN directas."
+            "Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión."
         }
         LabError::NetworkPrivacyBlocked(NetworkPolicyError::PolicyChanged) => {
             "La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior."
@@ -2137,6 +2492,21 @@ fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
             "No se pudo verificar la ruta del sistema. La conexión quedó bloqueada."
         }
     }
+}
+
+/// VPN state for QML: 0 not required, 1 unverifiable, 2 active, 3 inactive.
+fn vpn_status_code(policy: NetworkPrivacyPolicy) -> i32 {
+    match NetworkPolicyGuard::new(policy).vpn_status() {
+        VpnStatus::NotRequired => 0,
+        VpnStatus::Unverifiable => 1,
+        VpnStatus::Active => 2,
+        VpnStatus::Inactive => 3,
+    }
+}
+
+/// Whether any LAN path is allowed by the privacy choices.
+const fn lan_permitted(require_vpn: bool, allow_lan_exception: bool, relay_only: bool) -> bool {
+    !relay_only && (!require_vpn || allow_lan_exception)
 }
 
 fn error_code(error: &kryptopass_pairing_lab::LabError) -> &'static str {
@@ -2226,6 +2596,22 @@ fn hex_transfer_id(id: &[u8; 16]) -> String {
 }
 
 fn synthetic_transfer_error_message(
+    purpose: KeyTransferPurpose,
+    error: kryptopass_devices::SyntheticTransferError,
+) -> &'static str {
+    use kryptopass_devices::SyntheticTransferError;
+    match (purpose, error) {
+        (KeyTransferPurpose::VaultIdentity, SyntheticTransferError::Unsupported) => {
+            "El teléfono no admite recibir tu clave. Actualiza KryptoPass en Android."
+        }
+        (KeyTransferPurpose::VaultIdentity, SyntheticTransferError::Invalid) => {
+            "No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado."
+        }
+        (_, error) => synthetic_transfer_fallback_message(error),
+    }
+}
+
+fn synthetic_transfer_fallback_message(
     error: kryptopass_devices::SyntheticTransferError,
 ) -> &'static str {
     use kryptopass_devices::SyntheticTransferError;
@@ -2257,6 +2643,12 @@ macro_rules! notifying_property {
     };
 }
 notifying_property!(set_busy, busy, busy_changed, bool);
+notifying_property!(
+    set_inbound_key_transfer,
+    inbound_key_transfer,
+    inbound_key_transfer_changed,
+    QString
+);
 notifying_property!(set_lan_enabled, lan_enabled, lan_enabled_changed, bool);
 notifying_property!(
     set_internet_enabled,
@@ -2378,6 +2770,24 @@ notifying_property!(
     QString
 );
 notifying_property!(
+    set_vault_sync_peers,
+    vault_sync_peers,
+    vault_sync_peers_changed,
+    QStringList
+);
+notifying_property!(
+    set_vault_sync_message,
+    vault_sync_message,
+    vault_sync_message_changed,
+    QString
+);
+notifying_property!(
+    set_vault_key_fingerprint,
+    vault_key_fingerprint,
+    vault_key_fingerprint_changed,
+    QString
+);
+notifying_property!(
     set_synthetic_transfer_preparing,
     synthetic_transfer_preparing,
     synthetic_transfer_preparing_changed,
@@ -2389,3 +2799,479 @@ notifying_property!(
     synthetic_transfer_error_changed,
     QString
 );
+
+/// Secret-free UI state of the phone → Desktop vault-identity transfer.
+struct InboundTransferUi {
+    peer: DeviceId,
+    generation: u64,
+    transfer_id: [u8; 16],
+    fingerprint: [u8; 20],
+    device_name: String,
+    assessment: Option<super::synthetic_key_transfer::InboundAssessment>,
+    phase: &'static str,
+    received: u64,
+    total: u64,
+    message: String,
+    error: bool,
+    decision_sent: bool,
+    import_started: bool,
+    dismissed: bool,
+}
+
+/// Resolves the scoped capability of the exact session generation and runs
+/// `action` with it on the calling worker thread.
+fn with_inbound_control<R>(
+    owner: &ResumeProcessOwner,
+    peer: DeviceId,
+    generation: u64,
+    action: impl FnOnce(kryptopass_devices::SyntheticTransferControl) -> R,
+) -> Option<R> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .ok()?;
+    let control = runtime.block_on(owner.synthetic_transfer_control(peer, generation))?;
+    Some(action(control))
+}
+
+fn grouped_fingerprint(hex: &str) -> String {
+    hex.as_bytes()
+        .chunks(4)
+        .map(|group| std::str::from_utf8(group).unwrap_or_default())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+impl qobject::PairingLabController {
+    /// Accepts the inbound vault identity after reviewing sender and fingerprint.
+    pub fn accept_inbound_key_transfer(self: Pin<&mut Self>) {
+        self.decide_inbound_key_transfer(true);
+    }
+
+    /// Declines the inbound offer; nothing is received or imported.
+    pub fn reject_inbound_key_transfer(self: Pin<&mut Self>) {
+        self.decide_inbound_key_transfer(false);
+    }
+
+    /// Hides a finished operation; an undecided offer is rejected instead.
+    pub fn dismiss_inbound_key_transfer(mut self: Pin<&mut Self>) {
+        let waiting = self.rust().inbound_transfer.as_ref().is_some_and(|ui| {
+            matches!(ui.phase, "assessing" | "waiting_decision") && !ui.decision_sent
+        });
+        if waiting {
+            self.as_mut().decide_inbound_key_transfer(false);
+            return;
+        }
+        let active = self
+            .rust()
+            .inbound_transfer
+            .as_ref()
+            .is_some_and(|ui| matches!(ui.phase, "receiving" | "importing" | "verifying"));
+        if active {
+            return;
+        }
+        if let Some(ui) = self.as_mut().rust_mut().inbound_transfer.as_mut() {
+            ui.dismissed = true;
+        }
+        self.as_mut().publish_inbound_key_transfer();
+    }
+
+    fn track_inbound_key_transfer(
+        mut self: Pin<&mut Self>,
+        transfers: &BTreeMap<DeviceId, (u64, kryptopass_devices::SyntheticTransferProgress)>,
+    ) {
+        use kryptopass_devices::{InboundTransferFailure, InboundTransferPhase};
+
+        let mut changed = false;
+        for (peer, (generation, progress)) in transfers {
+            let Some(inbound) = progress.inbound else {
+                continue;
+            };
+            let known = self.rust().inbound_transfer.as_ref().is_some_and(|ui| {
+                ui.peer == *peer
+                    && ui.generation == *generation
+                    && ui.transfer_id == inbound.transfer_id
+            });
+            if !known {
+                if inbound.phase != InboundTransferPhase::AwaitingDecision {
+                    continue;
+                }
+                let id = peer.to_string();
+                let device_name = self
+                    .rust()
+                    .aliases
+                    .get(peer)
+                    .filter(|alias| !alias.is_empty())
+                    .cloned()
+                    .unwrap_or_else(|| format!("Dispositivo {}", &id[..12.min(id.len())]));
+                tracing::info!(
+                    total_size = inbound.total_size,
+                    "Inbound key transfer: offer shown to the user, assessing"
+                );
+                self.as_mut().rust_mut().inbound_transfer = Some(InboundTransferUi {
+                    peer: *peer,
+                    generation: *generation,
+                    transfer_id: inbound.transfer_id,
+                    fingerprint: inbound.fingerprint,
+                    device_name,
+                    assessment: None,
+                    phase: "assessing",
+                    received: 0,
+                    total: inbound.total_size,
+                    message: String::from("Revisando la clave ofrecida…"),
+                    error: false,
+                    decision_sent: false,
+                    import_started: false,
+                    dismissed: false,
+                });
+                self.as_mut().spawn_inbound_assessment();
+                changed = true;
+            }
+            let mut start_import = false;
+            if let Some(ui) = self.as_mut().rust_mut().inbound_transfer.as_mut() {
+                if ui.peer != *peer || ui.generation != *generation {
+                    continue;
+                }
+                let previous = ui.phase;
+                ui.received = inbound.received;
+                ui.total = inbound.total_size;
+                match inbound.phase {
+                    InboundTransferPhase::AwaitingDecision => {}
+                    InboundTransferPhase::Receiving => {
+                        ui.phase = "receiving";
+                        ui.message = String::from("Recibiendo la clave del teléfono…");
+                    }
+                    InboundTransferPhase::Importing => {
+                        if !ui.import_started {
+                            ui.import_started = true;
+                            ui.phase = "importing";
+                            ui.message = String::from(
+                                "Clave recibida y verificada (SHA-256). Importando en GnuPG…",
+                            );
+                            start_import = true;
+                        }
+                    }
+                    InboundTransferPhase::Complete => {
+                        ui.phase = "complete";
+                        ui.error = false;
+                        ui.message = String::from(
+                            "Clave importada en GnuPG y comprobada con el desafío. El teléfono recibió la confirmación.",
+                        );
+                    }
+                    InboundTransferPhase::Rejected => {
+                        ui.phase = "rejected";
+                        if ui.message.is_empty() || !ui.error {
+                            ui.message =
+                                String::from("Transferencia rechazada. No se recibió nada.");
+                        }
+                    }
+                    InboundTransferPhase::Cancelled => {
+                        ui.phase = "cancelled";
+                        ui.error = true;
+                        ui.message = String::from(
+                            "El teléfono canceló la transferencia. Se descartó lo recibido.",
+                        );
+                    }
+                    InboundTransferPhase::Expired => {
+                        ui.phase = "expired";
+                        ui.error = true;
+                        ui.message = String::from(
+                            "La transferencia caducó (5 minutos desde la oferta). Se descartó lo recibido.",
+                        );
+                    }
+                    InboundTransferPhase::Failed => {
+                        if previous != "failed" {
+                            ui.phase = "failed";
+                            // A local import failure already set a precise message.
+                            if !ui.error {
+                                ui.error = true;
+                                ui.message = String::from(match inbound.failure {
+                                    Some(InboundTransferFailure::Protocol) => {
+                                        "La transferencia no respetó el orden o el tamaño anunciado. Se descartó lo recibido."
+                                    }
+                                    Some(InboundTransferFailure::Digest) => {
+                                        "La clave recibida no coincide con la oferta (SHA-256). Se descartó."
+                                    }
+                                    Some(InboundTransferFailure::Remote(_)) => {
+                                        "El teléfono interrumpió la transferencia. Se descartó lo recibido."
+                                    }
+                                    Some(InboundTransferFailure::Disconnected) => {
+                                        "Se perdió la conexión antes de terminar. Se descartó lo recibido."
+                                    }
+                                    Some(InboundTransferFailure::Local) | None => {
+                                        "No se pudo importar o comprobar la clave. Se descartó lo recibido."
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+                if ui.phase != previous {
+                    tracing::info!(
+                        from = previous,
+                        to = ui.phase,
+                        received = ui.received,
+                        total = ui.total,
+                        failure = ?inbound.failure,
+                        "Inbound key transfer: UI phase changed"
+                    );
+                }
+                changed = true;
+            }
+            if start_import {
+                self.as_mut().spawn_inbound_import();
+            }
+        }
+        if changed {
+            self.as_mut().publish_inbound_key_transfer();
+        }
+    }
+
+    fn spawn_inbound_assessment(self: Pin<&mut Self>) {
+        let Some(ui) = self.rust().inbound_transfer.as_ref() else {
+            return;
+        };
+        let (peer, generation, transfer_id, fingerprint) =
+            (ui.peer, ui.generation, ui.transfer_id, ui.fingerprint);
+        let owner = self.rust().resume_owner.clone();
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let assessment = super::synthetic_key_transfer::assess_inbound(&fingerprint);
+            tracing::info!(
+                assessment = assessment.code(),
+                "Inbound key transfer: offer assessed"
+            );
+            if !assessment.allows_import() {
+                let sent = owner.as_ref().and_then(|owner| {
+                    with_inbound_control(owner, peer, generation, |control| {
+                        control.decide_inbound_key_transfer(generation, transfer_id, false)
+                    })
+                });
+                match sent {
+                    Some(Ok(())) => tracing::warn!(
+                        assessment = assessment.code(),
+                        "Inbound key transfer: rejected automatically"
+                    ),
+                    other => tracing::warn!(
+                        assessment = assessment.code(),
+                        result = ?other.map(|result| result.err()),
+                        "Inbound key transfer: automatic rejection could not be sent"
+                    ),
+                }
+            }
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().update_inbound(transfer_id, |ui| {
+                    if ui.generation != generation {
+                        return;
+                    }
+                    ui.assessment = Some(assessment);
+                    if assessment.allows_import() {
+                        if ui.phase == "assessing" {
+                            ui.phase = "waiting_decision";
+                            ui.message = String::new();
+                        }
+                    } else {
+                        ui.decision_sent = true;
+                        ui.error = true;
+                        ui.message = assessment.message().to_owned();
+                    }
+                });
+            });
+        });
+    }
+
+    fn decide_inbound_key_transfer(mut self: Pin<&mut Self>, accepted: bool) {
+        let Some(ui) = self.rust().inbound_transfer.as_ref() else {
+            return;
+        };
+        let allowed = ui.assessment.is_some_and(|value| value.allows_import());
+        if ui.decision_sent
+            || !matches!(ui.phase, "assessing" | "waiting_decision")
+            || (accepted && (ui.phase != "waiting_decision" || !allowed))
+        {
+            tracing::info!(
+                accepted,
+                phase = ui.phase,
+                "Inbound key transfer: decision ignored in this state"
+            );
+            return;
+        }
+        let (peer, generation, transfer_id) = (ui.peer, ui.generation, ui.transfer_id);
+        let Some(owner) = self.rust().resume_owner.clone() else {
+            return;
+        };
+        if let Some(ui) = self.as_mut().rust_mut().inbound_transfer.as_mut() {
+            ui.decision_sent = true;
+            ui.error = false;
+            ui.message = String::from(if accepted {
+                "Aceptada. Esperando la clave del teléfono…"
+            } else {
+                "Rechazaste la transferencia. No se recibirá nada."
+            });
+        }
+        tracing::info!(accepted, "Inbound key transfer: local decision");
+        self.as_mut().publish_inbound_key_transfer();
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = with_inbound_control(&owner, peer, generation, |control| {
+                control.decide_inbound_key_transfer(generation, transfer_id, accepted)
+            });
+            if matches!(result, Some(Ok(()))) {
+                return;
+            }
+            tracing::warn!(
+                accepted,
+                result = ?result.map(|result| result.err()),
+                "Inbound key transfer: decision could not be sent"
+            );
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().update_inbound(transfer_id, |ui| {
+                    ui.error = true;
+                    ui.message = String::from(
+                        "No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.",
+                    );
+                });
+            });
+        });
+    }
+
+    fn spawn_inbound_import(self: Pin<&mut Self>) {
+        let Some(ui) = self.rust().inbound_transfer.as_ref() else {
+            return;
+        };
+        let (peer, generation, transfer_id) = (ui.peer, ui.generation, ui.transfer_id);
+        let Some(owner) = self.rust().resume_owner.clone() else {
+            tracing::warn!("Inbound key transfer: no session owner to take the received key from");
+            return;
+        };
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let stage_thread = thread.clone();
+            let outcome = with_inbound_control(&owner, peer, generation, |control| {
+                let material = match control.take_inbound_key_material(generation, transfer_id) {
+                    Ok(material) => material,
+                    Err(error) => {
+                        tracing::warn!(error = ?error, "Inbound key transfer: received key not available for import");
+                        return Err(None);
+                    }
+                };
+                tracing::info!(
+                    size = material.protected_key().len(),
+                    challenge_bytes = material.encrypted_challenge().len(),
+                    "Inbound key transfer: validating received block"
+                );
+                let result = super::synthetic_key_transfer::import_inbound(&material, |stage| {
+                    let _ = stage_thread.queue(move |mut object| {
+                        object.as_mut().update_inbound(transfer_id, |ui| {
+                            if ui.error || ui.phase == "complete" {
+                                return;
+                            }
+                            ui.phase = stage;
+                            ui.message = String::from(if stage == "verifying" {
+                                "Clave importada. Comprobando que descifra el desafío; GnuPG puede pedir su contraseña…"
+                            } else {
+                                "Importando la clave en GnuPG…"
+                            });
+                        });
+                    });
+                });
+                // Wipes the received block before reporting the result.
+                drop(material);
+                let challenge_sha256 = result.as_ref().ok().copied();
+                if let Err(error) =
+                    control.finish_inbound_key_transfer(generation, transfer_id, challenge_sha256)
+                {
+                    tracing::warn!(error = ?error, "Inbound key transfer: result could not reach the session");
+                }
+                result.map(|_| ()).map_err(Some)
+            });
+            match &outcome {
+                Some(Ok(())) => {
+                    tracing::info!("Inbound key transfer: import and challenge verified")
+                }
+                Some(Err(Some(failure))) => tracing::warn!(
+                    stage = failure.stage,
+                    reason = failure.reason,
+                    "Inbound key transfer: import failed"
+                ),
+                Some(Err(None)) | None => {
+                    tracing::warn!("Inbound key transfer: import did not start, session changed")
+                }
+            }
+            let _ = thread.queue(move |mut object| {
+                object.as_mut().update_inbound(transfer_id, |ui| match outcome {
+                    Some(Ok(())) => {
+                        if ui.phase != "complete" {
+                            ui.message = String::from(
+                                "Clave importada y comprobada. Enviando la confirmación al teléfono…",
+                            );
+                        }
+                    }
+                    Some(Err(Some(failure))) => {
+                        ui.phase = "failed";
+                        ui.error = true;
+                        ui.message = failure.message().to_owned();
+                    }
+                    Some(Err(None)) | None => {
+                        ui.phase = "failed";
+                        ui.error = true;
+                        ui.message = String::from(
+                            "La sesión cambió antes de importar. No se importó nada.",
+                        );
+                    }
+                });
+            });
+        });
+    }
+
+    /// Applies `update` to the UI state of `transfer_id`, if it is still shown.
+    fn update_inbound(
+        mut self: Pin<&mut Self>,
+        transfer_id: [u8; 16],
+        update: impl FnOnce(&mut InboundTransferUi),
+    ) {
+        let applied = if let Some(ui) = self.as_mut().rust_mut().inbound_transfer.as_mut() {
+            if ui.transfer_id == transfer_id {
+                update(ui);
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if applied {
+            self.publish_inbound_key_transfer();
+        }
+    }
+
+    fn publish_inbound_key_transfer(mut self: Pin<&mut Self>) {
+        let value = match self.rust().inbound_transfer.as_ref() {
+            Some(ui) => {
+                let fingerprint = super::synthetic_key_transfer::fingerprint_hex(&ui.fingerprint);
+                let assessment = ui.assessment;
+                serde_json::json!({
+                    "visible": !ui.dismissed,
+                    "deviceId": ui.peer.to_string(),
+                    "deviceName": ui.device_name,
+                    "transferId": hex_transfer_id(&ui.transfer_id),
+                    "fingerprint": grouped_fingerprint(&fingerprint),
+                    "assessment": assessment.map_or("pending", |value| value.code()),
+                    "assessmentMessage": assessment.map_or("", |value| value.message()),
+                    "phase": ui.phase,
+                    "received": ui.received,
+                    "total": ui.total,
+                    "message": ui.message,
+                    "error": ui.error,
+                    "canDecide": ui.phase == "waiting_decision"
+                        && !ui.decision_sent
+                        && assessment.is_some_and(|value| value.allows_import()),
+                    "finished": matches!(ui.phase, "complete" | "rejected" | "cancelled" | "expired" | "failed"),
+                })
+            }
+            None => serde_json::json!({ "visible": false }),
+        };
+        self.as_mut()
+            .set_inbound_key_transfer(QString::from(value.to_string()));
+    }
+}

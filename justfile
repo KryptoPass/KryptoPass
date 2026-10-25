@@ -264,13 +264,14 @@ dev-reset:
         exit 1
     fi
     data="${XDG_DATA_HOME:-$HOME/.local/share}"
+    [[ "$data" == /* ]] || data="$HOME/.local/share"
     config="${XDG_CONFIG_HOME:-$HOME/.config}"
     state="${XDG_STATE_HOME:-$HOME/.local/state}"
     cache="${XDG_CACHE_HOME:-$HOME/.cache}"
     backup="$data/{{ app_org }}-reset-$(date +%Y%m%d-%H%M%S)"
     moved=0
     for path in "$data/{{ app_id }}" "$config/{{ app_id }}" "$config/{{ app_org }}" "$state/{{ app_id }}staterc" "$cache/{{ app_org }}"; do
-        [ -e "$path" ] || continue
+        [ -e "$path" ] || [ -L "$path" ] || continue
         target="$backup${path#"$HOME"}"
         mkdir -p "$(dirname "$target")"
         mv "$path" "$target"
@@ -279,12 +280,23 @@ dev-reset:
     done
     if [ "$moved" -eq 0 ]; then
         echo "No había datos de KryptoPass que apartar."
-        exit 0
     fi
+    # The keyring identity remains at the original path. Authorize a new empty
+    # trust DB only for this explicit reset, without replacing that identity.
+    pairing_profile="$data/{{ app_id }}/emulator-pairing-lab-v1"
+    install -d -m 700 "$data/{{ app_id }}" "$pairing_profile"
+    (umask 077; printf 'KryptoPass pairing profile reset v1\n' > "$pairing_profile/.pairing-profile-reset-v1")
+    sync -f "$pairing_profile"
+    echo "La próxima vinculación preparará su confianza conservando la identidad del llavero."
+    [ "$moved" -eq 1 ] || exit 0
     echo
     echo "Respaldo en: $backup"
     echo "Para volver atrás, con la app cerrada: just dev-reset (aparta lo nuevo) y luego"
     echo "  cp -a \"$backup/.\" \"$HOME/\""
+
+# Reset explícito con Secret Service separado y archivos temporales, sin datos del usuario.
+test-dev-reset:
+    cargo test -p kp-pairing-lab --test profile_reset dev_reset -- --ignored --nocapture
 
 translations:
     python3 packaging/translations.py update

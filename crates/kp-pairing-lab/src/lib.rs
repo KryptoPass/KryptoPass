@@ -67,6 +67,9 @@ pub enum LabNetwork {
     Lan { bind_ip: IpAddr },
     /// WebRTC through a public untrusted rendezvous relay; identity stays in Noise.
     Internet { route: RelayRoute },
+    /// Both at once: one invitation carries the LAN address and the relay room,
+    /// and the first carrier the phone reaches wins. Neither grants trust.
+    Auto { bind_ip: IpAddr, route: RelayRoute },
 }
 
 impl LabNetwork {
@@ -76,6 +79,22 @@ impl LabNetwork {
         getrandom::fill(&mut room).map_err(|_| LabError::Link)?;
         let route = RelayRoute::new(relay_origin, room).map_err(|_| LabError::Link)?;
         Ok(Self::Internet { route })
+    }
+
+    /// LAN plus a fresh rendezvous room, so pairing works off the local network too.
+    pub fn auto(bind_ip: IpAddr, relay_origin: &str) -> Result<Self, LabError> {
+        let Self::Internet { route } = Self::internet(relay_origin)? else {
+            return Err(LabError::Link);
+        };
+        Ok(Self::Auto { bind_ip, route })
+    }
+
+    /// The relay room, when this carrier uses one.
+    fn route(&self) -> Option<&RelayRoute> {
+        match self {
+            Self::Internet { route } | Self::Auto { route, .. } => Some(route),
+            Self::EmulatorLoopback | Self::Lan { .. } => None,
+        }
     }
 }
 
@@ -88,6 +107,7 @@ enum LocalListener {
     Emulator(TcpListener),
     Lan(LanHost),
     Internet(Box<RelayHost>),
+    Auto(LanHost, Box<RelayHost>),
 }
 
 /// Carrier retained after pairing, independent of the identity and session owner.
@@ -239,6 +259,7 @@ impl LabHost {
             .lookup_trusted_peer(&peer)
             .map_err(map_forget_trust_error)?;
         internet_routes::write(&self.directory, self.identity.device_id(), peer, None)?;
+        self.remove_sync_vault(peer)?;
         aliases::forget(&self.directory, self.identity.device_id(), peer)
             .map_err(|_| LabError::Profile)?;
         store
@@ -264,6 +285,7 @@ impl LabHost {
         validate_reset_profile_artifacts(directory, false, false)?;
 
         internet_routes::reset(directory)?;
+        vault_binding::remove_all_selections(directory)?;
         keys.delete().map_err(|_| LabError::KeyStore)?;
         SqliteTrustStore::reset_profile_files(directory).map_err(|_| LabError::Profile)?;
         aliases::reset_profile_files(directory).map_err(|_| LabError::Profile)?;
@@ -275,8 +297,9 @@ impl LabHost {
     ///
     /// If the directory does not exist, this initializes a new identity and
     /// trust database. Existing directories are loaded through
-    /// [`Self::open_existing_system_profile`]; missing or corrupt material is
-    /// never repaired by generating replacement keys or a new database.
+    /// [`Self::open_existing_system_profile`]. A validated explicit reset marker
+    /// permits fresh trust with an existing identity, as used by `just dev-reset`.
+    /// Without that marker, missing or corrupt material is never repaired.
     pub fn open_system_profile(directory: &Path) -> Result<Self, LabError> {
         #[cfg(unix)]
         let created = {
@@ -326,8 +349,19 @@ impl LabHost {
         if existing.is_some() {
             drop(existing);
             let identity = DeviceIdentity::load_existing(&keys).map_err(|_| LabError::KeyStore)?;
-            let store = SqliteTrustStore::open_existing(directory, identity.device_id())
+            let database_exists = directory
+                .join("device-trust.sqlite3")
+                .try_exists()
                 .map_err(|_| LabError::Profile)?;
+            let store = if database_exists {
+                SqliteTrustStore::open_existing(directory, identity.device_id())
+            } else {
+                // dev-reset archives trust but preserves the system keyring.
+                // Only its explicit reset marker permits a fresh trust DB for that identity.
+                validate_reset_ready_directory(directory)?;
+                SqliteTrustStore::open_new(directory, identity.device_id())
+            }
+            .map_err(|_| LabError::Profile)?;
             let peers = store.list_trusted_peers().map_err(|_| LabError::Profile)?;
             drop(store);
             aliases::read(directory, identity.device_id(), &peers)
@@ -348,6 +382,35 @@ impl LabHost {
             identity,
             directory: directory.to_path_buf(),
         })
+    }
+
+    /// Reports whether an explicit first pairing is needed without reading keys
+    /// or changing the reset marker. Invalid files and directories remain errors.
+    pub fn system_profile_needs_pairing(directory: &Path) -> Result<bool, LabError> {
+        match fs::symlink_metadata(directory) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(true),
+            Err(_) => return Err(LabError::Profile),
+            Ok(metadata) if !metadata.is_dir() || metadata.file_type().is_symlink() => {
+                return Err(LabError::Profile);
+            }
+            Ok(_) => {}
+        }
+        // Construction validates the private directory without contacting the keyring.
+        SystemSecretKeyStore::new(directory, SYSTEM_PROFILE_KEYRING_ID)
+            .map_err(|_| LabError::Profile)?;
+        if reset_marker_exists(directory)? {
+            validate_reset_profile_artifacts(directory, false, true)?;
+            if directory
+                .join("device-trust.sqlite3")
+                .try_exists()
+                .map_err(|_| LabError::Profile)?
+            {
+                return Ok(false);
+            }
+            validate_reset_ready_directory(directory)?;
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     /// Opens an existing system profile without creating or repairing anything.
@@ -483,7 +546,8 @@ impl LabHost {
         let network_use = match &network {
             LabNetwork::EmulatorLoopback => None,
             LabNetwork::Lan { .. } => Some(NetworkUse::Lan),
-            LabNetwork::Internet { .. } => Some(NetworkUse::Internet),
+            // LAN is an optional extra in auto mode; Internet must be allowed.
+            LabNetwork::Internet { .. } | LabNetwork::Auto { .. } => Some(NetworkUse::Internet),
         };
         if let Some(network_use) = network_use {
             guard.preflight(network_use)?;
@@ -588,22 +652,31 @@ impl LabHost {
                 )
             }
             LabNetwork::Internet { route } => {
-                let (config, policy) = self
-                    .internet_ice_configuration(&guard)
-                    .await
-                    .map_err(|error| map_lan_network_error(error, &guard))?;
-                LocalListener::Internet(Box::new(
-                    RelayHost::connect_with_privacy(route.clone(), config, policy, guard.clone())
-                        .await
-                        .map_err(|error| map_lan_network_error(error, &guard))?,
-                ))
+                LocalListener::Internet(Box::new(self.relay_host(route, &guard).await?))
+            }
+            LabNetwork::Auto { bind_ip, route } => {
+                let relay = Box::new(self.relay_host(route, &guard).await?);
+                // A privacy policy that forbids LAN leaves the relay alone.
+                let lan = match guard.preflight(NetworkUse::Lan) {
+                    Ok(()) => LanHost::bind(*bind_ip, session_id).await.ok(),
+                    Err(_) => None,
+                };
+                match lan {
+                    Some(lan) => LocalListener::Auto(lan, relay),
+                    None => {
+                        tracing::warn!(
+                            "Auto pairing: LAN unavailable, invitation uses the relay only"
+                        );
+                        LocalListener::Internet(relay)
+                    }
+                }
             }
         };
         let port = match &listener {
             LocalListener::Emulator(listener) => {
                 listener.local_addr().map_err(|_| LabError::Link)?.port()
             }
-            LocalListener::Lan(listener) => listener.port(),
+            LocalListener::Lan(listener) | LocalListener::Auto(listener, _) => listener.port(),
             LocalListener::Internet(_) => 0,
         };
         let invitation = if expected_peer.is_none() {
@@ -621,31 +694,56 @@ impl LabHost {
         } else {
             self.identity.device_id().to_string()
         };
-        let bootstrap = match &network {
-            LabNetwork::EmulatorLoopback => format!(
-                "{}:{port}:{session_hex}:{data}",
-                if invitation.is_some() {
-                    "kpdev1"
-                } else {
-                    "kpdevr1"
-                }
-            ),
-            LabNetwork::Lan { bind_ip } => {
+        let kind = if invitation.is_some() {
+            "pair"
+        } else {
+            "reconnect"
+        };
+        let bootstrap = match (&network, &listener) {
+            (LabNetwork::Auto { bind_ip, route }, LocalListener::Auto(..)) => {
                 let value = serde_json::json!({
                     "v": 1, "host": bind_ip.to_string(), "port": port,
-                    "session": session_hex, "kind": if invitation.is_some() { "pair" } else { "reconnect" }, "data": data,
+                    "relay": route.relay_origin(), "room": route.room_hex(),
+                    "session": session_hex, "kind": kind, "data": data,
                 });
                 let bytes = serde_json::to_vec(&value).map_err(|_| LabError::Link)?;
-                format!("kplan1:{}", URL_SAFE_NO_PAD.encode(bytes))
+                format!("kpauto1:{}", URL_SAFE_NO_PAD.encode(bytes))
             }
-            LabNetwork::Internet { route } => {
+            (LabNetwork::Auto { route, .. }, _) => {
                 let value = serde_json::json!({
                     "v": 1, "relay": route.relay_origin(), "room": route.room_hex(),
-                    "session": session_hex, "kind": if invitation.is_some() { "pair" } else { "reconnect" }, "data": data,
+                    "session": session_hex, "kind": kind, "data": data,
                 });
                 let bytes = serde_json::to_vec(&value).map_err(|_| LabError::Link)?;
                 format!("kpnet1:{}", URL_SAFE_NO_PAD.encode(bytes))
             }
+            _ => match &network {
+                LabNetwork::EmulatorLoopback => format!(
+                    "{}:{port}:{session_hex}:{data}",
+                    if invitation.is_some() {
+                        "kpdev1"
+                    } else {
+                        "kpdevr1"
+                    }
+                ),
+                LabNetwork::Lan { bind_ip } => {
+                    let value = serde_json::json!({
+                        "v": 1, "host": bind_ip.to_string(), "port": port,
+                        "session": session_hex, "kind": if invitation.is_some() { "pair" } else { "reconnect" }, "data": data,
+                    });
+                    let bytes = serde_json::to_vec(&value).map_err(|_| LabError::Link)?;
+                    format!("kplan1:{}", URL_SAFE_NO_PAD.encode(bytes))
+                }
+                LabNetwork::Internet { route } => {
+                    let value = serde_json::json!({
+                        "v": 1, "relay": route.relay_origin(), "room": route.room_hex(),
+                        "session": session_hex, "kind": if invitation.is_some() { "pair" } else { "reconnect" }, "data": data,
+                    });
+                    let bytes = serde_json::to_vec(&value).map_err(|_| LabError::Link)?;
+                    format!("kpnet1:{}", URL_SAFE_NO_PAD.encode(bytes))
+                }
+                LabNetwork::Auto { .. } => return Err(LabError::Link),
+            },
         };
         events
             .send(HostEvent::Bootstrap(bootstrap))
@@ -697,6 +795,38 @@ impl LabHost {
                 )
                 .await
             }
+            LocalListener::Auto(lan, relay) => {
+                let expected_id = expected_peer.map(|peer| *peer.device_id.as_bytes());
+                // The first carrier that reaches us wins; the other is dropped unused.
+                tracing::info!(port, "Auto pairing: waiting on LAN and relay");
+                let transport = tokio::select! {
+                    result = lan.accept() => {
+                        tracing::info!(ok = result.is_ok(), "Auto pairing: LAN carrier answered first");
+                        let mut transport = result.map_err(|_| LabError::Link)?;
+                        transport
+                            .enforce_network_policy(guard.clone())
+                            .map_err(LabError::NetworkPrivacyBlocked)?;
+                        transport
+                    }
+                    result = relay.accept(session_id, move |id| {
+                        expected_id.is_none_or(|expected| id == expected)
+                    }) => {
+                        tracing::info!(ok = result.is_ok(), "Auto pairing: relay carrier answered first");
+                        result.map_err(|error| map_lan_network_error(error, &guard))?.transport
+                    }
+                    error = guard.wait_for_change(Duration::from_millis(250)) => {
+                        return Err(LabError::NetworkPrivacyBlocked(error));
+                    }
+                };
+                self.run_transport(
+                    LabTransport::Lan(transport),
+                    store,
+                    config,
+                    invitation.as_ref(),
+                    &mut approval,
+                )
+                .await
+            }
             LocalListener::Internet(listener) => {
                 let expected_id = expected_peer.map(|peer| *peer.device_id.as_bytes());
                 let attempt = listener
@@ -717,10 +847,25 @@ impl LabHost {
                 Ok(outcome)
             }
         }?;
-        if let LabNetwork::Internet { route } = network {
-            self.set_internet_route(outcome.peer.device_id, &route)?;
+        // Auto mode keeps the room too, so later recovery can use either carrier.
+        if let Some(route) = network.route() {
+            self.set_internet_route(outcome.peer.device_id, route)?;
         }
         Ok(outcome)
+    }
+
+    async fn relay_host(
+        &self,
+        route: &RelayRoute,
+        guard: &NetworkPolicyGuard,
+    ) -> Result<RelayHost, LabError> {
+        let (config, policy) = self
+            .internet_ice_configuration(guard)
+            .await
+            .map_err(|error| map_lan_network_error(error, guard))?;
+        RelayHost::connect_with_privacy(route.clone(), config, policy, guard.clone())
+            .await
+            .map_err(|error| map_lan_network_error(error, guard))
     }
 
     async fn run_transport(
@@ -838,6 +983,9 @@ fn validate_reset_profile_artifacts(
                     }
                     validate_private_artifact(&path, 1024 * 1024)?;
                 }
+                // Vault Sync ledgers are vault history, not pairing state: a reset
+                // keeps them and only drops the per-peer selections inside.
+                vault_binding::DIRECTORY => vault_binding::validate_directory(&path)?,
                 _ => return Err(LabError::Profile),
             }
         }

@@ -54,6 +54,12 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
 
+[jobs.test-dev-reset]
+command = ["just", "test-dev-reset"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-pairing-lab", "justfile", "Cargo.toml", "Cargo.lock"]
+
 [jobs.p2p-demo]
 command = ["just", "p2p-demo"]
 need_stdout = true

@@ -41,7 +41,14 @@ use crate::{
 const SERVICE_TYPE: &str = "_kryptopass._tcp.local.";
 const DATA_CHANNEL_LABEL: &str = "kryptopass-v1";
 const SIGNALING_TIMEOUT: Duration = Duration::from_secs(30);
-const TURN_GATHERING_DEADLINE: Duration = Duration::from_secs(10);
+// The answer carries a complete candidate snapshot (no Trickle ICE yet), so its
+// gathering wait sits on the peer's connect deadline. A reachable relay usually
+// allocates in well under a second; these caps only bound silent servers.
+const TURN_GATHERING_DEADLINE: Duration = Duration::from_secs(5);
+const STUN_GATHERING_DEADLINE: Duration = Duration::from_secs(3);
+/// Short window after the first server-reflexive candidate so sibling
+/// candidates from the same gathering pass join the snapshot.
+const SERVER_REFLEXIVE_SETTLE: Duration = Duration::from_millis(300);
 const RECONNECT_ACCEPT_INTERVAL: Duration = Duration::from_secs(2);
 const RECONNECT_PATH: &str = "/kp/lan/v1/resume";
 const RESUME_PATH_PREFIX: &str = "/kp/lan/v1/resume/";
@@ -152,6 +159,7 @@ impl ResumeListener {
         let port = listener_v4.local_addr().map_err(|_| LanError::Bind)?.port();
         let (registrations, addresses) = register_resume_mdns(local_device_id, port, bind_address);
         tracing::info!(
+            port,
             mdns_services = addresses.len(),
             selected_family = if bind_address.is_ipv4() {
                 "ipv4"
@@ -261,6 +269,10 @@ impl ResumeListener {
         let (socket, remote) = accepted.map_err(|_| LanError::Signaling)?;
         state.last_accepted_at = Some(Instant::now());
         drop(state);
+        tracing::info!(
+            remote_family = if remote.is_ipv4() { "ipv4" } else { "ipv6" },
+            "LAN resume connection accepted"
+        );
 
         let local = socket.local_addr().map_err(|_| LanError::Signaling)?;
         if !is_supported_address(local.ip())
@@ -583,16 +595,26 @@ where
     // signaling rules, then filter only the local SDP sent below.
     let remote_policy = remote_offer_policy(policy);
     at_stage(validate_sdp(&offer.sdp, remote_policy), "offer_sdp")?;
-    tracing::info!("WebRTC offer accepted");
+    let offer_started = Instant::now();
+    let offer_candidates = CandidateTypeCounts::from_sdp(&offer.sdp);
+    tracing::info!(
+        host = offer_candidates.host,
+        srflx = offer_candidates.srflx,
+        prflx = offer_candidates.prflx,
+        relay = offer_candidates.relay,
+        "WebRTC offer accepted"
+    );
 
-    let turn_configured = has_turn_server(&ice_servers);
+    let gathering_plan = GatheringPlan::for_servers(&ice_servers);
     let (data_channel_tx, mut data_channel_rx) = mpsc::channel(1);
     let (gathering_tx, mut gathering_rx) = watch::channel(false);
     let (relay_candidate_tx, mut relay_candidate_rx) = watch::channel(false);
+    let (srflx_candidate_tx, mut srflx_candidate_rx) = watch::channel(false);
     let handler = Arc::new(LanPeerConnectionHandler {
         data_channel_tx,
         gathering_tx,
         relay_candidate_tx,
+        srflx_candidate_tx,
         candidate_policy: policy,
         received_channels: AtomicUsize::new(0),
         peer_connection: Mutex::new(None),
@@ -639,33 +661,40 @@ where
         "set_local_answer",
     )?;
 
-    let gather_reason = if turn_configured {
-        wait_for_turn_gathering(&mut gathering_rx, &mut relay_candidate_rx).await
-    } else {
-        if !*gathering_rx.borrow() {
-            gathering_rx.changed().await.map_err(|_| LanError::WebRtc)?;
+    let gather_reason = match gathering_plan {
+        GatheringPlan::Relay => {
+            wait_for_turn_gathering(&mut gathering_rx, &mut relay_candidate_rx).await
         }
-        if !*gathering_rx.borrow() {
-            return Err(LanError::WebRtc);
+        GatheringPlan::ServerReflexive => {
+            wait_for_stun_gathering(&mut gathering_rx, &mut srflx_candidate_rx).await
         }
-        GatheringStopReason::Complete
+        GatheringPlan::HostOnly => {
+            if !*gathering_rx.borrow() {
+                gathering_rx.changed().await.map_err(|_| LanError::WebRtc)?;
+            }
+            if !*gathering_rx.borrow() {
+                return Err(LanError::WebRtc);
+            }
+            GatheringStopReason::Complete
+        }
     };
 
     let local_description = pc.local_description().await.ok_or(LanError::WebRtc)?;
-    let (candidate_count, relay_candidate_count) = sdp_candidate_counts(&local_description.sdp);
-    if turn_configured {
-        tracing::info!(
-            reason = gather_reason.as_str(),
-            candidates = candidate_count,
-            relay_candidates = relay_candidate_count,
-            "ICE gathering snapshot selected"
-        );
-    }
+    let local_candidates = CandidateTypeCounts::from_sdp(&local_description.sdp);
+    tracing::info!(
+        reason = gather_reason.as_str(),
+        elapsed_ms = elapsed_ms(offer_started),
+        host = local_candidates.host,
+        srflx = local_candidates.srflx,
+        prflx = local_candidates.prflx,
+        relay = local_candidates.relay,
+        "ICE gathering snapshot selected"
+    );
     if ice_policy == RTCIceTransportPolicy::Relay {
-        if relay_candidate_count == 0 {
+        if local_candidates.relay == 0 {
             return at_stage(Err(LanError::WebRtc), "relay_candidate_missing");
         }
-        if relay_candidate_count != candidate_count {
+        if local_candidates.relay != local_candidates.total() {
             return at_stage(Err(LanError::WebRtc), "relay_candidate_policy");
         }
     }
@@ -689,7 +718,7 @@ where
             .map_err(|_| LanError::Signaling),
         "send_answer",
     )?;
-    tracing::info!("WebRTC answer sent");
+    tracing::info!(elapsed_ms = elapsed_ms(offer_started), "WebRTC answer sent");
 
     let data_channel = at_stage(
         data_channel_rx
@@ -699,7 +728,10 @@ where
         "data_channel",
     )?;
     at_stage(wait_for_open(&data_channel).await, "data_channel_open")?;
-    tracing::info!("WebRTC DataChannel opened");
+    tracing::info!(
+        elapsed_ms = elapsed_ms(offer_started),
+        "WebRTC DataChannel opened"
+    );
     Ok(WebRtcTransport::new(pc_guard.disarm(), data_channel))
 }
 
@@ -1289,6 +1321,7 @@ struct LanPeerConnectionHandler {
     data_channel_tx: mpsc::Sender<Result<Arc<dyn DataChannel>, LanError>>,
     gathering_tx: watch::Sender<bool>,
     relay_candidate_tx: watch::Sender<bool>,
+    srflx_candidate_tx: watch::Sender<bool>,
     candidate_policy: CandidatePolicy,
     received_channels: AtomicUsize,
     peer_connection: Mutex<Option<Weak<dyn PeerConnection>>>,
@@ -1297,8 +1330,10 @@ struct LanPeerConnectionHandler {
 #[async_trait::async_trait]
 impl PeerConnectionEventHandler for LanPeerConnectionHandler {
     async fn on_ice_candidate(&self, event: RTCPeerConnectionIceEvent) {
-        if is_usable_relay_candidate(&event, self.candidate_policy) {
+        if is_usable_candidate(&event, self.candidate_policy, RTCIceCandidateType::Relay) {
             self.relay_candidate_tx.send_replace(true);
+        } else if is_usable_candidate(&event, self.candidate_policy, RTCIceCandidateType::Srflx) {
+            self.srflx_candidate_tx.send_replace(true);
         }
     }
 
@@ -1350,6 +1385,7 @@ impl PeerConnectionEventHandler for LanPeerConnectionHandler {
 enum GatheringStopReason {
     Complete,
     RelayReady,
+    ServerReflexiveReady,
     Deadline,
 }
 
@@ -1358,6 +1394,7 @@ impl GatheringStopReason {
         match self {
             Self::Complete => "complete",
             Self::RelayReady => "relay_ready",
+            Self::ServerReflexiveReady => "srflx_ready",
             Self::Deadline => "deadline",
         }
     }
@@ -1392,21 +1429,95 @@ async fn wait_for_turn_gathering(
     }
 }
 
-fn has_turn_server(ice_servers: &[RTCIceServer]) -> bool {
+/// Without TURN, a server-reflexive candidate is the useful Internet path, so
+/// the snapshot is taken shortly after the first one instead of waiting for
+/// COMPLETE behind STUN retransmissions to servers that never answer.
+async fn wait_for_stun_gathering(
+    gathering_rx: &mut watch::Receiver<bool>,
+    srflx_candidate_rx: &mut watch::Receiver<bool>,
+) -> GatheringStopReason {
+    let deadline = tokio::time::sleep(STUN_GATHERING_DEADLINE);
+    tokio::pin!(deadline);
+    loop {
+        if *gathering_rx.borrow() {
+            return GatheringStopReason::Complete;
+        }
+        if *srflx_candidate_rx.borrow() {
+            break;
+        }
+        tokio::select! {
+            result = gathering_rx.changed() => {
+                if result.is_err() {
+                    return GatheringStopReason::Deadline;
+                }
+            }
+            result = srflx_candidate_rx.changed() => {
+                if result.is_err() {
+                    return GatheringStopReason::Deadline;
+                }
+            }
+            () = &mut deadline => return GatheringStopReason::Deadline,
+        }
+    }
+
+    let settle = tokio::time::sleep(SERVER_REFLEXIVE_SETTLE);
+    tokio::pin!(settle);
+    loop {
+        if *gathering_rx.borrow() {
+            return GatheringStopReason::Complete;
+        }
+        tokio::select! {
+            result = gathering_rx.changed() => {
+                if result.is_err() {
+                    return GatheringStopReason::ServerReflexiveReady;
+                }
+            }
+            () = &mut settle => return GatheringStopReason::ServerReflexiveReady,
+            () = &mut deadline => return GatheringStopReason::ServerReflexiveReady,
+        }
+    }
+}
+
+/// Which candidate the answer snapshot waits for, derived from the ICE servers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GatheringPlan {
+    /// No servers (LAN): host gathering completes almost immediately.
+    HostOnly,
+    ServerReflexive,
+    Relay,
+}
+
+impl GatheringPlan {
+    fn for_servers(ice_servers: &[RTCIceServer]) -> Self {
+        if has_server_scheme(ice_servers, &["turn", "turns"]) {
+            Self::Relay
+        } else if has_server_scheme(ice_servers, &["stun", "stuns"]) {
+            Self::ServerReflexive
+        } else {
+            Self::HostOnly
+        }
+    }
+}
+
+fn has_server_scheme(ice_servers: &[RTCIceServer], schemes: &[&str]) -> bool {
     ice_servers.iter().any(|server| {
         server.urls.iter().any(|url| {
             url.split_once(':').is_some_and(|(scheme, _)| {
-                scheme.eq_ignore_ascii_case("turn") || scheme.eq_ignore_ascii_case("turns")
+                schemes
+                    .iter()
+                    .any(|expected| scheme.eq_ignore_ascii_case(expected))
             })
         })
     })
 }
 
-fn is_usable_relay_candidate(event: &RTCPeerConnectionIceEvent, policy: CandidatePolicy) -> bool {
+fn is_usable_candidate(
+    event: &RTCPeerConnectionIceEvent,
+    policy: CandidatePolicy,
+    typ: RTCIceCandidateType,
+) -> bool {
     let candidate = &event.candidate;
-    if candidate.typ != RTCIceCandidateType::Relay
-        || candidate.component != 1
-        || candidate.protocol != RTCIceProtocol::Udp
+    if candidate.typ != typ || candidate.component != 1 || candidate.protocol != RTCIceProtocol::Udp
     {
         return false;
     }
@@ -1417,17 +1528,41 @@ fn is_usable_relay_candidate(event: &RTCPeerConnectionIceEvent, policy: Candidat
     validate_candidate(&line, policy).is_ok()
 }
 
-fn sdp_candidate_counts(sdp: &str) -> (usize, usize) {
-    sdp.lines()
-        .filter_map(|line| line.trim_end_matches('\r').strip_prefix("a=candidate:"))
-        .filter(|candidate| candidate.split_ascii_whitespace().nth(1) != Some("2"))
-        .fold((0, 0), |(total, relay), candidate| {
-            let is_relay = candidate
-                .split_ascii_whitespace()
-                .nth(7)
-                .is_some_and(|typ| typ.eq_ignore_ascii_case("relay"));
-            (total + 1, relay + usize::from(is_relay))
-        })
+/// Component-one candidate counts by type. Diagnostics carry only these
+/// counts, never addresses, ports or SDP.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct CandidateTypeCounts {
+    host: usize,
+    srflx: usize,
+    prflx: usize,
+    relay: usize,
+    other: usize,
+}
+
+impl CandidateTypeCounts {
+    fn from_sdp(sdp: &str) -> Self {
+        sdp.lines()
+            .filter_map(|line| line.trim_end_matches('\r').strip_prefix("a=candidate:"))
+            .filter(|candidate| candidate.split_ascii_whitespace().nth(1) != Some("2"))
+            .fold(Self::default(), |mut counts, candidate| {
+                match candidate.split_ascii_whitespace().nth(7) {
+                    Some(typ) if typ.eq_ignore_ascii_case("host") => counts.host += 1,
+                    Some(typ) if typ.eq_ignore_ascii_case("srflx") => counts.srflx += 1,
+                    Some(typ) if typ.eq_ignore_ascii_case("prflx") => counts.prflx += 1,
+                    Some(typ) if typ.eq_ignore_ascii_case("relay") => counts.relay += 1,
+                    _ => counts.other += 1,
+                }
+                counts
+            })
+    }
+
+    const fn total(self) -> usize {
+        self.host + self.srflx + self.prflx + self.relay + self.other
+    }
+}
+
+fn elapsed_ms(since: Instant) -> u64 {
+    u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 async fn wait_for_open(channel: &Arc<dyn DataChannel>) -> Result<(), LanError> {

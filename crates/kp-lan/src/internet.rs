@@ -574,6 +574,18 @@ impl RelayHost {
                 return Err(LanError::NetworkPolicy);
             }
         };
+        // The preflight checked the default route; this checks the socket the
+        // system actually used, before any signaling message is exchanged.
+        let local_address = connected
+            .0
+            .get_ref()
+            .get_ref()
+            .local_addr()
+            .map_err(|_| LanError::Signaling)?
+            .ip();
+        privacy_guard
+            .ensure_internet_source(local_address)
+            .map_err(|_| LanError::NetworkPolicy)?;
         Ok(Self {
             websocket: connected.0,
             ice_servers,

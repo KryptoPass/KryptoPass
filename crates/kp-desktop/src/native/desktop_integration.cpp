@@ -204,8 +204,10 @@ namespace kryptopass::desktop::native
 void capture_screenshot(const QString &path)
 {
     QTimer::singleShot(2000, qApp, [path] {
+        const bool devicesRequested = QCoreApplication::arguments().contains(QStringLiteral("--pairing-lab"));
         for (auto *window : QGuiApplication::topLevelWindows()) {
-            if (auto *quick = qobject_cast<QQuickWindow *>(window); quick && quick->isVisible()) {
+            if (auto *quick = qobject_cast<QQuickWindow *>(window);
+                quick && quick->isVisible() && (!devicesRequested || quick->objectName() == QStringLiteral("devicesWindow"))) {
                 QCoreApplication::exit(quick->grabWindow().save(path) ? 0 : 1);
                 return;
             }

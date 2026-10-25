@@ -6,6 +6,7 @@ use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{EntryIcon, EntryIconAsset, MAX_ENTRY_ICON_BYTES, SecretId};
 use rusqlite::types::Type;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
+use std::collections::HashMap;
 use std::path::Path;
 use uuid::Uuid;
 
@@ -134,4 +135,50 @@ pub(crate) fn read_icon_asset(path: &Path, id: Uuid) -> Result<Vec<u8>> {
     let asset = EntryIconAsset { id, png };
     asset.validate()?;
     Ok(asset.png)
+}
+
+impl super::SqliteStorage {
+    /// SHA-256 of every stored icon image that passes strict validation,
+    /// computed on the fly; an invalid row is logged and left out.
+    pub(crate) fn icon_asset_hashes(&self) -> Result<HashMap<Uuid, [u8; 32]>> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT id, png FROM entry_icon_assets WHERE length(png) BETWEEN 45 AND ?1")?;
+        let rows = statement.query_map([MAX_ENTRY_ICON_BYTES as i64], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?))
+        })?;
+        let mut hashes = HashMap::new();
+        for row in rows {
+            let (id, png) = row?;
+            let Ok(id) = Uuid::parse_str(&id) else {
+                tracing::warn!(reason = "asset_id", "Icon asset skipped while hashing");
+                continue;
+            };
+            let asset = EntryIconAsset { id, png };
+            if let Err(error) = asset.validate() {
+                tracing::warn!(reason = %error, "Icon asset failed strict validation while hashing");
+                continue;
+            }
+            hashes.insert(id, asset.sha256());
+        }
+        Ok(hashes)
+    }
+
+    /// One stored icon image, validated; None when the row is absent.
+    pub(crate) fn icon_asset(&self, id: Uuid) -> Result<Option<EntryIconAsset>> {
+        let png: Option<Vec<u8>> = self
+            .connection
+            .query_row(
+                "SELECT png FROM entry_icon_assets WHERE id = ?1 AND length(png) BETWEEN 45 AND ?2",
+                params![id.to_string(), MAX_ENTRY_ICON_BYTES as i64],
+                |row| row.get(0),
+            )
+            .optional()?;
+        png.map(|png| {
+            let asset = EntryIconAsset { id, png };
+            asset.validate()?;
+            Ok(asset)
+        })
+        .transpose()
+    }
 }

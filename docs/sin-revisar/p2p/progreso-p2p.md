@@ -2,6 +2,42 @@
 
 Plan de referencia: [propuesta completa v1.0](plan-implementacion-p2p.md).
 
+## Revisión y regresiones del 2026-10-24
+
+El usuario reactivó los agentes de tests y seguridad con `gpt-6-luna`, esfuerzo
+`max`. Las pausas citadas en los registros anteriores son históricas. Las
+pruebas nuevas siguen el patrón de `kp-keyring`: componentes reales, perfiles
+aislados, secuencias de usuario y efectos persistidos.
+
+- `resume_owner_lifecycle_tests` empareja dos identidades, reabre sus pins
+  SQLite, reconecta con Noise nuevo y entrega después el evento terminal real
+  de la sesión anterior. La nueva generación continúa conectada y conserva
+  trust. El transporte de este ensayo es en memoria, no WebRTC.
+- La integración `just test-dev-reset` ejecuta la receta real en otro D-Bus y
+  un GNOME Secret Service separado, con directorios XDG privados. Conserva el
+  backup, el DeviceId y una base de confianza nueva sin peers. El caso sin
+  marcador sigue rechazando trust perdido sin reemplazar identidad. Pasó un
+  test; el guard de procesos se sustituye solo dentro de esa invocación aislada.
+- `dev-reset` ahora deja el marcador explícito que autoriza ese estado. La
+  vinculación siguiente conserva la identidad de llavero y crea trust vacía;
+  sin marcador no hay reparación automática. Un fallo al abrir el perfil
+  también deja el código de error y la fase `open_pairing_profile` en el log,
+  sin claves ni invitaciones.
+- Corrección posterior de la apertura de Dispositivos: `load_devices`, el
+  wrapper y el actor de recuperación distinguen un reset pendiente de una
+  vinculación dañada. El primero muestra vacío normal sin consumir el marcador
+  ni crear claves o DB; una DB existente se sigue validando y conserva sus peers.
+  La integración cubre esa lectura previa al pairing, marker corrupto y sidecars
+  inesperados. Se comprobó además el binario real con XDG aislados y
+  `--pairing-lab --screenshot`: Dispositivos muestra el estado vacío, sin banda
+  de error; el perfil conserva únicamente el marcador. La cabecera y los errores
+  visibles ya no piden un «perfil de pruebas».
+- Seguridad revisó los cambios; Android revoca el opt-in sintético al olvidar,
+  resetear o cerrar, conserva datos y comparte un solo owner. Evidencia Android:
+  [progreso de seguridad](../../../../kryptopass-android/docs/android-security-progress.md).
+
+Estas regresiones no equivalen a certificar la integración de producción.
+
 Integración posterior solicitada: el laboratorio debug Desktop ↔ Android tiene
 pairing y reconexión por emulador confirmados manualmente por el usuario. Se
 añadió el adaptador WebRTC LAN, señalización WebSocket local y descubrimiento

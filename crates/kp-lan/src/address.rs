@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use crate::LanError;
-use crate::privacy::route_source_address;
+use crate::privacy::{is_tunnel_interface, route_source_address};
 
 /// Interface category for presenting a local network choice, never authorization.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -27,7 +27,7 @@ pub fn local_interfaces() -> Result<Vec<LanInterface>, LanError> {
     let mut interfaces: Vec<_> = if_addrs::get_if_addrs()
         .map_err(|_| LanError::AddressDiscovery)?
         .into_iter()
-        .filter(|interface| is_supported_address(interface.ip()))
+        .filter(|interface| is_supported_address(interface.ip()) && is_lan_capable(interface))
         .map(|interface| {
             let address = interface.ip();
             let lower = interface.name.to_ascii_lowercase();
@@ -91,6 +91,7 @@ pub fn local_addresses() -> Result<Vec<IpAddr>, LanError> {
     let interfaces = if_addrs::get_if_addrs().map_err(|_| LanError::AddressDiscovery)?;
     let mut addresses: Vec<_> = interfaces
         .into_iter()
+        .filter(is_lan_capable)
         .map(|interface| interface.ip())
         .filter(|address| is_supported_address(*address))
         .collect();
@@ -102,10 +103,11 @@ pub fn local_addresses() -> Result<Vec<IpAddr>, LanError> {
     Ok(addresses)
 }
 
-/// Return one locally assigned address selected by the OS for its default
-/// IPv4/IPv6 route. This never chooses a second interface merely because it
-/// appears physical or private; callers can bind this address for recovery
-/// when the user has not saved an explicit LAN address.
+/// Return the local address to use for LAN when the user saved none: the
+/// source the OS selects for its default route, if that address is on a real
+/// local segment. When the default route leaves through a VPN tunnel, fall
+/// back to the single LAN-capable address on a hardware-backed interface;
+/// with several candidates the choice is left to the user.
 #[must_use]
 pub fn os_selected_local_address() -> Option<IpAddr> {
     let interfaces = if_addrs::get_if_addrs().ok()?;
@@ -113,12 +115,67 @@ pub fn os_selected_local_address() -> Option<IpAddr> {
         route_source_address(IpAddr::V4(Ipv4Addr::new(198, 51, 100, 1))).ok(),
         route_source_address(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1))).ok(),
     ];
-    selected.into_iter().flatten().find(|address| {
+    let routed = selected.into_iter().flatten().find(|address| {
         is_supported_address(*address)
             && interfaces
                 .iter()
-                .any(|interface| interface.ip() == *address)
-    })
+                .any(|interface| interface.ip() == *address && is_lan_capable(interface))
+    });
+    if routed.is_some() {
+        return routed;
+    }
+    let hardware: Vec<_> = interfaces
+        .iter()
+        .filter(|interface| {
+            let address = interface.ip();
+            is_supported_address(address)
+                && !address.is_loopback()
+                && is_lan_capable(interface)
+                && has_hardware_device(&interface.name)
+        })
+        .collect();
+    // One interface often carries IPv4 plus an IPv6 ULA; that is still one
+    // segment, so prefer its IPv4. Several hardware interfaces stay ambiguous.
+    let name = &hardware.first()?.name;
+    if hardware.iter().any(|interface| &interface.name != name) {
+        return None;
+    }
+    hardware
+        .iter()
+        .find(|interface| interface.ip().is_ipv4())
+        .or_else(|| hardware.first())
+        .map(|interface| interface.ip())
+}
+
+/// Whether an interface address has neighbors on a local segment. Host-only
+/// prefixes (/32, /128) and layer-3 tunnels have none: VPN providers often
+/// hand every client the same tunnel address, so advertising it for LAN makes
+/// a peer on the same provider dial its own interface.
+fn is_lan_capable(interface: &if_addrs::Interface) -> bool {
+    let host_only = match &interface.addr {
+        if_addrs::IfAddr::V4(address) => address.prefixlen == 32 && !address.ip.is_loopback(),
+        if_addrs::IfAddr::V6(address) => address.prefixlen == 128 && !address.ip.is_loopback(),
+    };
+    !host_only && !matches!(is_tunnel_interface(&interface.name), Ok(true))
+}
+
+/// Linux links hardware-backed interfaces to their bus device; bridges, veth
+/// pairs, and tunnels have no such link. Only used to pick a unique fallback.
+#[cfg(target_os = "linux")]
+fn has_hardware_device(name: &str) -> bool {
+    !name.is_empty()
+        && !name.contains('/')
+        && name != "."
+        && name != ".."
+        && std::path::Path::new("/sys/class/net")
+            .join(name)
+            .join("device")
+            .exists()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn has_hardware_device(_name: &str) -> bool {
+    false
 }
 
 /// Keep an explicit address while it is assigned; otherwise follow only the

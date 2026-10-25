@@ -7,30 +7,6 @@
       <translation> El archivo ya fue publicado, pero no se pudo sincronizar su carpeta; podría no persistir ante un corte de energía.</translation>
     </message>
     <message>
-      <source> Se aplicaron {new_revocations} revocación(es).</source>
-      <translation> Se aplicaron {new_revocations} revocación(es).</translation>
-    </message>
-    <message>
-      <source> Se añadieron {new_signatures} firma(s).</source>
-      <translation> Se añadieron {new_signatures} firma(s).</translation>
-    </message>
-    <message>
-      <source> Se añadieron {new_subkeys} subclave(s).</source>
-      <translation> Se añadieron {new_subkeys} subclave(s).</translation>
-    </message>
-    <message>
-      <source> Se añadieron {new_user_ids} identidad(es).</source>
-      <translation> Se añadieron {new_user_ids} identidad(es).</translation>
-    </message>
-    <message>
-      <source> Se detectaron {item_errors} registro(s) con errores.</source>
-      <translation> Se detectaron {item_errors} registro(s) con errores.</translation>
-    </message>
-    <message>
-      <source> {unchanged} elemento(s) ya estaban actualizados.</source>
-      <translation> {unchanged} elemento(s) ya estaban actualizados.</translation>
-    </message>
-    <message>
       <source>%1 alias se guardarán como notas.</source>
       <translation>%1 alias se guardarán como notas.</translation>
     </message>
@@ -65,14 +41,6 @@
     <message>
       <source>%1 reglas de autocompletado se guardarán como referencia.</source>
       <translation>%1 reglas de autocompletado se guardarán como referencia.</translation>
-    </message>
-    <message>
-      <source>-----BEGIN PGP PUBLIC KEY BLOCK-----</source>
-      <translation>-----BEGIN PGP PUBLIC KEY BLOCK-----</translation>
-    </message>
-    <message>
-      <source>-----END PGP PUBLIC KEY BLOCK-----</source>
-      <translation>-----END PGP PUBLIC KEY BLOCK-----</translation>
     </message>
     <message>
       <source>&lt;a href="{url}" style="text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;&amp;#x2007;&amp;#x2007;&amp;#x2007;&lt;/span&gt;&lt;/a&gt;</source>
@@ -159,10 +127,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia.</translation>
     </message>
     <message>
-      <source>Caducidad de {scope} actualizada para {fingerprint}.</source>
-      <translation>Caducidad de {scope} actualizada para {fingerprint}.</translation>
-    </message>
-    <message>
       <source>Cambio guardado; no se pudo actualizar la lista.</source>
       <translation>Cambio guardado; no se pudo actualizar la lista.</translation>
     </message>
@@ -187,10 +151,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Certificación registrada</translation>
     </message>
     <message>
-      <source>Certificado de revocación preparado en {}.{}</source>
-      <translation>Certificado de revocación preparado en {}.{}</translation>
-    </message>
-    <message>
       <source>Cifrando y añadiendo los elementos a la bóveda actual…</source>
       <translation>Cifrando y añadiendo los elementos a la bóveda actual…</translation>
     </message>
@@ -205,10 +165,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Contraseña copiada</source>
       <translation>Contraseña copiada</translation>
-    </message>
-    <message>
-      <source>Copia privada guardada con permisos 0600 en {}.{}</source>
-      <translation>Copia privada guardada con permisos 0600 en {}.{}</translation>
     </message>
     <message>
       <source>Creado el %1</source>
@@ -251,14 +207,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Ejecutando operación OpenPGP…</translation>
     </message>
     <message>
-      <source>El archivo de importación</source>
-      <translation>El archivo de importación</translation>
-    </message>
-    <message>
-      <source>El archivo debe contener un único certificado de revocación completo.</source>
-      <translation>El archivo debe contener un único certificado de revocación completo.</translation>
-    </message>
-    <message>
       <source>El archivo descifrado no es una copia compatible de KryptoPass o está dañado. Selecciona otra copia o prueba con una versión más reciente de KryptoPass.</source>
       <translation>El archivo descifrado no es una copia compatible de KryptoPass o está dañado. Selecciona otra copia o prueba con una versión más reciente de KryptoPass.</translation>
     </message>
@@ -271,10 +219,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El archivo se guardó, pero no se pudo confirmar que todos los cambios llegaron al disco. Conserva la copia original.</translation>
     </message>
     <message>
-      <source>El archivo temporal ya está cerrado.</source>
-      <translation>El archivo temporal ya está cerrado.</translation>
-    </message>
-    <message>
       <source>El borrador del elemento no es válido.</source>
       <translation>El borrador del elemento no es válido.</translation>
     </message>
@@ -285,50 +229,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El borrador ya no corresponde al elemento abierto.</source>
       <translation>El borrador ya no corresponde al elemento abierto.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación</source>
-      <translation>El certificado de revocación</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación contiene datos armados inválidos.</source>
-      <translation>El certificado de revocación contiene datos armados inválidos.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación contiene datos tras su cierre.</source>
-      <translation>El certificado de revocación contiene datos tras su cierre.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación debe estar en formato ASCII.</source>
-      <translation>El certificado de revocación debe estar en formato ASCII.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación debe ser un archivo local regular.</source>
-      <translation>El certificado de revocación debe ser un archivo local regular.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación está incompleto.</source>
-      <translation>El certificado de revocación está incompleto.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación generado</source>
-      <translation>El certificado de revocación generado</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación no es texto ASCII válido.</source>
-      <translation>El certificado de revocación no es texto ASCII válido.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación tiene un encabezado incorrecto.</source>
-      <translation>El certificado de revocación tiene un encabezado incorrecto.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación tiene una cabecera inválida.</source>
-      <translation>El certificado de revocación tiene una cabecera inválida.</translation>
-    </message>
-    <message>
-      <source>El certificado de revocación tiene una suma de comprobación inválida.</source>
-      <translation>El certificado de revocación tiene una suma de comprobación inválida.</translation>
     </message>
     <message>
       <source>El contacto seleccionado no es válido.</source>
@@ -387,10 +287,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Esperando al agente GPG…</translation>
     </message>
     <message>
-      <source>Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red.</source>
-      <translation>Exigir VPN bloqueó la conexión porque Desktop no puede verificar cobertura para todos sus canales de red.</translation>
-    </message>
-    <message>
       <source>Failed to initialize QApplication</source>
       <translation>Failed to initialize QApplication</translation>
     </message>
@@ -403,14 +299,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Firma de prueba completada; si el agente ya tenía la passphrase en caché, no apareció diálogo</translation>
     </message>
     <message>
-      <source>Frase de paso actualizada para {fingerprint}.</source>
-      <translation>Frase de paso actualizada para {fingerprint}.</translation>
-    </message>
-    <message>
-      <source>GnuPG cerró el canal antes de completar la preparación de revocación.</source>
-      <translation>GnuPG cerró el canal antes de completar la preparación de revocación.</translation>
-    </message>
-    <message>
       <source>GnuPG creó la clave pero no devolvió su huella.</source>
       <translation>GnuPG creó la clave pero no devolvió su huella.</translation>
     </message>
@@ -419,56 +307,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>GnuPG devolvió una clave pública que no es ASCII/UTF-8.</translation>
     </message>
     <message>
-      <source>GnuPG eliminó también la parte pública de {fingerprint}; la operación quedó parcialmente aplicada.</source>
-      <translation>GnuPG eliminó también la parte pública de {fingerprint}; la operación quedó parcialmente aplicada.</translation>
-    </message>
-    <message>
-      <source>GnuPG emitió un estado que no es UTF-8.</source>
-      <translation>GnuPG emitió un estado que no es UTF-8.</translation>
-    </message>
-    <message>
-      <source>GnuPG emitió una línea de estado demasiado larga.</source>
-      <translation>GnuPG emitió una línea de estado demasiado larga.</translation>
-    </message>
-    <message>
       <source>GnuPG no permite borrar solo la parte pública mientras existe material secreto; elimina primero ese material o borra la clave completa.</source>
       <translation>GnuPG no permite borrar solo la parte pública mientras existe material secreto; elimina primero ese material o borra la clave completa.</translation>
     </message>
     <message>
       <source>GnuPG no produjo datos para la exportación solicitada.</source>
       <translation>GnuPG no produjo datos para la exportación solicitada.</translation>
-    </message>
-    <message>
-      <source>GnuPG no pudo generar el certificado de revocación solicitado.</source>
-      <translation>GnuPG no pudo generar el certificado de revocación solicitado.</translation>
-    </message>
-    <message>
-      <source>GnuPG presentó una pregunta de revocación inesperada.</source>
-      <translation>GnuPG presentó una pregunta de revocación inesperada.</translation>
-    </message>
-    <message>
-      <source>GnuPG solicitó más respuestas de revocación de las admitidas.</source>
-      <translation>GnuPG solicitó más respuestas de revocación de las admitidas.</translation>
-    </message>
-    <message>
-      <source>GnuPG superó el tiempo máximo de espera.</source>
-      <translation>GnuPG superó el tiempo máximo de espera.</translation>
-    </message>
-    <message>
-      <source>GnuPG terminó antes de guardar la revocación de la subclave.</source>
-      <translation>GnuPG terminó antes de guardar la revocación de la subclave.</translation>
-    </message>
-    <message>
-      <source>GnuPG terminó con estado {status}.</source>
-      <translation>GnuPG terminó con estado {status}.</translation>
-    </message>
-    <message>
-      <source>GnuPG terminó, pero el material privado de {fingerprint} sigue presente.</source>
-      <translation>GnuPG terminó, pero el material privado de {fingerprint} sigue presente.</translation>
-    </message>
-    <message>
-      <source>Guarda la exportación fuera de la carpeta privada de GnuPG.</source>
-      <translation>Guarda la exportación fuera de la carpeta privada de GnuPG.</translation>
     </message>
     <message>
       <source>Guardando carpeta…</source>
@@ -522,16 +366,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La bóveda activa cambió. Vuelve a revisar el archivo antes de importar.</translation>
     </message>
     <message>
-      <source>La carpeta de certificados de revocación no es una carpeta local segura.</source>
-      <translation>La carpeta de certificados de revocación no es una carpeta local segura.</translation>
-    </message>
-    <message>
       <source>La carpeta de destino no es válida.</source>
       <translation>La carpeta de destino no es válida.</translation>
-    </message>
-    <message>
-      <source>La carpeta de destino no existe o no es una carpeta.</source>
-      <translation>La carpeta de destino no existe o no es una carpeta.</translation>
     </message>
     <message>
       <source>La carpeta seleccionada no es válida.</source>
@@ -546,44 +382,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La clave elegida para la bóveda no es válida.</translation>
     </message>
     <message>
-      <source>La clave firmante está caducada.</source>
-      <translation>La clave firmante está caducada.</translation>
-    </message>
-    <message>
-      <source>La clave no contiene una clave primaria.</source>
-      <translation>La clave no contiene una clave primaria.</translation>
-    </message>
-    <message>
       <source>La clave no tiene material privado local.</source>
       <translation>La clave no tiene material privado local.</translation>
     </message>
     <message>
-      <source>La clave no tiene material privado que eliminar.</source>
-      <translation>La clave no tiene material privado que eliminar.</translation>
-    </message>
-    <message>
-      <source>La clave no tiene una huella primaria.</source>
-      <translation>La clave no tiene una huella primaria.</translation>
-    </message>
-    <message>
-      <source>La clave propia está revocada, deshabilitada o no es válida.</source>
-      <translation>La clave propia está revocada, deshabilitada o no es válida.</translation>
-    </message>
-    <message>
-      <source>La clave ya está revocada.</source>
-      <translation>La clave ya está revocada.</translation>
-    </message>
-    <message>
-      <source>La exportación supera el tamaño máximo permitido.</source>
-      <translation>La exportación supera el tamaño máximo permitido.</translation>
-    </message>
-    <message>
       <source>La fecha de caducidad supera el límite que puede representar GnuPG.</source>
       <translation>La fecha de caducidad supera el límite que puede representar GnuPG.</translation>
-    </message>
-    <message>
-      <source>La fuente externa devolvió una huella distinta de la solicitada: {actual}.</source>
-      <translation>La fuente externa devolvió una huella distinta de la solicitada: {actual}.</translation>
     </message>
     <message>
       <source>La identidad debe tener entre 1 y 255 bytes y no contener controles.</source>
@@ -596,14 +400,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La identidad ya está presente en esta clave.</source>
       <translation>La identidad ya está presente en esta clave.</translation>
-    </message>
-    <message>
-      <source>La identidad ya está revocada.</source>
-      <translation>La identidad ya está revocada.</translation>
-    </message>
-    <message>
-      <source>La interacción de revocación de GnuPG terminó inesperadamente.</source>
-      <translation>La interacción de revocación de GnuPG terminó inesperadamente.</translation>
     </message>
     <message>
       <source>La lista de huellas de subclave contiene duplicados.</source>
@@ -630,20 +426,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La política de red cambió. Se está cerrando la operación y no se reutilizará su ruta anterior.</translation>
     </message>
     <message>
-      <source>La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida.</source>
-      <translation>La recuperación LAN está bloqueada. Activa la excepción LAN explícita o usa una conexión permitida.</translation>
-    </message>
-    <message>
       <source>La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz.</source>
       <translation>La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz.</translation>
-    </message>
-    <message>
-      <source>La ruta de salida debe señalar un archivo.</source>
-      <translation>La ruta de salida debe señalar un archivo.</translation>
-    </message>
-    <message>
-      <source>La ruta del certificado de revocación no es válida.</source>
-      <translation>La ruta del certificado de revocación no es válida.</translation>
     </message>
     <message>
       <source>La ruta local está vacía o supera el tamaño permitido.</source>
@@ -670,20 +454,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La solicitud de operación OpenPGP supera el tamaño permitido.</translation>
     </message>
     <message>
-      <source>La subclave ya está revocada.</source>
-      <translation>La subclave ya está revocada.</translation>
-    </message>
-    <message>
       <source>Las consultas online están desactivadas.</source>
       <translation>Las consultas online están desactivadas.</translation>
     </message>
     <message>
       <source>Los servicios online están desactivados.</source>
       <translation>Los servicios online están desactivados.</translation>
-    </message>
-    <message>
-      <source>Material privado eliminado; la parte pública se conserva para {fingerprint}.</source>
-      <translation>Material privado eliminado; la parte pública se conserva para {fingerprint}.</translation>
     </message>
     <message>
       <source>Moviendo carpeta…</source>
@@ -702,20 +478,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay un borrador abierto para guardar.</translation>
     </message>
     <message>
-      <source>No se permite usar una extensión de base de datos como destino de exportación.</source>
-      <translation>No se permite usar una extensión de base de datos como destino de exportación.</translation>
-    </message>
-    <message>
       <source>No se pudo abrir KDE Contacts. Comprueba que KAddressBook está instalado.</source>
       <translation>No se pudo abrir KDE Contacts. Comprueba que KAddressBook está instalado.</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir el canal de comandos de GnuPG.</source>
-      <translation>No se pudo abrir el canal de comandos de GnuPG.</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir el canal de estado de GnuPG.</source>
-      <translation>No se pudo abrir el canal de estado de GnuPG.</translation>
     </message>
     <message>
       <source>No se pudo abrir el contenido del elemento.</source>
@@ -754,16 +518,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo cambiar el orden de la carpeta.</translation>
     </message>
     <message>
-      <source>No se pudo capturar la salida de GnuPG.</source>
-      <translation>No se pudo capturar la salida de GnuPG.</translation>
-    </message>
-    <message>
       <source>No se pudo cargar la bóveda.</source>
       <translation>No se pudo cargar la bóveda.</translation>
-    </message>
-    <message>
-      <source>No se pudo cerrar la salida acotada de GnuPG.</source>
-      <translation>No se pudo cerrar la salida acotada de GnuPG.</translation>
     </message>
     <message>
       <source>No se pudo completar la restauración. Comprueba el espacio disponible y los permisos de la carpeta de datos de KryptoPass.</source>
@@ -778,16 +534,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo crear la bóveda nueva. Comprueba el espacio disponible y vuelve a intentar la restauración.</translation>
     </message>
     <message>
-      <source>No se pudo determinar la fecha actual para validar la caducidad.</source>
-      <translation>No se pudo determinar la fecha actual para validar la caducidad.</translation>
-    </message>
-    <message>
       <source>No se pudo eliminar el elemento.</source>
       <translation>No se pudo eliminar el elemento.</translation>
     </message>
     <message>
       <source>No se pudo eliminar la carpeta.</source>
       <translation>No se pudo eliminar la carpeta.</translation>
+    </message>
+    <message>
+      <source>No se pudo escribir %1.</source>
+      <translation>No se pudo escribir %1.</translation>
     </message>
     <message>
       <source>No se pudo generar el archivo de actividad. Comprueba el espacio disponible e inténtalo de nuevo.</source>
@@ -816,6 +572,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo guardar la copia. Comprueba que puedes escribir en la carpeta elegida y que las claves seleccionadas siguen disponibles.</source>
       <translation>No se pudo guardar la copia. Comprueba que puedes escribir en la carpeta elegida y que las claves seleccionadas siguen disponibles.</translation>
+    </message>
+    <message>
+      <source>No se pudo iniciar gpg.</source>
+      <translation>No se pudo iniciar gpg.</translation>
+    </message>
+    <message>
+      <source>No se pudo leer el archivo %1.</source>
+      <translation>No se pudo leer el archivo %1.</translation>
     </message>
     <message>
       <source>No se pudo leer el archivo. Comprueba su ubicación y los permisos y vuelve a intentarlo.</source>
@@ -870,40 +634,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo publicar el resultado en el hilo de Qt</translation>
     </message>
     <message>
-      <source>No se pudo recuperar el resultado acotado de la exportación.</source>
-      <translation>No se pudo recuperar el resultado acotado de la exportación.</translation>
-    </message>
-    <message>
-      <source>No se pudo recuperar el resultado de la exportación.</source>
-      <translation>No se pudo recuperar el resultado de la exportación.</translation>
-    </message>
-    <message>
-      <source>No se pudo reservar un nombre temporal único.</source>
-      <translation>No se pudo reservar un nombre temporal único.</translation>
-    </message>
-    <message>
-      <source>No se pudo reservar una carpeta temporal privada.</source>
-      <translation>No se pudo reservar una carpeta temporal privada.</translation>
-    </message>
-    <message>
       <source>No se pudo usar esa imagen. Elige un PNG, JPEG o WebP estático de hasta 4 MB, con lados de hasta 4096 píxeles y un máximo de 4 millones de píxeles.</source>
       <translation>No se pudo usar esa imagen. Elige un PNG, JPEG o WebP estático de hasta 4 MB, con lados de hasta 4096 píxeles y un máximo de 4 millones de píxeles.</translation>
-    </message>
-    <message>
-      <source>No se puede certificar una clave revocada o no válida.</source>
-      <translation>No se puede certificar una clave revocada o no válida.</translation>
-    </message>
-    <message>
-      <source>No se puede certificar una identidad no válida.</source>
-      <translation>No se puede certificar una identidad no válida.</translation>
-    </message>
-    <message>
-      <source>No se puede certificar una identidad revocada.</source>
-      <translation>No se puede certificar una identidad revocada.</translation>
-    </message>
-    <message>
-      <source>No se puede elegir como principal una identidad revocada.</source>
-      <translation>No se puede elegir como principal una identidad revocada.</translation>
     </message>
     <message>
       <source>No válida según GnuPG</source>
@@ -938,10 +670,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Ordenando carpeta…</translation>
     </message>
     <message>
-      <source>Parte pública eliminada para {fingerprint}.</source>
-      <translation>Parte pública eliminada para {fingerprint}.</translation>
-    </message>
-    <message>
       <source>Prueba del agente GPG falló: {error}</source>
       <translation>Prueba del agente GPG falló: {error}</translation>
     </message>
@@ -964,10 +692,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Revocación registrada</source>
       <translation>Revocación registrada</translation>
-    </message>
-    <message>
-      <source>Se bloqueó la interacción de revocación de la subclave.</source>
-      <translation>Se bloqueó la interacción de revocación de la subclave.</translation>
     </message>
     <message>
       <source>Secretos personalizados</source>
@@ -1034,10 +758,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>%1 Además, no se pudo actualizar la lista de claves: %2</translation>
     </message>
     <message>
-      <source>%1 debe ser un archivo local regular.</source>
-      <translation>%1 debe ser un archivo local regular.</translation>
-    </message>
-    <message>
       <source>%1 elementos guardarán sus fechas originales en las notas.</source>
       <translation>%1 elementos guardarán sus fechas originales en las notas.</translation>
     </message>
@@ -1046,8 +766,36 @@ No incluye contraseñas ni valores de credenciales.
       <translation>%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.</translation>
     </message>
     <message>
+      <source>%1 está dentro de la carpeta de GnuPG.</source>
+      <translation>%1 está dentro de la carpeta de GnuPG.</translation>
+    </message>
+    <message>
+      <source>%1 identidad(es) certificada(s) en %2.</source>
+      <translation>%1 identidad(es) certificada(s) en %2.</translation>
+    </message>
+    <message>
+      <source>%1 no es un archivo local regular.</source>
+      <translation>%1 no es un archivo local regular.</translation>
+    </message>
+    <message>
+      <source>%1 no indica un archivo.</source>
+      <translation>%1 no indica un archivo.</translation>
+    </message>
+    <message>
       <source>%1 supera el tamaño permitido.</source>
       <translation>%1 supera el tamaño permitido.</translation>
+    </message>
+    <message>
+      <source>%1 tiene una extensión de base de datos.</source>
+      <translation>%1 tiene una extensión de base de datos.</translation>
+    </message>
+    <message>
+      <source>%1 ya está revocada.</source>
+      <translation>%1 ya está revocada.</translation>
+    </message>
+    <message>
+      <source>%1 ya existe y no se sobrescribirá.</source>
+      <translation>%1 ya existe y no se sobrescribirá.</translation>
     </message>
     <message numerus="yes">
       <source>%n clave GPG cargada</source>
@@ -1093,16 +841,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Caducada</translation>
     </message>
     <message>
+      <source>Caducidad de la clave primaria actualizada para %1.</source>
+      <translation>Caducidad de la clave primaria actualizada para %1.</translation>
+    </message>
+    <message>
+      <source>Caducidad de las subclaves seleccionadas actualizada para %1.</source>
+      <translation>Caducidad de las subclaves seleccionadas actualizada para %1.</translation>
+    </message>
+    <message>
+      <source>Cargando dispositivos vinculados…</source>
+      <translation>Cargando dispositivos vinculados…</translation>
+    </message>
+    <message>
       <source>Certificar</source>
       <translation>Certificar</translation>
     </message>
     <message>
       <source>Cifrar</source>
       <translation>Cifrar</translation>
-    </message>
-    <message>
-      <source>Clave %1 %2 desde la fuente externa configurada.</source>
-      <translation>Clave %1 %2 desde la fuente externa configurada.</translation>
     </message>
     <message>
       <source>Clave %1 revocada localmente.</source>
@@ -1169,14 +925,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</translation>
     </message>
     <message>
-      <source>El archivo %1 ya existe; la exportación no lo sobrescribirá.</source>
-      <translation>El archivo %1 ya existe; la exportación no lo sobrescribirá.</translation>
-    </message>
-    <message>
-      <source>El archivo %1 ya existe; no se sobrescribió.</source>
-      <translation>El archivo %1 ya existe; no se sobrescribió.</translation>
-    </message>
-    <message>
       <source>El documento Markdown supera el límite de 256 KiB.</source>
       <translation>El documento Markdown supera el límite de 256 KiB.</translation>
     </message>
@@ -1207,10 +955,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>GnuPG no confirmó la revocación de la subclave %1.</source>
       <translation>GnuPG no confirmó la revocación de la subclave %1.</translation>
-    </message>
-    <message>
-      <source>GnuPG no pudo exportar la clave: %1</source>
-      <translation>GnuPG no pudo exportar la clave: %1</translation>
     </message>
     <message>
       <source>GnuPG terminó, pero la clave %1 aún aparece en el llavero.</source>
@@ -1257,20 +1001,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La clave primaria %1 se creó, pero no aparece en el llavero.</translation>
     </message>
     <message>
-      <source>La clave primaria %1 se creó, pero no se pudo validar: %2</source>
-      <translation>La clave primaria %1 se creó, pero no se pudo validar: %2</translation>
-    </message>
-    <message>
       <source>La clave primaria %1 ya se creó, pero falló la subclave de cifrado: %2</source>
       <translation>La clave primaria %1 ya se creó, pero falló la subclave de cifrado: %2</translation>
     </message>
     <message>
       <source>La fuente externa no devolvió la clave %1 solicitada.</source>
       <translation>La fuente externa no devolvió la clave %1 solicitada.</translation>
-    </message>
-    <message>
-      <source>La identidad `%1` no pertenece a la clave %2.</source>
-      <translation>La identidad `%1` no pertenece a la clave %2.</translation>
     </message>
     <message>
       <source>La importación no aplicó ningún cambio: %1 elemento(s) no importado(s) y %2 registro(s) con error.</source>
@@ -1285,10 +1021,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La solicitud OpenPGP no es válida: %1</translation>
     </message>
     <message>
-      <source>La subclave %1 no pertenece a %2.</source>
-      <translation>La subclave %1 no pertenece a %2.</translation>
-    </message>
-    <message>
       <source>La subclave %1 no pertenece a la clave primaria %2.</source>
       <translation>La subclave %1 no pertenece a la clave primaria %2.</translation>
     </message>
@@ -1297,200 +1029,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No</translation>
     </message>
     <message>
-      <source>No existe la clave %1 en el llavero local.</source>
-      <translation>No existe la clave %1 en el llavero local.</translation>
-    </message>
-    <message>
       <source>No existe una clave local con la huella primaria %1.</source>
       <translation>No existe una clave local con la huella primaria %1.</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir %1: %2</source>
-      <translation>No se pudo abrir %1: %2</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir GnuPG: %1</source>
-      <translation>No se pudo abrir GnuPG: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir la carpeta de destino %1: %2</source>
-      <translation>No se pudo abrir la carpeta de destino %1: %2</translation>
-    </message>
-    <message>
-      <source>No se pudo activar pinentry: %1</source>
-      <translation>No se pudo activar pinentry: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo actualizar la caducidad: %1</source>
-      <translation>No se pudo actualizar la caducidad: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo actualizar la clave desde la fuente configurada: %1</source>
-      <translation>No se pudo actualizar la clave desde la fuente configurada: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo aplicar el certificado de revocación: %1</source>
-      <translation>No se pudo aplicar el certificado de revocación: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo añadir la identidad: %1</source>
-      <translation>No se pudo añadir la identidad: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo cambiar la frase de paso: %1</source>
-      <translation>No se pudo cambiar la frase de paso: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo cambiar la identidad principal: %1</source>
-      <translation>No se pudo cambiar la identidad principal: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo cerrar la consulta de claves: %1</source>
-      <translation>No se pudo cerrar la consulta de claves: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo certificar las identidades: %1</source>
-      <translation>No se pudo certificar las identidades: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo completar la revocación de la subclave: %1</source>
-      <translation>No se pudo completar la revocación de la subclave: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo consultar %1: %2</source>
-      <translation>No se pudo consultar %1: %2</translation>
-    </message>
-    <message>
-      <source>No se pudo consultar el certificado de revocación: %1</source>
-      <translation>No se pudo consultar el certificado de revocación: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo consultar el llavero OpenPGP: %1</source>
-      <translation>No se pudo consultar el llavero OpenPGP: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo consultar la carpeta de revocaciones: %1</source>
-      <translation>No se pudo consultar la carpeta de revocaciones: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo crear la clave primaria: %1</source>
-      <translation>No se pudo crear la clave primaria: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo crear la subclave de %1: %2</source>
-      <translation>No se pudo crear la subclave de %1: %2</translation>
-    </message>
-    <message>
-      <source>No se pudo crear un temporal seguro: %1</source>
-      <translation>No se pudo crear un temporal seguro: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo crear una carpeta temporal privada: %1</source>
-      <translation>No se pudo crear una carpeta temporal privada: %1</translation>
     </message>
     <message>
       <source>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</source>
       <translation>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</translation>
     </message>
     <message>
-      <source>No se pudo eliminar la clave completa: %1</source>
-      <translation>No se pudo eliminar la clave completa: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo eliminar la clave pública: %1</source>
-      <translation>No se pudo eliminar la clave pública: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo eliminar solo el material privado: %1</source>
-      <translation>No se pudo eliminar solo el material privado: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo escribir la exportación: %1</source>
-      <translation>No se pudo escribir la exportación: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo esperar a GnuPG: %1</source>
-      <translation>No se pudo esperar a GnuPG: %1</translation>
-    </message>
-    <message>
       <source>No se pudo generar el QR. El contenido puede superar la capacidad del código.</source>
       <translation>No se pudo generar el QR. El contenido puede superar la capacidad del código.</translation>
-    </message>
-    <message>
-      <source>No se pudo importar el material OpenPGP: %1</source>
-      <translation>No se pudo importar el material OpenPGP: %1</translation>
     </message>
     <message>
       <source>No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña.</source>
       <translation>No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña.</translation>
     </message>
     <message>
-      <source>No se pudo iniciar GnuPG para preparar la revocación: %1</source>
-      <translation>No se pudo iniciar GnuPG para preparar la revocación: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo iniciar GnuPG: %1</source>
-      <translation>No se pudo iniciar GnuPG: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo leer %1: %2</source>
-      <translation>No se pudo leer %1: %2</translation>
-    </message>
-    <message>
-      <source>No se pudo leer el archivo de importación: %1</source>
-      <translation>No se pudo leer el archivo de importación: %1</translation>
-    </message>
-    <message>
       <source>No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido.</source>
       <translation>No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido.</translation>
     </message>
     <message>
-      <source>No se pudo leer el estado de GnuPG: %1</source>
-      <translation>No se pudo leer el estado de GnuPG: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo leer la salida de GnuPG: %1</source>
-      <translation>No se pudo leer la salida de GnuPG: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo leer una clave OpenPGP: %1</source>
-      <translation>No se pudo leer una clave OpenPGP: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo preparar el certificado de revocación: %1</source>
-      <translation>No se pudo preparar el certificado de revocación: %1</translation>
-    </message>
-    <message>
       <source>No se pudo preparar la configuración TOTP.</source>
       <translation>No se pudo preparar la configuración TOTP.</translation>
-    </message>
-    <message>
-      <source>No se pudo preparar la consulta de claves: %1</source>
-      <translation>No se pudo preparar la consulta de claves: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo preparar la exportación: %1</source>
-      <translation>No se pudo preparar la exportación: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo publicar la exportación de forma atómica: %1</source>
-      <translation>No se pudo publicar la exportación de forma atómica: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo responder a GnuPG: %1</source>
-      <translation>No se pudo responder a GnuPG: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo revocar la identidad: %1</source>
-      <translation>No se pudo revocar la identidad: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo seleccionar la clave firmante: %1</source>
-      <translation>No se pudo seleccionar la clave firmante: %1</translation>
-    </message>
-    <message>
-      <source>No se pudo sincronizar la exportación: %1</source>
-      <translation>No se pudo sincronizar la exportación: %1</translation>
     </message>
     <message>
       <source>Nombre</source>
@@ -1509,12 +1069,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Número de tarjeta</translation>
     </message>
     <message>
+      <source>Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión.</source>
+      <translation>Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión.</translation>
+    </message>
+    <message>
       <source>Organize credentials and secure notes with OpenPGP encryption</source>
       <translation>Organiza credenciales y notas seguras con cifrado OpenPGP</translation>
     </message>
     <message>
       <source>PIN</source>
       <translation>PIN</translation>
+    </message>
+    <message>
+      <source>Parte pública eliminada para %1.</source>
+      <translation>Parte pública eliminada para %1.</translation>
     </message>
     <message>
       <source>País</source>
@@ -1573,6 +1141,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>SSH key exceeds size limit</translation>
     </message>
     <message>
+      <source>Se canceló la operación en pinentry.</source>
+      <translation>Se canceló la operación en pinentry.</translation>
+    </message>
+    <message>
       <source>Seguridad</source>
       <translation>Seguridad</translation>
     </message>
@@ -1625,6 +1197,30 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Campos adicionales</translation>
     </message>
     <message>
+      <source> %1 elemento(s) ya estaban actualizados.</source>
+      <translation> %1 elemento(s) ya estaban actualizados.</translation>
+    </message>
+    <message>
+      <source> Se aplicaron %1 revocación(es).</source>
+      <translation> Se aplicaron %1 revocación(es).</translation>
+    </message>
+    <message>
+      <source> Se añadieron %1 firma(s).</source>
+      <translation> Se añadieron %1 firma(s).</translation>
+    </message>
+    <message>
+      <source> Se añadieron %1 identidad(es).</source>
+      <translation> Se añadieron %1 identidad(es).</translation>
+    </message>
+    <message>
+      <source> Se añadieron %1 subclave(s).</source>
+      <translation> Se añadieron %1 subclave(s).</translation>
+    </message>
+    <message>
+      <source> Se detectaron %1 registro(s) con errores.</source>
+      <translation> Se detectaron %1 registro(s) con errores.</translation>
+    </message>
+    <message>
       <source> · conflicto, varias ramas</source>
       <translation> · conflicto, varias ramas</translation>
     </message>
@@ -1645,10 +1241,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Cancela la vinculación pendiente antes de borrar dispositivos.</translation>
     </message>
     <message>
-      <source>Cargando dispositivos autorizados del perfil…</source>
-      <translation>Cargando dispositivos autorizados del perfil…</translation>
-    </message>
-    <message>
       <source>Carpetas</source>
       <translation>Carpetas</translation>
     </message>
@@ -1659,6 +1251,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Cerrando la sesión. La confianza guardada se conserva.</source>
       <translation>Cerrando la sesión. La confianza guardada se conserva.</translation>
+    </message>
+    <message>
+      <source>Certificado de revocación preparado en %1.%2</source>
+      <translation>Certificado de revocación preparado en %1.%2</translation>
+    </message>
+    <message>
+      <source>Clave %1 actualizada desde la fuente externa configurada.</source>
+      <translation>Clave %1 actualizada desde la fuente externa configurada.</translation>
+    </message>
+    <message>
+      <source>Clave %1 importada desde la fuente externa configurada.</source>
+      <translation>Clave %1 importada desde la fuente externa configurada.</translation>
     </message>
     <message>
       <source>Claves SSH</source>
@@ -1679,6 +1283,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Confianza guardada. Abriendo la sesión autenticada…</source>
       <translation>Confianza guardada. Abriendo la sesión autenticada…</translation>
+    </message>
+    <message>
+      <source>Copia privada guardada con permisos 0600 en %1.%2</source>
+      <translation>Copia privada guardada con permisos 0600 en %1.%2</translation>
     </message>
     <message>
       <source>Correo electrónico</source>
@@ -1717,6 +1325,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Descripción: {name}</translation>
     </message>
     <message>
+      <source>Device link setup failed</source>
+      <translation>Device link setup failed</translation>
+    </message>
+    <message>
       <source>Directo</source>
       <translation>Directo</translation>
     </message>
@@ -1749,16 +1361,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</translation>
     </message>
     <message>
+      <source>El certificado de revocación no tiene un formato válido.</source>
+      <translation>El certificado de revocación no tiene un formato válido.</translation>
+    </message>
+    <message>
       <source>El dispositivo ya no está autorizado.</source>
       <translation>El dispositivo ya no está autorizado.</translation>
-    </message>
-    <message>
-      <source>El llavero del sistema no permitió abrir la identidad. No se creó un sustituto.</source>
-      <translation>El llavero del sistema no permitió abrir la identidad. No se creó un sustituto.</translation>
-    </message>
-    <message>
-      <source>El perfil de pruebas falta o no es válido. No se reparó automáticamente.</source>
-      <translation>El perfil de pruebas falta o no es válido. No se reparó automáticamente.</translation>
     </message>
     <message>
       <source>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</source>
@@ -1771,6 +1379,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El teléfono ya no está conectado con la sesión preparada para la prueba.</source>
       <translation>El teléfono ya no está conectado con la sesión preparada para la prueba.</translation>
+    </message>
+    <message>
+      <source>Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar.</source>
+      <translation>Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar.</translation>
     </message>
     <message>
       <source>Elementos personalizados</source>
@@ -1833,6 +1445,26 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Fechas originales: %1</translation>
     </message>
     <message>
+      <source>Frase de paso actualizada para %1.</source>
+      <translation>Frase de paso actualizada para %1.</translation>
+    </message>
+    <message>
+      <source>GnuPG %1 no es compatible; se necesita %2 o posterior.</source>
+      <translation>GnuPG %1 no es compatible; se necesita %2 o posterior.</translation>
+    </message>
+    <message>
+      <source>GnuPG eliminó también la parte pública de %1; la operación quedó parcialmente aplicada.</source>
+      <translation>GnuPG eliminó también la parte pública de %1; la operación quedó parcialmente aplicada.</translation>
+    </message>
+    <message>
+      <source>GnuPG no pudo %1: %2</source>
+      <translation>GnuPG no pudo %1: %2</translation>
+    </message>
+    <message>
+      <source>GnuPG terminó, pero el material privado de %1 sigue presente.</source>
+      <translation>GnuPG terminó, pero el material privado de %1 sigue presente.</translation>
+    </message>
+    <message>
       <source>Identidades</source>
       <translation>Identidades</translation>
     </message>
@@ -1853,12 +1485,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La bóveda cambió durante la operación. Actualiza la prueba e inténtalo otra vez.</translation>
     </message>
     <message>
+      <source>La clave %1 está caducada.</source>
+      <translation>La clave %1 está caducada.</translation>
+    </message>
+    <message>
+      <source>La clave %1 está revocada, deshabilitada o no es válida.</source>
+      <translation>La clave %1 está revocada, deshabilitada o no es válida.</translation>
+    </message>
+    <message>
       <source>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</source>
       <translation>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</translation>
     </message>
     <message>
       <source>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</source>
       <translation>La exportación contiene datos que la bóveda actual no puede representar. No se ha importado ningún elemento. Conserva el original y revisa sus tipos y tamaños.</translation>
+    </message>
+    <message>
+      <source>La identidad está revocada.</source>
+      <translation>La identidad está revocada.</translation>
+    </message>
+    <message>
+      <source>La identidad no es válida.</source>
+      <translation>La identidad no es válida.</translation>
     </message>
     <message>
       <source>La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.</source>
@@ -1875,6 +1523,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La prueba sintética solo está disponible en Desktop debug.</source>
       <translation>La prueba sintética solo está disponible en Desktop debug.</translation>
+    </message>
+    <message>
+      <source>La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas.</source>
+      <translation>La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas.</translation>
+    </message>
+    <message>
+      <source>La red local no está disponible con la privacidad elegida.</source>
+      <translation>La red local no está disponible con la privacidad elegida.</translation>
     </message>
     <message>
       <source>La sesión cambió antes de activar la transferencia. No se enviará material privado.</source>
@@ -1895,6 +1551,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</source>
       <translation>La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar.</translation>
+    </message>
+    <message>
+      <source>La solicitud OpenPGP contiene un valor no válido.</source>
+      <translation>La solicitud OpenPGP contiene un valor no válido.</translation>
     </message>
     <message>
       <source>La transferencia caducó. Vuelve a iniciar la prueba.</source>
@@ -1933,6 +1593,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Logins</translation>
     </message>
     <message>
+      <source>Material privado eliminado; la parte pública se conserva para %1.</source>
+      <translation>Material privado eliminado; la parte pública se conserva para %1.</translation>
+    </message>
+    <message>
       <source>Modificado el %1</source>
       <translation>Modificado el %1</translation>
     </message>
@@ -1949,6 +1613,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay en este equipo una clave privada de esta bóveda. Importa tu clave para desbloquearla.</translation>
     </message>
     <message>
+      <source>No hay ninguna clave privada OpenPGP disponible.</source>
+      <translation>No hay ninguna clave privada OpenPGP disponible.</translation>
+    </message>
+    <message>
       <source>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</source>
       <translation>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</translation>
     </message>
@@ -1957,16 +1625,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se completó el borrado. No se creó otra identidad. Puedes reintentar el reinicio del perfil.</translation>
     </message>
     <message>
+      <source>No se pudieron cargar los datos de vinculación de este equipo.</source>
+      <translation>No se pudieron cargar los datos de vinculación de este equipo.</translation>
+    </message>
+    <message>
+      <source>No se pudieron cargar los dispositivos guardados.</source>
+      <translation>No se pudieron cargar los dispositivos guardados.</translation>
+    </message>
+    <message>
       <source>No se pudieron cargar los nombres locales. La confianza se conserva.</source>
       <translation>No se pudieron cargar los nombres locales. La confianza se conserva.</translation>
     </message>
     <message>
-      <source>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</source>
-      <translation>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</translation>
+      <source>No se pudieron localizar los datos de vinculación.</source>
+      <translation>No se pudieron localizar los datos de vinculación.</translation>
     </message>
     <message>
-      <source>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</source>
-      <translation>No se pudo abrir el perfil existente. No se creó ni reparó una identidad automáticamente.</translation>
+      <source>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</source>
+      <translation>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</translation>
     </message>
     <message>
       <source>No se pudo abrir el perfil existente. No se creó una identidad nueva.</source>
@@ -1979,6 +1655,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo acceder al dueño de la sesión activa.</source>
       <translation>No se pudo acceder al dueño de la sesión activa.</translation>
+    </message>
+    <message>
+      <source>No se pudo acceder al llavero del sistema para abrir la identidad de este equipo.</source>
+      <translation>No se pudo acceder al llavero del sistema para abrir la identidad de este equipo.</translation>
+    </message>
+    <message>
+      <source>No se pudo comunicar con gpg.</source>
+      <translation>No se pudo comunicar con gpg.</translation>
+    </message>
+    <message>
+      <source>No se pudo crear un archivo temporal privado.</source>
+      <translation>No se pudo crear un archivo temporal privado.</translation>
     </message>
     <message>
       <source>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</source>
@@ -2045,10 +1733,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo localizar el perfil de dispositivos.</translation>
     </message>
     <message>
-      <source>No se pudo localizar el perfil de pruebas.</source>
-      <translation>No se pudo localizar el perfil de pruebas.</translation>
-    </message>
-    <message>
       <source>No se pudo preparar el servidor de conexión por Internet.</source>
       <translation>No se pudo preparar el servidor de conexión por Internet.</translation>
     </message>
@@ -2063,6 +1747,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo verificar tu clave. La bóveda sigue bloqueada.</source>
       <translation>No se pudo verificar tu clave. La bóveda sigue bloqueada.</translation>
+    </message>
+    <message>
+      <source>No se puede comprobar si la conexión a Internet pasa por una VPN en este sistema, así que quedó en pausa.</source>
+      <translation>No se puede comprobar si la conexión a Internet pasa por una VPN en este sistema, así que quedó en pausa.</translation>
+    </message>
+    <message>
+      <source>No se puede usar %1 como carpeta de destino.</source>
+      <translation>No se puede usar %1 como carpeta de destino.</translation>
     </message>
     <message>
       <source>Notas</source>
@@ -2145,10 +1837,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>STUN binding request from</translation>
     </message>
     <message>
-      <source>Se canceló la creación de la clave.</source>
-      <translation>Se canceló la creación de la clave.</translation>
-    </message>
-    <message>
       <source>Selecciona la dirección de Desktop en tu red local.</source>
       <translation>Selecciona la dirección de Desktop en tu red local.</translation>
     </message>
@@ -2175,10 +1863,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Sin carpeta</source>
       <translation>Sin carpeta</translation>
-    </message>
-    <message>
-      <source>Solo retransmisión está activo y bloquea las conexiones LAN directas.</source>
-      <translation>Solo retransmisión está activo y bloquea las conexiones LAN directas.</translation>
     </message>
     <message>
       <source>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</source>
@@ -2265,10 +1949,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Ya se inició una transferencia en esta sesión.</translation>
     </message>
     <message>
-      <source>[GNUPG:] </source>
-      <translation>[GNUPG:] </translation>
-    </message>
-    <message>
       <source>[Imagen omitida]</source>
       <translation>[Imagen omitida]</translation>
     </message>
@@ -2297,6 +1977,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>a secret has more than one companion</translation>
     </message>
     <message>
+      <source>abrir el contexto</source>
+      <translation>abrir el contexto</translation>
+    </message>
+    <message>
       <source>active store path is not valid UTF-8</source>
       <translation>active store path is not valid UTF-8</translation>
     </message>
@@ -2315,6 +1999,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>active store setting permissions are not private</source>
       <translation>active store setting permissions are not private</translation>
+    </message>
+    <message>
+      <source>actualizar la caducidad</source>
+      <translation>actualizar la caducidad</translation>
     </message>
     <message>
       <source>an array with at most {LIMIT} items</source>
@@ -2367,6 +2055,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>authenticator configuration is required</source>
       <translation>authenticator configuration is required</translation>
+    </message>
+    <message>
+      <source>añadir la identidad</source>
+      <translation>añadir la identidad</translation>
     </message>
     <message>
       <source>background plaintext limit exceeded</source>
@@ -2621,8 +2313,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>browser request cancelled</translation>
     </message>
     <message>
-      <source>buffer de exportación bloqueado</source>
-      <translation>buffer de exportación bloqueado</translation>
+      <source>cambiar la frase de paso</source>
+      <translation>cambiar la frase de paso</translation>
+    </message>
+    <message>
+      <source>cambiar la identidad principal</source>
+      <translation>cambiar la identidad principal</translation>
+    </message>
+    <message>
+      <source>completar la operación</source>
+      <translation>completar la operación</translation>
+    </message>
+    <message>
+      <source>consultar el llavero</source>
+      <translation>consultar el llavero</translation>
     </message>
     <message>
       <source>could not activate the selected store</source>
@@ -2969,6 +2673,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not write the active store setting</translation>
     </message>
     <message>
+      <source>crear la clave</source>
+      <translation>crear la clave</translation>
+    </message>
+    <message>
+      <source>crear la subclave</source>
+      <translation>crear la subclave</translation>
+    </message>
+    <message>
       <source>database file belongs to another application</source>
       <translation>database file belongs to another application</translation>
     </message>
@@ -3027,6 +2739,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>folder order is invalid</source>
       <translation>folder order is invalid</translation>
+    </message>
+    <message>
+      <source>gpg respondió de forma inesperada.</source>
+      <translation>gpg respondió de forma inesperada.</translation>
+    </message>
+    <message>
+      <source>gpg superó el tiempo límite.</source>
+      <translation>gpg superó el tiempo límite.</translation>
+    </message>
+    <message>
+      <source>gpg terminó con %1.</source>
+      <translation>gpg terminó con %1.</translation>
     </message>
     <message>
       <source>gpg-agent did not accept the request to forget the passphrase</source>
@@ -3133,22 +2857,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>isolated OpenPGP path is not valid UTF-8</translation>
     </message>
     <message>
-      <source>key {}</source>
-      <translation>key {}</translation>
-    </message>
-    <message>
-      <source>la clave primaria</source>
-      <translation>la clave primaria</translation>
-    </message>
-    <message>
-      <source>la exportación supera el tamaño permitido</source>
-      <translation>la exportación supera el tamaño permitido</translation>
-    </message>
-    <message>
-      <source>las subclaves seleccionadas</source>
-      <translation>las subclaves seleccionadas</translation>
-    </message>
-    <message>
       <source>legacy OpenPGP ciphertext without integrity protection is not accepted</source>
       <translation>legacy OpenPGP ciphertext without integrity protection is not accepted</translation>
     </message>
@@ -3241,6 +2949,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>restore output already exists; choose a new vault file</translation>
     </message>
     <message>
+      <source>revocar la identidad</source>
+      <translation>revocar la identidad</translation>
+    </message>
+    <message>
+      <source>revocar la subclave</source>
+      <translation>revocar la subclave</translation>
+    </message>
+    <message>
       <source>secret changed while opening</source>
       <translation>secret changed while opening</translation>
     </message>
@@ -3259,6 +2975,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>secret title cannot be empty</source>
       <translation>secret title cannot be empty</translation>
+    </message>
+    <message>
+      <source>seleccionar la clave firmante</source>
+      <translation>seleccionar la clave firmante</translation>
     </message>
     <message>
       <source>select a regular image file</source>
@@ -3489,10 +3209,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>{} · {}{marker}</source>
       <translation>{} · {}{marker}</translation>
-    </message>
-    <message>
-      <source>{}identidad(es) certificada(s) en {fingerprint}.</source>
-      <translation>{}identidad(es) certificada(s) en {fingerprint}.</translation>
     </message>
   </context>
   <context>
@@ -4113,14 +3829,6 @@ Huella(s) detectadas:
       <translation>No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar los dispositivos.</translation>
     </message>
     <message>
-      <source>El perfil local de pruebas no está disponible. No se creó una identidad sustituta.</source>
-      <translation>El perfil local de pruebas no está disponible. No se creó una identidad sustituta.</translation>
-    </message>
-    <message>
-      <source>El llavero del sistema no pudo abrir la identidad de pruebas. No se creó una identidad sustituta.</source>
-      <translation>El llavero del sistema no pudo abrir la identidad de pruebas. No se creó una identidad sustituta.</translation>
-    </message>
-    <message>
       <source>No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.</source>
       <translation>No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.</translation>
     </message>
@@ -4151,10 +3859,6 @@ Huella(s) detectadas:
     <message>
       <source>Tus dispositivos</source>
       <translation>Tus dispositivos</translation>
-    </message>
-    <message>
-      <source>Conexión de pruebas · Sin sincronización de bóveda</source>
-      <translation>Conexión de pruebas · Sin sincronización de bóveda</translation>
     </message>
     <message>
       <source>Más opciones</source>
@@ -4241,10 +3945,6 @@ Huella(s) detectadas:
       <translation>Los 7 coinciden</translation>
     </message>
     <message>
-      <source>Conectar por Internet</source>
-      <translation>Conectar por Internet</translation>
-    </message>
-    <message>
       <source>Servidor de conexión (wss://…)</source>
       <translation>Servidor de conexión (wss://…)</translation>
     </message>
@@ -4253,44 +3953,96 @@ Huella(s) detectadas:
       <translation>Servidor de conexión por Internet</translation>
     </message>
     <message>
-      <source>Exigir VPN para conexiones por Internet</source>
-      <translation>Exigir VPN para conexiones por Internet</translation>
-    </message>
-    <message>
-      <source>Permitir una excepción explícita para recuperación LAN</source>
-      <translation>Permitir una excepción explícita para recuperación LAN</translation>
-    </message>
-    <message>
-      <source>Usar solo retransmisión TURN</source>
-      <translation>Usar solo retransmisión TURN</translation>
-    </message>
-    <message>
-      <source>Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.</source>
-      <translation>Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.</translation>
-    </message>
-    <message>
-      <source>Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.</source>
-      <translation>Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.</translation>
-    </message>
-    <message>
-      <source>Usar conexión por red local</source>
-      <translation>Usar conexión por red local</translation>
-    </message>
-    <message>
-      <source>Interfaz de red local de Desktop</source>
-      <translation>Interfaz de red local de Desktop</translation>
-    </message>
-    <message>
       <source>Actualizar redes</source>
       <translation>Actualizar redes</translation>
     </message>
     <message>
-      <source>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</source>
-      <translation>No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.</translation>
+      <source>Vuelve a cargar los dispositivos. Si el problema continúa, consulta el registro de la aplicación.</source>
+      <translation>Vuelve a cargar los dispositivos. Si el problema continúa, consulta el registro de la aplicación.</translation>
     </message>
     <message>
-      <source>Modo emulador avanzado: solo funciona cuando Android se ejecuta en esta computadora.</source>
-      <translation>Modo emulador avanzado: solo funciona cuando Android se ejecuta en esta computadora.</translation>
+      <source>Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.</source>
+      <translation>Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>Vincula y conecta tus dispositivos</source>
+      <translation>Vincula y conecta tus dispositivos</translation>
+    </message>
+    <message>
+      <source>Privacidad de la conexión</source>
+      <translation>Privacidad de la conexión</translation>
+    </message>
+    <message>
+      <source>Automática (recomendada)</source>
+      <translation>Automática (recomendada)</translation>
+    </message>
+    <message>
+      <source>Usa la ruta que elija el sistema, incluida tu VPN si está conectada.</source>
+      <translation>Usa la ruta que elija el sistema, incluida tu VPN si está conectada.</translation>
+    </message>
+    <message>
+      <source>Solo a través de VPN</source>
+      <translation>Solo a través de VPN</translation>
+    </message>
+    <message>
+      <source>Internet solo se usa mientras el sistema lo envía por una VPN. Si la VPN se desconecta, la conexión se pausa.</source>
+      <translation>Internet solo se usa mientras el sistema lo envía por una VPN. Si la VPN se desconecta, la conexión se pausa.</translation>
+    </message>
+    <message>
+      <source>VPN conectada: la conexión a Internet pasa por ella.</source>
+      <translation>VPN conectada: la conexión a Internet pasa por ella.</translation>
+    </message>
+    <message>
+      <source>No hay una VPN conectada. Las conexiones por Internet están en pausa hasta que la conectes.</source>
+      <translation>No hay una VPN conectada. Las conexiones por Internet están en pausa hasta que la conectes.</translation>
+    </message>
+    <message>
+      <source>Este sistema no permite comprobar la VPN, así que las conexiones por Internet están en pausa.</source>
+      <translation>Este sistema no permite comprobar la VPN, así que las conexiones por Internet están en pausa.</translation>
+    </message>
+    <message>
+      <source>Permitir también la red local</source>
+      <translation>Permitir también la red local</translation>
+    </message>
+    <message>
+      <source>Ocultar mi dirección IP al otro dispositivo</source>
+      <translation>Ocultar mi dirección IP al otro dispositivo</translation>
+    </message>
+    <message>
+      <source>Todo pasa por el servidor de retransmisión. Es algo más lento y desactiva la red local.</source>
+      <translation>Todo pasa por el servidor de retransmisión. Es algo más lento y desactiva la red local.</translation>
+    </message>
+    <message>
+      <source>Cómo emparejar un dispositivo nuevo</source>
+      <translation>Cómo emparejar un dispositivo nuevo</translation>
+    </message>
+    <message>
+      <source>Por Internet</source>
+      <translation>Por Internet</translation>
+    </message>
+    <message>
+      <source>En la misma red local</source>
+      <translation>En la misma red local</translation>
+    </message>
+    <message>
+      <source>No disponible mientras ocultas tu dirección IP.</source>
+      <translation>No disponible mientras ocultas tu dirección IP.</translation>
+    </message>
+    <message>
+      <source>No disponible: activa «Permitir también la red local» en Privacidad.</source>
+      <translation>No disponible: activa «Permitir también la red local» en Privacidad.</translation>
+    </message>
+    <message>
+      <source>Red local de este equipo</source>
+      <translation>Red local de este equipo</translation>
+    </message>
+    <message>
+      <source>No se encontró una red local. Conéctate a Wi-Fi o Ethernet y actualiza las redes.</source>
+      <translation>No se encontró una red local. Conéctate a Wi-Fi o Ethernet y actualiza las redes.</translation>
+    </message>
+    <message>
+      <source>Emulador Android en este equipo (avanzado)</source>
+      <translation>Emulador Android en este equipo (avanzado)</translation>
     </message>
     <message>
       <source>Dispositivos autorizados</source>

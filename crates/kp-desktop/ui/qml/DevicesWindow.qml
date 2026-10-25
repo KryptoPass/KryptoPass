@@ -6,6 +6,7 @@ import org.kde.kirigami as Kirigami
 
 Controls.ApplicationWindow {
     id: dialog
+    objectName: "devicesWindow"
     required property var controller
     readonly property bool opened: visible
     readonly property bool available: controller.available
@@ -17,6 +18,8 @@ Controls.ApplicationWindow {
     property bool reconnectFlow: false
     property string expandedDeviceId: ""
     property string syncExpandedDeviceId: ""
+    // Which offer the last key transfer of this window carried, to label its status.
+    property bool keyTransferVault: false
     property string aliasTargetId: ""
     property string aliasDraft: ""
     property string forgetTargetId: ""
@@ -25,8 +28,20 @@ Controls.ApplicationWindow {
     readonly property var snapshot: parseSnapshot(controller.devicesSnapshot)
     readonly property var devices: snapshot.devices
     readonly property var sasRows: parseSasRows(controller.sasEmojis)
+    // Phone → Desktop vault-identity offer; opens its dialog while visible.
+    readonly property var inboundTransfer: parseInboundTransfer(controller.inboundKeyTransfer)
+    onInboundTransferChanged: {
+        if (inboundTransfer.visible) {
+            if (!inboundKeyDialog.opened)
+                inboundKeyDialog.open();
+        } else if (inboundKeyDialog.opened) {
+            inboundKeyDialog.close();
+        }
+    }
     readonly property bool sasReady: sasRows.length === 7
     readonly property bool waitingForPeer: controller.bootstrap.length > 0 && controller.statusCode === "waiting_peer"
+    // Any LAN path (pairing, recovery, emulator) is allowed by the privacy choices.
+    readonly property bool lanAllowed: !controller.relayOnly && (!controller.requireVpn || controller.allowLanException)
     readonly property bool comparing: controller.awaiting || controller.statusCode === "confirming"
     readonly property string statusHint: hintForStatus(controller.statusCode)
     readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error", "network_policy_blocked", "network_policy_changed"].includes(controller.statusCode)
@@ -48,6 +63,42 @@ Controls.ApplicationWindow {
         show();
         raise();
         requestActivate();
+    }
+
+    function parseInboundTransfer(value) {
+        try {
+            const parsed = JSON.parse(value || "{}");
+            return parsed && typeof parsed === "object" ? parsed : ({ visible: false });
+        } catch (error) {
+            return ({ visible: false });
+        }
+    }
+
+    function inboundPhaseLabel(transfer) {
+        switch (transfer.phase) {
+        case "assessing":
+            return qsTr("Revisando la clave ofrecida…");
+        case "waiting_decision":
+            return qsTr("Esperando tu decisión");
+        case "receiving":
+            return qsTr("Recibiendo (%1 de %2 bytes)").arg(transfer.received || 0).arg(transfer.total || 0);
+        case "importing":
+            return qsTr("Importando en GnuPG");
+        case "verifying":
+            return qsTr("Comprobando el desafío");
+        case "complete":
+            return qsTr("Completado");
+        case "rejected":
+            return qsTr("Rechazada");
+        case "cancelled":
+            return qsTr("Cancelada por el teléfono");
+        case "expired":
+            return qsTr("Caducada");
+        case "failed":
+            return qsTr("Error");
+        default:
+            return "";
+        }
     }
 
     function parseSnapshot(value) {
@@ -108,6 +159,21 @@ Controls.ApplicationWindow {
         return Kirigami.Theme.disabledTextColor;
     }
 
+    function keyTransferLabel(phase) {
+        switch (phase) {
+        case "waiting_acceptance":
+            return qsTr("Esperando que aceptes en el teléfono");
+        case "sending":
+            return qsTr("Enviando tu clave");
+        case "waiting_receipt":
+            return qsTr("Esperando que el teléfono la guarde");
+        case "complete":
+            return qsTr("El teléfono guardó tu clave y comprobó que puede descifrar");
+        default:
+            return syntheticTransferLabel(phase);
+        }
+    }
+
     function syntheticTransferLabel(phase) {
         switch (phase) {
         case "ready":
@@ -162,9 +228,9 @@ Controls.ApplicationWindow {
         case "trust_error":
             return qsTr("No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar los dispositivos.");
         case "profile_error":
-            return qsTr("El perfil local de pruebas no está disponible. No se creó una identidad sustituta.");
+            return qsTr("Vuelve a cargar los dispositivos. Si el problema continúa, consulta el registro de la aplicación.");
         case "keystore_error":
-            return qsTr("El llavero del sistema no pudo abrir la identidad de pruebas. No se creó una identidad sustituta.");
+            return qsTr("Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.");
         case "authentication_error":
             return qsTr("No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.");
         case "rejected":
@@ -263,7 +329,7 @@ Controls.ApplicationWindow {
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Conexión de pruebas · Sin sincronización de bóveda")
+                    text: qsTr("Vincula y conecta tus dispositivos")
                     textFormat: Text.PlainText
                     color: Kirigami.Theme.disabledTextColor
                     elide: Text.ElideRight
@@ -384,7 +450,7 @@ Controls.ApplicationWindow {
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: dialog.controller.internetEnabled ? qsTr("Ambos dispositivos necesitan acceso a Internet.") : (dialog.controller.lanEnabled ? qsTr("Ambos dispositivos deben estar en la misma red local.") : qsTr("Modo emulador: solo para Android en esta computadora."))
+                        text: dialog.controller.internetEnabled && dialog.controller.lanEnabled ? qsTr("El teléfono prueba primero la red local y, si no llega, usa Internet.") : dialog.controller.internetEnabled ? qsTr("Ambos dispositivos necesitan acceso a Internet.") : (dialog.controller.lanEnabled ? qsTr("Ambos dispositivos deben estar en la misma red local.") : qsTr("Modo emulador: solo para Android en esta computadora."))
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                         color: Kirigami.Theme.disabledTextColor
@@ -506,11 +572,14 @@ Controls.ApplicationWindow {
                 }
             }
 
-            // Connection options, folded by default.
+            // Connection options, folded by default. Choices that cannot work
+            // together are disabled here; the controller refuses them as well.
+            // Each control restores its binding after a click so later backend
+            // updates (normalization, VPN state) stay visible.
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.networkOptionsVisible
-                text: qsTr("Opciones de conexión")
+                text: qsTr("Privacidad de la conexión")
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -519,17 +588,139 @@ Controls.ApplicationWindow {
                 visible: dialog.networkOptionsVisible
                 spacing: Kirigami.Units.smallSpacing
 
+                Controls.RadioButton {
+                    id: privacyAutomatic
+                    Layout.fillWidth: true
+                    text: qsTr("Automática (recomendada)")
+                    checked: !dialog.controller.requireVpn
+                    enabled: !dialog.controller.maintenanceBusy
+                    onToggled: {
+                        if (checked)
+                            dialog.controller.configurePrivacy(false, false, dialog.controller.relayOnly);
+                        checked = Qt.binding(() => !dialog.controller.requireVpn);
+                    }
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: privacyAutomatic.indicator.width + privacyAutomatic.spacing
+                    text: qsTr("Usa la ruta que elija el sistema, incluida tu VPN si está conectada.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Controls.RadioButton {
+                    id: privacyVpn
+                    Layout.fillWidth: true
+                    text: qsTr("Solo a través de VPN")
+                    checked: dialog.controller.requireVpn
+                    enabled: !dialog.controller.maintenanceBusy
+                    onToggled: {
+                        if (checked)
+                            dialog.controller.configurePrivacy(true, dialog.controller.allowLanException, dialog.controller.relayOnly);
+                        checked = Qt.binding(() => dialog.controller.requireVpn);
+                    }
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: privacyVpn.indicator.width + privacyVpn.spacing
+                    text: qsTr("Internet solo se usa mientras el sistema lo envía por una VPN. Si la VPN se desconecta, la conexión se pausa.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: dialog.controller.requireVpn
+                    type: dialog.controller.vpnStatus === 2 ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
+                    text: {
+                        switch (dialog.controller.vpnStatus) {
+                        case 2:
+                            return qsTr("VPN conectada: la conexión a Internet pasa por ella.");
+                        case 3:
+                            return qsTr("No hay una VPN conectada. Las conexiones por Internet están en pausa hasta que la conectes.");
+                        default:
+                            return qsTr("Este sistema no permite comprobar la VPN, así que las conexiones por Internet están en pausa.");
+                        }
+                    }
+                }
                 Controls.CheckBox {
                     Layout.fillWidth: true
-                    text: qsTr("Conectar por Internet")
-                    checked: dialog.controller.internetEnabled
+                    Layout.leftMargin: privacyVpn.indicator.width + privacyVpn.spacing
+                    visible: dialog.controller.requireVpn
+                    text: qsTr("Permitir también la red local")
+                    checked: dialog.controller.allowLanException && !dialog.controller.relayOnly
+                    enabled: !dialog.controller.relayOnly && !dialog.controller.maintenanceBusy
+                    onToggled: {
+                        dialog.controller.configurePrivacy(true, checked, dialog.controller.relayOnly);
+                        checked = Qt.binding(() => dialog.controller.allowLanException && !dialog.controller.relayOnly);
+                    }
+                }
+                Controls.CheckBox {
+                    id: hideAddress
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    text: qsTr("Ocultar mi dirección IP al otro dispositivo")
+                    checked: dialog.controller.relayOnly
+                    enabled: !dialog.controller.maintenanceBusy
+                    onToggled: {
+                        dialog.controller.configurePrivacy(dialog.controller.requireVpn, dialog.controller.allowLanException, checked);
+                        checked = Qt.binding(() => dialog.controller.relayOnly);
+                    }
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: hideAddress.indicator.width + hideAddress.spacing
+                    text: qsTr("Todo pasa por el servidor de retransmisión. Es algo más lento y desactiva la red local.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: Kirigami.Theme.disabledTextColor
+                }
+            }
+
+            Kirigami.ListSectionHeader {
+                Layout.fillWidth: true
+                visible: dialog.networkOptionsVisible
+                text: qsTr("Cómo emparejar un dispositivo nuevo")
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                visible: dialog.networkOptionsVisible
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.RadioButton {
+                    id: pairByAuto
+                    Layout.fillWidth: true
+                    text: qsTr("Automático: red local y, si no llega, Internet")
+                    checked: dialog.controller.internetEnabled && dialog.controller.lanEnabled
+                    enabled: !dialog.controller.busy && dialog.lanAllowed
+                    onToggled: {
+                        if (checked) {
+                            dialog.controller.configureNetwork(true, dialog.controller.networkIndex);
+                            dialog.controller.configureInternet(true, relayField.text);
+                        }
+                        checked = Qt.binding(() => dialog.controller.internetEnabled && dialog.controller.lanEnabled);
+                    }
+                }
+                Controls.RadioButton {
+                    id: pairByInternet
+                    Layout.fillWidth: true
+                    text: qsTr("Solo por Internet")
+                    checked: dialog.controller.internetEnabled && !dialog.controller.lanEnabled
                     enabled: !dialog.controller.busy
-                    onToggled: dialog.controller.configureInternet(checked, relayField.text)
+                    onToggled: {
+                        if (checked) {
+                            dialog.controller.configureNetwork(false, -1);
+                            dialog.controller.configureInternet(true, relayField.text);
+                        }
+                        checked = Qt.binding(() => dialog.controller.internetEnabled && !dialog.controller.lanEnabled);
+                    }
                 }
                 Controls.TextField {
                     id: relayField
                     Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.gridUnit
+                    Layout.leftMargin: pairByInternet.indicator.width + pairByInternet.spacing
                     visible: dialog.controller.internetEnabled
                     enabled: !dialog.controller.busy
                     text: dialog.controller.relayOrigin
@@ -537,59 +728,39 @@ Controls.ApplicationWindow {
                     Accessible.name: qsTr("Servidor de conexión por Internet")
                     onEditingFinished: dialog.controller.configureInternet(true, text)
                 }
-                Controls.CheckBox {
+                Controls.RadioButton {
+                    id: pairByLan
                     Layout.fillWidth: true
-                    text: qsTr("Exigir VPN para conexiones por Internet")
-                    checked: dialog.controller.requireVpn
-                    enabled: !dialog.controller.maintenanceBusy
-                    onToggled: dialog.controller.configurePrivacy(checked, dialog.controller.allowLanException, dialog.controller.relayOnly)
+                    text: qsTr("Solo red local")
+                    checked: dialog.controller.lanEnabled && !dialog.controller.internetEnabled
+                    enabled: !dialog.controller.busy && dialog.lanAllowed
+                    onToggled: {
+                        if (checked) {
+                            dialog.controller.configureInternet(false, relayField.text);
+                            dialog.controller.configureNetwork(true, dialog.controller.networkIndex);
+                        }
+                        checked = Qt.binding(() => dialog.controller.lanEnabled && !dialog.controller.internetEnabled);
+                    }
                 }
-                Controls.CheckBox {
+                Controls.Label {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.gridUnit
-                    visible: dialog.controller.requireVpn
-                    text: qsTr("Permitir una excepción explícita para recuperación LAN")
-                    checked: dialog.controller.allowLanException
-                    enabled: !dialog.controller.maintenanceBusy
-                    onToggled: dialog.controller.configurePrivacy(dialog.controller.requireVpn, checked, dialog.controller.relayOnly)
-                }
-                Controls.CheckBox {
-                    Layout.fillWidth: true
-                    text: qsTr("Usar solo retransmisión TURN")
-                    checked: dialog.controller.relayOnly
-                    enabled: !dialog.controller.maintenanceBusy
-                    onToggled: dialog.controller.configurePrivacy(dialog.controller.requireVpn, dialog.controller.allowLanException, checked)
-                }
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    visible: dialog.controller.vpnStatus == 1
-                    type: Kirigami.MessageType.Warning
-                    text: qsTr("Desktop no puede verificar que DNS, señalización, STUN, TURN y UDP estén cubiertos por la VPN. Exigir VPN bloquea las conexiones por Internet; la recuperación LAN también queda bloqueada hasta activar su excepción.")
-                }
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    visible: dialog.controller.relayOnly
-                    type: Kirigami.MessageType.Information
-                    text: qsTr("Solo retransmisión elimina STUN y candidatos directos, exige un servidor TURN válido y bloquea las conexiones LAN directas.")
-                }
-                Controls.CheckBox {
-                    Layout.fillWidth: true
-                    visible: !dialog.controller.internetEnabled
-                    text: qsTr("Usar conexión por red local")
-                    checked: dialog.controller.lanEnabled
-                    enabled: !dialog.controller.busy
-                    onToggled: dialog.controller.configureNetwork(checked, dialog.controller.networkIndex)
+                    Layout.leftMargin: pairByLan.indicator.width + pairByLan.spacing
+                    visible: !dialog.lanAllowed
+                    text: dialog.controller.relayOnly ? qsTr("No disponible mientras ocultas tu dirección IP.") : qsTr("No disponible: activa «Permitir también la red local» en Privacidad.")
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: Kirigami.Theme.disabledTextColor
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.gridUnit
-                    visible: dialog.controller.lanEnabled && !dialog.controller.internetEnabled
+                    Layout.leftMargin: pairByLan.indicator.width + pairByLan.spacing
+                    visible: dialog.lanAllowed && dialog.controller.lanEnabled
                     Controls.ComboBox {
                         Layout.fillWidth: true
                         enabled: !dialog.controller.busy
                         model: dialog.controller.networkAddresses
                         currentIndex: dialog.controller.networkIndex
-                        Accessible.name: qsTr("Interfaz de red local de Desktop")
+                        Accessible.name: qsTr("Red local de este equipo")
                         onActivated: index => dialog.controller.configureNetwork(true, index)
                     }
                     Controls.ToolButton {
@@ -604,19 +775,26 @@ Controls.ApplicationWindow {
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    visible: dialog.controller.lanEnabled && !dialog.controller.internetEnabled && dialog.controller.networkIndex < 0
-                    text: qsTr("No hay una dirección local disponible. Actualiza las redes o usa el modo emulador.")
+                    Layout.leftMargin: pairByLan.indicator.width + pairByLan.spacing
+                    visible: dialog.lanAllowed && dialog.controller.lanEnabled && dialog.controller.networkIndex < 0
+                    text: qsTr("No se encontró una red local. Conéctate a Wi-Fi o Ethernet y actualiza las redes.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
                 }
-                Controls.Label {
+                Controls.RadioButton {
+                    id: pairByEmulator
                     Layout.fillWidth: true
-                    visible: !dialog.controller.lanEnabled && !dialog.controller.internetEnabled
-                    text: qsTr("Modo emulador avanzado: solo funciona cuando Android se ejecuta en esta computadora.")
-                    textFormat: Text.PlainText
-                    wrapMode: Text.Wrap
-                    color: Kirigami.Theme.disabledTextColor
+                    text: qsTr("Emulador Android en este equipo (avanzado)")
+                    checked: !dialog.controller.lanEnabled && !dialog.controller.internetEnabled
+                    enabled: !dialog.controller.busy && dialog.lanAllowed
+                    onToggled: {
+                        if (checked) {
+                            dialog.controller.configureInternet(false, relayField.text);
+                            dialog.controller.configureNetwork(false, -1);
+                        }
+                        checked = Qt.binding(() => !dialog.controller.lanEnabled && !dialog.controller.internetEnabled);
+                    }
                 }
             }
 
@@ -644,6 +822,7 @@ Controls.ApplicationWindow {
                     readonly property string connection: String(modelData.connection || "")
                     readonly property string connectionGeneration: String(modelData.connectionGeneration || "")
                     readonly property string syntheticTransferPhase: String(modelData.syntheticTransferPhase || "unsupported")
+                    readonly property int keyTransferVersion: Number(modelData.keyTransferVersion || 0)
                     readonly property bool expanded: dialog.expandedDeviceId === deviceId
                     readonly property bool syncExpanded: dialog.syncExpandedDeviceId === deviceId
                     Layout.fillWidth: true
@@ -775,6 +954,97 @@ Controls.ApplicationWindow {
                         }
                     }
                     ColumnLayout {
+                        readonly property bool vaultSyncOn: dialog.controller.vaultSyncPeers.indexOf(deviceRow.deviceId) >= 0
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        visible: dialog.available && dialog.controller.vaultKeyFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: parent.vaultSyncOn
+                                ? qsTr("La bóveda se sincroniza con este teléfono mientras Desktop está desbloqueado y conectado. Solo los elementos cifrados con tu clave principal; carpetas e iconos quedan en Desktop.")
+                                : qsTr("Sincroniza con este teléfono los elementos cifrados con tu clave principal. El teléfono necesita antes tu clave.")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        Controls.Button {
+                            text: parent.vaultSyncOn ? qsTr("Dejar de sincronizar la bóveda") : qsTr("Sincronizar bóveda")
+                            icon.name: parent.vaultSyncOn ? "dialog-cancel" : "folder-sync"
+                            enabled: !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                            onClicked: parent.vaultSyncOn ? dialog.controller.disableVaultSync(deviceRow.deviceId) : dialog.controller.enableVaultSync(deviceRow.deviceId)
+                        }
+                        Kirigami.InlineMessage {
+                            Layout.fillWidth: true
+                            visible: dialog.controller.vaultSyncMessage.length > 0
+                            type: Kirigami.MessageType.Information
+                            text: dialog.controller.vaultSyncMessage
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
+                        visible: dialog.available && dialog.controller.vaultKeyFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: deviceRow.connection === "connected" && deviceRow.keyTransferVersion < 2
+                                ? qsTr("Actualiza KryptoPass en el teléfono para recibir tu clave OpenPGP.")
+                                : qsTr("El teléfono necesita tu clave OpenPGP para abrir la bóveda. Se envía cifrada por esta conexión y sigue protegida con tu contraseña.")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.Button {
+                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase === "ready" && deviceRow.keyTransferVersion >= 2
+                                text: qsTr("Enviar mi clave al teléfono")
+                                icon.name: "document-send"
+                                enabled: !dialog.controller.syntheticTransferPreparing && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
+                                onClicked: {
+                                    dialog.keyTransferVault = true;
+                                    syntheticTransferApproval.vaultIdentity = true;
+                                    syntheticTransferApproval.deviceId = deviceRow.deviceId;
+                                    syntheticTransferApproval.connectionGeneration = deviceRow.connectionGeneration;
+                                    syntheticTransferApproval.recipient = dialog.deviceName(deviceRow.modelData);
+                                    syntheticTransferApproval.fingerprint = dialog.controller.vaultKeyFingerprint;
+                                    syntheticTransferApproval.approved = false;
+                                    syntheticTransferApproval.open();
+                                }
+                            }
+                            Controls.Button {
+                                visible: dialog.keyTransferVault && ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
+                                text: qsTr("Cancelar transferencia")
+                                icon.name: "dialog-cancel"
+                                onClicked: { console.info("Key transfer cancel from device row cancel button"); dialog.controller.cancelSyntheticKeyTransfer(); }
+                            }
+                            Controls.BusyIndicator {
+                                running: dialog.keyTransferVault && dialog.controller.syntheticTransferPreparing
+                                visible: running
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: implicitWidth
+                            }
+                            Controls.Label {
+                                visible: dialog.keyTransferVault && deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
+                                text: dialog.keyTransferLabel(deviceRow.syntheticTransferPhase)
+                                textFormat: Text.PlainText
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Kirigami.InlineMessage {
+                            Layout.fillWidth: true
+                            visible: dialog.keyTransferVault && dialog.controller.syntheticTransferError.length > 0
+                            type: Kirigami.MessageType.Error
+                            text: dialog.controller.syntheticTransferError
+                        }
+                    }
+                    ColumnLayout {
                         Layout.fillWidth: true
                         Layout.leftMargin: Kirigami.Units.largeSpacing + Kirigami.Units.iconSizes.medium + Kirigami.Units.largeSpacing
                         Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -797,6 +1067,8 @@ Controls.ApplicationWindow {
                                 icon.name: "mail-send"
                                 enabled: !dialog.controller.syntheticTransferPreparing && !dialog.controller.syncBusy && !dialog.controller.busy && !dialog.controller.maintenanceBusy
                                 onClicked: {
+                                    dialog.keyTransferVault = false;
+                                    syntheticTransferApproval.vaultIdentity = false;
                                     syntheticTransferApproval.deviceId = deviceRow.deviceId;
                                     syntheticTransferApproval.connectionGeneration = deviceRow.connectionGeneration;
                                     syntheticTransferApproval.recipient = dialog.deviceName(deviceRow.modelData);
@@ -806,19 +1078,19 @@ Controls.ApplicationWindow {
                                 }
                             }
                             Controls.Button {
-                                visible: ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
+                                visible: !dialog.keyTransferVault && ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
                                 text: qsTr("Cancelar transferencia")
                                 icon.name: "dialog-cancel"
-                                onClicked: dialog.controller.cancelSyntheticKeyTransfer()
+                                onClicked: { console.info("Key transfer cancel from device details cancel button"); dialog.controller.cancelSyntheticKeyTransfer(); }
                             }
                             Controls.BusyIndicator {
-                                running: dialog.controller.syntheticTransferPreparing
+                                running: !dialog.keyTransferVault && dialog.controller.syntheticTransferPreparing
                                 visible: running
                                 implicitWidth: Kirigami.Units.iconSizes.small
                                 implicitHeight: implicitWidth
                             }
                             Controls.Label {
-                                visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
+                                visible: !dialog.keyTransferVault && deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase !== "unsupported" && deviceRow.syntheticTransferPhase !== "ready"
                                 text: dialog.syntheticTransferLabel(deviceRow.syntheticTransferPhase)
                                 textFormat: Text.PlainText
                                 wrapMode: Text.Wrap
@@ -826,7 +1098,7 @@ Controls.ApplicationWindow {
                         }
                         Kirigami.InlineMessage {
                             Layout.fillWidth: true
-                            visible: dialog.controller.syntheticTransferError.length > 0
+                            visible: !dialog.keyTransferVault && dialog.controller.syntheticTransferError.length > 0
                             type: Kirigami.MessageType.Error
                             text: dialog.controller.syntheticTransferError
                         }
@@ -1046,7 +1318,7 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: qsTr("Confirmar envío de clave de prueba")
+        title: vaultIdentity ? qsTr("Enviar tu clave OpenPGP al teléfono") : qsTr("Confirmar envío de clave de prueba")
         width: Math.min(Kirigami.Units.gridUnit * 26, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
         property string deviceId: ""
@@ -1054,6 +1326,7 @@ Controls.ApplicationWindow {
         property string recipient: ""
         property string fingerprint: ""
         property bool approved: false
+        property bool vaultIdentity: false
         readonly property var transferDevice: dialog.devices.find(device => String(device.deviceId || "") === deviceId) || ({})
         readonly property string transferPhase: String(transferDevice.syntheticTransferPhase || "ready")
         readonly property bool transferPending: dialog.controller.syntheticTransferPreparing || ["waiting_acceptance", "sending", "waiting_receipt"].includes(transferPhase)
@@ -1061,6 +1334,7 @@ Controls.ApplicationWindow {
         onClosed: {
             if (approved && transferPending) {
                 approved = false;
+                console.info("Key transfer cancel from approval dialog closed");
                 dialog.controller.cancelSyntheticKeyTransfer();
             }
         }
@@ -1078,7 +1352,7 @@ Controls.ApplicationWindow {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !syntheticTransferApproval.approved
-                text: qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
+                text: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave. Compáralo con el que muestra el teléfono:") : qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
             }
@@ -1089,13 +1363,15 @@ Controls.ApplicationWindow {
                 textFormat: Text.PlainText
                 font.family: "monospace"
                 wrapMode: Text.WrapAnywhere
-                Accessible.name: qsTr("Fingerprint completo de la clave de prueba")
+                Accessible.name: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave") : qsTr("Fingerprint completo de la clave de prueba")
             }
             Kirigami.InlineMessage {
                 Layout.fillWidth: true
                 visible: !syntheticTransferApproval.approved
                 type: Kirigami.MessageType.Warning
-                text: qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
+                text: syntheticTransferApproval.vaultIdentity
+                    ? qsTr("Se enviará la clave privada que abre tu bóveda, solo a este teléfono y solo después de que la aceptes allí. GnuPG te pedirá su contraseña para exportarla; en el teléfono seguirá protegida con esa misma contraseña. Esta confirmación autoriza un único envío en esta sesión.")
+                    : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
             }
             Controls.BusyIndicator {
                 Layout.alignment: Qt.AlignHCenter
@@ -1105,7 +1381,9 @@ Controls.ApplicationWindow {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: syntheticTransferApproval.approved
-                text: dialog.controller.syntheticTransferPreparing ? qsTr("Preparando la clave de prueba en GnuPG…") : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase)
+                text: dialog.controller.syntheticTransferPreparing
+                    ? (syntheticTransferApproval.vaultIdentity ? qsTr("Exportando tu clave con GnuPG; escribe su contraseña si te la pide…") : qsTr("Preparando la clave de prueba en GnuPG…"))
+                    : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
             }
@@ -1121,8 +1399,10 @@ Controls.ApplicationWindow {
                 text: syntheticTransferApproval.approved ? (syntheticTransferApproval.transferPending ? qsTr("Cancelar transferencia") : qsTr("Cerrar")) : qsTr("Cancelar")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
                 onClicked: {
-                    if (syntheticTransferApproval.approved && syntheticTransferApproval.transferPending)
+                    if (syntheticTransferApproval.approved && syntheticTransferApproval.transferPending) {
+                        console.info("Key transfer cancel from approval dialog cancel button");
                         dialog.controller.cancelSyntheticKeyTransfer();
+                    }
                     syntheticTransferApproval.approved = false;
                     syntheticTransferApproval.close();
                 }
@@ -1131,13 +1411,122 @@ Controls.ApplicationWindow {
                 visible: !syntheticTransferApproval.approved
                 text: qsTr("Confirmar y enviar")
                 icon.name: "mail-send"
-                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
+                // ActionRole keeps the dialog open: AcceptRole would close it, and closing
+                // an approved, pending transfer cancels it in onClosed.
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
                 onClicked: {
                     syntheticTransferApproval.approved = true;
-                    dialog.controller.startSyntheticKeyTransfer(syntheticTransferApproval.deviceId, syntheticTransferApproval.connectionGeneration, syntheticTransferApproval.fingerprint);
+                    if (syntheticTransferApproval.vaultIdentity)
+                        dialog.controller.startVaultKeyTransfer(syntheticTransferApproval.deviceId, syntheticTransferApproval.connectionGeneration, syntheticTransferApproval.fingerprint);
+                    else
+                        dialog.controller.startSyntheticKeyTransfer(syntheticTransferApproval.deviceId, syntheticTransferApproval.connectionGeneration, syntheticTransferApproval.fingerprint);
                 }
             }
             onRejected: syntheticTransferApproval.close()
+        }
+    }
+
+    Controls.Dialog {
+        id: inboundKeyDialog
+        parent: Controls.Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        closePolicy: Controls.Popup.NoAutoClose
+        title: qsTr("Recibir tu clave OpenPGP desde el teléfono")
+        width: Math.min(Kirigami.Units.gridUnit * 28, dialog.width - Kirigami.Units.gridUnit * 2)
+        standardButtons: Controls.Dialog.NoButton
+        readonly property var transfer: dialog.inboundTransfer
+        readonly property string phase: String(transfer.phase || "")
+        readonly property bool working: ["assessing", "importing", "verifying"].includes(phase)
+
+        contentItem: ColumnLayout {
+            spacing: Kirigami.Units.mediumSpacing
+            Controls.Label {
+                Layout.fillWidth: true
+                text: qsTr("Origen: %1").arg(String(inboundKeyDialog.transfer.deviceName || ""))
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                text: qsTr("Fingerprint completo de la clave ofrecida. Compáralo con el que muestra el teléfono:")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                text: String(inboundKeyDialog.transfer.fingerprint || "")
+                textFormat: Text.PlainText
+                font.family: "monospace"
+                wrapMode: Text.WrapAnywhere
+                Accessible.name: qsTr("Fingerprint completo de la clave ofrecida")
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: String(inboundKeyDialog.transfer.assessmentMessage || "").length > 0
+                type: ["new", "add_secret", "merge"].includes(String(inboundKeyDialog.transfer.assessment || "")) ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
+                text: String(inboundKeyDialog.transfer.assessmentMessage || "")
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: inboundKeyDialog.transfer.canDecide === true
+                text: qsTr("Solo se aceptará la clave privada protegida con contraseña de esta huella. Después de importarla, GnuPG puede pedirte su contraseña para comprobar que funciona.")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                color: Kirigami.Theme.disabledTextColor
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                Controls.BusyIndicator {
+                    running: inboundKeyDialog.working
+                    visible: running
+                    implicitWidth: Kirigami.Units.iconSizes.small
+                    implicitHeight: implicitWidth
+                }
+                Controls.Label {
+                    Layout.fillWidth: true
+                    text: dialog.inboundPhaseLabel(inboundKeyDialog.transfer)
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    font.bold: true
+                }
+            }
+            Controls.ProgressBar {
+                Layout.fillWidth: true
+                visible: inboundKeyDialog.phase === "receiving"
+                from: 0
+                to: Math.max(1, Number(inboundKeyDialog.transfer.total || 0))
+                value: Number(inboundKeyDialog.transfer.received || 0)
+            }
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                visible: String(inboundKeyDialog.transfer.message || "").length > 0
+                type: inboundKeyDialog.transfer.error === true ? Kirigami.MessageType.Error : (inboundKeyDialog.phase === "complete" ? Kirigami.MessageType.Positive : Kirigami.MessageType.Information)
+                text: String(inboundKeyDialog.transfer.message || "")
+            }
+        }
+        footer: Controls.DialogButtonBox {
+            Controls.Button {
+                visible: inboundKeyDialog.transfer.canDecide === true || inboundKeyDialog.phase === "assessing"
+                text: qsTr("Rechazar")
+                icon.name: "dialog-cancel"
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
+                onClicked: dialog.controller.rejectInboundKeyTransfer()
+            }
+            Controls.Button {
+                visible: inboundKeyDialog.transfer.canDecide === true
+                text: qsTr("Aceptar e importar")
+                icon.name: "document-import"
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
+                onClicked: dialog.controller.acceptInboundKeyTransfer()
+            }
+            Controls.Button {
+                visible: inboundKeyDialog.transfer.finished === true
+                text: qsTr("Cerrar")
+                Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
+                onClicked: dialog.controller.dismissInboundKeyTransfer()
+            }
         }
     }
 

@@ -12,7 +12,7 @@ use kryptopass_devices::{
 use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
 use kryptopass_pairing::{
     EstablishedSession, LocalApproval, LocalDecision, PairingConfig, PairingEngine,
-    PairingInvitation, PairingRole, SasDisplay,
+    PairingInvitation, PairingMode, PairingRole, SasDisplay,
 };
 use kryptopass_transport::{MemoryTransport, MemoryTransportConfig};
 use std::{
@@ -65,6 +65,19 @@ struct Approve;
 impl LocalApproval for Approve {
     async fn confirm_sas(&mut self, _sas: &SasDisplay) -> LocalDecision {
         LocalDecision::Approve
+    }
+}
+
+#[derive(Default)]
+struct UnexpectedApproval {
+    calls: usize,
+}
+
+#[async_trait]
+impl LocalApproval for UnexpectedApproval {
+    async fn confirm_sas(&mut self, _sas: &SasDisplay) -> LocalDecision {
+        self.calls += 1;
+        LocalDecision::Cancel
     }
 }
 
@@ -356,4 +369,258 @@ async fn connected_lifecycle_already_published_before_subscription_keeps_session
     );
     assert_no_premature_end(&mut harness, &owner_directory).await;
     end_session_and_process_terminal_event(&mut harness, peer_session).await;
+}
+
+#[tokio::test]
+async fn stale_session_end_from_previous_generation_does_not_remove_authenticated_reconnect() {
+    let paired = pair_two_ephemeral_devices().await;
+    let owner_id = paired.owner_identity.device_id();
+    let peer_id = paired.peer_identity.device_id();
+    let owner_public = paired.owner_identity.public_identity();
+    let peer_public = paired.peer_identity.public_identity();
+    let owner_directory = DeviceDirectory::new(owner_id);
+    owner_directory
+        .replace_trusted(vec![peer_public])
+        .expect("owner directory contains the paired peer");
+    let peer_directory = DeviceDirectory::new(peer_id);
+    peer_directory
+        .replace_trusted(vec![owner_public])
+        .expect("peer directory contains the paired owner");
+
+    let owner_session = start_session(
+        owner_directory.clone(),
+        paired.owner_session,
+        owner_id,
+        peer_public,
+    )
+    .expect("start the first owner session");
+    let old_generation = owner_session.generation();
+    let mut harness = start_owner_watcher(
+        &paired._owner_profile,
+        owner_directory.clone(),
+        peer_public,
+        owner_session,
+    );
+    let mut peer_session = start_session(
+        peer_directory.clone(),
+        paired.peer_session,
+        peer_id,
+        owner_public,
+    )
+    .expect("start the first peer session");
+    wait_until_connected(
+        &harness
+            .runtime
+            .sessions
+            .get(&peer_id)
+            .expect("owner retains the first session")
+            .handle,
+    )
+    .await;
+    wait_until_connected(&peer_session).await;
+
+    // Capture the old owner's real terminal event but defer processing it while
+    // a fresh authenticated session for the same pinned peer becomes active.
+    peer_session
+        .disconnect(SessionCloseReason::UserRequested)
+        .expect("peer requests a real user disconnect");
+    let old_terminal_command = timeout(Duration::from_secs(3), harness.command_receiver.recv())
+        .await
+        .expect("old session terminal event reaches the process owner")
+        .expect("owner command channel remains open");
+    assert!(matches!(
+        &old_terminal_command,
+        OwnerCommand::SessionEnded(peer, generation)
+            if *peer == peer_id && *generation == old_generation
+    ));
+    harness
+        .runtime
+        .sessions
+        .get_mut(&peer_id)
+        .expect("owner still retains the old session until the event is processed")
+        .handle
+        .wait_closed()
+        .await;
+    peer_session.wait_closed().await;
+    assert!(matches!(
+        owner_directory
+            .snapshot()
+            .get(&peer_id)
+            .map(|device| device.connection),
+        Some(ConnectionState::Disconnected)
+    ));
+
+    let (owner_transport, peer_transport) = MemoryTransport::pair(MemoryTransportConfig::default())
+        .expect("create a fresh carrier for the authenticated reconnect");
+    let owner_store = SqliteTrustStore::open_existing(paired._owner_profile.path(), owner_id)
+        .expect("reopen the owner's persisted trust profile");
+    let peer_store = SqliteTrustStore::open_existing(paired._peer_profile.path(), peer_id)
+        .expect("reopen the peer's persisted trust profile");
+    assert_eq!(
+        owner_store
+            .lookup_trusted_peer(&peer_id)
+            .expect("owner's exact peer pin survives disconnect"),
+        peer_public
+    );
+    assert_eq!(
+        peer_store
+            .lookup_trusted_peer(&owner_id)
+            .expect("peer's exact owner pin survives disconnect"),
+        owner_public
+    );
+    let mut owner_config =
+        PairingConfig::reconnect([0x52; 16], PairingRole::Initiator, 20_100, peer_public);
+    owner_config.timeout = Duration::from_secs(3);
+    let mut peer_config =
+        PairingConfig::reconnect([0x52; 16], PairingRole::Responder, 20_100, owner_public);
+    peer_config.timeout = Duration::from_secs(3);
+    let mut owner_approval = UnexpectedApproval::default();
+    let mut peer_approval = UnexpectedApproval::default();
+    let (owner_reconnect, peer_reconnect) = tokio::join!(
+        PairingEngine::new(
+            owner_transport,
+            &paired.owner_identity,
+            owner_store,
+            owner_config,
+        )
+        .expect("construct the pinned owner reconnect")
+        .run(None, &mut owner_approval),
+        PairingEngine::new(
+            peer_transport,
+            &paired.peer_identity,
+            peer_store,
+            peer_config,
+        )
+        .expect("construct the pinned peer reconnect")
+        .run(None, &mut peer_approval),
+    );
+    let owner_reconnect = owner_reconnect.expect("owner authenticates the reconnect");
+    let peer_reconnect = peer_reconnect.expect("peer authenticates the reconnect");
+    assert_eq!(owner_reconnect.mode, PairingMode::Reconnect);
+    assert_eq!(peer_reconnect.mode, PairingMode::Reconnect);
+    assert!(owner_reconnect.sas.is_none());
+    assert!(peer_reconnect.sas.is_none());
+    assert_eq!(owner_approval.calls, 0);
+    assert_eq!(peer_approval.calls, 0);
+
+    let owner_reconnected = start_session(
+        owner_directory.clone(),
+        owner_reconnect.session,
+        owner_id,
+        peer_public,
+    )
+    .expect("start the new owner session after authenticated reconnect");
+    let new_generation = owner_reconnected.generation();
+    assert_ne!(new_generation, old_generation);
+    harness
+        .runtime
+        .watch_session(peer_id, new_generation, &owner_reconnected);
+    harness.runtime.sessions.insert(
+        peer_id,
+        OwnedSession {
+            handle: owner_reconnected,
+        },
+    );
+    let mut peer_reconnected = start_session(
+        peer_directory,
+        peer_reconnect.session,
+        peer_id,
+        owner_public,
+    )
+    .expect("start the peer session after authenticated reconnect");
+    wait_until_connected(
+        &harness
+            .runtime
+            .sessions
+            .get(&peer_id)
+            .expect("owner retains the new session")
+            .handle,
+    )
+    .await;
+    wait_until_connected(&peer_reconnected).await;
+
+    assert!(matches!(
+        owner_directory
+            .snapshot()
+            .get(&peer_id)
+            .map(|device| device.connection),
+        Some(ConnectionState::Connected)
+    ));
+    assert_eq!(
+        harness
+            .runtime
+            .sessions
+            .get(&peer_id)
+            .map(|session| session.handle.generation()),
+        Some(new_generation),
+        "the process owner stores the new authenticated generation"
+    );
+
+    assert!(
+        !harness
+            .runtime
+            .handle_command(old_terminal_command, &harness.snapshots, &harness.policy)
+            .await,
+        "a stale terminal event does not stop the owner loop"
+    );
+    assert_eq!(
+        harness
+            .runtime
+            .sessions
+            .get(&peer_id)
+            .map(|session| session.handle.generation()),
+        Some(new_generation),
+        "the old generation cannot remove the new session from the owner"
+    );
+    assert!(matches!(
+        owner_directory
+            .snapshot()
+            .get(&peer_id)
+            .map(|device| device.connection),
+        Some(ConnectionState::Connected)
+    ));
+    assert!(
+        harness
+            .policy
+            .lock()
+            .expect("owner accept policy lock")
+            .active
+            .contains(&peer_id),
+        "the active peer stays available to the new authenticated session"
+    );
+
+    let owner_trust_after = SqliteTrustStore::open_existing(paired._owner_profile.path(), owner_id)
+        .expect("reopen owner trust after reconnect");
+    let peer_trust_after = SqliteTrustStore::open_existing(paired._peer_profile.path(), peer_id)
+        .expect("reopen peer trust after reconnect");
+    assert_eq!(
+        owner_trust_after
+            .lookup_trusted_peer(&peer_id)
+            .expect("owner's pin remains readable after reconnect"),
+        peer_public
+    );
+    assert_eq!(
+        peer_trust_after
+            .lookup_trusted_peer(&owner_id)
+            .expect("peer's pin remains readable after reconnect"),
+        owner_public
+    );
+
+    harness
+        .runtime
+        .sessions
+        .get(&peer_id)
+        .expect("owner retains the reconnected session")
+        .handle
+        .disconnect(SessionCloseReason::UserRequested)
+        .expect("close the reconnected owner session after assertions");
+    harness
+        .runtime
+        .sessions
+        .get_mut(&peer_id)
+        .expect("owner retains the reconnected session during cleanup")
+        .handle
+        .wait_closed()
+        .await;
+    peer_reconnected.wait_closed().await;
 }

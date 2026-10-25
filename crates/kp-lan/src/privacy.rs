@@ -24,7 +24,8 @@ pub enum VpnMode {
     /// Let the operating system choose and apply its current routes.
     #[default]
     FollowSystem,
-    /// Require verifiable process-wide VPN coverage before Internet use.
+    /// Use the Internet only while the system routes it through a VPN tunnel;
+    /// pause Internet connections when no tunnel carries the route.
     RequireVpn,
 }
 
@@ -32,7 +33,7 @@ pub enum VpnMode {
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkPrivacyPolicy {
-    /// Whether all Internet sockets must be covered by a verified VPN.
+    /// Whether Internet use requires the system route to go through a VPN tunnel.
     pub vpn_mode: VpnMode,
     /// Explicit exception for local discovery and LAN traffic while VPN is required.
     pub allow_lan_exception: bool,
@@ -54,7 +55,11 @@ pub enum NetworkUse {
 pub enum VpnStatus {
     /// The user did not require VPN coverage.
     NotRequired,
-    /// This process cannot prove complete VPN coverage on the current platform.
+    /// The system route to the Internet goes through a VPN tunnel interface.
+    Active,
+    /// VPN is required but the system route to the Internet bypasses any tunnel.
+    Inactive,
+    /// This platform or route source cannot tell whether a tunnel carries the route.
     Unverifiable,
 }
 
@@ -75,6 +80,9 @@ pub enum NetworkPolicyError {
     /// VPN coverage for this process and all required protocols is unverified.
     #[error("VPN coverage cannot be verified for this process")]
     VpnUnverifiable,
+    /// VPN is required but the system route to the Internet does not use one.
+    #[error("the system route to the Internet does not use a VPN")]
+    VpnInactive,
     /// LAN use is disabled while VPN is required.
     #[error("local network use requires an explicit exception")]
     LanExceptionRequired,
@@ -149,6 +157,17 @@ impl NetworkRouteSnapshot {
 pub trait RouteSnapshotSource: Send + Sync {
     /// Read the current route generation without opening an Internet connection.
     fn snapshot(&self) -> Result<NetworkRouteSnapshot, NetworkPolicyError>;
+
+    /// Whether the system's default Internet route currently leaves through a
+    /// VPN tunnel interface. Sources that cannot tell keep the strict default.
+    fn internet_route_uses_tunnel(&self) -> Result<bool, NetworkPolicyError> {
+        Err(NetworkPolicyError::VpnUnverifiable)
+    }
+
+    /// Whether `source` is assigned to a VPN tunnel interface.
+    fn address_uses_tunnel(&self, _source: IpAddr) -> Result<bool, NetworkPolicyError> {
+        Err(NetworkPolicyError::VpnUnverifiable)
+    }
 }
 
 /// Captures one allowed route generation and rejects later changes.
@@ -196,25 +215,32 @@ impl NetworkPolicyGuard {
         self.policy
     }
 
-    /// Return the visible VPN state without inferring it from interface names.
+    /// Return the visible VPN state from the interface type the OS reports for
+    /// the Internet route, never from interface names or address ranges.
     #[must_use]
-    pub const fn vpn_status(&self) -> VpnStatus {
+    pub fn vpn_status(&self) -> VpnStatus {
         match self.policy.vpn_mode {
             VpnMode::FollowSystem => VpnStatus::NotRequired,
-            VpnMode::RequireVpn => VpnStatus::Unverifiable,
+            VpnMode::RequireVpn => match self.source.internet_route_uses_tunnel() {
+                Ok(true) => VpnStatus::Active,
+                Ok(false) => VpnStatus::Inactive,
+                Err(_) => VpnStatus::Unverifiable,
+            },
         }
     }
 
     /// Validate permission and pin the first permitted operation to its route.
-    /// Strict VPN checks happen before the route source is read and before any
-    /// DNS, broker, WSS, STUN, TURN, LAN, or mDNS operation can begin.
+    /// VPN and relay checks happen before the route generation is pinned and
+    /// before any DNS, broker, WSS, STUN, TURN, LAN, or mDNS operation begins.
     pub fn preflight(&self, use_kind: NetworkUse) -> Result<(), NetworkPolicyError> {
         if self.policy.relay_only && use_kind == NetworkUse::Lan {
             return Err(NetworkPolicyError::RelayRequired);
         }
         match (self.policy.vpn_mode, use_kind) {
             (VpnMode::RequireVpn, NetworkUse::Internet) => {
-                return Err(NetworkPolicyError::VpnUnverifiable);
+                if !self.source.internet_route_uses_tunnel()? {
+                    return Err(NetworkPolicyError::VpnInactive);
+                }
             }
             (VpnMode::RequireVpn, NetworkUse::Lan) if !self.policy.allow_lan_exception => {
                 return Err(NetworkPolicyError::LanExceptionRequired);
@@ -222,6 +248,19 @@ impl NetworkPolicyGuard {
             _ => {}
         }
         self.ensure_current()
+    }
+
+    /// Confirm that a connected Internet socket's local address is on a VPN
+    /// tunnel when VPN is required. The route snapshot covers later changes.
+    pub fn ensure_internet_source(&self, source: IpAddr) -> Result<(), NetworkPolicyError> {
+        if self.policy.vpn_mode != VpnMode::RequireVpn {
+            return Ok(());
+        }
+        if self.source.address_uses_tunnel(source)? {
+            Ok(())
+        } else {
+            Err(NetworkPolicyError::VpnInactive)
+        }
     }
 
     /// Reject a route change after the first permitted operation.
@@ -310,6 +349,53 @@ impl RouteSnapshotSource for SystemRouteSnapshot {
             &selected_sources,
         ))
     }
+
+    fn internet_route_uses_tunnel(&self) -> Result<bool, NetworkPolicyError> {
+        // Internet sockets bind to the relay route's source address, which is
+        // IPv4 on dual-stack hosts whenever an IPv4 default route exists.
+        let source = route_source_address(IpAddr::V4(std::net::Ipv4Addr::new(198, 51, 100, 1)))
+            .or_else(|_| {
+                route_source_address(IpAddr::V6(std::net::Ipv6Addr::new(
+                    0x2001, 0xdb8, 0, 0, 0, 0, 0, 1,
+                )))
+            })
+            .map_err(|_| NetworkPolicyError::RouteSnapshotUnavailable)?;
+        self.address_uses_tunnel(source)
+    }
+
+    fn address_uses_tunnel(&self, source: IpAddr) -> Result<bool, NetworkPolicyError> {
+        let interfaces =
+            if_addrs::get_if_addrs().map_err(|_| NetworkPolicyError::RouteSnapshotUnavailable)?;
+        let interface = interfaces
+            .iter()
+            .find(|interface| interface.ip() == source)
+            .ok_or(NetworkPolicyError::RouteSnapshotUnavailable)?;
+        is_tunnel_interface(&interface.name)
+    }
+}
+
+/// Classify an interface by the link type the kernel reports. Layer-3 tunnels
+/// (WireGuard, tun-based VPNs, PPP, IP-in-IP, GRE) carry no link-layer header;
+/// physical, bridge, and virtual Ethernet devices report ARPHRD_ETHER instead.
+#[cfg(target_os = "linux")]
+pub(crate) fn is_tunnel_interface(name: &str) -> Result<bool, NetworkPolicyError> {
+    // ARPHRD_PPP, ARPHRD_TUNNEL, ARPHRD_TUNNEL6, ARPHRD_SIT, ARPHRD_IPGRE,
+    // ARPHRD_IP6GRE and ARPHRD_NONE from <linux/if_arp.h>.
+    const TUNNEL_LINK_TYPES: [u16; 7] = [512, 768, 769, 776, 778, 823, 65534];
+    if name.is_empty() || name.contains(['/', '\0']) || name == "." || name == ".." {
+        return Err(NetworkPolicyError::RouteSnapshotUnavailable);
+    }
+    let link_type = fs::read_to_string(format!("/sys/class/net/{name}/type"))
+        .ok()
+        .and_then(|value| value.trim().parse::<u16>().ok())
+        .ok_or(NetworkPolicyError::RouteSnapshotUnavailable)?;
+    Ok(TUNNEL_LINK_TYPES.contains(&link_type))
+}
+
+/// Other platforms have no tunnel classifier yet, so VPN coverage stays unverifiable.
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn is_tunnel_interface(_name: &str) -> Result<bool, NetworkPolicyError> {
+    Err(NetworkPolicyError::VpnUnverifiable)
 }
 
 #[cfg(target_os = "linux")]

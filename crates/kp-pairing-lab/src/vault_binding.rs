@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const DIRECTORY: &str = "sync-vaults-v1";
+pub(crate) const DIRECTORY: &str = "sync-vaults-v1";
 const MAX_CONFIG_BYTES: u64 = 1024;
 
 /// Public local selection, not a capability or proof of OpenPGP key possession.
@@ -120,6 +120,25 @@ impl LabHost {
         fs::File::open(directory)
             .and_then(|dir| dir.sync_all())
             .map_err(|_| LabError::Profile)
+    }
+
+    /// Removes the local selection for `peer`. Ledgers are kept: they hold vault history
+    /// that other peers or a later selection still use.
+    pub fn remove_sync_vault(&self, peer: DeviceId) -> Result<(), LabError> {
+        self.lookup(peer)?;
+        let directory = self.directory.join(DIRECTORY);
+        let path = directory.join(format!("{}.json", hex(peer.as_bytes())));
+        match fs::symlink_metadata(&path) {
+            Ok(_) => {
+                check_private(&path, false)?;
+                fs::remove_file(&path).map_err(|_| LabError::Profile)?;
+                fs::File::open(directory)
+                    .and_then(|dir| dir.sync_all())
+                    .map_err(|_| LabError::Profile)
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(_) => Err(LabError::Profile),
+        }
     }
 
     /// Loads an existing binding; absence leaves ordinary sessions Sync-disabled.
@@ -259,6 +278,34 @@ fn check_private(path: &Path, directory: bool) -> Result<(), LabError> {
         use std::os::unix::fs::MetadataExt;
         if metadata.uid() != rustix::process::getuid().as_raw() || metadata.mode() & 0o077 != 0 {
             return Err(LabError::Profile);
+        }
+    }
+    Ok(())
+}
+
+/// Accepts the Sync directory during a profile reset: private, owned, real.
+pub(crate) fn validate_directory(path: &Path) -> Result<(), LabError> {
+    check_private(path, true)
+}
+
+/// Drops every per-peer selection (`<peer>.json`) after a reset. Ledgers, mirror
+/// state and anything else stay: they belong to the vault, not to pairing.
+pub(crate) fn remove_all_selections(profile: &Path) -> Result<(), LabError> {
+    let directory = profile.join(DIRECTORY);
+    if fs::symlink_metadata(&directory).is_err() {
+        return Ok(());
+    }
+    check_private(&directory, true)?;
+    for entry in fs::read_dir(&directory).map_err(|_| LabError::Profile)? {
+        let entry = entry.map_err(|_| LabError::Profile)?;
+        let name = entry.file_name();
+        let is_selection = name.to_str().is_some_and(|name| {
+            name.len() == 69
+                && name.ends_with(".json")
+                && name[..64].bytes().all(|byte| byte.is_ascii_hexdigit())
+        });
+        if is_selection {
+            fs::remove_file(entry.path()).map_err(|_| LabError::Profile)?;
         }
     }
     Ok(())

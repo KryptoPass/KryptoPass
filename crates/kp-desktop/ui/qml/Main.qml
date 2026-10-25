@@ -39,6 +39,37 @@ Controls.ApplicationWindow {
         running: true
         onTriggered: store.controller.refreshBrowserPairing()
     }
+    // Exchanges vault changes with paired phones while the vault is unlocked.
+    property bool vaultReloadPending: false
+    Timer {
+        interval: 5000
+        repeat: true
+        running: !store.controller.locked && deviceController.vaultSyncPeers.length > 0
+        onTriggered: {
+            if (root.mutationsBlocked || editor.opened)
+                return;
+            if (root.vaultReloadPending) {
+                root.vaultReloadPending = false;
+                store.controller.loadStore();
+                return;
+            }
+            deviceController.runVaultMirror();
+        }
+    }
+    Connections {
+        target: deviceController
+        // A phone offered its vault identity: show the review dialog.
+        function onInboundKeyTransferChanged() {
+            if (!devicesWindow.opened && deviceController.inboundKeyTransfer.indexOf("\"visible\":true") !== -1)
+                devicesWindow.open();
+        }
+        function onVaultMirrorPulled() {
+            if (root.mutationsBlocked || editor.opened)
+                root.vaultReloadPending = true;
+            else
+                store.controller.loadStore();
+        }
+    }
     BrowserAccessWindow {
         id: browserAccessWindow
         requestJson: store.controller.browserAccess
@@ -374,6 +405,7 @@ Controls.ApplicationWindow {
         target: store.controller
         function onLockedChanged() {
             if (store.controller.locked) {
+                console.info("Key transfer cancel from vault locked");
                 deviceController.cancelSyntheticKeyTransfer();
             } else if (!root.keysMode) {
                 store.controller.selectEntry(store.selectedId);

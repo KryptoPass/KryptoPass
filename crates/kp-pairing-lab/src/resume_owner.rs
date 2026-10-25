@@ -118,6 +118,11 @@ enum OwnerCommand {
     ),
     SyntheticTransferProgressChanged(DeviceId, u64, SyntheticTransferProgress),
     UnregisterSyntheticTransfer(DeviceId, u64),
+    SyntheticTransferControlFor(
+        DeviceId,
+        u64,
+        oneshot::Sender<Option<SyntheticTransferControl>>,
+    ),
     IncomingFinished(
         DeviceId,
         u64,
@@ -256,6 +261,26 @@ impl ResumeProcessOwner {
         response
             .await
             .map_err(|_| SyntheticTransferError::WrongSession)?
+    }
+
+    /// Returns the scoped transfer capability of the exact peer generation, used
+    /// to answer and complete an inbound key offer from that phone.
+    pub async fn synthetic_transfer_control(
+        &self,
+        peer: DeviceId,
+        expected_generation: u64,
+    ) -> Option<SyntheticTransferControl> {
+        let (reply, response) = oneshot::channel();
+        self.inner
+            .commands
+            .send(OwnerCommand::SyntheticTransferControlFor(
+                peer,
+                expected_generation,
+                reply,
+            ))
+            .await
+            .ok()?;
+        response.await.ok().flatten()
     }
 
     /// Drops a closed outgoing session's route while retaining its last
@@ -414,14 +439,12 @@ async fn run_owner(
 
     // Startup is read-only. If the directory is missing, wait for an explicit
     // pairing operation to initialize it and then call ensure_ready.
-    let reset_pending = state
-        .directory_path
-        .join(super::PROFILE_RESET_MARKER)
-        .exists();
-    if state.directory_path.exists()
-        && !reset_pending
-        && state.ensure_ready(&snapshots).await.is_err()
-    {
+    let profile_error = match super::LabHost::system_profile_needs_pairing(&state.directory_path) {
+        Ok(true) => false,
+        Ok(false) => state.ensure_ready(&snapshots).await.is_err(),
+        Err(_) => true,
+    };
+    if profile_error {
         snapshots.send_modify(|snapshot| snapshot.profile_error = true);
     }
 
@@ -758,9 +781,14 @@ impl OwnerRuntime {
 
     async fn bind_listener(&mut self) {
         let Some(host) = self.host.as_ref() else {
+            tracing::info!(reason = "no_profile", "LAN resume listener not started");
             return;
         };
         let Some(settings) = self.network_settings else {
+            tracing::warn!(
+                reason = "privacy_settings_unavailable",
+                "LAN resume listener not started"
+            );
             self.listener = None;
             if let Some(ready) = self.ready.as_mut() {
                 ready.reconnect_port = 0;
@@ -768,13 +796,18 @@ impl OwnerRuntime {
             return;
         };
         let Some(guard) = self.network_guard.as_ref().cloned() else {
+            tracing::warn!(
+                reason = "no_network_guard",
+                "LAN resume listener not started"
+            );
             self.listener = None;
             if let Some(ready) = self.ready.as_mut() {
                 ready.reconnect_port = 0;
             }
             return;
         };
-        if guard.preflight(NetworkUse::Lan).is_err() {
+        if let Err(error) = guard.preflight(NetworkUse::Lan) {
+            tracing::warn!(reason = ?error, "LAN resume listener blocked by network policy");
             self.listener = None;
             if let Some(ready) = self.ready.as_mut() {
                 ready.reconnect_port = 0;
@@ -787,6 +820,11 @@ impl OwnerRuntime {
             &assigned,
             kryptopass_lan::os_selected_local_address(),
         ) else {
+            tracing::warn!(
+                reason = "no_lan_address",
+                assigned = assigned.len(),
+                "LAN resume listener not started"
+            );
             self.listener = None;
             if let Some(ready) = self.ready.as_mut() {
                 ready.reconnect_port = 0;
@@ -805,7 +843,8 @@ impl OwnerRuntime {
                     ready.reconnect_port = port;
                 }
             }
-            Err(_) => {
+            Err(error) => {
+                tracing::warn!(reason = ?error, "LAN resume listener bind failed");
                 self.listener = None;
                 if let Some(ready) = self.ready.as_mut() {
                     ready.reconnect_port = 0;
@@ -924,16 +963,26 @@ impl OwnerRuntime {
                                 .is_none_or(|until| *until <= StdInstant::now())
                     });
                     if !permitted_by_policy {
+                        tracing::info!("LAN resume rejected: policy (suppressed, busy or cooling down)");
                         return false;
                     }
                     let snapshot = devices.snapshot();
-                    let trusted_in_directory = snapshot.get(&peer).is_some_and(|device| {
+                    let connection = snapshot.get(&peer).map(|device| device.connection.clone());
+                    let trusted_in_directory = connection.as_ref().is_some_and(|connection| {
                         matches!(
-                            device.connection,
+                            connection,
                             ConnectionState::Disconnected | ConnectionState::Failed
                         )
                     });
-                    let authorized = trusted_in_directory && host.lookup(peer).is_ok();
+                    let known_to_host = host.lookup(peer).is_ok();
+                    let authorized = trusted_in_directory && known_to_host;
+                    if !authorized {
+                        tracing::info!(
+                            connection = ?connection,
+                            known_to_host,
+                            "LAN resume rejected: device not in a resumable state"
+                        );
+                    }
                     if authorized {
                         if let Ok(mut current) = policy.lock() {
                             if current.suppressed.contains(&peer)
@@ -1230,6 +1279,14 @@ impl OwnerRuntime {
                         snapshot.synthetic_transfers = self.synthetic_transfers.clone();
                     });
                 }
+            }
+            OwnerCommand::SyntheticTransferControlFor(peer, generation, reply) => {
+                let control = self
+                    .synthetic_controls
+                    .get(&peer)
+                    .filter(|control| control.generation() == generation)
+                    .cloned();
+                let _ = reply.send(control);
             }
             OwnerCommand::UnregisterSyntheticTransfer(peer, generation) => {
                 if self

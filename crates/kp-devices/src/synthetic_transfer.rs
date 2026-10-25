@@ -1,5 +1,8 @@
-//! Bounded sender for the explicitly negotiated synthetic provisioning exercise.
-//! OpenPGP export, human authorization and durable import remain application duties.
+//! Bounded sender for explicitly negotiated OpenPGP key provisioning: the
+//! synthetic fixture (extension version 1) or the sender's vault identity
+//! (version 2). Version 3 adds the reverse direction, handled by
+//! `synthetic_receive`. OpenPGP export, human authorization and durable import
+//! remain application duties.
 
 use kryptopass_protocol::{MessagePayload, proto};
 use sha2::{Digest, Sha256};
@@ -13,6 +16,34 @@ pub const SYNTHETIC_KEY_MAX_BYTES: usize = 1024 * 1024;
 pub const SYNTHETIC_KEY_CHUNK_BYTES: usize = 32 * 1024;
 /// Lifetime of one operation, including both human decisions.
 pub const SYNTHETIC_KEY_TIMEOUT: Duration = Duration::from_secs(120);
+/// Highest extension version this endpoint negotiates. Version 3 also lets
+/// the phone send its vault identity to Desktop; this sender is unchanged.
+pub const KEY_TRANSFER_VERSION: u32 = 3;
+
+/// What the offered key is; the receiver applies a different policy to each.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyTransferPurpose {
+    /// Laboratory fixture pinned by both builds; never the user's identity.
+    SyntheticFixture,
+    /// The OpenPGP identity that encrypts the sender's vault.
+    VaultIdentity,
+}
+
+impl KeyTransferPurpose {
+    const fn wire(self) -> u32 {
+        match self {
+            Self::SyntheticFixture => 0,
+            Self::VaultIdentity => 1,
+        }
+    }
+
+    const fn minimum_version(self) -> u32 {
+        match self {
+            Self::SyntheticFixture => 1,
+            Self::VaultIdentity => 2,
+        }
+    }
+}
 
 /// Public, secret-free state of a transfer in one authenticated session.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,6 +79,11 @@ pub struct SyntheticTransferProgress {
     pub phase: SyntheticTransferPhase,
     /// Identifier of the operation, if one was started in this session.
     pub transfer_id: Option<[u8; 16]>,
+    /// Extension version both endpoints negotiated; 2 also accepts the vault
+    /// identity, 3 also the phone → Desktop direction.
+    pub version: u32,
+    /// The phone → Desktop operation of this session, if one was offered.
+    pub inbound: Option<crate::synthetic_receive::InboundTransferProgress>,
 }
 
 /// Bounded errors that do not retain or render message contents.
@@ -75,13 +111,33 @@ pub enum SyntheticTransferError {
 /// session and an explicit local command; chunks also require remote acceptance.
 pub struct SyntheticKeyTransferSend {
     offer: proto::SyntheticKeyOffer,
+    purpose: KeyTransferPurpose,
     key: Zeroizing<Vec<u8>>,
     challenge_sha256: [u8; 32],
 }
 
 impl SyntheticKeyTransferSend {
-    /// Validates local preparation and computes the protected object's digest.
+    /// Validates a synthetic fixture export and computes its digest.
     pub fn new(
+        transfer_id: [u8; 16],
+        fingerprint: Vec<u8>,
+        secret_key: Vec<u8>,
+        encrypted_challenge: Vec<u8>,
+        challenge_sha256: [u8; 32],
+    ) -> Result<Self, SyntheticTransferError> {
+        Self::with_purpose(
+            KeyTransferPurpose::SyntheticFixture,
+            transfer_id,
+            fingerprint,
+            secret_key,
+            encrypted_challenge,
+            challenge_sha256,
+        )
+    }
+
+    /// Validates local preparation for `purpose` and computes the protected object's digest.
+    pub fn with_purpose(
+        purpose: KeyTransferPurpose,
         transfer_id: [u8; 16],
         fingerprint: Vec<u8>,
         secret_key: Vec<u8>,
@@ -106,7 +162,9 @@ impl SyntheticKeyTransferSend {
                 total_size: key.len() as u64,
                 sha256_digest: Sha256::digest(key.as_slice()).to_vec(),
                 encrypted_challenge,
+                key_purpose: purpose.wire(),
             },
+            purpose,
             key,
             challenge_sha256,
         })
@@ -123,11 +181,16 @@ pub enum SyntheticTransferOutbound {
     Complete(proto::SyntheticKeyComplete),
     /// Cancellation, timeout or failure of this exact transfer.
     Abort(proto::SyntheticKeyAbort),
+    /// Receiver side: the local user's decision on an inbound offer.
+    Decision(proto::SyntheticKeyDecision),
+    /// Receiver side: sent only after import and challenge decryption.
+    Receipt(proto::SyntheticKeyReceipt),
 }
 
 /// A one-operation sender. Session generation and trust are enforced by its owner.
 pub struct SyntheticTransferSender {
     progress: SyntheticTransferProgress,
+    version: u32,
     prepared: Option<SyntheticKeyTransferSend>,
     deadline: Option<Instant>,
     next_chunk: usize,
@@ -135,10 +198,18 @@ pub struct SyntheticTransferSender {
 }
 
 impl SyntheticTransferSender {
-    /// Creates an idle actor after bilateral capability negotiation.
+    /// Creates an idle synthetic-only actor after bilateral capability negotiation.
     #[must_use]
     pub fn new(supported: bool) -> Self {
+        Self::with_version(u32::from(supported))
+    }
+
+    /// Creates an idle actor for the version both endpoints negotiated; 0 disables it.
+    #[must_use]
+    pub fn with_version(version: u32) -> Self {
+        let supported = version != 0;
         Self {
+            version,
             progress: SyntheticTransferProgress {
                 phase: if supported {
                     SyntheticTransferPhase::Ready
@@ -146,6 +217,8 @@ impl SyntheticTransferSender {
                     SyntheticTransferPhase::Unsupported
                 },
                 transfer_id: None,
+                version,
+                inbound: None,
             },
             prepared: None,
             deadline: None,
@@ -166,7 +239,9 @@ impl SyntheticTransferSender {
         prepared: SyntheticKeyTransferSend,
         now: Instant,
     ) -> Result<SyntheticTransferOutbound, SyntheticTransferError> {
-        if self.progress.phase == SyntheticTransferPhase::Unsupported {
+        if self.progress.phase == SyntheticTransferPhase::Unsupported
+            || self.version < prepared.purpose.minimum_version()
+        {
             return Err(SyntheticTransferError::Unsupported);
         }
         if self.used || self.progress.phase != SyntheticTransferPhase::Ready {

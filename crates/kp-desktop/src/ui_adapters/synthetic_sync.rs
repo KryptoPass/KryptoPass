@@ -143,6 +143,8 @@ pub(crate) fn run(
                             "Prueba Desktop".to_owned(),
                             false,
                             false,
+                            Vec::new(),
+                            kryptopass_core::IconState::Automatic,
                             synthetic_login(),
                         )
                         .map_err(map_service_error)?;
@@ -162,6 +164,8 @@ pub(crate) fn run(
                             "Credencial de prueba".to_owned(),
                             false,
                             false,
+                            Vec::new(),
+                            kryptopass_core::IconState::Automatic,
                             synthetic_login(),
                         )
                         .map_err(map_service_error)?;

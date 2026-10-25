@@ -17,6 +17,7 @@ getrandom = "0.3"
 prost = "0.14.4"
 rusqlite = { version = "0.40.2", default-features = false }
 sha2 = "0.10"
+tracing = "0.1"
 
 [dev-dependencies]
 kryptopass_identity = { package = "kp-identity", path = "../kp-identity", features = ["test-support"] }

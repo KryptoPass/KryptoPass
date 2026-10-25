@@ -15,6 +15,7 @@ name = "pairing-interop-host"
 path = "src/bin/interop_host.rs"
 
 [dependencies]
+tracing = "0.1"
 async-trait = "0.1"
 base64 = "0.22"
 getrandom = "0.3"
