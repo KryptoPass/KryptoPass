@@ -97,6 +97,7 @@ enum OwnerCommand {
     RefreshTrust(oneshot::Sender<Result<ResumeOwnerReady, super::LabError>>),
     RefreshNetworkPolicy,
     Suppress(DeviceId),
+    Renegotiate(DeviceId),
     Allow(DeviceId),
     SessionStable(DeviceId, u64),
     SessionEnded(DeviceId, u64),
@@ -307,6 +308,16 @@ impl ResumeProcessOwner {
             policy.suppressed.insert(peer);
         }
         let _ = self.inner.commands.try_send(OwnerCommand::Suppress(peer));
+    }
+
+    /// Ends the live session with `peer` as superseded so the phone reconnects at once and
+    /// the new session reads the current Sync binding. Used after Sync is turned on or off,
+    /// because a session only learns about its binding when it starts.
+    pub fn renegotiate_peer(&self, peer: DeviceId) {
+        let _ = self
+            .inner
+            .commands
+            .try_send(OwnerCommand::Renegotiate(peer));
     }
 
     /// Clears explicit-disconnect suppression after the user chooses Reconnect.
@@ -1209,6 +1220,12 @@ impl OwnerRuntime {
                     if let Ok(mut current) = policy.lock() {
                         current.active.remove(&peer);
                     }
+                }
+            }
+            OwnerCommand::Renegotiate(peer) => {
+                if let Some(session) = self.sessions.get(&peer) {
+                    tracing::info!("Sync binding changed: renegotiating the live session");
+                    let _ = session.handle.disconnect(SessionCloseReason::Superseded);
                 }
             }
             OwnerCommand::Allow(peer) => {

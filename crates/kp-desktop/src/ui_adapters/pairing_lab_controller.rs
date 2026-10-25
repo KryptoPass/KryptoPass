@@ -1331,16 +1331,23 @@ impl qobject::PairingLabController {
                 mirror::disable(&directory, peer)
             };
             tracing::info!(enabled, error = ?result.err(), "Vault sync selection changed");
+            let failed = result.is_err();
             let _ = thread.queue(move |mut object| {
-                object.as_mut().set_vault_sync_failed(result.is_err());
+                object.as_mut().set_vault_sync_failed(failed);
                 object.as_mut().set_vault_sync_message(match result {
                     Ok(()) if enabled => QString::from(
-                        "Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.",
+                        "Sincronización activada. Si el teléfono aún no la tiene activada, actívala allí: Dispositivos → este Desktop → Sincronizar mi bóveda.",
                     ),
                     Ok(()) => QString::from("Sincronización desactivada. La bóveda no cambió."),
                     Err(error) => QString::from(error.message()),
                 });
                 object.as_mut().refresh_vault_sync_peers();
+                // A live session only reads its Sync binding when it starts.
+                if !failed {
+                    if let Some(owner) = object.rust().resume_owner.as_ref() {
+                        owner.renegotiate_peer(peer);
+                    }
+                }
             });
         });
     }

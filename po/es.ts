@@ -950,6 +950,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Sin verificar</translation>
     </message>
     <message>
+      <source>Sincronización activada. Si el teléfono aún no la tiene activada, actívala allí: Dispositivos → este Desktop → Sincronizar mi bóveda.</source>
+      <translation>Sincronización activada. Si el teléfono aún no la tiene activada, actívala allí: Dispositivos → este Desktop → Sincronizar mi bóveda.</translation>
+    </message>
+    <message>
       <source>Solo se puede vincular una huella OpenPGP completa.</source>
       <translation>Solo se puede vincular una huella OpenPGP completa.</translation>
     </message>
@@ -2235,10 +2239,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Sin carpeta</source>
       <translation>Sin carpeta</translation>
-    </message>
-    <message>
-      <source>Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.</source>
-      <translation>Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.</translation>
     </message>
     <message>
       <source>Sincronización desactivada. La bóveda no cambió.</source>
