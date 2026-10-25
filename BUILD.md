@@ -38,25 +38,22 @@ bacon         # check continuo en fondo (q = job qmllint)
   `bacon fmt`, `bacon fmt-native` y `bacon fmt-qml` usan esas mismas puertas.
   Al actualizar la versión mayor de clang-format, revisar el diff de formato
   y actualizar el requisito de `tools/source_format.py` en el mismo cambio.
-- Sin display (CI): `QT_QPA_PLATFORM=offscreen`.
+- Sin display (compilación desatendida): `QT_QPA_PLATFORM=offscreen`.
 - Estilo QML fijado en código (`org.kde.desktop`); override con
   `QT_QUICK_CONTROLS_STYLE`.
 - Licencia: GPL-3.0-or-later (`COPYING`).
 
-CI ejecuta las recetas de `just verify` como pasos separados y después
-`just smoke`, en pushes a `main`, pull requests o por ejecución manual de
-`Verify` en GitHub Actions. Tras compilar el workspace, los chequeos
-independientes siguen ejecutándose aunque otro falle; cada fallo mantiene
-el workflow en rojo. Así, un fallo de QML no oculta los resultados de Rust,
-traducciones o distribución.
+Las releases se publican al empujar una etiqueta `v<versión>` que coincida con
+`[workspace.package].version`. El workflow `Release` compila con CMake, genera
+un tarball de fuentes, un árbol instalable para Arch Linux x86_64 y sus sumas
+SHA-256, y crea la release en GitHub. No ejecuta `just verify` ni `just smoke`:
+esas puertas son locales. El workflow separa la compilación (solo lectura) de
+la publicación (`contents: write`), fija la imagen Arch por digest y las
+acciones por commit.
 
-El contenedor Arch instala Qt/KDE y `ttf-dejavu`, y usa renderizado offscreen
-por software. Sin fuentes instaladas, los glifos de sustitución de Qt alteran
-las métricas y recortan el diálogo de vinculación con letra grande.
-La caché conserva dependencias de Cargo incluso si falla un test; cambia al
-actualizar el entorno nativo para no reutilizar
-artefactos compilados contra otras versiones de Qt/KDE/C++.
-`just smoke` ya crea y elimina su propio perfil temporal aislado.
+`just verify` y `just smoke` siguen siendo la referencia para validar cambios
+antes de publicar. `just smoke` ya crea y elimina su propio perfil temporal
+aislado.
 
 ## Rutas de compilación y herramientas Qt
 
@@ -85,9 +82,10 @@ regenerar los archivos no cambia su contenido cada día.
 
 Se necesitan también los headers de KDE Contacts, Akonadi Contact Widgets,
 KCoreAddons, KXmlGui, KConfig, KIdleTime y KIO (KIOGui), además del módulo Qt DBus.
-Para las puertas de distribución se utilizan
-Qt Linguist (`lupdate`, `lrelease`), Python 3.11+, `reuse`, `appstreamcli`
-y `desktop-file-validate`. CI declara los paquetes equivalentes de Arch Linux.
+Las comprobaciones de distribución usan Qt Linguist (`lupdate`, `lrelease`),
+Python 3.11+, `reuse`, `appstreamcli` y `desktop-file-validate`; las ejecuta
+`just verify`. El workflow de release solo instala las dependencias necesarias
+para compilar y empaquetar.
 
 `just metadata` valida que los archivos generados coincidan con Cargo y
 comprueba desktop/AppStream; `just licenses` comprueba REUSE. Ambos forman
