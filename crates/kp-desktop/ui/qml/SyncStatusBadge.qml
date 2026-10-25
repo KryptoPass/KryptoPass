@@ -96,34 +96,36 @@ Controls.ToolButton {
 
     contentItem: RowLayout {
         spacing: Kirigami.Units.smallSpacing
-        Kirigami.Icon {
-            id: icon
-            implicitWidth: Kirigami.Units.iconSizes.small
-            implicitHeight: Kirigami.Units.iconSizes.small
-            source: {
-                switch (badge.phase) {
-                case "working":
-                    return "state-sync";
-                case "locked":
-                    return "state-pause";
-                case "error":
-                    return "state-error";
-                default:
-                    return "state-ok";
-                }
-            }
-            color: badge.phase === "error" ? Kirigami.Theme.negativeTextColor : (badge.phase === "locked" ? Kirigami.Theme.neutralTextColor : (badge.phase === "ok" ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.textColor))
-            Accessible.ignored: true
-            RotationAnimator on rotation {
+        // As on the phone: the icon stays still and a progress ring turns around it.
+        Item {
+            id: mark
+            readonly property real ring: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
+            implicitWidth: ring
+            implicitHeight: ring
+            Controls.BusyIndicator {
+                anchors.fill: parent
+                padding: 0
                 running: badge.phase === "working" && badge.visible
-                from: 0
-                to: 360
-                duration: 1100
-                loops: Animation.Infinite
+                visible: running
             }
-            // The spinner must come back upright when it stops.
-            onSourceChanged: if (badge.phase !== "working")
-                rotation = 0
+            Kirigami.Icon {
+                anchors.centerIn: parent
+                width: Kirigami.Units.iconSizes.smallMedium
+                height: width
+                isMask: true
+                source: {
+                    switch (badge.phase) {
+                    case "locked":
+                        return "state-pause-symbolic";
+                    case "error":
+                        return "state-error-symbolic";
+                    default:
+                        return "cloudstatus-symbolic";
+                    }
+                }
+                color: badge.phase === "error" ? Kirigami.Theme.negativeTextColor : (badge.phase === "locked" ? Kirigami.Theme.neutralTextColor : (badge.phase === "ok" ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.highlightColor))
+                Accessible.ignored: true
+            }
         }
         Controls.Label {
             // Words only when something needs attention; otherwise the icon and its tooltip.

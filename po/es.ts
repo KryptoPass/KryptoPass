@@ -4437,70 +4437,6 @@ Huella(s) detectadas:
       <translation>Elige una de tus claves privadas y revisa el destinatario antes de enviarla. Se conserva protegida con su contraseña.</translation>
     </message>
     <message>
-      <source>El teléfono no tiene esta clave, así que no se sincroniza.</source>
-      <translation>El teléfono no tiene esta clave, así que no se sincroniza.</translation>
-    </message>
-    <message>
-      <source>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</source>
-      <translation>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</translation>
-    </message>
-    <message>
-      <source>Se sincroniza.</source>
-      <translation>Se sincroniza.</translation>
-    </message>
-    <message>
-      <source>El teléfono la tiene, pero no se sincroniza.</source>
-      <translation>El teléfono la tiene, pero no se sincroniza.</translation>
-    </message>
-    <message>
-      <source>Solo la tiene el teléfono; Desktop no tiene su clave privada.</source>
-      <translation>Solo la tiene el teléfono; Desktop no tiene su clave privada.</translation>
-    </message>
-    <message>
-      <source>Solo en Desktop: el teléfono no la tiene.</source>
-      <translation>Solo en Desktop: el teléfono no la tiene.</translation>
-    </message>
-    <message>
-      <source>Solo en Desktop.</source>
-      <translation>Solo en Desktop.</translation>
-    </message>
-    <message>
-      <source>Sin nombre</source>
-      <translation>Sin nombre</translation>
-    </message>
-    <message>
-      <source>Clave desconocida</source>
-      <translation>Clave desconocida</translation>
-    </message>
-    <message>
-      <source>Claves en Sincronización (%1 de %2)</source>
-      <translation>Claves en Sincronización (%1 de %2)</translation>
-    </message>
-    <message>
-      <source>Actualizar</source>
-      <translation>Actualizar</translation>
-    </message>
-    <message>
-      <source>Vuelve a negociar con el teléfono para leer sus claves actuales</source>
-      <translation>Vuelve a negociar con el teléfono para leer sus claves actuales</translation>
-    </message>
-    <message>
-      <source>Desbloquear…</source>
-      <translation>Desbloquear…</translation>
-    </message>
-    <message>
-      <source>Sincronizar</source>
-      <translation>Sincronizar</translation>
-    </message>
-    <message>
-      <source>Dejar de sincronizar</source>
-      <translation>Dejar de sincronizar</translation>
-    </message>
-    <message>
-      <source>Aún no hay claves con parte privada en este equipo.</source>
-      <translation>Aún no hay claves con parte privada en este equipo.</translation>
-    </message>
-    <message>
       <source>El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.</source>
       <translation>El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.</translation>
     </message>
@@ -8641,6 +8577,73 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>SyncKeyList</name>
+    <message>
+      <source>El teléfono no tiene esta clave, así que no se sincroniza.</source>
+      <translation>El teléfono no tiene esta clave, así que no se sincroniza.</translation>
+    </message>
+    <message>
+      <source>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</source>
+      <translation>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</translation>
+    </message>
+    <message>
+      <source>Se sincroniza.</source>
+      <translation>Se sincroniza.</translation>
+    </message>
+    <message>
+      <source>El teléfono la tiene, pero no se sincroniza.</source>
+      <translation>El teléfono la tiene, pero no se sincroniza.</translation>
+    </message>
+    <message>
+      <source>Solo la tiene el teléfono; Desktop no tiene su clave privada.</source>
+      <translation>Solo la tiene el teléfono; Desktop no tiene su clave privada.</translation>
+    </message>
+    <message>
+      <source>Solo en Desktop: el teléfono no la tiene.</source>
+      <translation>Solo en Desktop: el teléfono no la tiene.</translation>
+    </message>
+    <message>
+      <source>Solo en Desktop.</source>
+      <translation>Solo en Desktop.</translation>
+    </message>
+    <message>
+      <source>Sin nombre</source>
+      <translation>Sin nombre</translation>
+    </message>
+    <message>
+      <source>Clave desconocida</source>
+      <translation>Clave desconocida</translation>
+    </message>
+    <message>
+      <source>Claves en Sincronización (%1 de %2)</source>
+      <translation>Claves en Sincronización (%1 de %2)</translation>
+    </message>
+    <message>
+      <source>Actualizar</source>
+      <translation>Actualizar</translation>
+    </message>
+    <message>
+      <source>Vuelve a negociar con el teléfono para leer sus claves actuales</source>
+      <translation>Vuelve a negociar con el teléfono para leer sus claves actuales</translation>
+    </message>
+    <message>
+      <source>Desbloquear…</source>
+      <translation>Desbloquear…</translation>
+    </message>
+    <message>
+      <source>Sincronizar</source>
+      <translation>Sincronizar</translation>
+    </message>
+    <message>
+      <source>Dejar de sincronizar</source>
+      <translation>Dejar de sincronizar</translation>
+    </message>
+    <message>
+      <source>Aún no hay claves con parte privada en este equipo.</source>
+      <translation>Aún no hay claves con parte privada en este equipo.</translation>
+    </message>
+  </context>
+  <context>
     <name>SyncKeysPicker</name>
     <message>
       <source>Claves para sincronizar</source>
@@ -8696,6 +8699,37 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Estado de la bóveda: %1</source>
       <translation>Estado de la bóveda: %1</translation>
+    </message>
+  </context>
+  <context>
+    <name>SyncStatusPopover</name>
+    <message>
+      <source>Sincronización de la bóveda</source>
+      <translation>Sincronización de la bóveda</translation>
+    </message>
+    <message>
+      <source>La sincronización está detenida: falta la contraseña de la clave de %1.</source>
+      <translation>La sincronización está detenida: falta la contraseña de la clave de %1.</translation>
+    </message>
+    <message>
+      <source>Desbloquear clave…</source>
+      <translation>Desbloquear clave…</translation>
+    </message>
+    <message>
+      <source>Ningún dispositivo sincroniza esta bóveda. Actívalo desde la ventana de dispositivos.</source>
+      <translation>Ningún dispositivo sincroniza esta bóveda. Actívalo desde la ventana de dispositivos.</translation>
+    </message>
+    <message>
+      <source>Conectado</source>
+      <translation>Conectado</translation>
+    </message>
+    <message>
+      <source>Sin conexión. Se sincroniza al reconectar.</source>
+      <translation>Sin conexión. Se sincroniza al reconectar.</translation>
+    </message>
+    <message>
+      <source>Administrar dispositivos…</source>
+      <translation>Administrar dispositivos…</translation>
     </message>
   </context>
   <context>

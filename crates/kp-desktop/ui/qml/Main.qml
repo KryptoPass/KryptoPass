@@ -126,6 +126,10 @@ Controls.ApplicationWindow {
         target: importWindow
         locked: root.viewsLocked
     }
+    LockGuard {
+        target: syncPopover
+        locked: root.viewsLocked
+    }
     KeyStore {
         id: keys
         objectName: "keyStore"
@@ -1376,11 +1380,22 @@ Controls.ApplicationWindow {
                 }
                 // The vault's message and the Sync with phones, in one KDE-style indicator.
                 SyncStatusBadge {
+                    id: syncBadge
                     syncController: deviceController
                     storeStatus: root.keysMode ? keys.controller.status : store.controller.status
                     busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)
                     failed: !root.keysMode && !store.controller.locked && store.controller.errorMessage.length > 0
-                    onActivated: devicesWindow.open()
+                    onActivated: syncPopover.opened ? syncPopover.close() : syncPopover.open()
+                    // Opens above the indicator, not the whole devices window.
+                    SyncStatusPopover {
+                        id: syncPopover
+                        host: devicesWindow
+                        controller: deviceController
+                        onOpenDevicesRequested: {
+                            close();
+                            devicesWindow.open();
+                        }
+                    }
                 }
             }
         }
