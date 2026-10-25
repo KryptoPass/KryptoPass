@@ -165,3 +165,27 @@ Las pantallas muestran la ruta ICE observada (directa, directa en red privada
 o TURN) y la familia IPv4/IPv6; la configuración LAN/Internet no determina esa
 etiqueta. API tipada Rust/Kotlin, campos Qt, actualización, limpieza y límites
 en [Ruta activa de conexión](../transporte/ui-ruta-activa-de-conexion-v1.md).
+
+
+## Actualización de presentación Desktop — 2026-10-25
+
+Desktop muestra una lista compacta y abre las opciones por dispositivo dentro
+de la misma ventana. Se retira el aviso permanente de sesión activa; el límite
+de una conexión se explica al solicitar otra. Pruebas sintéticas e identificador
+quedan en desplegables. El envío permite elegir entre las claves privadas
+locales válidas para el desafío v4, usando KeyListDelegate, nombre, correo y
+huella, seguido de confirmación del destinatario. No cambia la clave principal.
+Android conserva su límite actual de una identidad importada, sin reemplazos;
+esa limitación se indica en Desktop. No cambia la versión ni los bytes del
+protocolo.
+Detalle, alcance y verificación: [Rediseño Desktop](redesign-dispositivos-desktop.md).
+
+
+## Claves de Sync por teléfono — 2026-10-25
+
+Al activar Sync, Desktop pide qué claves con clave privada se comparten con ese
+teléfono; ya no usa siempre la principal. El teléfono declara las suyas con
+`VaultKeys` y el `vault_id` de los vínculos nuevos es aleatorio y lo elige
+Desktop; el teléfono lo adopta. La clave principal solo es la opción por
+defecto para elementos nuevos. Contrato completo y límites:
+[Sync por conjunto de claves](../sync/claves-por-telefono.md).

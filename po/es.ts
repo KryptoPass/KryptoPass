@@ -75,6 +75,10 @@
       <translation>Abriendo elemento…</translation>
     </message>
     <message>
+      <source>Aceptada. Esperando la clave del teléfono…</source>
+      <translation>Aceptada. Esperando la clave del teléfono…</translation>
+    </message>
+    <message>
       <source>Actividad en KryptoPass
 Eventos conservados, del más reciente al más antiguo.
 No incluye contraseñas ni valores de credenciales.
@@ -127,6 +131,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia.</translation>
     </message>
     <message>
+      <source>Bóveda sincronizada: {} recibidos, {} enviados.</source>
+      <translation>Bóveda sincronizada: {} recibidos, {} enviados.</translation>
+    </message>
+    <message>
       <source>Cambio guardado; no se pudo actualizar la lista.</source>
       <translation>Cambio guardado; no se pudo actualizar la lista.</translation>
     </message>
@@ -157,6 +165,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Cifrando y guardando la copia…</source>
       <translation>Cifrando y guardando la copia…</translation>
+    </message>
+    <message>
+      <source>Clave importada en GnuPG y comprobada con el desafío. El teléfono recibió la confirmación.</source>
+      <translation>Clave importada en GnuPG y comprobada con el desafío. El teléfono recibió la confirmación.</translation>
+    </message>
+    <message>
+      <source>Clave importada y comprobada. Enviando la confirmación al teléfono…</source>
+      <translation>Clave importada y comprobada. Enviando la confirmación al teléfono…</translation>
+    </message>
+    <message>
+      <source>Clave importada. Comprobando que descifra el desafío; GnuPG puede pedir su contraseña…</source>
+      <translation>Clave importada. Comprobando que descifra el desafío; GnuPG puede pedir su contraseña…</translation>
+    </message>
+    <message>
+      <source>Clave recibida y verificada (SHA-256). Importando en GnuPG…</source>
+      <translation>Clave recibida y verificada (SHA-256). Importando en GnuPG…</translation>
     </message>
     <message>
       <source>Contraseña actualizada</source>
@@ -199,6 +223,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Desbloquea la bóveda antes de modificarla.</translation>
     </message>
     <message>
+      <source>Desbloquea la bóveda en Desktop para sincronizar los cambios.</source>
+      <translation>Desbloquea la bóveda en Desktop para sincronizar los cambios.</translation>
+    </message>
+    <message>
       <source>Descifrando y comprobando la copia…</source>
       <translation>Descifrando y comprobando la copia…</translation>
     </message>
@@ -217,6 +245,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El archivo se guardó, pero no se pudo confirmar que todos los cambios llegaron al disco. Conserva la copia original.</source>
       <translation>El archivo se guardó, pero no se pudo confirmar que todos los cambios llegaron al disco. Conserva la copia original.</translation>
+    </message>
+    <message>
+      <source>El bloque recibido no es una única clave privada protegida con contraseña con la huella ofrecida. No se importó nada.</source>
+      <translation>El bloque recibido no es una única clave privada protegida con contraseña con la huella ofrecida. No se importó nada.</translation>
     </message>
     <message>
       <source>El borrador del elemento no es válido.</source>
@@ -245,6 +277,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El icono o el color de la carpeta no son válidos.</source>
       <translation>El icono o el color de la carpeta no son válidos.</translation>
+    </message>
+    <message>
+      <source>El teléfono canceló la transferencia. Se descartó lo recibido.</source>
+      <translation>El teléfono canceló la transferencia. Se descartó lo recibido.</translation>
+    </message>
+    <message>
+      <source>El teléfono interrumpió la transferencia. Se descartó lo recibido.</source>
+      <translation>El teléfono interrumpió la transferencia. Se descartó lo recibido.</translation>
+    </message>
+    <message>
+      <source>El teléfono no admite recibir tu clave. Actualiza KryptoPass en Android.</source>
+      <translation>El teléfono no admite recibir tu clave. Actualiza KryptoPass en Android.</translation>
+    </message>
+    <message>
+      <source>El teléfono ya no está conectado o no admite recibir esta clave.</source>
+      <translation>El teléfono ya no está conectado o no admite recibir esta clave.</translation>
     </message>
     <message>
       <source>Elemento cargado</source>
@@ -287,6 +335,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Esperando al agente GPG…</translation>
     </message>
     <message>
+      <source>Este teléfono ya sincroniza otra bóveda. Desactívala antes de cambiarla.</source>
+      <translation>Este teléfono ya sincroniza otra bóveda. Desactívala antes de cambiarla.</translation>
+    </message>
+    <message>
       <source>Failed to initialize QApplication</source>
       <translation>Failed to initialize QApplication</translation>
     </message>
@@ -299,12 +351,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Firma de prueba completada; si el agente ya tenía la passphrase en caché, no apareció diálogo</translation>
     </message>
     <message>
+      <source>Forget device ignored</source>
+      <translation>Forget device ignored</translation>
+    </message>
+    <message>
+      <source>GnuPG could not decrypt the challenge</source>
+      <translation>GnuPG could not decrypt the challenge</translation>
+    </message>
+    <message>
+      <source>GnuPG could not import a key part</source>
+      <translation>GnuPG could not import a key part</translation>
+    </message>
+    <message>
       <source>GnuPG creó la clave pero no devolvió su huella.</source>
       <translation>GnuPG creó la clave pero no devolvió su huella.</translation>
     </message>
     <message>
       <source>GnuPG devolvió una clave pública que no es ASCII/UTF-8.</source>
       <translation>GnuPG devolvió una clave pública que no es ASCII/UTF-8.</translation>
+    </message>
+    <message>
+      <source>GnuPG did not store the secret key</source>
+      <translation>GnuPG did not store the secret key</translation>
     </message>
     <message>
       <source>GnuPG no permite borrar solo la parte pública mientras existe material secreto; elimina primero ese material o borra la clave completa.</source>
@@ -315,12 +383,32 @@ No incluye contraseñas ni valores de credenciales.
       <translation>GnuPG no produjo datos para la exportación solicitada.</translation>
     </message>
     <message>
+      <source>GnuPG no pudo importar la clave. Revisa GnuPG y vuelve a intentarlo desde el teléfono.</source>
+      <translation>GnuPG no pudo importar la clave. Revisa GnuPG y vuelve a intentarlo desde el teléfono.</translation>
+    </message>
+    <message>
+      <source>GnuPG rejected the import</source>
+      <translation>GnuPG rejected the import</translation>
+    </message>
+    <message>
+      <source>GnuPG reported a key other than the offered one</source>
+      <translation>GnuPG reported a key other than the offered one</translation>
+    </message>
+    <message>
       <source>Guardando carpeta…</source>
       <translation>Guardando carpeta…</translation>
     </message>
     <message>
       <source>Guardando elemento…</source>
       <translation>Guardando elemento…</translation>
+    </message>
+    <message>
+      <source>Icon asset failed strict validation while hashing</source>
+      <translation>Icon asset failed strict validation while hashing</translation>
+    </message>
+    <message>
+      <source>Icon asset skipped while hashing</source>
+      <translation>Icon asset skipped while hashing</translation>
     </message>
     <message>
       <source>Identidad inválida</source>
@@ -342,6 +430,90 @@ No incluye contraseñas ni valores de credenciales.
       </translation>
     </message>
     <message>
+      <source>Importando la clave en GnuPG…</source>
+      <translation>Importando la clave en GnuPG…</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: GnuPG import result</source>
+      <translation>Inbound key transfer: GnuPG import result</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: GnuPG lookup failed</source>
+      <translation>Inbound key transfer: GnuPG lookup failed</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: UI phase changed</source>
+      <translation>Inbound key transfer: UI phase changed</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: automatic rejection could not be sent</source>
+      <translation>Inbound key transfer: automatic rejection could not be sent</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: block is one protected v4 secret key with the offered fingerprint</source>
+      <translation>Inbound key transfer: block is one protected v4 secret key with the offered fingerprint</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: decision could not be sent</source>
+      <translation>Inbound key transfer: decision could not be sent</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: decision ignored in this state</source>
+      <translation>Inbound key transfer: decision ignored in this state</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: import and challenge verified</source>
+      <translation>Inbound key transfer: import and challenge verified</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: import did not start, session changed</source>
+      <translation>Inbound key transfer: import did not start, session changed</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: import failed</source>
+      <translation>Inbound key transfer: import failed</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: imported into GnuPG, decrypting challenge</source>
+      <translation>Inbound key transfer: imported into GnuPG, decrypting challenge</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: local decision</source>
+      <translation>Inbound key transfer: local decision</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: no session owner to take the received key from</source>
+      <translation>Inbound key transfer: no session owner to take the received key from</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: offer assessed</source>
+      <translation>Inbound key transfer: offer assessed</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: offer shown to the user, assessing</source>
+      <translation>Inbound key transfer: offer shown to the user, assessing</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: received key not available for import</source>
+      <translation>Inbound key transfer: received key not available for import</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: rejected automatically</source>
+      <translation>Inbound key transfer: rejected automatically</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: result could not reach the session</source>
+      <translation>Inbound key transfer: result could not reach the session</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: unexpected OpenPGP packet tag</source>
+      <translation>Inbound key transfer: unexpected OpenPGP packet tag</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: validating received block</source>
+      <translation>Inbound key transfer: validating received block</translation>
+    </message>
+    <message>
       <source>Indica la huella OpenPGP completa.</source>
       <translation>Indica la huella OpenPGP completa.</translation>
     </message>
@@ -360,6 +532,38 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Inválida</source>
       <translation>Inválida</translation>
+    </message>
+    <message>
+      <source>Key transfer could not start</source>
+      <translation>Key transfer could not start</translation>
+    </message>
+    <message>
+      <source>Key transfer: cancelled</source>
+      <translation>Key transfer: cancelled</translation>
+    </message>
+    <message>
+      <source>Key transfer: export ready, sending offer</source>
+      <translation>Key transfer: export ready, sending offer</translation>
+    </message>
+    <message>
+      <source>Key transfer: offer sent</source>
+      <translation>Key transfer: offer sent</translation>
+    </message>
+    <message>
+      <source>Key transfer: phase changed</source>
+      <translation>Key transfer: phase changed</translation>
+    </message>
+    <message>
+      <source>Key transfer: preparing export</source>
+      <translation>Key transfer: preparing export</translation>
+    </message>
+    <message>
+      <source>Key transfer: result superseded by a newer operation</source>
+      <translation>Key transfer: result superseded by a newer operation</translation>
+    </message>
+    <message>
+      <source>Key transfer: session changed before the offer was activated</source>
+      <translation>Key transfer: session changed before the offer was activated</translation>
     </message>
     <message>
       <source>La bóveda activa cambió. Vuelve a revisar el archivo antes de importar.</source>
@@ -384,6 +588,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La clave no tiene material privado local.</source>
       <translation>La clave no tiene material privado local.</translation>
+    </message>
+    <message>
+      <source>La clave recibida no coincide con la oferta (SHA-256). Se descartó.</source>
+      <translation>La clave recibida no coincide con la oferta (SHA-256). Se descartó.</translation>
+    </message>
+    <message>
+      <source>La clave se importó en GnuPG, pero no se pudo descifrar el desafío (¿contraseña cancelada o incorrecta?). El teléfono no recibirá confirmación.</source>
+      <translation>La clave se importó en GnuPG, pero no se pudo descifrar el desafío (¿contraseña cancelada o incorrecta?). El teléfono no recibirá confirmación.</translation>
     </message>
     <message>
       <source>La fecha de caducidad supera el límite que puede representar GnuPG.</source>
@@ -654,10 +866,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>OpenPGP decryption failed</translation>
     </message>
     <message>
-      <source>OpenPGP encryption did not accept every selected recipient</source>
-      <translation>OpenPGP encryption did not accept every selected recipient</translation>
-    </message>
-    <message>
       <source>OpenPGP encryption failed</source>
       <translation>OpenPGP encryption failed</translation>
     </message>
@@ -748,6 +956,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source> %1 clave(s) no tenían identidad de usuario.</source>
       <translation> %1 clave(s) no tenían identidad de usuario.</translation>
+    </message>
+    <message>
+      <source> (copia del teléfono)</source>
+      <translation> (copia del teléfono)</translation>
     </message>
     <message>
       <source> Se omitieron %1 clave(s) de formato v3.</source>
@@ -1033,6 +1245,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No existe una clave local con la huella primaria %1.</translation>
     </message>
     <message>
+      <source>No hay una bóveda activa con la que comparar. Se rechazó automáticamente.</source>
+      <translation>No hay una bóveda activa con la que comparar. Se rechazó automáticamente.</translation>
+    </message>
+    <message>
       <source>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</source>
       <translation>No se pudo descifrar la copia. Necesitas la clave privada de alguien con acceso a ella. Comprueba que esté importada y vuelve a intentar; si GnuPG pide una contraseña, introdúcela en su ventana. El archivo también podría estar dañado.</translation>
     </message>
@@ -1265,6 +1481,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave %1 importada desde la fuente externa configurada.</translation>
     </message>
     <message>
+      <source>Clave %1 marcada como tuya: GnuPG ya puede cifrar con ella.</source>
+      <translation>Clave %1 marcada como tuya: GnuPG ya puede cifrar con ella.</translation>
+    </message>
+    <message>
       <source>Claves SSH</source>
       <translation>Claves SSH</translation>
     </message>
@@ -1369,16 +1589,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El dispositivo ya no está autorizado.</translation>
     </message>
     <message>
+      <source>El historial de Sync contiene cambios de un dispositivo que ya no está autorizado. El historial se conserva, pero Sync necesita recuperarlo antes de continuar.</source>
+      <translation>El historial de Sync contiene cambios de un dispositivo que ya no está autorizado. El historial se conserva, pero Sync necesita recuperarlo antes de continuar.</translation>
+    </message>
+    <message>
       <source>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</source>
       <translation>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</translation>
     </message>
     <message>
-      <source>El teléfono o la sesión no admite la transferencia sintética.</source>
-      <translation>El teléfono o la sesión no admite la transferencia sintética.</translation>
+      <source>El teléfono no tiene alguna de las claves elegidas. Elige solo las que tiene.</source>
+      <translation>El teléfono no tiene alguna de las claves elegidas. Elige solo las que tiene.</translation>
     </message>
     <message>
-      <source>El teléfono ya no está conectado con la sesión preparada para la prueba.</source>
-      <translation>El teléfono ya no está conectado con la sesión preparada para la prueba.</translation>
+      <source>El teléfono o la sesión no admite la transferencia sintética.</source>
+      <translation>El teléfono o la sesión no admite la transferencia sintética.</translation>
     </message>
     <message>
       <source>Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar.</source>
@@ -1389,8 +1613,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Elementos personalizados</translation>
     </message>
     <message>
+      <source>Elige al menos una clave con clave privada en este equipo para sincronizar.</source>
+      <translation>Elige al menos una clave con clave privada en este equipo para sincronizar.</translation>
+    </message>
+    <message>
       <source>Emparejamiento rechazado. No se concedió confianza.</source>
       <translation>Emparejamiento rechazado. No se concedió confianza.</translation>
+    </message>
+    <message>
+      <source>Es una clave de tu bóveda y no está en GnuPG: se creará al importarla.</source>
+      <translation>Es una clave de tu bóveda y no está en GnuPG: se creará al importarla.</translation>
+    </message>
+    <message>
+      <source>Es una clave de tu bóveda y ya está en GnuPG: se combinará (identidades, subclaves y firmas nuevas). No se borra nada.</source>
+      <translation>Es una clave de tu bóveda y ya está en GnuPG: se combinará (identidades, subclaves y firmas nuevas). No se borra nada.</translation>
+    </message>
+    <message>
+      <source>Es una clave de tu bóveda. GnuPG solo tiene su parte pública: se añadirá la parte privada.</source>
+      <translation>Es una clave de tu bóveda. GnuPG solo tiene su parte pública: se añadirá la parte privada.</translation>
     </message>
     <message>
       <source>Escanea el QR desde Android o copia el código de conexión.</source>
@@ -1411,6 +1651,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Esperando recuperar la conexión con el dispositivo autorizado…</source>
       <translation>Esperando recuperar la conexión con el dispositivo autorizado…</translation>
+    </message>
+    <message>
+      <source>Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente.</source>
+      <translation>Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente.</translation>
     </message>
     <message>
       <source>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</source>
@@ -1453,12 +1697,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>GnuPG %1 no es compatible; se necesita %2 o posterior.</translation>
     </message>
     <message>
+      <source>GnuPG did not export the selected identity</source>
+      <translation>GnuPG did not export the selected identity</translation>
+    </message>
+    <message>
       <source>GnuPG eliminó también la parte pública de %1; la operación quedó parcialmente aplicada.</source>
       <translation>GnuPG eliminó también la parte pública de %1; la operación quedó parcialmente aplicada.</translation>
     </message>
     <message>
       <source>GnuPG no pudo %1: %2</source>
       <translation>GnuPG no pudo %1: %2</translation>
+    </message>
+    <message>
+      <source>GnuPG no puede cifrar con la clave %1 porque no está marcada como tuya. Ábrela en Claves y pulsa «Marcar como mía».</source>
+      <translation>GnuPG no puede cifrar con la clave %1 porque no está marcada como tuya. Ábrela en Claves y pulsa «Marcar como mía».</translation>
+    </message>
+    <message>
+      <source>GnuPG no registró la confianza de la clave %1. Sigue sin poder cifrar con ella; revisa GnuPG e inténtalo de nuevo.</source>
+      <translation>GnuPG no registró la confianza de la clave %1. Sigue sin poder cifrar con ella; revisa GnuPG e inténtalo de nuevo.</translation>
     </message>
     <message>
       <source>GnuPG terminó, pero el material privado de %1 sigue presente.</source>
@@ -1469,8 +1725,32 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Identidades</translation>
     </message>
     <message>
+      <source>Inbound key transfer: no active vault to compare</source>
+      <translation>Inbound key transfer: no active vault to compare</translation>
+    </message>
+    <message>
+      <source>Inbound key transfer: offered fingerprint is not a key of the active vault</source>
+      <translation>Inbound key transfer: offered fingerprint is not a key of the active vault</translation>
+    </message>
+    <message>
       <source>Introduce un servidor WSS válido, sin credenciales ni parámetros.</source>
       <translation>Introduce un servidor WSS válido, sin credenciales ni parámetros.</translation>
+    </message>
+    <message>
+      <source>Key transfer: selected identity export failed</source>
+      <translation>Key transfer: selected identity export failed</translation>
+    </message>
+    <message>
+      <source>Keyring: could not mark the key as own</source>
+      <translation>Keyring: could not mark the key as own</translation>
+    </message>
+    <message>
+      <source>Keyring: key marked as own</source>
+      <translation>Keyring: key marked as own</translation>
+    </message>
+    <message>
+      <source>Keyring: user asked to mark a key as own (ultimate ownertrust)</source>
+      <translation>Keyring: user asked to mark a key as own (ultimate ownertrust)</translation>
     </message>
     <message>
       <source>KryptoPass synthetic test password</source>
@@ -1493,6 +1773,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La clave %1 está revocada, deshabilitada o no es válida.</translation>
     </message>
     <message>
+      <source>La clave elegida no es válida. Vuelve a abrir la selección y revisa su huella.</source>
+      <translation>La clave elegida no es válida. Vuelve a abrir la selección y revisa su huella.</translation>
+    </message>
+    <message>
+      <source>La clave ya no pertenece a la bóveda activa. No se importó nada.</source>
+      <translation>La clave ya no pertenece a la bóveda activa. No se importó nada.</translation>
+    </message>
+    <message>
       <source>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</source>
       <translation>La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar.</translation>
     </message>
@@ -1507,10 +1795,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La identidad no es válida.</source>
       <translation>La identidad no es válida.</translation>
-    </message>
-    <message>
-      <source>La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.</source>
-      <translation>La identidad sintética cambió después de mostrar la confirmación. Vuelve a revisar el fingerprint.</translation>
     </message>
     <message>
       <source>La invitación o conexión caducó. Genera otro código.</source>
@@ -1537,6 +1821,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La sesión cambió antes de activar la transferencia. No se enviará material privado.</translation>
     </message>
     <message>
+      <source>La sesión cambió antes de importar. No se importó nada.</source>
+      <translation>La sesión cambió antes de importar. No se importó nada.</translation>
+    </message>
+    <message>
       <source>La sesión cambió. Vuelve a abrir la confirmación.</source>
       <translation>La sesión cambió. Vuelve a abrir la confirmación.</translation>
     </message>
@@ -1557,8 +1845,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La solicitud OpenPGP contiene un valor no válido.</translation>
     </message>
     <message>
+      <source>La transferencia caducó (5 minutos desde la oferta). Se descartó lo recibido.</source>
+      <translation>La transferencia caducó (5 minutos desde la oferta). Se descartó lo recibido.</translation>
+    </message>
+    <message>
       <source>La transferencia caducó. Vuelve a iniciar la prueba.</source>
       <translation>La transferencia caducó. Vuelve a iniciar la prueba.</translation>
+    </message>
+    <message>
+      <source>La transferencia no respetó el orden o el tamaño anunciado. Se descartó lo recibido.</source>
+      <translation>La transferencia no respetó el orden o el tamaño anunciado. Se descartó lo recibido.</translation>
     </message>
     <message>
       <source>La transferencia sintética solo está disponible en Desktop debug.</source>
@@ -1617,6 +1913,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay ninguna clave privada OpenPGP disponible.</translation>
     </message>
     <message>
+      <source>No hay una bóveda abierta en Desktop.</source>
+      <translation>No hay una bóveda abierta en Desktop.</translation>
+    </message>
+    <message>
       <source>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</source>
       <translation>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</translation>
     </message>
@@ -1645,6 +1945,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</translation>
     </message>
     <message>
+      <source>No se pudo abrir el perfil de vinculación de este teléfono.</source>
+      <translation>No se pudo abrir el perfil de vinculación de este teléfono.</translation>
+    </message>
+    <message>
       <source>No se pudo abrir el perfil existente. No se creó una identidad nueva.</source>
       <translation>No se pudo abrir el perfil existente. No se creó una identidad nueva.</translation>
     </message>
@@ -1665,6 +1969,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo comunicar con gpg.</translation>
     </message>
     <message>
+      <source>No se pudo consultar GnuPG para revisar la clave. Se rechazó automáticamente.</source>
+      <translation>No se pudo consultar GnuPG para revisar la clave. Se rechazó automáticamente.</translation>
+    </message>
+    <message>
       <source>No se pudo crear un archivo temporal privado.</source>
       <translation>No se pudo crear un archivo temporal privado.</translation>
     </message>
@@ -1675,6 +1983,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</source>
       <translation>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</translation>
+    </message>
+    <message>
+      <source>No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.</source>
+      <translation>No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.</translation>
+    </message>
+    <message>
+      <source>No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado.</source>
+      <translation>No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado.</translation>
     </message>
     <message>
       <source>No se pudo guardar el nombre. La identidad y la confianza se conservan.</source>
@@ -1701,6 +2017,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo guardar la preferencia de la clave principal.</translation>
     </message>
     <message>
+      <source>No se pudo importar o comprobar la clave. Se descartó lo recibido.</source>
+      <translation>No se pudo importar o comprobar la clave. Se descartó lo recibido.</translation>
+    </message>
+    <message>
       <source>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</source>
       <translation>No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.</translation>
     </message>
@@ -1719,6 +2039,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo leer la política de privacidad de red. No se inició una conexión.</source>
       <translation>No se pudo leer la política de privacidad de red. No se inició una conexión.</translation>
+    </message>
+    <message>
+      <source>No se pudo leer o guardar la bóveda. Se reintentará.</source>
+      <translation>No se pudo leer o guardar la bóveda. Se reintentará.</translation>
     </message>
     <message>
       <source>No se pudo localizar el archivo de política de red. No se aplicaron cambios.</source>
@@ -1761,6 +2085,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Notas</translation>
     </message>
     <message>
+      <source>OpenPGP encryption failed: {detail}</source>
+      <translation>OpenPGP encryption failed: {detail}</translation>
+    </message>
+    <message>
+      <source>OpenPGP encryption refused: the key is here with its private part but GnuPG does not trust it as the user's own</source>
+      <translation>OpenPGP encryption refused: the key is here with its private part but GnuPG does not trust it as the user's own</translation>
+    </message>
+    <message>
+      <source>OpenPGP fingerprint is invalid</source>
+      <translation>OpenPGP fingerprint is invalid</translation>
+    </message>
+    <message>
       <source>Operación cancelada.</source>
       <translation>Operación cancelada.</translation>
     </message>
@@ -1773,8 +2109,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>PUBLIC SYNTHETIC</translation>
     </message>
     <message>
+      <source>Pairing carrier selected</source>
+      <translation>Pairing carrier selected</translation>
+    </message>
+    <message>
       <source>Pairing lab: device session state updated</source>
       <translation>Pairing lab: device session state updated</translation>
+    </message>
+    <message>
+      <source>Pairing profile maintenance failed</source>
+      <translation>Pairing profile maintenance failed</translation>
+    </message>
+    <message>
+      <source>Pairing profile maintenance requested</source>
+      <translation>Pairing profile maintenance requested</translation>
     </message>
     <message>
       <source>Papelera</source>
@@ -1809,6 +2157,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Rechazando…</translation>
     </message>
     <message>
+      <source>Rechazaste la transferencia. No se recibirá nada.</source>
+      <translation>Rechazaste la transferencia. No se recibirá nada.</translation>
+    </message>
+    <message>
+      <source>Recibiendo la clave del teléfono…</source>
+      <translation>Recibiendo la clave del teléfono…</translation>
+    </message>
+    <message>
       <source>Red</source>
       <translation>Red</translation>
     </message>
@@ -1829,12 +2185,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Repeated transport diagnostics (addresses omitted)</translation>
     </message>
     <message>
+      <source>Revisando la clave ofrecida…</source>
+      <translation>Revisando la clave ofrecida…</translation>
+    </message>
+    <message>
       <source>Revisión sintética no proyectable</source>
       <translation>Revisión sintética no proyectable</translation>
     </message>
     <message>
       <source>STUN binding request from</source>
       <translation>STUN binding request from</translation>
+    </message>
+    <message>
+      <source>Se perdió la conexión antes de terminar. Se descartó lo recibido.</source>
+      <translation>Se perdió la conexión antes de terminar. Se descartó lo recibido.</translation>
     </message>
     <message>
       <source>Selecciona la dirección de Desktop en tu red local.</source>
@@ -1865,6 +2229,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Sin carpeta</translation>
     </message>
     <message>
+      <source>Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.</source>
+      <translation>Sincronización activada. Actívala también en el teléfono: Dispositivos → este Desktop → Sincronizar mi bóveda.</translation>
+    </message>
+    <message>
+      <source>Sincronización desactivada. La bóveda no cambió.</source>
+      <translation>Sincronización desactivada. La bóveda no cambió.</translation>
+    </message>
+    <message>
       <source>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</source>
       <translation>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</translation>
     </message>
@@ -1883,6 +2255,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Todos los archivos (*)</source>
       <translation>Todos los archivos (*)</translation>
+    </message>
+    <message>
+      <source>Transferencia rechazada. No se recibió nada.</source>
+      <translation>Transferencia rechazada. No se recibió nada.</translation>
     </message>
     <message>
       <source>Unix {}</source>
@@ -1919,6 +2295,98 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Validez plena según GnuPG</source>
       <translation>Validez plena según GnuPG</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not apply a ledger record</source>
+      <translation>Vault mirror could not apply a ledger record</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not decrypt a ledger record; the key may be missing here or locked</source>
+      <translation>Vault mirror could not decrypt a ledger record; the key may be missing here or locked</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not encrypt a record received from the phone</source>
+      <translation>Vault mirror could not encrypt a record received from the phone</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not hash the icon images</source>
+      <translation>Vault mirror could not hash the icon images</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not open the selected ledger</source>
+      <translation>Vault mirror could not open the selected ledger</translation>
+    </message>
+    <message>
+      <source>Vault mirror could not read an icon asset</source>
+      <translation>Vault mirror could not read an icon asset</translation>
+    </message>
+    <message>
+      <source>Vault mirror idle: no trusted phone syncs vault keys</source>
+      <translation>Vault mirror idle: no trusted phone syncs vault keys</translation>
+    </message>
+    <message>
+      <source>Vault mirror idle: the phone holds none of the selected keys</source>
+      <translation>Vault mirror idle: the phone holds none of the selected keys</translation>
+    </message>
+    <message>
+      <source>Vault mirror kept the Desktop icon</source>
+      <translation>Vault mirror kept the Desktop icon</translation>
+    </message>
+    <message>
+      <source>Vault mirror ledger write failed</source>
+      <translation>Vault mirror ledger write failed</translation>
+    </message>
+    <message>
+      <source>Vault mirror pass</source>
+      <translation>Vault mirror pass</translation>
+    </message>
+    <message>
+      <source>Vault mirror published an icon asset</source>
+      <translation>Vault mirror published an icon asset</translation>
+    </message>
+    <message>
+      <source>Vault mirror rejected an icon asset</source>
+      <translation>Vault mirror rejected an icon asset</translation>
+    </message>
+    <message>
+      <source>Vault mirror retries a record whose icon asset arrived</source>
+      <translation>Vault mirror retries a record whose icon asset arrived</translation>
+    </message>
+    <message>
+      <source>Vault mirror run</source>
+      <translation>Vault mirror run</translation>
+    </message>
+    <message>
+      <source>Vault mirror run failed</source>
+      <translation>Vault mirror run failed</translation>
+    </message>
+    <message>
+      <source>Vault mirror sends a record without its image icon</source>
+      <translation>Vault mirror sends a record without its image icon</translation>
+    </message>
+    <message>
+      <source>Vault mirror sends a record without its theme icon</source>
+      <translation>Vault mirror sends a record without its theme icon</translation>
+    </message>
+    <message>
+      <source>Vault mirror sends the record without its image icon</source>
+      <translation>Vault mirror sends the record without its image icon</translation>
+    </message>
+    <message>
+      <source>Vault mirror skipped a record</source>
+      <translation>Vault mirror skipped a record</translation>
+    </message>
+    <message>
+      <source>Vault mirror stopped: gpg-agent has no cached passphrase</source>
+      <translation>Vault mirror stopped: gpg-agent has no cached passphrase</translation>
+    </message>
+    <message>
+      <source>Vault mirror waits for an icon asset</source>
+      <translation>Vault mirror waits for an icon asset</translation>
+    </message>
+    <message>
+      <source>Vault sync selection changed</source>
+      <translation>Vault sync selection changed</translation>
     </message>
     <message>
       <source>Vencimiento</source>
@@ -1977,6 +2445,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>a secret has more than one companion</translation>
     </message>
     <message>
+      <source>a secret part is not protected by a passphrase</source>
+      <translation>a secret part is not protected by a passphrase</translation>
+    </message>
+    <message>
       <source>abrir el contexto</source>
       <translation>abrir el contexto</translation>
     </message>
@@ -2007,6 +2479,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>an array with at most {LIMIT} items</source>
       <translation>an array with at most {LIMIT} items</translation>
+    </message>
+    <message>
+      <source>another local key could decrypt the challenge</source>
+      <translation>another local key could decrypt the challenge</translation>
     </message>
     <message>
       <source>application data directory is not owned by the current user</source>
@@ -2321,6 +2797,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>cambiar la identidad principal</translation>
     </message>
     <message>
+      <source>challenge plaintext has the wrong size</source>
+      <translation>challenge plaintext has the wrong size</translation>
+    </message>
+    <message>
+      <source>challenge uses legacy encryption without integrity</source>
+      <translation>challenge uses legacy encryption without integrity</translation>
+    </message>
+    <message>
       <source>completar la operación</source>
       <translation>completar la operación</translation>
     </message>
@@ -2395,6 +2879,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not create the store directory</source>
       <translation>could not create the store directory</translation>
+    </message>
+    <message>
+      <source>could not create the transfer challenge</source>
+      <translation>could not create the transfer challenge</translation>
     </message>
     <message>
       <source>could not enable durable store journaling</source>
@@ -2517,6 +3005,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not measure backup size</translation>
     </message>
     <message>
+      <source>could not open GnuPG</source>
+      <translation>could not open GnuPG</translation>
+    </message>
+    <message>
       <source>could not open an application setting safely</source>
       <translation>could not open an application setting safely</translation>
     </message>
@@ -2553,6 +3045,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not prepare bounded OpenPGP output</translation>
     </message>
     <message>
+      <source>could not prepare decryption output</source>
+      <translation>could not prepare decryption output</translation>
+    </message>
+    <message>
       <source>could not prepare the active store setting directory</source>
       <translation>could not prepare the active store setting directory</translation>
     </message>
@@ -2563,6 +3059,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not prepare the application data root</source>
       <translation>could not prepare the application data root</translation>
+    </message>
+    <message>
+      <source>could not prepare the key export</source>
+      <translation>could not prepare the key export</translation>
     </message>
     <message>
       <source>could not prepare the setup state directory</source>
@@ -2697,6 +3197,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>duplicate icon resource</translation>
     </message>
     <message>
+      <source>empty ciphertext</source>
+      <translation>empty ciphertext</translation>
+    </message>
+    <message>
       <source>encrypted backup exceeds the maximum size</source>
       <translation>encrypted backup exceeds the maximum size</translation>
     </message>
@@ -2813,6 +3317,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>import destination has no parent</translation>
     </message>
     <message>
+      <source>imported key fingerprint mismatch</source>
+      <translation>imported key fingerprint mismatch</translation>
+    </message>
+    <message>
+      <source>indeterminate packet length is not allowed</source>
+      <translation>indeterminate packet length is not allowed</translation>
+    </message>
+    <message>
       <source>invalid device</source>
       <translation>invalid device</translation>
     </message>
@@ -2839,6 +3351,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>invalid icon source</source>
       <translation>invalid icon source</translation>
+    </message>
+    <message>
+      <source>invalid packet header</source>
+      <translation>invalid packet header</translation>
     </message>
     <message>
       <source>isolated OpenPGP home is not a real directory</source>
@@ -2889,6 +3405,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>missing linked secret</translation>
     </message>
     <message>
+      <source>more than one secret primary key in the block</source>
+      <translation>more than one secret primary key in the block</translation>
+    </message>
+    <message>
       <source>no absolute application config directory is available</source>
       <translation>no absolute application config directory is available</translation>
     </message>
@@ -2905,6 +3425,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no local secret key protects this vault</translation>
     </message>
     <message>
+      <source>no secret primary key in the block</source>
+      <translation>no secret primary key in the block</translation>
+    </message>
+    <message>
       <source>no such remote</source>
       <translation>no such remote</translation>
     </message>
@@ -2913,12 +3437,48 @@ No incluye contraseñas ni valores de credenciales.
       <translation>not a login</translation>
     </message>
     <message>
+      <source>offered key is not a key of the active vault</source>
+      <translation>offered key is not a key of the active vault</translation>
+    </message>
+    <message>
+      <source>only OpenPGP v4 identities can be sent to the phone</source>
+      <translation>only OpenPGP v4 identities can be sent to the phone</translation>
+    </message>
+    <message>
+      <source>only v4 secret keys are accepted</source>
+      <translation>only v4 secret keys are accepted</translation>
+    </message>
+    <message>
       <source>output size overflow</source>
       <translation>output size overflow</translation>
     </message>
     <message>
+      <source>packet extends past the block</source>
+      <translation>packet extends past the block</translation>
+    </message>
+    <message>
+      <source>partial body length is not allowed in a key</source>
+      <translation>partial body length is not allowed in a key</translation>
+    </message>
+    <message>
       <source>path is not a directory</source>
       <translation>path is not a directory</translation>
+    </message>
+    <message>
+      <source>primary fingerprint differs from the offer</source>
+      <translation>primary fingerprint differs from the offer</translation>
+    </message>
+    <message>
+      <source>public key part too large</source>
+      <translation>public key part too large</translation>
+    </message>
+    <message>
+      <source>recipient refused</source>
+      <translation>recipient refused</translation>
+    </message>
+    <message>
+      <source>recipient refused: {error}</source>
+      <translation>recipient refused: {error}</translation>
     </message>
     <message>
       <source>related entry identifier is invalid</source>
@@ -2967,6 +3527,22 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>secret does not exist</source>
       <translation>secret does not exist</translation>
+    </message>
+    <message>
+      <source>secret key missing after import</source>
+      <translation>secret key missing after import</translation>
+    </message>
+    <message>
+      <source>secret key missing before decryption</source>
+      <translation>secret key missing before decryption</translation>
+    </message>
+    <message>
+      <source>secret key part missing</source>
+      <translation>secret key part missing</translation>
+    </message>
+    <message>
+      <source>secret part is a GnuPG stub without key material</source>
+      <translation>secret part is a GnuPG stub without key material</translation>
     </message>
     <message>
       <source>secret revision is exhausted</source>
@@ -3025,6 +3601,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>setup state version is not supported</translation>
     </message>
     <message>
+      <source>signature before the primary key</source>
+      <translation>signature before the primary key</translation>
+    </message>
+    <message>
       <source>store contains too many recipient records for a backup</source>
       <translation>store contains too many recipient records for a backup</translation>
     </message>
@@ -3071,6 +3651,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>stored secret recipient metadata is invalid</source>
       <translation>stored secret recipient metadata is invalid</translation>
+    </message>
+    <message>
+      <source>subkey before the primary key</source>
+      <translation>subkey before the primary key</translation>
     </message>
     <message>
       <source>synthetic OpenPGP fixture cache is not a real directory</source>
@@ -3141,12 +3725,36 @@ No incluye contraseñas ni valores de credenciales.
       <translation>synthetic fixture operation failed</translation>
     </message>
     <message>
+      <source>the challenge was not decrypted by the offered key</source>
+      <translation>the challenge was not decrypted by the offered key</translation>
+    </message>
+    <message>
       <source>the primary key has no keygrip to forget</source>
       <translation>the primary key has no keygrip to forget</translation>
     </message>
     <message>
       <source>the primary secret key is not in the keyring</source>
       <translation>the primary secret key is not in the keyring</translation>
+    </message>
+    <message>
+      <source>the secret primary key does not lead the block</source>
+      <translation>the secret primary key does not lead the block</translation>
+    </message>
+    <message>
+      <source>the selected identity cannot be sent</source>
+      <translation>the selected identity cannot be sent</translation>
+    </message>
+    <message>
+      <source>the selected identity has no secret key in GnuPG</source>
+      <translation>the selected identity has no secret key in GnuPG</translation>
+    </message>
+    <message>
+      <source>the selected identity is invalid</source>
+      <translation>the selected identity is invalid</translation>
+    </message>
+    <message>
+      <source>the selected identity is not a valid recipient</source>
+      <translation>the selected identity is not a valid recipient</translation>
     </message>
     <message>
       <source>timed out</source>
@@ -3165,6 +3773,30 @@ No incluye contraseñas ni valores de credenciales.
       <translation>too many linked pairs</translation>
     </message>
     <message>
+      <source>truncated key material</source>
+      <translation>truncated key material</translation>
+    </message>
+    <message>
+      <source>truncated key packet</source>
+      <translation>truncated key packet</translation>
+    </message>
+    <message>
+      <source>truncated packet header</source>
+      <translation>truncated packet header</translation>
+    </message>
+    <message>
+      <source>truncated packet length</source>
+      <translation>truncated packet length</translation>
+    </message>
+    <message>
+      <source>truncated protection header</source>
+      <translation>truncated protection header</translation>
+    </message>
+    <message>
+      <source>unexpected packet: not exactly one transferable secret key</source>
+      <translation>unexpected packet: not exactly one transferable secret key</translation>
+    </message>
+    <message>
       <source>unhandled STUN packet</source>
       <translation>unhandled STUN packet</translation>
     </message>
@@ -3179,6 +3811,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>unsupported field projection</source>
       <translation>unsupported field projection</translation>
+    </message>
+    <message>
+      <source>unsupported public-key algorithm</source>
+      <translation>unsupported public-key algorithm</translation>
+    </message>
+    <message>
+      <source>user ID before the primary key</source>
+      <translation>user ID before the primary key</translation>
     </message>
     <message>
       <source>vault directory is unavailable</source>
@@ -3719,10 +4359,240 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>DeviceDetailsPage</name>
+    <message>
+      <source>· Vinculado</source>
+      <translation>· Vinculado</translation>
+    </message>
+    <message>
+      <source>Cambiar nombre</source>
+      <translation>Cambiar nombre</translation>
+    </message>
+    <message>
+      <source>Sincronización de la bóveda</source>
+      <translation>Sincronización de la bóveda</translation>
+    </message>
+    <message>
+      <source>Sincronizar la bóveda con este dispositivo</source>
+      <translation>Sincronizar la bóveda con este dispositivo</translation>
+    </message>
+    <message>
+      <source>Activada · se sincroniza mientras la bóveda está desbloqueada.</source>
+      <translation>Activada · se sincroniza mientras la bóveda está desbloqueada.</translation>
+    </message>
+    <message>
+      <source>Activada · esperando que el dispositivo se conecte.</source>
+      <translation>Activada · esperando que el dispositivo se conecte.</translation>
+    </message>
+    <message>
+      <source>Comparte los elementos de esta bóveda. El teléfono necesita su clave OpenPGP y tener Sync activado.</source>
+      <translation>Comparte los elementos de esta bóveda. El teléfono necesita su clave OpenPGP y tener Sync activado.</translation>
+    </message>
+    <message>
+      <source>Clave OpenPGP</source>
+      <translation>Clave OpenPGP</translation>
+    </message>
+    <message>
+      <source>Elegir clave para enviar…</source>
+      <translation>Elegir clave para enviar…</translation>
+    </message>
+    <message>
+      <source>Elige una de tus claves privadas y revisa el destinatario antes de enviarla. Se conserva protegida con su contraseña.</source>
+      <translation>Elige una de tus claves privadas y revisa el destinatario antes de enviarla. Se conserva protegida con su contraseña.</translation>
+    </message>
+    <message>
+      <source>Claves sincronizadas: %1</source>
+      <translation>Claves sincronizadas: %1</translation>
+    </message>
+    <message>
+      <source>Reconectar para enviar</source>
+      <translation>Reconectar para enviar</translation>
+    </message>
+    <message>
+      <source>Desconectar para reintentar</source>
+      <translation>Desconectar para reintentar</translation>
+    </message>
+    <message>
+      <source>Conecta este dispositivo para enviar la clave.</source>
+      <translation>Conecta este dispositivo para enviar la clave.</translation>
+    </message>
+    <message>
+      <source>Actualiza KryptoPass en el teléfono para recibir la clave.</source>
+      <translation>Actualiza KryptoPass en el teléfono para recibir la clave.</translation>
+    </message>
+    <message>
+      <source>Espera a que termine la operación actual.</source>
+      <translation>Espera a que termine la operación actual.</translation>
+    </message>
+    <message>
+      <source>Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. La vinculación se conserva.</source>
+      <translation>Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. La vinculación se conserva.</translation>
+    </message>
+    <message>
+      <source>Preparando la clave…</source>
+      <translation>Preparando la clave…</translation>
+    </message>
+    <message>
+      <source>Cancelar envío</source>
+      <translation>Cancelar envío</translation>
+    </message>
+    <message>
+      <source>Detalles de conexión</source>
+      <translation>Detalles de conexión</translation>
+    </message>
+    <message>
+      <source>Identificador del dispositivo</source>
+      <translation>Identificador del dispositivo</translation>
+    </message>
+    <message>
+      <source>Copiar identificador</source>
+      <translation>Copiar identificador</translation>
+    </message>
+    <message>
+      <source>Desconectar conserva la vinculación. Olvidar retira el permiso de este dispositivo en este equipo.</source>
+      <translation>Desconectar conserva la vinculación. Olvidar retira el permiso de este dispositivo en este equipo.</translation>
+    </message>
+    <message>
+      <source>Desconectar</source>
+      <translation>Desconectar</translation>
+    </message>
+    <message>
+      <source>Reconectar</source>
+      <translation>Reconectar</translation>
+    </message>
+    <message>
+      <source>Olvidar dispositivo…</source>
+      <translation>Olvidar dispositivo…</translation>
+    </message>
+    <message>
+      <source>Desarrollo</source>
+      <translation>Desarrollo</translation>
+    </message>
+    <message>
+      <source>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</source>
+      <translation>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</translation>
+    </message>
+    <message>
+      <source>Enviar clave de prueba</source>
+      <translation>Enviar clave de prueba</translation>
+    </message>
+    <message>
+      <source>Cancelar transferencia</source>
+      <translation>Cancelar transferencia</translation>
+    </message>
+    <message>
+      <source>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</source>
+      <translation>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</translation>
+    </message>
+    <message>
+      <source>Activar prueba de Sync</source>
+      <translation>Activar prueba de Sync</translation>
+    </message>
+    <message>
+      <source>Actualizar prueba</source>
+      <translation>Actualizar prueba</translation>
+    </message>
+    <message>
+      <source>Crear credencial de prueba</source>
+      <translation>Crear credencial de prueba</translation>
+    </message>
+    <message>
+      <source>Revisiones guardadas en este equipo: %1</source>
+      <translation>Revisiones guardadas en este equipo: %1</translation>
+    </message>
+  </context>
+  <context>
+    <name>DeviceKeyPicker</name>
+    <message>
+      <source>Elegir clave para enviar</source>
+      <translation>Elegir clave para enviar</translation>
+    </message>
+    <message>
+      <source>Para: %1</source>
+      <translation>Para: %1</translation>
+    </message>
+    <message>
+      <source>Elige cuál de tus claves privadas quieres enviar al teléfono.</source>
+      <translation>Elige cuál de tus claves privadas quieres enviar al teléfono.</translation>
+    </message>
+    <message>
+      <source>Huella completa: %1</source>
+      <translation>Huella completa: %1</translation>
+    </message>
+    <message>
+      <source>Esta clave no es la principal de la bóveda activa. Enviarla no cambia la principal ni da acceso a los elementos cifrados solo con ella.</source>
+      <translation>Esta clave no es la principal de la bóveda activa. Enviarla no cambia la principal ni da acceso a los elementos cifrados solo con ella.</translation>
+    </message>
+    <message>
+      <source>Por ahora, el teléfono admite una sola clave importada. No reemplaza una existente.</source>
+      <translation>Por ahora, el teléfono admite una sola clave importada. No reemplaza una existente.</translation>
+    </message>
+    <message>
+      <source>La conexión o la clave elegida ya no está disponible. Cierra y vuelve a elegir antes de enviarla.</source>
+      <translation>La conexión o la clave elegida ya no está disponible. Cierra y vuelve a elegir antes de enviarla.</translation>
+    </message>
+    <message>
+      <source>No hay claves privadas disponibles en GnuPG. Revisa tus claves antes de enviarlas.</source>
+      <translation>No hay claves privadas disponibles en GnuPG. Revisa tus claves antes de enviarlas.</translation>
+    </message>
+    <message>
+      <source>Actualizar claves</source>
+      <translation>Actualizar claves</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Revisar envío</source>
+      <translation>Revisar envío</translation>
+    </message>
+  </context>
+  <context>
     <name>DevicesWindow</name>
     <message>
       <source>Dispositivos</source>
       <translation>Dispositivos</translation>
+    </message>
+    <message>
+      <source>Revisando la clave ofrecida…</source>
+      <translation>Revisando la clave ofrecida…</translation>
+    </message>
+    <message>
+      <source>Esperando tu decisión</source>
+      <translation>Esperando tu decisión</translation>
+    </message>
+    <message>
+      <source>Recibiendo (%1 de %2 bytes)</source>
+      <translation>Recibiendo (%1 de %2 bytes)</translation>
+    </message>
+    <message>
+      <source>Importando en GnuPG</source>
+      <translation>Importando en GnuPG</translation>
+    </message>
+    <message>
+      <source>Comprobando el desafío</source>
+      <translation>Comprobando el desafío</translation>
+    </message>
+    <message>
+      <source>Completado</source>
+      <translation>Completado</translation>
+    </message>
+    <message>
+      <source>Rechazada</source>
+      <translation>Rechazada</translation>
+    </message>
+    <message>
+      <source>Cancelada por el teléfono</source>
+      <translation>Cancelada por el teléfono</translation>
+    </message>
+    <message>
+      <source>Caducada</source>
+      <translation>Caducada</translation>
+    </message>
+    <message>
+      <source>Error</source>
+      <translation>Error</translation>
     </message>
     <message>
       <source>Dispositivo</source>
@@ -3747,6 +4617,30 @@ Huella(s) detectadas:
     <message>
       <source>Desconectado</source>
       <translation>Desconectado</translation>
+    </message>
+    <message>
+      <source>Lista para enviar la clave elegida</source>
+      <translation>Lista para enviar la clave elegida</translation>
+    </message>
+    <message>
+      <source>Este dispositivo no admite recibir la clave</source>
+      <translation>Este dispositivo no admite recibir la clave</translation>
+    </message>
+    <message>
+      <source>Esperando que aceptes en el teléfono</source>
+      <translation>Esperando que aceptes en el teléfono</translation>
+    </message>
+    <message>
+      <source>Enviando tu clave</source>
+      <translation>Enviando tu clave</translation>
+    </message>
+    <message>
+      <source>Esperando que el teléfono la guarde</source>
+      <translation>Esperando que el teléfono la guarde</translation>
+    </message>
+    <message>
+      <source>El teléfono guardó tu clave y comprobó que puede descifrar</source>
+      <translation>El teléfono guardó tu clave y comprobó que puede descifrar</translation>
     </message>
     <message>
       <source>Prueba de transferencia disponible</source>
@@ -3857,8 +4751,16 @@ Huella(s) detectadas:
       <translation>La sesión autenticada está activa. Cerrar esta ventana no la desconecta.</translation>
     </message>
     <message>
+      <source>Volver a dispositivos</source>
+      <translation>Volver a dispositivos</translation>
+    </message>
+    <message>
       <source>Tus dispositivos</source>
       <translation>Tus dispositivos</translation>
+    </message>
+    <message>
+      <source>Conexión y opciones del dispositivo</source>
+      <translation>Conexión y opciones del dispositivo</translation>
     </message>
     <message>
       <source>Más opciones</source>
@@ -3871,14 +4773,6 @@ Huella(s) detectadas:
     <message>
       <source>Actualizar dispositivos y redes</source>
       <translation>Actualizar dispositivos y redes</translation>
-    </message>
-    <message>
-      <source>Reiniciar vinculación…</source>
-      <translation>Reiniciar vinculación…</translation>
-    </message>
-    <message>
-      <source>Hay una sesión activa con %1. Desconéctalo antes de vincular o reconectar otro dispositivo.</source>
-      <translation>Hay una sesión activa con %1. Desconéctalo antes de vincular o reconectar otro dispositivo.</translation>
     </message>
     <message>
       <source>Reconectar dispositivo</source>
@@ -3903,6 +4797,10 @@ Huella(s) detectadas:
     <message>
       <source>Modo emulador: solo para Android en esta computadora.</source>
       <translation>Modo emulador: solo para Android en esta computadora.</translation>
+    </message>
+    <message>
+      <source>El teléfono prueba primero la red local y, si no llega, usa Internet.</source>
+      <translation>El teléfono prueba primero la red local y, si no llega, usa Internet.</translation>
     </message>
     <message>
       <source>Ocultar código</source>
@@ -3945,12 +4843,24 @@ Huella(s) detectadas:
       <translation>Los 7 coinciden</translation>
     </message>
     <message>
+      <source>Automático: red local y, si no llega, Internet</source>
+      <translation>Automático: red local y, si no llega, Internet</translation>
+    </message>
+    <message>
+      <source>Solo por Internet</source>
+      <translation>Solo por Internet</translation>
+    </message>
+    <message>
       <source>Servidor de conexión (wss://…)</source>
       <translation>Servidor de conexión (wss://…)</translation>
     </message>
     <message>
       <source>Servidor de conexión por Internet</source>
       <translation>Servidor de conexión por Internet</translation>
+    </message>
+    <message>
+      <source>Solo red local</source>
+      <translation>Solo red local</translation>
     </message>
     <message>
       <source>Actualizar redes</source>
@@ -3961,12 +4871,20 @@ Huella(s) detectadas:
       <translation>Vuelve a cargar los dispositivos. Si el problema continúa, consulta el registro de la aplicación.</translation>
     </message>
     <message>
+      <source>otro dispositivo</source>
+      <translation>otro dispositivo</translation>
+    </message>
+    <message>
       <source>Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.</source>
       <translation>Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.</translation>
     </message>
     <message>
       <source>Vincula y conecta tus dispositivos</source>
       <translation>Vincula y conecta tus dispositivos</translation>
+    </message>
+    <message>
+      <source>Borrar todas las vinculaciones…</source>
+      <translation>Borrar todas las vinculaciones…</translation>
     </message>
     <message>
       <source>Privacidad de la conexión</source>
@@ -4017,14 +4935,6 @@ Huella(s) detectadas:
       <translation>Cómo emparejar un dispositivo nuevo</translation>
     </message>
     <message>
-      <source>Por Internet</source>
-      <translation>Por Internet</translation>
-    </message>
-    <message>
-      <source>En la misma red local</source>
-      <translation>En la misma red local</translation>
-    </message>
-    <message>
       <source>No disponible mientras ocultas tu dirección IP.</source>
       <translation>No disponible mientras ocultas tu dirección IP.</translation>
     </message>
@@ -4053,26 +4963,6 @@ Huella(s) detectadas:
       <translation>Cargando dispositivos autorizados…</translation>
     </message>
     <message>
-      <source>Emparejado</source>
-      <translation>Emparejado</translation>
-    </message>
-    <message>
-      <source>Confianza no disponible</source>
-      <translation>Confianza no disponible</translation>
-    </message>
-    <message>
-      <source>Estado de confianza: %1</source>
-      <translation>Estado de confianza: %1</translation>
-    </message>
-    <message>
-      <source>Estado de conexión: %1</source>
-      <translation>Estado de conexión: %1</translation>
-    </message>
-    <message>
-      <source>Ruta de conexión: %1</source>
-      <translation>Ruta de conexión: %1</translation>
-    </message>
-    <message>
       <source>Reconectar</source>
       <translation>Reconectar</translation>
     </message>
@@ -4089,64 +4979,28 @@ Huella(s) detectadas:
       <translation>Más acciones</translation>
     </message>
     <message>
+      <source>Ver detalles y opciones</source>
+      <translation>Ver detalles y opciones</translation>
+    </message>
+    <message>
       <source>Cambiar nombre…</source>
       <translation>Cambiar nombre…</translation>
-    </message>
-    <message>
-      <source>Ocultar identificador</source>
-      <translation>Ocultar identificador</translation>
-    </message>
-    <message>
-      <source>Mostrar identificador</source>
-      <translation>Mostrar identificador</translation>
     </message>
     <message>
       <source>Olvidar dispositivo…</source>
       <translation>Olvidar dispositivo…</translation>
     </message>
     <message>
-      <source>Ocultar prueba de Sync</source>
-      <translation>Ocultar prueba de Sync</translation>
+      <source>¿Borrar todas las vinculaciones?</source>
+      <translation>¿Borrar todas las vinculaciones?</translation>
     </message>
     <message>
-      <source>Prueba sintética de Sync</source>
-      <translation>Prueba sintética de Sync</translation>
-    </message>
-    <message>
-      <source>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</source>
-      <translation>Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.</translation>
-    </message>
-    <message>
-      <source>Enviar clave de prueba</source>
-      <translation>Enviar clave de prueba</translation>
+      <source>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.</source>
+      <translation>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.</translation>
     </message>
     <message>
       <source>Cancelar transferencia</source>
       <translation>Cancelar transferencia</translation>
-    </message>
-    <message>
-      <source>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</source>
-      <translation>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</translation>
-    </message>
-    <message>
-      <source>Activar prueba de Sync</source>
-      <translation>Activar prueba de Sync</translation>
-    </message>
-    <message>
-      <source>Actualizar prueba</source>
-      <translation>Actualizar prueba</translation>
-    </message>
-    <message>
-      <source>Crear credencial de prueba</source>
-      <translation>Crear credencial de prueba</translation>
-    </message>
-    <message>
-      <source>Revisiones guardadas en este equipo: %1</source>
-      <translation>Revisiones guardadas en este equipo: %1</translation>
-    </message>
-    <message>
-      <source>Identificador completo del dispositivo</source>
-      <translation>Identificador completo del dispositivo</translation>
     </message>
     <message>
       <source>Sin dispositivos vinculados</source>
@@ -4165,10 +5019,6 @@ Huella(s) detectadas:
       <translation>Cerrar</translation>
     </message>
     <message>
-      <source>¿Reiniciar vinculación?</source>
-      <translation>¿Reiniciar vinculación?</translation>
-    </message>
-    <message>
       <source>¿Olvidar dispositivo?</source>
       <translation>¿Olvidar dispositivo?</translation>
     </message>
@@ -4181,16 +5031,36 @@ Huella(s) detectadas:
       <translation>Se cerrará la conexión y se eliminarán la autorización y el nombre local de «%1» en este equipo. También olvida este equipo en Android antes de volver a emparejarlos. La bóveda y OpenPGP se conservan.</translation>
     </message>
     <message>
-      <source>Reiniciar vinculación</source>
-      <translation>Reiniciar vinculación</translation>
-    </message>
-    <message>
       <source>Olvidar dispositivo</source>
       <translation>Olvidar dispositivo</translation>
     </message>
     <message>
+      <source>Borrar todas las vinculaciones</source>
+      <translation>Borrar todas las vinculaciones</translation>
+    </message>
+    <message>
+      <source>Una conexión a la vez</source>
+      <translation>Una conexión a la vez</translation>
+    </message>
+    <message>
+      <source>Ahora estás conectado a %1. Para conectar otro dispositivo, abre esta conexión y pulsa Desconectar. Tus dispositivos seguirán vinculados.</source>
+      <translation>Ahora estás conectado a %1. Para conectar otro dispositivo, abre esta conexión y pulsa Desconectar. Tus dispositivos seguirán vinculados.</translation>
+    </message>
+    <message>
+      <source>Volver</source>
+      <translation>Volver</translation>
+    </message>
+    <message>
+      <source>Ver conexión actual</source>
+      <translation>Ver conexión actual</translation>
+    </message>
+    <message>
       <source>Confirmar envío de clave de prueba</source>
       <translation>Confirmar envío de clave de prueba</translation>
+    </message>
+    <message>
+      <source>Enviar tu clave OpenPGP al teléfono</source>
+      <translation>Enviar tu clave OpenPGP al teléfono</translation>
     </message>
     <message>
       <source>Destinatario: %1</source>
@@ -4201,20 +5071,82 @@ Huella(s) detectadas:
       <translation>Fingerprint completo de la identidad OpenPGP sintética:</translation>
     </message>
     <message>
+      <source>Clave elegida: %1
+Huella completa; compárala con el teléfono:</source>
+      <translation>Clave elegida: %1
+Huella completa; compárala con el teléfono:</translation>
+    </message>
+    <message>
       <source>Fingerprint completo de la clave de prueba</source>
       <translation>Fingerprint completo de la clave de prueba</translation>
+    </message>
+    <message>
+      <source>Fingerprint completo de tu clave</source>
+      <translation>Fingerprint completo de tu clave</translation>
     </message>
     <message>
       <source>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</source>
       <translation>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</translation>
     </message>
     <message>
+      <source>La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la clave.</source>
+      <translation>La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la clave.</translation>
+    </message>
+    <message>
       <source>Preparando la clave de prueba en GnuPG…</source>
       <translation>Preparando la clave de prueba en GnuPG…</translation>
     </message>
     <message>
+      <source>Exportando tu clave con GnuPG; escribe su contraseña si te la pide…</source>
+      <translation>Exportando tu clave con GnuPG; escribe su contraseña si te la pide…</translation>
+    </message>
+    <message>
       <source>Confirmar y enviar</source>
       <translation>Confirmar y enviar</translation>
+    </message>
+    <message>
+      <source>Preparando…</source>
+      <translation>Preparando…</translation>
+    </message>
+    <message>
+      <source>Enviando…</source>
+      <translation>Enviando…</translation>
+    </message>
+    <message>
+      <source>Reintentar</source>
+      <translation>Reintentar</translation>
+    </message>
+    <message>
+      <source>Volver al dispositivo</source>
+      <translation>Volver al dispositivo</translation>
+    </message>
+    <message>
+      <source>Recibir tu clave OpenPGP desde el teléfono</source>
+      <translation>Recibir tu clave OpenPGP desde el teléfono</translation>
+    </message>
+    <message>
+      <source>Origen: %1</source>
+      <translation>Origen: %1</translation>
+    </message>
+    <message>
+      <source>Fingerprint completo de la clave ofrecida. Compáralo con el que muestra el teléfono:</source>
+      <translation>Fingerprint completo de la clave ofrecida. Compáralo con el que muestra el teléfono:</translation>
+    </message>
+    <message>
+      <source>Fingerprint completo de la clave ofrecida</source>
+      <translation>Fingerprint completo de la clave ofrecida</translation>
+    </message>
+    <message>
+      <source>Solo se aceptará la clave privada protegida con contraseña de esta huella. Después de importarla, GnuPG puede pedirte su contraseña para comprobar que funciona.</source>
+      <translation>Solo se aceptará la clave privada protegida con contraseña de esta huella. Después de importarla, GnuPG puede pedirte su contraseña para comprobar que funciona.</translation>
+    </message>
+    <message>
+      <source>Rechazar</source>
+      <translation>Rechazar</translation>
+    </message>
+    <message>
+      <source>Aceptar e importar</source>
+      <translation>Aceptar e importar</translation>
     </message>
     <message>
       <source>Nombre del dispositivo</source>
@@ -5232,6 +6164,14 @@ Huella(s) detectadas:
       <translation>Administrar</translation>
     </message>
     <message>
+      <source>GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.</source>
+      <translation>GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.</translation>
+    </message>
+    <message>
+      <source>Marcar como mía…</source>
+      <translation>Marcar como mía…</translation>
+    </message>
+    <message>
       <source>Guardar respaldo privado…</source>
       <translation>Guardar respaldo privado…</translation>
     </message>
@@ -5574,6 +6514,10 @@ Huella(s) detectadas:
       <translation>Eliminar clave del llavero</translation>
     </message>
     <message>
+      <source>Marcar clave como mía</source>
+      <translation>Marcar clave como mía</translation>
+    </message>
+    <message>
       <source>Operación OpenPGP</source>
       <translation>Operación OpenPGP</translation>
     </message>
@@ -5620,6 +6564,10 @@ Huella(s) detectadas:
     <message>
       <source>Eliminar del llavero</source>
       <translation>Eliminar del llavero</translation>
+    </message>
+    <message>
+      <source>Marcar como mía</source>
+      <translation>Marcar como mía</translation>
     </message>
     <message>
       <source>Continuar</source>
@@ -5772,6 +6720,10 @@ Huella(s) detectadas:
     <message>
       <source>Huella OpenPGP completa para recuperar una clave externa</source>
       <translation>Huella OpenPGP completa para recuperar una clave externa</translation>
+    </message>
+    <message>
+      <source>Esta clave tiene su parte privada en este equipo, pero GnuPG no sabe que es tuya y por eso se niega a cifrar con ella. Al marcarla como tuya, GnuPG le da confianza total (ultimate) en este llavero. Solo hazlo con claves que sean realmente tuyas. No se envía nada a otros dispositivos ni se revoca nada.</source>
+      <translation>Esta clave tiene su parte privada en este equipo, pero GnuPG no sabe que es tuya y por eso se niega a cifrar con ella. Al marcarla como tuya, GnuPG le da confianza total (ultimate) en este llavero. Solo hazlo con claves que sean realmente tuyas. No se envía nada a otros dispositivos ni se revoca nada.</translation>
     </message>
     <message>
       <source>El borrado afecta solo al llavero local y no revoca la clave ni retira copias que otras personas ya tengan. Si borras la parte privada sin respaldo, perderás acceso a los secretos de esta clave.</source>
@@ -7574,6 +8526,33 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Notas del elemento</source>
       <translation>Notas del elemento</translation>
+    </message>
+  </context>
+  <context>
+    <name>SyncKeysPicker</name>
+    <message>
+      <source>Claves para sincronizar</source>
+      <translation>Claves para sincronizar</translation>
+    </message>
+    <message>
+      <source>Para: %1</source>
+      <translation>Para: %1</translation>
+    </message>
+    <message>
+      <source>Se sincronizan los elementos cifrados solo con una de las claves marcadas. No se pudo comprobar qué claves tiene el teléfono (desconectado o versión anterior): marca únicamente las que tiene, o no podrá abrir esos elementos.</source>
+      <translation>Se sincronizan los elementos cifrados solo con una de las claves marcadas. No se pudo comprobar qué claves tiene el teléfono (desconectado o versión anterior): marca únicamente las que tiene, o no podrá abrir esos elementos.</translation>
+    </message>
+    <message>
+      <source>Se sincronizan los elementos cifrados solo con una de las claves marcadas. Solo se muestran las claves que tienen este equipo y el teléfono.</source>
+      <translation>Se sincronizan los elementos cifrados solo con una de las claves marcadas. Solo se muestran las claves que tienen este equipo y el teléfono.</translation>
+    </message>
+    <message>
+      <source>El teléfono no tiene ninguna de las claves de este equipo. Envíale una clave desde Dispositivos primero.</source>
+      <translation>El teléfono no tiene ninguna de las claves de este equipo. Envíale una clave desde Dispositivos primero.</translation>
+    </message>
+    <message>
+      <source>No hay claves con clave privada válida en este equipo.</source>
+      <translation>No hay claves con clave privada válida en este equipo.</translation>
     </message>
   </context>
   <context>
