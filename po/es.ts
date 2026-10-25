@@ -2413,6 +2413,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vault sync: key passphrase cached</translation>
     </message>
     <message>
+      <source>Vault sync: renegotiating the session on request</source>
+      <translation>Vault sync: renegotiating the session on request</translation>
+    </message>
+    <message>
       <source>Vencimiento</source>
       <translation>Vencimiento</translation>
     </message>
@@ -4425,8 +4429,68 @@ Huella(s) detectadas:
       <translation>Elige una de tus claves privadas y revisa el destinatario antes de enviarla. Se conserva protegida con su contraseña.</translation>
     </message>
     <message>
-      <source>Claves sincronizadas: %1</source>
-      <translation>Claves sincronizadas: %1</translation>
+      <source>El teléfono no tiene esta clave, así que no se sincroniza.</source>
+      <translation>El teléfono no tiene esta clave, así que no se sincroniza.</translation>
+    </message>
+    <message>
+      <source>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</source>
+      <translation>Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).</translation>
+    </message>
+    <message>
+      <source>Se sincroniza.</source>
+      <translation>Se sincroniza.</translation>
+    </message>
+    <message>
+      <source>El teléfono la tiene, pero no se sincroniza.</source>
+      <translation>El teléfono la tiene, pero no se sincroniza.</translation>
+    </message>
+    <message>
+      <source>Solo la tiene el teléfono; Desktop no tiene su clave privada.</source>
+      <translation>Solo la tiene el teléfono; Desktop no tiene su clave privada.</translation>
+    </message>
+    <message>
+      <source>Solo en Desktop: el teléfono no la tiene.</source>
+      <translation>Solo en Desktop: el teléfono no la tiene.</translation>
+    </message>
+    <message>
+      <source>Solo en Desktop.</source>
+      <translation>Solo en Desktop.</translation>
+    </message>
+    <message>
+      <source>Sin nombre</source>
+      <translation>Sin nombre</translation>
+    </message>
+    <message>
+      <source>Clave desconocida</source>
+      <translation>Clave desconocida</translation>
+    </message>
+    <message>
+      <source>Claves en Sincronización (%1 de %2)</source>
+      <translation>Claves en Sincronización (%1 de %2)</translation>
+    </message>
+    <message>
+      <source>Actualizar</source>
+      <translation>Actualizar</translation>
+    </message>
+    <message>
+      <source>Vuelve a negociar con el teléfono para leer sus claves actuales</source>
+      <translation>Vuelve a negociar con el teléfono para leer sus claves actuales</translation>
+    </message>
+    <message>
+      <source>Desbloquear…</source>
+      <translation>Desbloquear…</translation>
+    </message>
+    <message>
+      <source>Sincronizar</source>
+      <translation>Sincronizar</translation>
+    </message>
+    <message>
+      <source>Dejar de sincronizar</source>
+      <translation>Dejar de sincronizar</translation>
+    </message>
+    <message>
+      <source>Aún no hay claves con parte privada en este equipo.</source>
+      <translation>Aún no hay claves con parte privada en este equipo.</translation>
     </message>
     <message>
       <source>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</source>

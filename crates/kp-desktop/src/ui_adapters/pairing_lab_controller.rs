@@ -253,6 +253,9 @@ pub mod qobject {
         #[cxx_name = "dismissInboundKeyTransfer"]
         fn dismiss_inbound_key_transfer(self: Pin<&mut Self>);
         #[qinvokable]
+        #[cxx_name = "retryVaultSync"]
+        fn retry_vault_sync(self: Pin<&mut Self>, device_id: QString);
+        #[qinvokable]
         #[cxx_name = "unlockSyncKey"]
         fn unlock_sync_key(self: Pin<&mut Self>, fingerprint: QString);
         #[qinvokable]
@@ -1425,6 +1428,18 @@ impl qobject::PairingLabController {
                 }
             });
         });
+    }
+
+    /// Renegotiates the live session with `device_id` so it reads the current Sync binding
+    /// and the keys the phone declares, without touching the Sync switch.
+    pub fn retry_vault_sync(self: Pin<&mut Self>, device_id: QString) {
+        let Some(peer) = parse_device_id(&device_id.to_string()) else {
+            return;
+        };
+        tracing::info!("Vault sync: renegotiating the session on request");
+        if let Some(owner) = self.rust().resume_owner.as_ref() {
+            owner.renegotiate_peer(peer);
+        }
     }
 
     /// Asks gpg-agent for the passphrase of one vault key, so a Sync that stopped because
