@@ -210,6 +210,40 @@ pub(crate) fn enable(
         .map_err(MirrorError::from)
 }
 
+/// Adds `key` to the keys synced with `peer` once the user has handed that key to the phone.
+/// Sending a private key is the strongest consent there is, so the items of that key follow it;
+/// nothing happens when Sync is not on for the phone, its binding is of the older kind, the key
+/// is not a secret key here, or it is already selected. True when the selection changed.
+pub(crate) fn add_selected_key(
+    lab_directory: &Path,
+    peer: DeviceId,
+    key: &KeyFingerprint,
+) -> Result<bool, MirrorError> {
+    let host =
+        LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
+    let Some(info) = host
+        .sync_vault_info(peer)
+        .map_err(|_| MirrorError::Profile)?
+    else {
+        return Ok(false);
+    };
+    if !info.key_agnostic || info.vault_id == SYNTHETIC_VAULT_ID {
+        return Ok(false);
+    }
+    if !keys_with_secret()?.contains(&key.as_str().to_ascii_uppercase()) {
+        return Ok(false);
+    }
+    let bytes = fingerprint_bytes(key)?;
+    if info.fingerprints.contains(&bytes) {
+        return Ok(false);
+    }
+    let mut keys = info.fingerprints;
+    keys.push(bytes);
+    host.update_sync_keys(peer, &keys)
+        .map_err(MirrorError::from)?;
+    Ok(true)
+}
+
 /// Stops syncing with `peer`. The ledger stays, as the history of the vault.
 pub(crate) fn disable(lab_directory: &Path, peer: DeviceId) -> Result<(), MirrorError> {
     let host =

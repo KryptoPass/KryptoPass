@@ -275,6 +275,22 @@ Controls.ScrollView {
                     }
                 }
                 Kirigami.InlineMessage {
+                    id: newPhoneKeyMessage
+                    readonly property var offered: deviceRow.syncKeyRows.filter(row => row.canAdd && row.state === "available")
+                    Layout.fillWidth: true
+                    visible: deviceRow.vaultSyncOn && offered.length > 0
+                    type: Kirigami.MessageType.Information
+                    text: offered.length > 0 ? qsTr("El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.").arg(offered.map(row => row.title).join(", ")) : ""
+                    actions: [
+                        Kirigami.Action {
+                            text: newPhoneKeyMessage.offered.length > 0 ? qsTr("Sincronizar la clave de %1").arg(newPhoneKeyMessage.offered[0].title) : ""
+                            icon.name: "list-add"
+                            enabled: !deviceRow.host.controller.busy && newPhoneKeyMessage.offered.length > 0
+                            onTriggered: deviceRow.host.controller.enableVaultSync(deviceRow.deviceId, deviceRow.syncedKeys.concat([newPhoneKeyMessage.offered[0].id]).join(","))
+                        }
+                    ]
+                }
+                Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     visible: deviceRow.vaultSyncOn && deviceRow.host.vaultLocked
                     type: Kirigami.MessageType.Warning

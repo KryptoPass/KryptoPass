@@ -1493,6 +1493,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave desbloqueada. La sincronización continuará en unos segundos.</translation>
     </message>
     <message>
+      <source>Clave enviada: sus elementos ya se sincronizan con el teléfono.</source>
+      <translation>Clave enviada: sus elementos ya se sincronizan con el teléfono.</translation>
+    </message>
+    <message>
       <source>Claves SSH</source>
       <translation>Claves SSH</translation>
     </message>
@@ -2407,6 +2411,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Vault sync: could not unlock the key</source>
       <translation>Vault sync: could not unlock the key</translation>
+    </message>
+    <message>
+      <source>Vault sync: key added after sending it to the phone</source>
+      <translation>Vault sync: key added after sending it to the phone</translation>
     </message>
     <message>
       <source>Vault sync: key passphrase cached</source>
@@ -4493,6 +4501,14 @@ Huella(s) detectadas:
       <translation>Aún no hay claves con parte privada en este equipo.</translation>
     </message>
     <message>
+      <source>El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.</source>
+      <translation>El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.</translation>
+    </message>
+    <message>
+      <source>Sincronizar la clave de %1</source>
+      <translation>Sincronizar la clave de %1</translation>
+    </message>
+    <message>
       <source>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</source>
       <translation>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</translation>
     </message>
@@ -5095,10 +5111,6 @@ Huella(s) detectadas:
       <translation>¿Borrar todas las vinculaciones?</translation>
     </message>
     <message>
-      <source>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.</source>
-      <translation>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.</translation>
-    </message>
-    <message>
       <source>Cancelar transferencia</source>
       <translation>Cancelar transferencia</translation>
     </message>
@@ -5187,6 +5199,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</source>
       <translation>Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.</translation>
+    </message>
+    <message>
+      <source>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Si la sincronización de la bóveda está activada con este teléfono, también se sincronizarán con él los elementos que incluyan esta clave. Esta confirmación autoriza un único envío en esta sesión.</source>
+      <translation>Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Si la sincronización de la bóveda está activada con este teléfono, también se sincronizarán con él los elementos que incluyan esta clave. Esta confirmación autoriza un único envío en esta sesión.</translation>
     </message>
     <message>
       <source>La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la clave.</source>

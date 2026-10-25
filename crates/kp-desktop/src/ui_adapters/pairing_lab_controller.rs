@@ -331,6 +331,8 @@ pub struct PairingLabControllerRust {
     synthetic_transfer_generation: u64,
     synthetic_transfer_preparing_peer: Option<(DeviceId, u64)>,
     synthetic_transfer_target: Option<(DeviceId, u64, [u8; 16])>,
+    /// Vault key being handed to a phone, so its items follow it into Sync once it is received.
+    vault_key_send: Option<(DeviceId, String)>,
     inbound_key_transfer: QString,
     inbound_transfer: Option<InboundTransferUi>,
     aliases: BTreeMap<DeviceId, String>,
@@ -402,6 +404,7 @@ impl Default for PairingLabControllerRust {
             synthetic_transfer_generation: 0,
             synthetic_transfer_preparing_peer: None,
             synthetic_transfer_target: None,
+            vault_key_send: None,
             inbound_key_transfer: QString::from("{\"visible\":false}"),
             inbound_transfer: None,
             aliases: BTreeMap::new(),
@@ -606,6 +609,9 @@ impl qobject::PairingLabController {
                 .map(|(previous_generation, previous)| (*previous_generation, previous.phase));
             if previous != Some((*generation, progress.phase)) {
                 tracing::info!(phase = ?progress.phase, version = progress.version, "Key transfer: phase changed");
+                if progress.phase == kryptopass_devices::SyntheticTransferPhase::Complete {
+                    self.as_mut().sync_key_after_send(*peer);
+                }
             }
         }
         self.as_mut().rust_mut().synthetic_transfer_progress = state.synthetic_transfers.clone();
@@ -1156,6 +1162,9 @@ impl qobject::PairingLabController {
             ));
             return;
         }
+        if matches!(purpose, KeyTransferPurpose::VaultIdentity) {
+            self.as_mut().rust_mut().vault_key_send = Some((peer, approved_fingerprint.clone()));
+        }
         let connected = self.rust().devices.as_ref().is_some_and(|devices| {
             devices.snapshot().get(&peer).is_some_and(|device| {
                 device.connection == ConnectionState::Connected
@@ -1427,6 +1436,36 @@ impl qobject::PairingLabController {
                     }
                 }
             });
+        });
+    }
+
+    /// A vault key reached the phone: if Sync is on for it, the items of that key now sync
+    /// too, with no second step. Sending the private key is the user's explicit consent.
+    fn sync_key_after_send(mut self: Pin<&mut Self>, peer: DeviceId) {
+        let Some((sent_peer, fingerprint)) = self.rust().vault_key_send.clone() else {
+            return;
+        };
+        if sent_peer != peer {
+            return;
+        }
+        self.as_mut().rust_mut().vault_key_send = None;
+        let (Ok(key), Ok(directory)) = (KeyFingerprint::parse(&fingerprint), lab_directory())
+        else {
+            return;
+        };
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = mirror::add_selected_key(&directory, peer, &key);
+            tracing::info!(added = ?result.as_ref().ok(), error = ?result.err(), "Vault sync: key added after sending it to the phone");
+            if let Ok(true) = result {
+                let _ = thread.queue(move |mut object| {
+                    object.as_mut().set_vault_sync_failed(false);
+                    object.as_mut().set_vault_sync_message(QString::from(
+                        "Clave enviada: sus elementos ya se sincronizan con el teléfono.",
+                    ));
+                    object.as_mut().refresh_vault_sync_peers();
+                });
+            }
         });
     }
 

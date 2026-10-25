@@ -1265,7 +1265,7 @@ Controls.ApplicationWindow {
                     Layout.fillWidth: true
                     visible: !syntheticTransferApproval.approved
                     type: Kirigami.MessageType.Warning
-                    text: syntheticTransferApproval.vaultIdentity ? qsTr("Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Esta confirmación autoriza un único envío en esta sesión.") : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
+                    text: syntheticTransferApproval.vaultIdentity ? qsTr("Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Si la sincronización de la bóveda está activada con este teléfono, también se sincronizarán con él los elementos que incluyan esta clave. Esta confirmación autoriza un único envío en esta sesión.") : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
