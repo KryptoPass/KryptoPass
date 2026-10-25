@@ -107,6 +107,25 @@ Controls.ApplicationWindow {
             secureClipboard.copySensitive(code);
         }
     }
+    // Views that must stay closed while the vault is locked (one guard each). The first-run
+    // setup counts as locked too, but it must still be able to restore a backup.
+    readonly property bool viewsLocked: store.controller.locked && !store.controller.setupRequired
+    LockGuard {
+        target: devicesWindow
+        locked: root.viewsLocked
+    }
+    LockGuard {
+        target: browserAccessWindow
+        locked: root.viewsLocked
+    }
+    LockGuard {
+        target: backupWindow
+        locked: root.viewsLocked
+    }
+    LockGuard {
+        target: importWindow
+        locked: root.viewsLocked
+    }
     KeyStore {
         id: keys
         objectName: "keyStore"
@@ -754,7 +773,7 @@ Controls.ApplicationWindow {
         id: showDevicesAction
         controller: shell
         actionId: "showDevices"
-        enabled: devicesWindow.available
+        enabled: devicesWindow.available && !store.controller.locked
         onTriggered: devicesWindow.open()
     }
     readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
@@ -1357,8 +1376,6 @@ Controls.ApplicationWindow {
                 }
                 // The vault's message and the Sync with phones, in one KDE-style indicator.
                 SyncStatusBadge {
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 0
                     syncController: deviceController
                     storeStatus: root.keysMode ? keys.controller.status : store.controller.status
                     busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)

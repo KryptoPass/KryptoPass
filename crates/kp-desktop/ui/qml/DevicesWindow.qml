@@ -64,6 +64,9 @@ Controls.ApplicationWindow {
     title: qsTr("Dispositivos")
 
     function open() {
+        // Devices expose keys and Sync, so they stay closed while the vault is locked.
+        if (vaultLocked)
+            return;
         if (!visible) {
             x = screen.virtualX + Math.round((screen.width - width) / 2);
             y = screen.virtualY + Math.round((screen.height - height) / 2);
