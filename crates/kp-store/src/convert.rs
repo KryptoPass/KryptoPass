@@ -5,8 +5,8 @@
 //! panic. Errors name what was wrong, never a stored value.
 
 use kp_template::TemplateId;
-use kryptopass_core::vault::VersionId;
 use kryptopass_core::vault::{Author, StoreError};
+use kryptopass_core::vault::{Hlc, VersionId};
 use kryptopass_core::{EntryIcon, FolderId, KeyFingerprint, RecipientSet, SecretId};
 use rusqlite::ErrorCode;
 use uuid::Uuid;
@@ -88,12 +88,18 @@ pub(crate) fn revision_param(value: u64) -> StoreResult<i64> {
     i64::try_from(value).map_err(|_| StoreError::Rejected("revision exhausted"))
 }
 
-pub(crate) fn timestamp(value: i64) -> StoreResult<u64> {
-    u64::try_from(value).map_err(|_| corrupt("timestamp"))
+pub(crate) fn clock(millis: i64, counter: i64) -> StoreResult<Hlc> {
+    Ok(Hlc {
+        millis: u64::try_from(millis).map_err(|_| corrupt("clock"))?,
+        counter: u32::try_from(counter).map_err(|_| corrupt("clock"))?,
+    })
 }
 
-pub(crate) fn timestamp_param(value: u64) -> StoreResult<i64> {
-    i64::try_from(value).map_err(|_| StoreError::Rejected("timestamp out of range"))
+/// Clock columns as SQLite stores them.
+pub(crate) fn clock_params(clock: Hlc) -> StoreResult<(i64, i64)> {
+    let millis =
+        i64::try_from(clock.millis).map_err(|_| StoreError::Rejected("clock out of range"))?;
+    Ok((millis, i64::from(clock.counter)))
 }
 
 pub(crate) fn author(raw: Option<String>) -> StoreResult<Author> {

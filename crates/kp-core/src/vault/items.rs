@@ -11,7 +11,7 @@ use super::{Cipher, Store, Vault, logged, next_revision};
 use crate::EntryIconAsset;
 use crate::domain::item::{ItemContent, decode_item, encode_item_with};
 use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink, SecretLinkError};
-use crate::util::{clean_line, unix_now};
+use crate::util::{clean_line, unix_millis};
 
 const MAX_TITLE_BYTES: usize = 512;
 
@@ -117,7 +117,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             },
             base: Base::New,
             parents: Parents::Head,
-            created_at: unix_now(),
+            now_millis: unix_millis(),
             icon_asset,
             link: link.map_or(LinkChange::Keep, |target| LinkChange::Set(Some(target))),
         })))?;
@@ -234,7 +234,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             record: ItemRecord { meta, ciphertext },
             base: Base::Revision(base),
             parents,
-            created_at: unix_now(),
+            now_millis: unix_millis(),
             icon_asset,
             link,
         })))?;

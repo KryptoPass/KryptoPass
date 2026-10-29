@@ -1,8 +1,8 @@
 //! Item writes: local versions, versions from elsewhere, moves and deletion.
 
 use kryptopass_core::vault::{
-    Author, Base, ItemRecord, ItemState, ItemVersion, LinkChange, Parents, PutItem, StoreError,
-    VersionId, VersionInfo,
+    Author, Base, Hlc, ItemRecord, ItemState, ItemVersion, LinkChange, Parents, PutItem,
+    StoreError, VersionId, VersionInfo,
 };
 use kryptopass_core::{EntryIconAsset, FolderId, SecretId};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -12,11 +12,11 @@ use super::{
     bump_revision, check_ciphertext, collect_garbage, links, require_folder, store_icon_asset,
 };
 use crate::convert::{
-    SqlResult, StoreResult, author_param, icon_columns, revision, revision_param, text,
-    timestamp_param, version_id,
+    SqlResult, StoreResult, author_param, clock, clock_params, icon_columns, revision,
+    revision_param, text, version_id,
 };
 use crate::{graph, read};
-use kryptopass_core::util::{is_clean_line, unix_now};
+use kryptopass_core::util::{is_clean_line, unix_millis};
 
 /// Sanity bound on a stored title; the vault applies the real, smaller limit.
 const MAX_TITLE_BYTES: usize = 1024;
@@ -28,7 +28,7 @@ pub(super) fn put(connection: &Connection, put: PutItem) -> StoreResult<()> {
         record: ItemRecord { meta, ciphertext },
         base,
         parents,
-        created_at,
+        now_millis,
         icon_asset,
         link,
     } = put;
@@ -49,7 +49,7 @@ pub(super) fn put(connection: &Connection, put: PutItem) -> StoreResult<()> {
                 meta.head,
                 &meta.state,
                 &Author::Local,
-                created_at,
+                Hlc::next(now_millis, []),
                 &ciphertext,
             )?;
         }
@@ -67,6 +67,7 @@ pub(super) fn put(connection: &Connection, put: PutItem) -> StoreResult<()> {
                 Parents::Head => vec![head],
                 Parents::Merge(list) => merge_parents(connection, meta.id, head, list)?,
             };
+            let clock = Hlc::next(now_millis, clocks_of(connection, &parents)?);
             insert_version(
                 connection,
                 meta.id,
@@ -74,7 +75,7 @@ pub(super) fn put(connection: &Connection, put: PutItem) -> StoreResult<()> {
                 &parents,
                 &meta.state,
                 &Author::Local,
-                created_at,
+                clock,
                 &ciphertext,
             )?;
             advance_heads(connection, meta.id, meta.head, &parents)?;
@@ -134,7 +135,7 @@ pub(super) fn add_version(
                 mut parents,
                 state,
                 author,
-                created_at,
+                clock,
             },
         ciphertext,
     } = version;
@@ -160,15 +161,7 @@ pub(super) fn add_version(
         if !parents.is_empty() {
             return Err(StoreError::Rejected("a parent version is missing"));
         }
-        create(
-            connection,
-            item,
-            id,
-            &state,
-            &author,
-            created_at,
-            &ciphertext,
-        )?;
+        create(connection, item, id, &state, &author, clock, &ciphertext)?;
         tracing::debug!(item = %item.0, version = %id.0, "item received");
         return Ok(());
     };
@@ -187,7 +180,7 @@ pub(super) fn add_version(
         &parents,
         &state,
         &author,
-        created_at,
+        clock,
         &ciphertext,
     )?;
     advance_heads(connection, item, id, &parents)?;
@@ -238,7 +231,7 @@ pub(super) fn delete(connection: &Connection, id: SecretId) -> StoreResult<()> {
 pub(super) fn create_from_record(
     connection: &Connection,
     record: &ItemRecord,
-    created_at: u64,
+    now_millis: u64,
 ) -> StoreResult<()> {
     let ItemRecord { meta, ciphertext } = record;
     check_ciphertext(ciphertext)?;
@@ -255,7 +248,7 @@ pub(super) fn create_from_record(
         meta.head,
         &meta.state,
         &Author::Local,
-        created_at,
+        Hlc::next(now_millis, []),
         ciphertext,
     )
 }
@@ -269,17 +262,20 @@ pub(super) fn move_head(
 ) -> StoreResult<()> {
     let (_, head) = current(connection, item)?.ok_or(StoreError::ItemNotFound)?;
     let version = VersionId::new();
+    let (millis, counter) =
+        clock_params(Hlc::next(unix_millis(), clocks_of(connection, &[head])?))?;
     connection
         .execute(
             "INSERT INTO item_versions(id, item_id, payload, folder_id, title, template, \
                  favorite, trashed, icon_theme, icon_asset_id, icon_favicon_host, author, \
-                 created_at) \
+                 clock_millis, clock_counter) \
              SELECT ?1, item_id, payload, ?2, title, template, favorite, trashed, icon_theme, \
-                 icon_asset_id, icon_favicon_host, NULL, ?3 FROM item_versions WHERE id = ?4",
+                 icon_asset_id, icon_favicon_host, NULL, ?3, ?4 FROM item_versions WHERE id = ?5",
             params![
                 text(version.0),
                 folder.map(|id| text(id.0)),
-                timestamp_param(unix_now())?,
+                millis,
+                counter,
                 text(head.0)
             ],
         )
@@ -317,7 +313,7 @@ fn create(
     version: VersionId,
     state: &ItemState,
     author: &Author,
-    created_at: u64,
+    clock: Hlc,
     ciphertext: &[u8],
 ) -> StoreResult<()> {
     // `items.head` is checked at commit, so the row can precede its version.
@@ -334,7 +330,7 @@ fn create(
         &[],
         state,
         author,
-        created_at,
+        clock,
         ciphertext,
     )?;
     connection
@@ -354,9 +350,10 @@ fn insert_version(
     parents: &[VersionId],
     state: &ItemState,
     author: &Author,
-    created_at: u64,
+    clock: Hlc,
     ciphertext: &[u8],
 ) -> StoreResult<()> {
+    let (millis, counter) = clock_params(clock)?;
     let hash = Sha256::digest(ciphertext).to_vec();
     connection
         .execute(
@@ -370,8 +367,8 @@ fn insert_version(
         .execute(
             "INSERT INTO item_versions(id, item_id, payload, folder_id, title, template, \
                  favorite, trashed, icon_theme, icon_asset_id, icon_favicon_host, author, \
-                 created_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                 clock_millis, clock_counter) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 text(version.0),
                 text(item.0),
@@ -385,7 +382,8 @@ fn insert_version(
                 asset,
                 host,
                 author_param(author)?,
-                timestamp_param(created_at)?,
+                millis,
+                counter,
             ],
         )
         .sql()?;
@@ -465,6 +463,23 @@ fn owner_of(connection: &Connection, version: VersionId) -> StoreResult<Option<S
         .sql()?
         .map(|raw| crate::convert::item_id(&raw))
         .transpose()
+}
+
+/// The clocks of `versions`, which must be stored.
+fn clocks_of(connection: &Connection, versions: &[VersionId]) -> StoreResult<Vec<Hlc>> {
+    versions
+        .iter()
+        .map(|version| {
+            let (millis, counter) = connection
+                .query_row(
+                    "SELECT clock_millis, clock_counter FROM item_versions WHERE id = ?1",
+                    [text(version.0)],
+                    |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+                )
+                .sql()?;
+            clock(millis, counter)
+        })
+        .collect()
 }
 
 fn head_template(connection: &Connection, head: VersionId) -> StoreResult<String> {

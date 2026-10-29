@@ -5,7 +5,7 @@ use super::record::{ItemMeta, ItemRecord, VersionId};
 use super::store::{Base, Change, LinkChange, Parents, PutItem};
 use super::{Cipher, Store, Vault, logged, next_revision};
 use crate::domain::{RecipientSet, SecretId};
-use crate::util::unix_now;
+use crate::util::unix_millis;
 
 impl<S: Store, C: Cipher> Vault<S, C> {
     /// Re-encrypts an item for a new recipient set, only at revision `base`.
@@ -54,7 +54,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             },
             base: Base::Revision(base),
             parents: Parents::Head,
-            created_at: unix_now(),
+            now_millis: unix_millis(),
             icon_asset: None,
             link: LinkChange::Keep,
         })))?;

@@ -88,8 +88,9 @@ pub struct PutItem {
     pub base: Base,
     /// Ignored for a new item, which has no parents.
     pub parents: Parents,
-    /// Seconds since the Unix epoch.
-    pub created_at: u64,
+    /// Wall-clock milliseconds since the Unix epoch. The store derives the
+    /// version's clock from it and the parents' clocks, inside the change.
+    pub now_millis: u64,
     /// Image to store when the icon is a newly chosen picture.
     pub icon_asset: Option<EntryIconAsset>,
     pub link: LinkChange,

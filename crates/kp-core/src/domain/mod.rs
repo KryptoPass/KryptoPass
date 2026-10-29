@@ -1,5 +1,6 @@
 //! Core entities and value objects for the local secret store.
 
+pub mod clock;
 pub mod content;
 pub mod entry_icon;
 pub mod item;

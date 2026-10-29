@@ -60,7 +60,10 @@ CREATE TABLE item_versions (
     icon_favicon_host TEXT,
     -- NULL for this device, otherwise the author's Sync device id.
     author TEXT CHECK(author IS NULL OR length(author) BETWEEN 1 AND 128),
-    created_at INTEGER NOT NULL CHECK(created_at >= 0 AND typeof(created_at) = 'integer'),
+    -- Hybrid logical clock: wall-clock milliseconds and a tie counter.
+    clock_millis INTEGER NOT NULL CHECK(clock_millis >= 0 AND typeof(clock_millis) = 'integer'),
+    clock_counter INTEGER NOT NULL
+        CHECK(clock_counter BETWEEN 0 AND 4294967295 AND typeof(clock_counter) = 'integer'),
     CHECK((icon_theme IS NOT NULL) + (icon_asset_id IS NOT NULL)
           + (icon_favicon_host IS NOT NULL) <= 1)
 );
@@ -118,7 +121,8 @@ const PROBES: [&str; 11] = [
     "SELECT id, head, revision FROM items LIMIT 0",
     "SELECT hash, ciphertext FROM item_payloads LIMIT 0",
     "SELECT id, item_id, payload, folder_id, title, template, favorite, trashed, \
-     icon_theme, icon_asset_id, icon_favicon_host, author, created_at FROM item_versions LIMIT 0",
+     icon_theme, icon_asset_id, icon_favicon_host, author, clock_millis, clock_counter \
+     FROM item_versions LIMIT 0",
     "SELECT version_id, fingerprint FROM item_version_recipients LIMIT 0",
     "SELECT version_id, parent_id FROM item_version_parents LIMIT 0",
     "SELECT item_id, version_id FROM item_heads LIMIT 0",

@@ -325,7 +325,8 @@ pub(crate) fn versions(
         Versions::One(version) => ("AND v.id = ?2", Some(text(version.0))),
     };
     let sql = format!(
-        "SELECT v.id, v.author, v.created_at, v.folder_id, v.title, v.template, v.favorite, \
+        "SELECT v.id, v.author, v.clock_millis, v.clock_counter, v.folder_id, v.title, \
+                v.template, v.favorite, \
                 v.trashed, v.icon_theme, v.icon_asset_id, v.icon_favicon_host \
          FROM item_versions v WHERE v.item_id = ?1 {filter} ORDER BY v.rowid DESC"
     );
@@ -334,8 +335,8 @@ pub(crate) fn versions(
         Ok((
             row.get::<_, String>(0)?,
             row.get::<_, Option<String>>(1)?,
-            row.get::<_, i64>(2)?,
-            raw_state(row, 3)?,
+            (row.get::<_, i64>(2)?, row.get::<_, i64>(3)?),
+            raw_state(row, 4)?,
         ))
     };
     let rows = match &extra {
@@ -358,7 +359,7 @@ pub(crate) fn versions(
     )?;
     let mut parents = parents_of(connection, id)?;
     rows.into_iter()
-        .map(|(version, author, created_at, raw)| {
+        .map(|(version, author, (millis, counter), raw)| {
             let fingerprints = recipients.remove(&version).unwrap_or_default();
             let id_value = version_id(&version)?;
             Ok(VersionInfo {
@@ -367,7 +368,7 @@ pub(crate) fn versions(
                 parents: parents.remove(&id_value).unwrap_or_default(),
                 state: state(raw, fingerprints)?,
                 author: convert::author(author)?,
-                created_at: convert::timestamp(created_at)?,
+                clock: convert::clock(millis, counter)?,
             })
         })
         .collect()

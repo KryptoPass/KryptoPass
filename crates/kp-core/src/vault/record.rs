@@ -11,6 +11,7 @@
 use kp_template::TemplateId;
 use uuid::Uuid;
 
+use crate::domain::clock::Hlc;
 use crate::domain::entry_icon::EntryIcon;
 use crate::domain::{FolderId, RecipientSet, SecretId};
 
@@ -88,9 +89,8 @@ pub struct VersionInfo {
     pub parents: Vec<VersionId>,
     pub state: ItemState,
     pub author: Author,
-    /// Seconds since the Unix epoch, as the author's clock said. Informative
-    /// only: clocks disagree, so order comes from parents, not from this.
-    pub created_at: u64,
+    /// When it was written; later than every parent's clock.
+    pub clock: Hlc,
 }
 
 /// One version with its encrypted payload.

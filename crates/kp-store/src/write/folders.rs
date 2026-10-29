@@ -9,7 +9,7 @@ use rusqlite::{Connection, params};
 use super::{bump_revision, collect_garbage, items, links, require_folder};
 use crate::convert::{SqlResult, StoreResult, folder_id, item_id, text};
 use crate::read;
-use kryptopass_core::util::{Ancestry, ancestry, is_clean_line, unix_now};
+use kryptopass_core::util::{Ancestry, ancestry, is_clean_line, unix_millis};
 
 /// Sanity bound on a stored name; the vault applies the real, smaller limit.
 const MAX_NAME_BYTES: usize = 1024;
@@ -201,7 +201,7 @@ pub(super) fn append(
     for folder in folders {
         add(connection, folder)?;
     }
-    let now = unix_now();
+    let now = unix_millis();
     for record in &records {
         items::create_from_record(connection, record, now)?;
     }

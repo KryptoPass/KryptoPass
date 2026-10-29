@@ -24,6 +24,7 @@ use std::sync::Arc;
 
 use crate::domain::item::FormatRules;
 
+pub use crate::domain::clock::Hlc;
 pub use cipher::{Cipher, CipherError};
 pub use error::VaultError;
 pub use folders::{FolderEdit, NewFolder};

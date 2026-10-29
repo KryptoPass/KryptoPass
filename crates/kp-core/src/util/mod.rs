@@ -12,5 +12,5 @@ mod tree;
 pub use json::unescape_json_string;
 pub use limits::MAX_CIPHERTEXT_BYTES;
 pub use text::{clean_line, has_control_characters, is_clean_line};
-pub use time::unix_now;
+pub use time::{unix_millis, unix_now};
 pub use tree::{Ancestry, ancestry};
