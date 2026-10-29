@@ -48,7 +48,7 @@ impl Keyring {
         Session::open(self.home.as_deref())
     }
 
-    fn gpg(&self, session: &Session) -> Gpg {
+    pub(crate) fn gpg(&self, session: &Session) -> Gpg {
         Gpg::new(session.engine_program(), self.home.as_deref())
     }
 

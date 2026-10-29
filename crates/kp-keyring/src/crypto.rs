@@ -154,6 +154,29 @@ impl Keyring {
     }
 }
 
+impl Keyring {
+    /// Makes gpg-agent forget the cached passphrase of every subkey of
+    /// `fingerprint`, so the next decryption asks again. The cache is keyed
+    /// by keygrip, so this affects every application using the key.
+    #[instrument(level = "debug", skip(self), fields(key = %fingerprint.key_id()))]
+    pub fn forget_passphrase(&self, fingerprint: &Fingerprint) -> Result<()> {
+        let mut session = self.session()?;
+        let key = session.require(fingerprint)?;
+        let keygrips: Vec<String> = key
+            .subkeys()
+            .filter_map(|subkey| subkey.keygrip().ok().map(str::to_owned))
+            .filter(|keygrip| {
+                keygrip.len() == 40 && keygrip.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+            .collect();
+        if keygrips.is_empty() {
+            return Err(Error::NoSecretMaterial(fingerprint.clone()));
+        }
+        self.gpg(&session).clear_passphrases(&keygrips)?;
+        Ok(())
+    }
+}
+
 /// The key of `fingerprint` if it can be encrypted to.
 fn encryption_key(session: &mut Session, fingerprint: &Fingerprint) -> Result<Key> {
     let key = session.require(fingerprint)?;

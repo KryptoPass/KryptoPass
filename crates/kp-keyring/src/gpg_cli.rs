@@ -77,6 +77,40 @@ impl Gpg {
         result
     }
 
+    /// Asks gpg-agent to forget the cached passphrases of these keygrips,
+    /// through the `gpg-connect-agent` that sits next to `gpg`.
+    #[instrument(level = "debug", skip(self, keygrips), fields(keygrips = keygrips.len()))]
+    pub fn clear_passphrases(&self, keygrips: &[String]) -> Result<(), CommandError> {
+        let program = self
+            .program
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .map_or_else(
+                || PathBuf::from("gpg-connect-agent"),
+                |parent| parent.join("gpg-connect-agent"),
+            );
+        let mut command = Command::new(program);
+        if let Some(home) = &self.home {
+            command.arg("--homedir").arg(home);
+        }
+        for keygrip in keygrips {
+            command.arg(format!("CLEAR_PASSPHRASE --mode=normal {keygrip}"));
+        }
+        let mut child = command
+            .arg("/bye")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(CommandError::Spawn)?;
+        let status = wait_with_timeout(&mut child, COMMAND_TIMEOUT)?;
+        debug!(
+            success = status.success(),
+            "Keyring: gpg-agent cache cleared"
+        );
+        exit_ok(status)
+    }
+
     /// Asks gpg for a revocation certificate, answering its fixed dialogue
     /// with reason "no reason specified". Pinentry may prompt for the key.
     #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
