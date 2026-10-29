@@ -4,9 +4,6 @@
 //! Operations are grouped by file (`items`, `folders`, `sharing`, `settings`) as `impl`
 //! blocks of [`Vault`]. Every public operation logs its outcome with ids,
 //! codes and revisions only: never titles, values or key material.
-//!
-//! This module sits beside the older `service` and is not wired to the app
-//! yet; it is meant to replace it.
 
 mod cipher;
 mod conflict;

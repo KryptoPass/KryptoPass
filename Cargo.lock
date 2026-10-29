@@ -2033,11 +2033,9 @@ name = "kp-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "crc32fast",
  "deunicode",
  "email_address",
- "kp-generator",
  "kp-memsec",
  "kp-template",
  "percent-encoding",

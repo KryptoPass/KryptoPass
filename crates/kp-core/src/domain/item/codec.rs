@@ -13,7 +13,7 @@ use super::content::{CustomValue, ITEM_SCHEMA_VERSION, ItemContent, ItemValue};
 use super::format::FormatRules;
 use super::issue::ItemIssues;
 use crate::SensitiveBytes;
-use crate::domain::content::MAX_CONTENT_BYTES;
+use crate::util::MAX_CONTENT_BYTES;
 
 use kp_template::{Template, TemplateId};
 use serde::{Deserialize, Serialize};

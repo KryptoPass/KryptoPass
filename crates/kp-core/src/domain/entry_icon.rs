@@ -2,8 +2,6 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::content::SecretContent;
-
 pub const MAX_ENTRY_ICON_BYTES: usize = 512 * 1024;
 pub const MAX_ENTRY_ICON_DIMENSION: u32 = 256;
 
@@ -146,27 +144,6 @@ pub fn validate_normalized_png(png: &[u8]) -> Result<(u32, u32)> {
     anyhow::bail!("icon PNG is missing its end")
 }
 
-pub struct EntryAppearanceUpdate {
-    pub icon: Option<EntryIcon>,
-    pub asset: Option<EntryIconAsset>,
-}
-
-impl EntryAppearanceUpdate {
-    pub fn validate(&self) -> Result<()> {
-        if let Some(icon) = &self.icon {
-            icon.validate()?;
-        }
-        if let Some(asset) = &self.asset {
-            asset.validate()?;
-            ensure!(
-                self.icon == Some(EntryIcon::Image { asset_id: asset.id }),
-                "entry icon and resource do not match"
-            );
-        }
-        Ok(())
-    }
-}
-
 pub fn valid_favicon_host(host: &str) -> bool {
     if host.len() > 253 || !host.contains('.') || host != host.to_ascii_lowercase() {
         return false;
@@ -208,23 +185,6 @@ pub fn favicon_for_url(value: &str) -> Option<EntryIcon> {
 /// when the address has no usable favicon host.
 pub fn automatic_icon_for_url(value: &str) -> Option<EntryIcon> {
     favicon_for_url(value).or_else(|| server_theme_for_url(value))
-}
-
-pub fn automatic_entry_icon(content: &SecretContent) -> Option<EntryIcon> {
-    match content {
-        SecretContent::Login(login) => {
-            let url = login.urls.first().map_or("", crate::SensitiveText::as_str);
-            automatic_icon_for_url(url)
-        }
-        SecretContent::Note(_)
-        | SecretContent::Custom(_)
-        | SecretContent::Card(_)
-        | SecretContent::Totp(_)
-        | SecretContent::Identity(_)
-        | SecretContent::Wifi(_)
-        | SecretContent::License(_)
-        | SecretContent::SshKey(_) => None,
-    }
 }
 
 /// IP literals never yield favicons; routers and self-hosted services get the

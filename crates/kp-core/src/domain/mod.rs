@@ -1,7 +1,7 @@
-//! Core entities and value objects for the local secret store.
+//! Core entities and value objects shared by the vault: ids, folders,
+//! recipients and links.
 
 pub mod clock;
-pub mod content;
 pub mod entry_icon;
 pub mod item;
 pub(crate) mod wifi;
@@ -17,9 +17,6 @@ pub enum DomainError {
 
     #[error("at least one recipient is required")]
     EmptyRecipients,
-
-    #[error("unsupported secret kind")]
-    UnsupportedSecretKind,
 
     #[error("invalid folder icon identifier")]
     InvalidFolderIcon,
@@ -224,89 +221,4 @@ pub struct Folder {
     pub appearance: FolderAppearance,
     /// Copied into a new secret at creation time; does not re-encrypt existing secrets.
     pub default_recipients: Option<RecipientSet>,
-}
-
-/// Supported first-generation secret projections.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SecretKind {
-    Login,
-    ApiToken,
-    Totp,
-    SshKey,
-    SecureNote,
-    Card,
-    Identity,
-    Custom,
-    Wifi,
-    License,
-}
-
-impl SecretKind {
-    /// Stable storage identifier for this kind. These identifiers are part of
-    /// the encrypted payload contract and must not depend on Rust variant names.
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Login => "login",
-            Self::ApiToken => "api-token",
-            Self::Totp => "totp",
-            Self::SshKey => "ssh-key",
-            Self::SecureNote => "note",
-            Self::Card => "card",
-            Self::Identity => "identity",
-            Self::Custom => "custom",
-            Self::Wifi => "wifi",
-            Self::License => "license",
-        }
-    }
-
-    /// Parses a stable storage identifier without accepting lossy aliases.
-    pub fn parse(value: &str) -> Result<Self, DomainError> {
-        match value {
-            "login" => Ok(Self::Login),
-            "api-token" => Ok(Self::ApiToken),
-            "totp" => Ok(Self::Totp),
-            "ssh-key" => Ok(Self::SshKey),
-            "note" => Ok(Self::SecureNote),
-            "card" => Ok(Self::Card),
-            "identity" => Ok(Self::Identity),
-            "custom" => Ok(Self::Custom),
-            "wifi" => Ok(Self::Wifi),
-            "license" => Ok(Self::License),
-            _ => Err(DomainError::UnsupportedSecretKind),
-        }
-    }
-}
-
-/// Public metadata used to list and organize a secret without loading its payload.
-///
-/// The encrypted content is deliberately absent; callers that need to decrypt
-/// or replace a secret must use [`Secret`] instead.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SecretMetadata {
-    pub icon: Option<entry_icon::EntryIcon>,
-    pub id: SecretId,
-    pub folder_id: Option<FolderId>,
-    pub title: String,
-    pub kind: SecretKind,
-    pub recipients: RecipientSet,
-    pub favorite: bool,
-    pub trashed: bool,
-    /// Monotonic optimistic-concurrency token for metadata and ciphertext.
-    pub revision: u64,
-}
-
-/// An encrypted secret. Plaintext must not be stored in this entity.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Secret {
-    pub icon: Option<entry_icon::EntryIcon>,
-    pub id: SecretId,
-    pub folder_id: Option<FolderId>,
-    pub title: String,
-    pub kind: SecretKind,
-    pub recipients: RecipientSet,
-    pub ciphertext: Vec<u8>,
-    pub favorite: bool,
-    pub trashed: bool,
-    /// Monotonic optimistic-concurrency token for metadata and ciphertext.
-    pub revision: u64,
 }
