@@ -1994,6 +1994,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kp-app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kp-core",
+ "kp-generator",
+ "kp-keyring",
+ "kp-search",
+ "kp-store",
+ "kp-template",
+ "thiserror 2.0.21",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "kp-browser"
 version = "0.1.0"
 dependencies = [

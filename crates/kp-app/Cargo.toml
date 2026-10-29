@@ -1,0 +1,27 @@
+[package]
+name = "kp-app"
+version.workspace = true
+edition.workspace = true
+# kp-keyring needs 1.88.
+rust-version = "1.88"
+license.workspace = true
+description = "Application layer without UI: vault sessions, editor forms, search, autofill and generators"
+publish = false
+
+[lib]
+name = "kryptopass_app"
+
+[dependencies]
+kryptopass-core = { package = "kp-core", path = "../kp-core" }
+kryptopass-store = { package = "kp-store", path = "../kp-store" }
+kryptopass-keyring = { package = "kp-keyring", path = "../kp-keyring", features = ["vault"] }
+kryptopass-generator = { package = "kp-generator", path = "../kp-generator" }
+kryptopass-search = { package = "kp-search", path = "../kp-search" }
+kp-template = { path = "../kp-template" }
+anyhow = "1"
+thiserror = "2.0"
+tracing = "0.1"
+uuid = "1"
+
+[lints]
+workspace = true
