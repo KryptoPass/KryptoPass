@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="api-token" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="application-certificate"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="service"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="credential">
+      <kp:field id="service" type="text" required="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="token" type="secret" required="true" copy="true" history="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="client-id" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="client-secret" type="secret" copy="true" history="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="endpoint" type="url">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="expiry-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="scopes" type="multiline">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+  <kp:behavior>
+    <kp:versions max="20"/>
+  </kp:behavior>
+</kp:template>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="bank-account" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="view-financial-account-savings"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="bank"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="account">
+      <kp:field id="bank" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="holder" type="text" copy="true" search="index">
+        <kp:label ref="account-holder"/>
+      </kp:field>
+      <kp:field id="account-number" type="secret" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="iban" type="text" copy="true" conceal="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="routing-number" type="text" copy="true" conceal="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="swift" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="pin" type="secret" copy="true">
+        <kp:label ref="card-pin"/>
+        <kp:limit max-bytes="12"/>
+        <kp:generator ref="pin" length="6"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="contact">
+      <kp:field id="phone" type="phone" copy="true">
+        <kp:label ref="bank-phone"/>
+      </kp:field>
+      <kp:field id="website" type="url" browser-match="true">
+        <kp:label ref="websites"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

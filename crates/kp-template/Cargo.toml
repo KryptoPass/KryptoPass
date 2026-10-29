@@ -1,0 +1,19 @@
+[package]
+name = "kp-template"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Item template model: field types, sections, generators and message catalogs"
+publish = false
+
+[dependencies]
+roxmltree = "0.20"
+serde = { version = "1", optional = true }
+
+[features]
+# Serialize and deserialize identifiers as validated strings.
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

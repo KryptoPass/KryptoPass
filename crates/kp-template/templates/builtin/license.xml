@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="license" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="license"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="product"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="license">
+      <kp:field id="product" type="text" required="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="version" type="text">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="license-key" type="secret-multiline" required="true" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="licensed-to" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="email" type="email" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="purchase-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="expiry-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="order-number" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="website" type="url">
+        <kp:label ref="websites"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="email-account" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="mail-message"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="email"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="account">
+      <kp:field id="email" type="email" autocomplete="email" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="username" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="password" type="secret" copy="true" history="true">
+        <kp:label/>
+        <kp:generator ref="password"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="connection">
+      <kp:field id="incoming-server" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="incoming-port" type="number">
+        <kp:label ref="port"/>
+      </kp:field>
+      <kp:field id="outgoing-server" type="text" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="outgoing-port" type="number">
+        <kp:label ref="port"/>
+      </kp:field>
+      <kp:field id="connection-security" type="choice">
+        <kp:label/>
+        <kp:prop name="options" value="none,starttls,ssl"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+  <kp:behavior>
+    <kp:versions max="20"/>
+  </kp:behavior>
+</kp:template>

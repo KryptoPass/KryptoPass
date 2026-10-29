@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="card" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="wallet-open"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="holder"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="card">
+      <kp:field id="brand" type="choice">
+        <kp:label ref="card-brand"/>
+        <kp:prop name="options" value="visa,mastercard,amex,discover,jcb,unionpay,other"/>
+      </kp:field>
+      <kp:field id="holder" type="text" autocomplete="cc-name" copy="true" search="index">
+        <kp:label ref="card-holder"/>
+      </kp:field>
+      <kp:field id="number" type="card-number" required="true" copy="true" autocomplete="cc-number">
+        <kp:label ref="card-number"/>
+        <kp:limit max-bytes="32"/>
+      </kp:field>
+      <kp:field id="expiry" type="date" precision="month" autocomplete="cc-exp">
+        <kp:label ref="card-expiry"/>
+      </kp:field>
+      <kp:field id="cvv" type="digits" min-length="3" max-length="4" conceal="true" copy="true" autocomplete="cc-csc">
+        <kp:label ref="card-cvv"/>
+      </kp:field>
+      <kp:field id="pin" type="digits" min-length="4" max-length="12" conceal="true" copy="true">
+        <kp:label ref="card-pin"/>
+        <kp:generator ref="pin" length="4"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="bank">
+      <kp:field id="bank" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="phone" type="phone" copy="true">
+        <kp:label ref="bank-phone"/>
+      </kp:field>
+      <kp:field id="website" type="url" browser-match="true">
+        <kp:label ref="websites"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

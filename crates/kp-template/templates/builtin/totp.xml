@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="totp" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="security-high"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="issuer"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="authenticator">
+      <kp:field id="issuer" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="account" type="text" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="uri" type="totp" required="true" copy="true">
+        <kp:label ref="totp-uri"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

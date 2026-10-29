@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="crypto-wallet" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="wallet-open"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="wallet-name"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="wallet">
+      <kp:field id="wallet-name" type="text" required="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="network" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="address" type="text" copy="true">
+        <kp:label ref="wallet-address"/>
+      </kp:field>
+      <kp:field id="recovery-phrase" type="secret-multiline" required="true" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="private-key" type="secret-multiline" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="password" type="secret" copy="true">
+        <kp:label/>
+        <kp:generator ref="password"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

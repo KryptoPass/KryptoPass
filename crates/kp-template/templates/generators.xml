@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:generators xmlns:kp="https://kryptopass.org/ns/template/1">
+  <kp:generator id="password">
+    <kp:param name="length" default="20" min="8" max="128"/>
+    <kp:class id="lower" default="true"/>
+    <kp:class id="upper" default="true"/>
+    <kp:class id="digits" default="true"/>
+    <kp:class id="symbols" default="true"/>
+  </kp:generator>
+  <kp:generator id="pin">
+    <kp:param name="length" default="6" min="4" max="12"/>
+    <kp:class id="digits" default="true"/>
+  </kp:generator>
+</kp:generators>

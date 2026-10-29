@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="passport" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="user-properties"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="full-name"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="document">
+      <kp:field id="full-name" type="text" required="true" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="document-number" type="text" copy="true" conceal="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="country" type="text" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="birth-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="birth-place" type="text">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="issue-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="expiry-date" type="date">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="identity" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="user-identity"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="email"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="name">
+      <kp:field id="first-name" type="text" autocomplete="given-name" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="middle-name" type="text" autocomplete="additional-name" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="last-name" type="text" autocomplete="family-name" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="birthday" type="date" autocomplete="bday">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="contact">
+      <kp:field id="email" type="email" multiple="true" max="100" autocomplete="email" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="phone" type="phone" multiple="true" max="100" autocomplete="tel" copy="true">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="address">
+      <kp:field id="street" type="multiline" autocomplete="street-address" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="city" type="text" autocomplete="address-level2" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="region" type="text" autocomplete="address-level1" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="postal-code" type="text" autocomplete="postal-code" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="country" type="text" autocomplete="country-name" copy="true">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

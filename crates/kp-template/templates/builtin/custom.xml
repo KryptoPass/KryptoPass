@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="custom" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="document-edit"/>
+    <kp:search-title field="title"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="100"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

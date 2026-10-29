@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="membership" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="user-group-properties"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="organization"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="membership">
+      <kp:field id="organization" type="text" required="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="member-id" type="text" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="member-since" type="date" precision="month">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="expiry-date" type="date">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="pin" type="secret" copy="true">
+        <kp:label ref="card-pin"/>
+      </kp:field>
+      <kp:field id="phone" type="phone" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="website" type="url" browser-match="true">
+        <kp:label ref="websites"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="wifi" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="network-wireless"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="ssid"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="network">
+      <kp:field id="ssid" type="text" required="true" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="security" type="choice">
+        <kp:label/>
+        <kp:prop name="options" value="none,wep,wpa,wpa3"/>
+      </kp:field>
+      <kp:field id="password" type="secret" copy="true">
+        <kp:label/>
+        <kp:limit max-bytes="256"/>
+        <kp:generator ref="password" length="24"/>
+      </kp:field>
+      <kp:field id="hidden" type="boolean">
+        <kp:label ref="hidden-network"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+  <kp:checks>
+    <kp:check ref="wifi-password" fields="security password"/>
+  </kp:checks>
+  <kp:actions>
+    <kp:action ref="show-qr" format="wifi" fields="ssid security password hidden"/>
+  </kp:actions>
+</kp:template>

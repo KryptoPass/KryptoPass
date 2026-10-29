@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="ssh-key" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="network-connect"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="fingerprint"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="keys">
+      <kp:field id="private-key" type="ssh-private-key" required="true" copy="true">
+        <kp:label/>
+        <kp:limit max-bytes="524288"/>
+      </kp:field>
+      <kp:field id="passphrase" type="secret" copy="true">
+        <kp:label/>
+        <kp:limit max-bytes="65536"/>
+      </kp:field>
+      <kp:field id="public-key" type="ssh-public-key" copy="true">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="fingerprint" type="ssh-fingerprint" copy="true" search="index">
+        <kp:label/>
+      </kp:field>
+      <kp:field id="user" type="text" copy="true" search="index">
+        <kp:label ref="username"/>
+        <kp:limit max-bytes="16384"/>
+      </kp:field>
+      <kp:field id="hosts" type="text" multiple="true" max="100" copy="true" search="index">
+        <kp:label ref="host"/>
+        <kp:limit max-bytes="16384"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+</kp:template>

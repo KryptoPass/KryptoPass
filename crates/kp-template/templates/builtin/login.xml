@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:template xmlns:kp="https://kryptopass.org/ns/template/1" id="login" version="1" kind="builtin">
+  <kp:meta>
+    <kp:name/>
+    <kp:icon name="dialog-password"/>
+    <kp:search-title field="title"/>
+    <kp:summary field="username"/>
+  </kp:meta>
+  <kp:fields>
+    <kp:section id="credentials">
+      <kp:field id="username" type="text" copy="true" autocomplete="username" search="index">
+        <kp:label/>
+        <kp:limit max-bytes="16384"/>
+      </kp:field>
+      <kp:field id="email" type="email" copy="true" autocomplete="email" search="index">
+        <kp:label/>
+        <kp:limit max-bytes="16384"/>
+      </kp:field>
+      <kp:field id="password" type="secret" required="true" copy="true" autocomplete="current-password" history="true">
+        <kp:label/>
+        <kp:limit max-bytes="65536"/>
+        <kp:generator ref="password"/>
+      </kp:field>
+      <kp:field id="totp" type="totp" copy="true" autocomplete="one-time-code">
+        <kp:label/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="sites">
+      <kp:field id="urls" type="url" multiple="true" max="100" search="index" browser-match="true">
+        <kp:label ref="websites"/>
+      </kp:field>
+    </kp:section>
+    <kp:section id="extra">
+      <kp:field id="notes" type="multiline" format="markdown">
+        <kp:label/>
+        <kp:limit max-bytes="262144"/>
+      </kp:field>
+      <kp:custom-fields allowed="true" max="50"/>
+    </kp:section>
+  </kp:fields>
+  <kp:behavior>
+    <kp:versions max="20"/>
+    <kp:events track="create use rotate edit copy"/>
+  </kp:behavior>
+</kp:template>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 KryptoPass contributors
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<kp:catalog xmlns:kp="https://kryptopass.org/ns/template/1" xml:lang="pt-BR" version="1">
+  <kp:templates>
+    <kp:text id="api-token">Credencial de API</kp:text>
+    <kp:text id="bank-account">Conta bancária</kp:text>
+    <kp:text id="card">Cartão de crédito</kp:text>
+    <kp:text id="crypto-wallet">Carteira cripto</kp:text>
+    <kp:text id="custom">Personalizado</kp:text>
+    <kp:text id="database">Banco de dados</kp:text>
+    <kp:text id="drivers-license">Carteira de motorista</kp:text>
+    <kp:text id="email-account">Conta de e-mail</kp:text>
+    <kp:text id="identity">Identidade</kp:text>
+    <kp:text id="license">Licença de software</kp:text>
+    <kp:text id="login">Login</kp:text>
+    <kp:text id="membership">Associação</kp:text>
+    <kp:text id="note">Nota segura</kp:text>
+    <kp:text id="passport">Passaporte</kp:text>
+    <kp:text id="password">Senha</kp:text>
+    <kp:text id="server">Servidor</kp:text>
+    <kp:text id="ssh-key">Chave SSH</kp:text>
+    <kp:text id="totp">Código de verificação</kp:text>
+    <kp:text id="wifi">Rede Wi-Fi</kp:text>
+  </kp:templates>
+  <kp:sections>
+    <kp:text id="account">Conta</kp:text>
+    <kp:text id="address">Endereço</kp:text>
+    <kp:text id="authenticator">Autenticador</kp:text>
+    <kp:text id="bank">Banco</kp:text>
+    <kp:text id="card">Cartão</kp:text>
+    <kp:text id="connection">Conexão</kp:text>
+    <kp:text id="contact">Contato</kp:text>
+    <kp:text id="content">Conteúdo</kp:text>
+    <kp:text id="credential">Credencial</kp:text>
+    <kp:text id="credentials">Credenciais</kp:text>
+    <kp:text id="document">Documento</kp:text>
+    <kp:text id="extra">Mais</kp:text>
+    <kp:text id="keys">Chaves</kp:text>
+    <kp:text id="license">Licença</kp:text>
+    <kp:text id="membership">Associação</kp:text>
+    <kp:text id="name">Nome</kp:text>
+    <kp:text id="network">Rede</kp:text>
+    <kp:text id="sites">Sites</kp:text>
+    <kp:text id="wallet">Carteira</kp:text>
+  </kp:sections>
+  <kp:labels>
+    <kp:text id="account">Conta</kp:text>
+    <kp:text id="account-holder">Titular da conta</kp:text>
+    <kp:text id="account-number">Número da conta</kp:text>
+    <kp:text id="admin-url">URL de administração</kp:text>
+    <kp:text id="bank">Banco</kp:text>
+    <kp:text id="bank-phone">Telefone do banco</kp:text>
+    <kp:text id="birth-date">Data de nascimento</kp:text>
+    <kp:text id="birth-place">Local de nascimento</kp:text>
+    <kp:text id="birthday">Aniversário</kp:text>
+    <kp:text id="body">Conteúdo</kp:text>
+    <kp:text id="card-brand">Bandeira</kp:text>
+    <kp:text id="card-cvv">Código de segurança</kp:text>
+    <kp:text id="card-expiry">Validade</kp:text>
+    <kp:text id="card-holder">Titular</kp:text>
+    <kp:text id="card-number">Número do cartão</kp:text>
+    <kp:text id="card-pin">PIN</kp:text>
+    <kp:text id="city">Cidade</kp:text>
+    <kp:text id="client-id">ID do cliente</kp:text>
+    <kp:text id="client-secret">Segredo do cliente</kp:text>
+    <kp:text id="connection-security">Segurança da conexão</kp:text>
+    <kp:text id="connection-string">String de conexão</kp:text>
+    <kp:text id="country">País</kp:text>
+    <kp:text id="db-name">Banco de dados</kp:text>
+    <kp:text id="db-type">Tipo</kp:text>
+    <kp:text id="document-number">Número do documento</kp:text>
+    <kp:text id="email">E-mail</kp:text>
+    <kp:text id="endpoint">Endpoint</kp:text>
+    <kp:text id="expiry-date">Data de validade</kp:text>
+    <kp:text id="fingerprint">Impressão digital</kp:text>
+    <kp:text id="first-name">Nome</kp:text>
+    <kp:text id="full-name">Nome completo</kp:text>
+    <kp:text id="hidden-network">Rede oculta</kp:text>
+    <kp:text id="host">Servidor</kp:text>
+    <kp:text id="iban">IBAN</kp:text>
+    <kp:text id="incoming-server">Servidor de entrada</kp:text>
+    <kp:text id="issue-date">Data de emissão</kp:text>
+    <kp:text id="issuer">Emissor</kp:text>
+    <kp:text id="last-name">Sobrenome</kp:text>
+    <kp:text id="license-class">Categoria</kp:text>
+    <kp:text id="license-key">Chave de licença</kp:text>
+    <kp:text id="licensed-to">Licenciado para</kp:text>
+    <kp:text id="member-id">N.º de associado</kp:text>
+    <kp:text id="member-since">Associado desde</kp:text>
+    <kp:text id="middle-name">Nome do meio</kp:text>
+    <kp:text id="network">Rede</kp:text>
+    <kp:text id="notes">Notas</kp:text>
+    <kp:text id="order-number">Número do pedido</kp:text>
+    <kp:text id="organization">Organização</kp:text>
+    <kp:text id="outgoing-server">Servidor de saída</kp:text>
+    <kp:text id="passphrase">Frase secreta</kp:text>
+    <kp:text id="password">Senha</kp:text>
+    <kp:text id="phone">Telefone</kp:text>
+    <kp:text id="port">Porta</kp:text>
+    <kp:text id="postal-code">CEP</kp:text>
+    <kp:text id="private-key">Chave privada</kp:text>
+    <kp:text id="product">Produto</kp:text>
+    <kp:text id="public-key">Chave pública</kp:text>
+    <kp:text id="purchase-date">Data de compra</kp:text>
+    <kp:text id="recovery-phrase">Frase de recuperação</kp:text>
+    <kp:text id="region">Estado ou província</kp:text>
+    <kp:text id="routing-number">Número de roteamento</kp:text>
+    <kp:text id="scopes">Escopos</kp:text>
+    <kp:text id="security">Tipo de segurança</kp:text>
+    <kp:text id="service">Serviço</kp:text>
+    <kp:text id="ssid">Nome da rede (SSID)</kp:text>
+    <kp:text id="street">Rua</kp:text>
+    <kp:text id="swift">SWIFT/BIC</kp:text>
+    <kp:text id="token">Token</kp:text>
+    <kp:text id="totp">Código de verificação (TOTP)</kp:text>
+    <kp:text id="totp-uri">URI do autenticador</kp:text>
+    <kp:text id="username">Usuário</kp:text>
+    <kp:text id="version">Versão</kp:text>
+    <kp:text id="wallet-address">Endereço</kp:text>
+    <kp:text id="wallet-name">Nome da carteira</kp:text>
+    <kp:text id="websites">Sites</kp:text>
+  </kp:labels>
+  <kp:options>
+    <kp:text id="none">Nenhuma</kp:text>
+  </kp:options>
+</kp:catalog>
