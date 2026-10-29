@@ -6,10 +6,11 @@
 use std::collections::HashMap;
 
 use kryptopass_core::vault::{
-    ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo,
+    ItemMeta, ItemRecord, ItemState, ItemVersion, KeySettings, VersionId, VersionInfo,
 };
 use kryptopass_core::{
-    EntryIconAsset, Folder, FolderAppearance, FolderId, MAX_ENTRY_ICON_BYTES, SecretId, SecretLink,
+    EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, MAX_ENTRY_ICON_BYTES,
+    RecipientSet, SecretId, SecretLink,
 };
 use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -444,4 +445,41 @@ fn fingerprints_by<P: rusqlite::Params>(
         grouped.entry(owner).or_default().push(fingerprint);
     }
     Ok(grouped)
+}
+
+pub(crate) fn default_recipients(connection: &Connection) -> StoreResult<Option<RecipientSet>> {
+    let mut statement = connection
+        .prepare("SELECT fingerprint FROM default_recipients ORDER BY fingerprint")
+        .sql()?;
+    let fingerprints = statement
+        .query_map([], |row| row.get::<_, String>(0))
+        .sql()?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .sql()?;
+    if fingerprints.is_empty() {
+        return Ok(None);
+    }
+    convert::recipients(fingerprints).map(Some)
+}
+
+pub(crate) fn key_settings(connection: &Connection) -> StoreResult<Vec<KeySettings>> {
+    let mut statement = connection
+        .prepare("SELECT fingerprint, forget_on_lock FROM key_settings ORDER BY fingerprint")
+        .sql()?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .sql()?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .sql()?;
+    rows.into_iter()
+        .map(|(fingerprint, forget_on_lock)| {
+            Ok(KeySettings {
+                fingerprint: KeyFingerprint::parse(&fingerprint)
+                    .map_err(|_| corrupt("key settings fingerprint"))?,
+                forget_on_lock: flag(forget_on_lock)?,
+            })
+        })
+        .collect()
 }

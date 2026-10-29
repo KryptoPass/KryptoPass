@@ -7,6 +7,7 @@
 mod folders;
 mod items;
 mod links;
+mod settings;
 
 pub(crate) use items::belongs;
 
@@ -42,6 +43,10 @@ pub(crate) fn commit(connection: &mut Connection, change: Change) -> StoreResult
             items,
             links,
         } => folders::append(&transaction, &folders, items, &links)?,
+        Change::SetDefaultRecipients(recipients) => {
+            settings::set_default_recipients(&transaction, recipients.as_ref())?;
+        }
+        Change::SetKeySettings(key) => settings::set_key_settings(&transaction, &key)?,
     }
     transaction.commit().sql()?;
     tracing::debug!(change = kind, "store change committed");
@@ -58,6 +63,8 @@ fn change_kind(change: &Change) -> &'static str {
         Change::MoveFolder { .. } => "move_folder",
         Change::RemoveFolder { .. } => "remove_folder",
         Change::Append { .. } => "append",
+        Change::SetDefaultRecipients(_) => "set_default_recipients",
+        Change::SetKeySettings(_) => "set_key_settings",
     }
 }
 

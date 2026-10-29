@@ -63,6 +63,15 @@ impl Cipher for KeyringCipher {
             .decrypt(ciphertext, self.unlock, MAX_CONTENT_BYTES)
             .map_err(cipher_error)
     }
+
+    fn secret_keys(&self) -> Result<Vec<KeyFingerprint>, CipherError> {
+        let keys = self.keyring.list_secret_keys().map_err(cipher_error)?;
+        Ok(keys
+            .iter()
+            .filter(|key| key.has_secret)
+            .filter_map(|key| core_fingerprint(&key.fingerprint))
+            .collect())
+    }
 }
 
 /// Both types hold a validated, uppercase fingerprint; the parse cannot fail
@@ -91,7 +100,8 @@ fn cipher_error(error: Error) -> CipherError {
             Some(key) => CipherError::UnusableRecipient(key),
             None => CipherError::Backend(error.into()),
         },
-        Error::NoSecretKey | Error::Locked | Error::BadPassphrase => CipherError::KeyUnavailable,
+        Error::NoSecretKey => CipherError::NotARecipient,
+        Error::Locked | Error::BadPassphrase => CipherError::KeyUnavailable,
         Error::Canceled => CipherError::Canceled,
         _ => CipherError::Backend(error.into()),
     }

@@ -12,8 +12,9 @@
 use thiserror::Error;
 
 use super::record::{ItemMeta, ItemRecord, ItemVersion, VersionId, VersionInfo};
+use super::settings::KeySettings;
 use crate::EntryIconAsset;
-use crate::domain::{Folder, FolderId, SecretId, SecretLink};
+use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink};
 use uuid::Uuid;
 
 /// Why the store refused or failed a read or a change.
@@ -139,6 +140,12 @@ pub enum Change {
         items: Vec<ItemRecord>,
         links: Vec<SecretLink>,
     },
+    /// Replaces the recipients of new items outside a folder with defaults;
+    /// `None` clears them.
+    SetDefaultRecipients(Option<RecipientSet>),
+    /// Replaces one key's settings. Settings equal to the defaults are not
+    /// kept, so forgetting a key leaves nothing behind.
+    SetKeySettings(KeySettings),
 }
 
 /// Storage the vault runs on.
@@ -183,6 +190,13 @@ pub trait Store {
         a: VersionId,
         b: VersionId,
     ) -> Result<Option<VersionId>, StoreError>;
+
+    /// Recipients of new items that neither name theirs nor go into a folder
+    /// with defaults.
+    fn default_recipients(&self) -> Result<Option<RecipientSet>, StoreError>;
+
+    /// Settings of every key that has any besides the defaults.
+    fn key_settings(&self) -> Result<Vec<KeySettings>, StoreError>;
 
     fn commit(&mut self, change: Change) -> Result<(), StoreError>;
 }

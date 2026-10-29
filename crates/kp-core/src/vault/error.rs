@@ -48,7 +48,7 @@ pub enum VaultError {
     InvalidPosition,
     #[error("invalid icon")]
     InvalidIcon,
-    #[error("no recipients selected and the folder has no default")]
+    #[error("no recipients selected and no default applies")]
     NoRecipients,
     #[error("content is too large")]
     ContentTooLarge,
@@ -58,6 +58,10 @@ pub enum VaultError {
     /// A conflicting difference was left without a choice.
     #[error("a conflict was left unresolved")]
     ConflictUnresolved,
+    /// A side of the conflict is encrypted only to keys this device lacks;
+    /// a device that holds them has to merge it.
+    #[error("a side of the conflict is not readable on this device")]
+    ConflictUnreadable,
     #[error(transparent)]
     Invalid(ItemIssues),
     #[error(transparent)]
@@ -90,6 +94,7 @@ impl VaultError {
             Self::ContentTooLarge => "content-too-large",
             Self::CorruptContent => "corrupt-content",
             Self::ConflictUnresolved => "conflict-unresolved",
+            Self::ConflictUnreadable => "conflict-unreadable",
             Self::Invalid(_) => "invalid-content",
             Self::Link(SecretLinkError::InvalidTarget) => "link-invalid-target",
             Self::Link(SecretLinkError::Occupied) => "link-occupied",
@@ -97,6 +102,7 @@ impl VaultError {
             Self::Cipher(CipherError::UntrustedRecipient(_)) => "recipient-untrusted",
             Self::Cipher(CipherError::Canceled) => "canceled",
             Self::Cipher(CipherError::KeyUnavailable) => "key-unavailable",
+            Self::Cipher(CipherError::NotARecipient) => "not-a-recipient",
             Self::Cipher(CipherError::Backend(_)) => "cipher-failed",
             Self::Store(_) => "storage-failed",
         }

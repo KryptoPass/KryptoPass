@@ -17,9 +17,10 @@ mod schema;
 mod write;
 
 use kryptopass_core::vault::{
-    Change, ItemMeta, ItemRecord, ItemVersion, Store, StoreError, VersionId, VersionInfo,
+    Change, ItemMeta, ItemRecord, ItemVersion, KeySettings, Store, StoreError, VersionId,
+    VersionInfo,
 };
-use kryptopass_core::{EntryIconAsset, Folder, FolderId, SecretId, SecretLink};
+use kryptopass_core::{EntryIconAsset, Folder, FolderId, RecipientSet, SecretId, SecretLink};
 use rusqlite::Connection;
 
 use convert::{SqlResult, StoreResult};
@@ -101,6 +102,14 @@ impl Store for SqliteStore {
             let edges = read::parents_of(connection, id)?;
             Ok(graph::merge_base(&edges, a, b))
         })
+    }
+
+    fn default_recipients(&self) -> Result<Option<RecipientSet>, StoreError> {
+        self.read(read::default_recipients)
+    }
+
+    fn key_settings(&self) -> Result<Vec<KeySettings>, StoreError> {
+        self.read(read::key_settings)
     }
 
     fn commit(&mut self, change: Change) -> Result<(), StoreError> {

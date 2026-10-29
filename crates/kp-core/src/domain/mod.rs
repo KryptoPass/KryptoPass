@@ -150,6 +150,13 @@ impl RecipientSet {
     pub fn as_slice(&self) -> &[KeyFingerprint] {
         &self.0
     }
+
+    /// Whether any of `keys` is a recipient, that is, whether a device
+    /// holding those secret keys can decrypt. No key ranks above another.
+    pub fn includes_any<'a>(&self, keys: impl IntoIterator<Item = &'a KeyFingerprint>) -> bool {
+        keys.into_iter()
+            .any(|key| self.0.binary_search(key).is_ok())
+    }
 }
 
 /// A folder's display appearance. The icon is a theme icon name, not a path.

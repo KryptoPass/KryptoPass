@@ -1,7 +1,7 @@
 //! Vault: the use cases over items and folders, built on template-driven
 //! content and two small ports, [`Store`] and [`Cipher`].
 //!
-//! Operations are grouped by file (`items`, `folders`, `sharing`) as `impl`
+//! Operations are grouped by file (`items`, `folders`, `sharing`, `settings`) as `impl`
 //! blocks of [`Vault`]. Every public operation logs its outcome with ids,
 //! codes and revisions only: never titles, values or key material.
 //!
@@ -18,6 +18,7 @@ mod item;
 mod items;
 mod record;
 mod registry;
+mod settings;
 mod sharing;
 mod store;
 
@@ -33,9 +34,10 @@ pub use folders::{FolderEdit, NewFolder};
 pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};
 pub use record::{Author, ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo};
 pub use registry::TemplateRegistry;
+pub use settings::KeySettings;
 pub use store::{Base, Change, FolderContents, LinkChange, Parents, PutItem, Store, StoreError};
 
-/// An open vault: storage, the key to read it and the templates it uses.
+/// An open vault: storage, the keys to read it and the templates it uses.
 pub struct Vault<S, C> {
     store: S,
     cipher: C,

@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use super::error::VaultError;
 use super::icon;
-use super::item::{Item, ItemEdit, NewItem, Recipients};
+use super::item::{Item, ItemEdit, NewItem};
 use super::record::{ItemMeta, ItemRecord, ItemState, VersionId};
 use super::store::{Base, Change, LinkChange, Parents, PutItem};
 use super::{Cipher, Store, Vault, logged, next_revision};
 use crate::EntryIconAsset;
 use crate::domain::item::{ItemContent, decode_item, encode_item_with};
-use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink, SecretLinkError};
+use crate::domain::{Folder, FolderId, SecretId, SecretLink, SecretLinkError};
 use crate::util::{clean_line, unix_millis};
 
 const MAX_TITLE_BYTES: usize = 512;
@@ -83,7 +83,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         let plaintext = encode_item_with(&content, template, &self.rules)?;
 
         let folder_record = folder.map(|id| self.require_folder(id)).transpose()?;
-        let recipients = resolve_recipients(recipients, folder_record.as_ref())?;
+        let recipients = self.resolve_recipients(recipients, folder_record.as_ref())?;
         self.cipher.check_recipients(&recipients)?;
 
         let id = SecretId::new();
@@ -321,17 +321,5 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             Some(companion) if companion != id => Err(SecretLinkError::Occupied.into()),
             _ => Ok(()),
         }
-    }
-}
-
-fn resolve_recipients(
-    recipients: Recipients,
-    folder: Option<&Folder>,
-) -> Result<RecipientSet, VaultError> {
-    match recipients {
-        Recipients::Explicit(recipients) => Ok(recipients),
-        Recipients::FolderDefault => folder
-            .and_then(|folder| folder.default_recipients.clone())
-            .ok_or(VaultError::NoRecipients),
     }
 }

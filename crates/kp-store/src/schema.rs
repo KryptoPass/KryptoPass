@@ -4,7 +4,8 @@
 //! local revision; `item_versions` holds immutable states, `item_version_parents`
 //! the edges between them, `item_heads` the versions without children, and
 //! `item_payloads` the ciphertexts by SHA-256, so versions that only change
-//! metadata share their payload.
+//! metadata share their payload. `default_recipients` and `key_settings`
+//! hold the vault's settings; no table singles out a key.
 //!
 //! Version 1 is the store of `kp-desktop/src/storage`. Each refuses the
 //! other's files; there is no migration because no vault is in production.
@@ -98,10 +99,15 @@ WHEN EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'item endpoint is already paired');
 END;
-CREATE TABLE vault_primary_key (
-    singleton INTEGER PRIMARY KEY NOT NULL CHECK(singleton = 1),
-    fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64)),
-    forget_on_lock INTEGER NOT NULL DEFAULT 0 CHECK(forget_on_lock IN (0, 1))
+-- Recipients of new items outside a folder with defaults. No key is the
+-- vault's: these are only a starting selection.
+CREATE TABLE default_recipients (
+    fingerprint TEXT PRIMARY KEY NOT NULL CHECK(length(fingerprint) IN (40, 64))
+);
+-- Only keys whose settings differ from the defaults have a row.
+CREATE TABLE key_settings (
+    fingerprint TEXT PRIMARY KEY NOT NULL CHECK(length(fingerprint) IN (40, 64)),
+    forget_on_lock INTEGER NOT NULL CHECK(forget_on_lock IN (0, 1))
 );
 CREATE INDEX folders_by_parent ON folders(parent_id);
 CREATE INDEX item_versions_by_item ON item_versions(item_id);
@@ -114,7 +120,7 @@ CREATE INDEX items_by_head ON items(head);
 ";
 
 /// One probe per table, so a damaged or foreign schema fails on open.
-const PROBES: [&str; 11] = [
+const PROBES: [&str; 12] = [
     "SELECT id, parent_id, name, icon, color, sort_position FROM folders LIMIT 0",
     "SELECT folder_id, fingerprint FROM folder_recipients LIMIT 0",
     "SELECT id, png FROM entry_icon_assets LIMIT 0",
@@ -127,7 +133,8 @@ const PROBES: [&str; 11] = [
     "SELECT version_id, parent_id FROM item_version_parents LIMIT 0",
     "SELECT item_id, version_id FROM item_heads LIMIT 0",
     "SELECT first_item_id, second_item_id FROM item_links LIMIT 0",
-    "SELECT singleton, fingerprint, forget_on_lock FROM vault_primary_key LIMIT 0",
+    "SELECT fingerprint FROM default_recipients LIMIT 0",
+    "SELECT fingerprint, forget_on_lock FROM key_settings LIMIT 0",
 ];
 
 pub(crate) fn initialize(connection: &mut Connection) -> Result<()> {

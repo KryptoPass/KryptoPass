@@ -10,8 +10,9 @@ use crate::domain::{FolderId, RecipientSet, SecretId};
 #[derive(Clone, Debug)]
 pub enum Recipients {
     Explicit(RecipientSet),
-    /// The default recipients of the destination folder.
-    FolderDefault,
+    /// The destination folder's default recipients, or the vault's when the
+    /// folder has none or there is no folder.
+    Default,
 }
 
 /// The icon a person picks for an item.

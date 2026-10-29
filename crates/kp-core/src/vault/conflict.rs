@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use super::error::VaultError;
 use super::item::{IconChoice, Item, ItemEdit};
 use super::record::{ItemMeta, ItemState};
-use super::{Cipher, Store, Vault, logged};
+use super::{Cipher, CipherError, Store, Vault, logged};
 use crate::domain::SecretId;
 use crate::domain::entry_icon::EntryIcon;
 use crate::domain::item::{DiffTarget, Difference, ItemContent, Side, compare};
@@ -84,13 +84,21 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         } else {
             Side::Ours
         };
-        let base = self
-            .store
-            .merge_base(id, meta.head, theirs.id)?
-            .map(|base| self.open_version(id, base))
-            .transpose()?;
-        let ours = self.open_version(id, meta.head)?;
-        let theirs = self.open_version(id, theirs.id)?;
+        let ours = self.open_version(id, meta.head).map_err(unreadable)?;
+        let theirs = self.open_version(id, theirs.id).map_err(unreadable)?;
+        // A base encrypted only to other keys counts as no base: every
+        // difference then goes to review, which is the safe side.
+        let base = match self.store.merge_base(id, meta.head, theirs.meta.head)? {
+            Some(base) => match self.open_version(id, base) {
+                Ok(base) => Some(base),
+                Err(VaultError::Cipher(CipherError::NotARecipient)) => {
+                    tracing::debug!(item = %id.0, "merge base not readable on this device");
+                    None
+                }
+                Err(error) => return Err(error),
+            },
+            None => None,
+        };
         let template = self.templates.template(ours.meta.state.template.as_str())?;
 
         let mut differences = state_differences(
@@ -194,6 +202,14 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             },
             Some(EntryIcon::Favicon { .. }) | None => IconChoice::Automatic,
         })
+    }
+}
+
+/// A side this device has no key for is not a fault: another device merges it.
+fn unreadable(error: VaultError) -> VaultError {
+    match error {
+        VaultError::Cipher(CipherError::NotARecipient) => VaultError::ConflictUnreadable,
+        other => other,
     }
 }
 
