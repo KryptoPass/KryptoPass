@@ -2296,7 +2296,6 @@ dependencies = [
  "kp-transport",
  "proptest",
  "prost",
- "rusqlite",
  "serde_json",
  "sha2",
  "tokio",

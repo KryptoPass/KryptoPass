@@ -146,9 +146,9 @@ pub enum MessagePayload {
     PairingAbort(proto::PairingAbort),
     /// Synchronization greeting.
     SyncHello(proto::SyncHello),
-    /// Bounded revision manifest.
+    /// Bounded manifest of heads and deletion marks.
     SyncManifest(proto::SyncManifest),
-    /// Bounded revision request.
+    /// Bounded request for heads and deletion marks.
     SyncRequest(proto::SyncRequest),
     /// Opaque synchronization fragment.
     SyncChunk(proto::SyncChunk),
@@ -156,8 +156,6 @@ pub enum MessagePayload {
     SyncCommit(proto::SyncCommit),
     /// Synchronization acknowledgement.
     SyncAck(proto::SyncAck),
-    /// Conflict metadata.
-    SyncConflict(proto::SyncConflict),
     /// Reserved key transfer offer; this crate performs no key operation.
     KeyTransferOffer(proto::KeyTransferOffer),
     /// Reserved key transfer fragment; this crate performs no key operation.
@@ -206,7 +204,6 @@ impl fmt::Debug for MessagePayload {
             Self::SyncChunk(_) => "SyncChunk",
             Self::SyncCommit(_) => "SyncCommit",
             Self::SyncAck(_) => "SyncAck",
-            Self::SyncConflict(_) => "SyncConflict",
             Self::KeyTransferOffer(_) => "KeyTransferOffer",
             Self::KeyTransferChunk(_) => "KeyTransferChunk",
             Self::KeyTransferComplete(_) => "KeyTransferComplete",
@@ -542,7 +539,6 @@ fn message_type_name(message_type: proto::MessageType) -> &'static str {
         Type::SyncChunk => "SyncChunk",
         Type::SyncCommit => "SyncCommit",
         Type::SyncAck => "SyncAck",
-        Type::SyncConflict => "SyncConflict",
         Type::KeyTransferOffer => "KeyTransferOffer",
         Type::KeyTransferChunk => "KeyTransferChunk",
         Type::KeyTransferComplete => "KeyTransferComplete",
@@ -609,7 +605,6 @@ fn decode_payload(type_value: i32, bytes: &[u8]) -> Result<MessagePayload, Proto
         Type::SyncChunk => decode!(proto::SyncChunk, SyncChunk, validate_sync_chunk),
         Type::SyncCommit => decode!(proto::SyncCommit, SyncCommit, validate_sync_commit),
         Type::SyncAck => decode!(proto::SyncAck, SyncAck, validate_sync_ack),
-        Type::SyncConflict => decode!(proto::SyncConflict, SyncConflict, validate_sync_conflict),
         Type::KeyTransferOffer => {
             decode!(
                 proto::KeyTransferOffer,
@@ -678,7 +673,6 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
     let repeated = match proto::MessageType::try_from(type_value) {
         Ok(proto::MessageType::SyncManifest) => Some((2_u64, 1024_usize)),
         Ok(proto::MessageType::SyncRequest) => Some((2, 256)),
-        Ok(proto::MessageType::SyncConflict) => Some((2, 16)),
         Ok(proto::MessageType::VaultKeys) => Some((1, MAX_VAULT_KEYS)),
         Ok(_) => None,
         Err(_) => return Err(ProtocolError::UnknownMessageType { value: type_value }),
@@ -688,10 +682,6 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
         Ok(proto::MessageType::SyncChunk
             | proto::MessageType::KeyTransferChunk
             | proto::MessageType::SyntheticKeyChunk)
-    );
-    let is_conflict = matches!(
-        proto::MessageType::try_from(type_value),
-        Ok(proto::MessageType::SyncConflict)
     );
     let mut offset = 0usize;
     let mut repeated_count = 0usize;
@@ -742,11 +732,6 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
                 }
                 if is_chunk && field == 6 && field_bytes.len() > MAX_FRAGMENT_SIZE {
                     return Err(ProtocolError::FragmentLimitExceeded);
-                }
-                if is_conflict && field == 2 && field_bytes.len() != 16 {
-                    return Err(ProtocolError::InvalidField {
-                        field: "revision_ids",
-                    });
                 }
             }
             5 => skip(payload, &mut offset, 4, type_value)?,
@@ -946,15 +931,34 @@ fn validate_session_close(value: &proto::SessionClose) -> Result<(), ProtocolErr
 }
 
 fn validate_sync_hello(value: &proto::SyncHello) -> Result<(), ProtocolError> {
-    require_id(&value.vault_id, 16, "vault_id")?;
     require_id(&value.device_id, 32, "device_id")?;
-    require_fingerprint(&value.openpgp_fingerprint)?;
-    if value.known_revision_count > 1_000_000 {
+    if value.keys.is_empty() || value.keys.len() > 32 {
+        return Err(ProtocolError::InvalidField { field: "keys" });
+    }
+    let mut seen = HashSet::with_capacity(value.keys.len());
+    for key in &value.keys {
+        require_fingerprint(key)?;
+        if !seen.insert(key.as_slice()) {
+            return Err(ProtocolError::InvalidField {
+                field: "duplicate_key",
+            });
+        }
+    }
+    if value.known_object_count > 1_000_000 {
         return Err(ProtocolError::InvalidField {
-            field: "known_revision_count",
+            field: "known_object_count",
         });
     }
     Ok(())
+}
+
+/// A version id, or empty for a deletion mark.
+fn require_optional_version(value: &[u8]) -> Result<(), ProtocolError> {
+    if value.is_empty() {
+        Ok(())
+    } else {
+        require_id(value, 16, "version_id")
+    }
 }
 
 fn validate_sync_manifest(value: &proto::SyncManifest) -> Result<(), ProtocolError> {
@@ -964,12 +968,17 @@ fn validate_sync_manifest(value: &proto::SyncManifest) -> Result<(), ProtocolErr
     }
     let mut seen = HashSet::with_capacity(value.heads.len());
     for head in &value.heads {
-        require_id(&head.record_id, 16, "record_id")?;
-        require_id(&head.revision_id, 16, "revision_id")?;
-        require_len(&head.revision_hash, 32, "revision_hash")?;
-        if !seen.insert((head.record_id.as_slice(), head.revision_id.as_slice())) {
+        if !(1..=2).contains(&head.record_kind) {
             return Err(ProtocolError::InvalidField {
-                field: "duplicate_manifest_revision",
+                field: "record_kind",
+            });
+        }
+        require_id(&head.record_id, 16, "record_id")?;
+        require_optional_version(&head.version_id)?;
+        require_len(&head.object_hash, 32, "object_hash")?;
+        if !seen.insert((head.record_id.as_slice(), head.version_id.as_slice())) {
+            return Err(ProtocolError::InvalidField {
+                field: "duplicate_manifest_head",
             });
         }
     }
@@ -978,19 +987,16 @@ fn validate_sync_manifest(value: &proto::SyncManifest) -> Result<(), ProtocolErr
 
 fn validate_sync_request(value: &proto::SyncRequest) -> Result<(), ProtocolError> {
     require_id(&value.snapshot_id, 16, "snapshot_id")?;
-    if value.revisions.len() > 256 {
+    if value.wanted.len() > 256 {
         return Err(ProtocolError::FragmentLimitExceeded);
     }
-    let mut seen = HashSet::with_capacity(value.revisions.len());
-    for revision in &value.revisions {
-        require_id(&revision.record_id, 16, "record_id")?;
-        require_id(&revision.revision_id, 16, "revision_id")?;
-        if !seen.insert((
-            revision.record_id.as_slice(),
-            revision.revision_id.as_slice(),
-        )) {
+    let mut seen = HashSet::with_capacity(value.wanted.len());
+    for wanted in &value.wanted {
+        require_id(&wanted.record_id, 16, "record_id")?;
+        require_optional_version(&wanted.version_id)?;
+        if !seen.insert((wanted.record_id.as_slice(), wanted.version_id.as_slice())) {
             return Err(ProtocolError::InvalidField {
-                field: "duplicate_requested_revision",
+                field: "duplicate_wanted",
             });
         }
     }
@@ -1058,25 +1064,6 @@ fn validate_sync_ack(value: &proto::SyncAck) -> Result<(), ProtocolError> {
         .map_err(|_| ProtocolError::InvalidField { field: "status" })?;
     if status == proto::AckStatus::Unspecified {
         return Err(ProtocolError::InvalidField { field: "status" });
-    }
-    Ok(())
-}
-
-fn validate_sync_conflict(value: &proto::SyncConflict) -> Result<(), ProtocolError> {
-    require_id(&value.record_id, 16, "record_id")?;
-    if !(2..=16).contains(&value.revision_ids.len()) {
-        return Err(ProtocolError::InvalidField {
-            field: "revision_ids",
-        });
-    }
-    let mut seen = HashSet::with_capacity(value.revision_ids.len());
-    for id in &value.revision_ids {
-        require_id(id, 16, "revision_ids")?;
-        if !seen.insert(id.as_slice()) {
-            return Err(ProtocolError::InvalidField {
-                field: "duplicate_revision_id",
-            });
-        }
     }
     Ok(())
 }

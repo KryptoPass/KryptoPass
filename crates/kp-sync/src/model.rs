@@ -1,4 +1,9 @@
-//! Canonical signed revision objects and their identity trust boundary.
+//! The signed objects Sync exchanges: versions, deletion marks and blobs.
+//!
+//! The canonical bytes, which the Ed25519 signature covers, are specified in
+//! `docs/sync/contrato.md`; protobuf bytes are never signed. A version carries
+//! its state encrypted and refers to its content and attachments by SHA-256,
+//! so a change of title does not resend the content.
 
 use kryptopass_identity::{
     DeviceId, DeviceIdentity, PublicIdentity, TrustStore, TrustStoreError, verify_signature,
@@ -6,255 +11,424 @@ use kryptopass_identity::{
 use sha2::{Digest as _, Sha256};
 use std::fmt;
 
-/// Fixed-width vault, record and revision identifier.
+/// Fixed-width record, version and transfer identifier.
 pub type Id = [u8; 16];
 
 /// Fixed-width SHA-256 digest.
 pub type Digest = [u8; 32];
 
-/// Maximum number of direct causal parents on one revision.
+/// Maximum number of direct parents of one version.
 pub const SYNC_MAX_PARENTS: usize = 16;
 
-/// Maximum number of current heads that can be merged into one revision.
-pub const SYNC_MAX_HEADS: usize = 16;
+/// Maximum recipients of one version or deletion mark.
+pub const SYNC_MAX_RECIPIENTS: usize = 32;
 
-/// Maximum heads in one streamed manifest page; 256 fixed-size heads fit one payload.
+/// Maximum blobs a version refers to besides its content.
+pub const SYNC_MAX_ATTACHMENTS: usize = 16;
+
+/// Maximum encrypted state carried inside a version.
+pub const SYNC_MAX_STATE_BYTES: usize = 256 * 1024;
+
+/// Maximum size of one encrypted blob: item content or an icon image.
+pub const SYNC_MAX_BLOB_BYTES: usize = 2 * 1024 * 1024 + 256 * 1024;
+
+/// Maximum heads in one streamed manifest page.
 pub const SYNC_MANIFEST_PAGE_HEADS: usize = 256;
 
-/// Maximum revisions in one protobuf batch.
-pub const SYNC_MAX_REVISIONS_PER_BATCH: usize = 32;
+/// Maximum versions and deletion marks in one batch.
+pub const SYNC_MAX_OBJECTS_PER_BATCH: usize = 32;
 
-/// Maximum encoded protobuf batch size.
+/// Maximum encoded batch size.
 pub const SYNC_MAX_BATCH_BYTES: usize = 8 * 1024 * 1024;
 
-/// Maximum encrypted content carried by one revision.
-pub const SYNC_MAX_CIPHERTEXT_BYTES: usize = 2 * 1024 * 1024;
+/// Maximum versions and deletion marks one store offers to a peer.
+pub const SYNC_MAX_OBJECTS: usize = 10_000;
 
-/// Maximum revisions retained by an isolated ledger.
-pub const SYNC_MAX_LEDGER_REVISIONS: usize = 10_000;
-
-/// Maximum ciphertext bytes retained by an isolated ledger.
-pub const SYNC_MAX_LEDGER_CIPHERTEXT_BYTES: usize = 64 * 1024 * 1024;
-
-const REVISION_DOMAIN: &[u8] = b"org.kryptopass.sync-revision.v1\0";
-const OBJECT_DOMAIN: &[u8] = b"org.kryptopass.sync-object.v1\0";
-const REVISION_VERSION: u16 = 1;
+const VERSION_DOMAIN: &[u8] = b"org.kryptopass.sync.version\0";
+const DELETION_DOMAIN: &[u8] = b"org.kryptopass.sync.deletion\0";
+const OBJECT_DOMAIN: &[u8] = b"org.kryptopass.sync.object\0";
+const FORMAT: u16 = 1;
 const SIGNATURE_BYTES: usize = 64;
 
-/// The signed operation represented by a revision.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// What a record is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u8)]
-pub enum Operation {
-    /// Replace the complete encrypted record contents.
-    Write = 1,
-    /// Retain a tombstone and its causal history.
-    Delete = 2,
+pub enum RecordKind {
+    Item = 1,
+    Folder = 2,
 }
 
-impl Operation {
-    pub(crate) const fn from_wire(value: i32) -> Option<Self> {
+impl RecordKind {
+    pub const fn from_wire(value: u32) -> Option<Self> {
         match value {
-            1 => Some(Self::Write),
-            2 => Some(Self::Delete),
+            1 => Some(Self::Item),
+            2 => Some(Self::Folder),
             _ => None,
         }
     }
 
-    const fn as_byte(self) -> u8 {
-        self as u8
+    pub const fn as_wire(self) -> u32 {
+        self as u32
     }
 }
 
-/// Immutable, signed encrypted revision and its causal metadata.
-#[derive(Clone, PartialEq, Eq)]
-pub struct Revision {
-    /// Vault to which the revision belongs.
-    pub vault_id: Id,
-    /// Stable identifier of the logical record.
+/// Hybrid logical clock: later than every parent's, even when the author's
+/// wall clock is behind. Only a hint for preselecting a conflict side.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Clock {
+    pub millis: u64,
+    pub counter: u32,
+}
+
+/// An OpenPGP primary key fingerprint: 20 bytes (v4) or 32 bytes (v5/v6).
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Fingerprint(Vec<u8>);
+
+impl Fingerprint {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, SyncError> {
+        if matches!(bytes.len(), 20 | 32) && bytes.iter().any(|byte| *byte != 0) {
+            Ok(Self(bytes))
+        } else {
+            Err(SyncError::InvalidObject)
+        }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+/// The fields of a version before it is signed.
+#[derive(Clone)]
+pub struct VersionDraft {
+    pub record_kind: RecordKind,
     pub record_id: Id,
-    /// Stable identifier of this immutable revision.
-    pub revision_id: Id,
-    /// Unique parent IDs in unsigned byte lexicographic order.
-    pub parent_revision_ids: Vec<Id>,
-    /// Device that signed this revision.
-    pub author_device_id: DeviceId,
-    /// Write or tombstone operation.
-    pub operation: Operation,
-    /// Opaque encrypted record contents, or empty for a tombstone.
-    pub ciphertext: Vec<u8>,
-    /// SHA-256 of `ciphertext`, including SHA-256(empty) for deletes.
-    pub content_hash: Digest,
-    /// Ed25519 signature over [`Self::canonical_bytes`].
+    pub version_id: Id,
+    pub parents: Vec<Id>,
+    pub clock: Clock,
+    pub recipients: Vec<Fingerprint>,
+    /// The state encrypted to `recipients`.
+    pub state: Vec<u8>,
+    /// SHA-256 of the encrypted content; items only.
+    pub content_hash: Option<Digest>,
+    /// SHA-256 of other blobs the state refers to, such as an icon image.
+    pub attachments: Vec<Digest>,
+}
+
+/// An immutable, signed version of an item or folder.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Version {
+    pub record_kind: RecordKind,
+    pub record_id: Id,
+    pub version_id: Id,
+    /// Unique, in ascending byte order.
+    pub parents: Vec<Id>,
+    pub author: DeviceId,
+    pub clock: Clock,
+    /// Unique, in ascending byte order.
+    pub recipients: Vec<Fingerprint>,
+    pub state: Vec<u8>,
+    pub content_hash: Option<Digest>,
+    /// Unique, in ascending byte order.
+    pub attachments: Vec<Digest>,
     pub signature: [u8; SIGNATURE_BYTES],
 }
 
-impl fmt::Debug for Revision {
+impl fmt::Debug for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Revision([redacted])")
+        f.write_str("Version([redacted])")
     }
 }
 
-impl Revision {
-    /// Creates a revision and signs the documented canonical byte sequence.
-    ///
-    /// Parent IDs are sorted before signing. Duplicate parents are rejected.
-    /// A write must carry 1..=2 MiB of encrypted content; a delete carries none.
-    pub fn sign(
-        vault_id: Id,
-        record_id: Id,
-        revision_id: Id,
-        mut parents: Vec<Id>,
-        operation: Operation,
-        ciphertext: Vec<u8>,
-        author: &DeviceIdentity,
-    ) -> Result<Self, SyncError> {
-        if parents.len() > SYNC_MAX_PARENTS {
-            return Err(SyncError::LimitExceeded);
-        }
-        parents.sort_unstable();
-        if parents.windows(2).any(|pair| pair[0] == pair[1]) {
-            return Err(SyncError::InvalidRevision);
-        }
-        if is_zero_id(&vault_id)
-            || is_zero_id(&record_id)
-            || is_zero_id(&revision_id)
-            || parents.iter().any(is_zero_id)
-        {
-            return Err(SyncError::InvalidRevision);
-        }
-        if ciphertext.len() > SYNC_MAX_CIPHERTEXT_BYTES {
-            return Err(SyncError::LimitExceeded);
-        }
-        match operation {
-            Operation::Write if ciphertext.is_empty() => return Err(SyncError::InvalidRevision),
-            Operation::Delete if !ciphertext.is_empty() => {
-                return Err(SyncError::InvalidRevision);
-            }
-            Operation::Write | Operation::Delete => {}
-        }
-
-        let mut revision = Self {
-            vault_id,
+impl Version {
+    /// Sorts the lists, checks every field and signs with `author`.
+    pub fn sign(draft: VersionDraft, author: &DeviceIdentity) -> Result<Self, SyncError> {
+        let VersionDraft {
+            record_kind,
             record_id,
-            revision_id,
-            parent_revision_ids: parents,
-            author_device_id: author.device_id(),
-            operation,
-            content_hash: Sha256::digest(&ciphertext).into(),
-            ciphertext,
+            version_id,
+            mut parents,
+            clock,
+            mut recipients,
+            state,
+            content_hash,
+            mut attachments,
+        } = draft;
+        parents.sort_unstable();
+        recipients.sort_unstable();
+        attachments.sort_unstable();
+        let mut version = Self {
+            record_kind,
+            record_id,
+            version_id,
+            parents,
+            author: author.device_id(),
+            clock,
+            recipients,
+            state,
+            content_hash,
+            attachments,
             signature: [0; SIGNATURE_BYTES],
         };
-        let bytes = revision.canonical_bytes()?;
-        revision.signature = author.sign(&bytes);
-        Ok(revision)
+        version.signature = author.sign(&version.canonical_bytes()?);
+        Ok(version)
     }
 
-    /// Verifies the author binding, object fields, content digest and signature.
+    /// Checks the fields and that `author` signed them.
     pub fn verify(&self, author: &PublicIdentity) -> Result<(), SyncError> {
-        self.validate_fields()?;
-        author.validate().map_err(|_| SyncError::InvalidSignature)?;
-        if author.device_id != self.author_device_id {
+        if author.validate().is_err() || author.device_id != self.author {
             return Err(SyncError::InvalidSignature);
         }
-        let bytes = self.canonical_bytes()?;
-        verify_signature(&author.signing_public_key, &bytes, &self.signature)
-            .map_err(|_| SyncError::InvalidSignature)
+        verify_signature(
+            &author.signing_public_key,
+            &self.canonical_bytes()?,
+            &self.signature,
+        )
+        .map_err(|_| SyncError::InvalidSignature)
     }
 
-    /// Returns the exact bytes covered by the Ed25519 signature.
+    /// The bytes the signature covers.
     pub fn canonical_bytes(&self) -> Result<Vec<u8>, SyncError> {
-        self.validate_fields()?;
-        let parent_bytes = self
-            .parent_revision_ids
-            .len()
-            .checked_mul(16)
-            .ok_or(SyncError::LimitExceeded)?;
-        let capacity = REVISION_DOMAIN
-            .len()
-            .checked_add(2 + 16 + 16 + 16 + 2)
-            .and_then(|value| value.checked_add(parent_bytes))
-            .and_then(|value| value.checked_add(32 + 1 + 4))
-            .and_then(|value| value.checked_add(self.ciphertext.len()))
-            .and_then(|value| value.checked_add(32))
-            .ok_or(SyncError::LimitExceeded)?;
-        let mut bytes = Vec::new();
-        bytes
-            .try_reserve_exact(capacity)
-            .map_err(|_| SyncError::Allocation)?;
-        bytes.extend_from_slice(REVISION_DOMAIN);
-        bytes.extend_from_slice(&REVISION_VERSION.to_be_bytes());
-        bytes.extend_from_slice(&self.vault_id);
-        bytes.extend_from_slice(&self.record_id);
-        bytes.extend_from_slice(&self.revision_id);
-        bytes.extend_from_slice(&(self.parent_revision_ids.len() as u16).to_be_bytes());
-        for parent in &self.parent_revision_ids {
-            bytes.extend_from_slice(parent);
-        }
-        bytes.extend_from_slice(self.author_device_id.as_bytes());
-        bytes.push(self.operation.as_byte());
-        bytes.extend_from_slice(&(self.ciphertext.len() as u32).to_be_bytes());
-        bytes.extend_from_slice(&self.ciphertext);
-        bytes.extend_from_slice(&self.content_hash);
-        Ok(bytes)
+        self.validate()?;
+        let mut bytes = Canonical::new(VERSION_DOMAIN);
+        bytes.u8(self.record_kind as u8);
+        bytes.raw(&self.record_id);
+        bytes.raw(&self.version_id);
+        bytes.list16(self.parents.iter().map(|id| id.as_slice()), |out, id| {
+            out.raw(id)
+        })?;
+        bytes.raw(self.author.as_bytes());
+        bytes.clock(self.clock);
+        bytes.list16(
+            self.recipients.iter().map(Fingerprint::as_bytes),
+            Canonical::bytes8,
+        )?;
+        bytes.bytes32(&self.state)?;
+        bytes.bytes8(
+            self.content_hash
+                .as_ref()
+                .map_or(&[][..], |hash| hash.as_slice()),
+        );
+        bytes.list16(
+            self.attachments.iter().map(|hash| hash.as_slice()),
+            |out, hash| out.raw(hash),
+        )?;
+        Ok(bytes.finish())
+    }
+
+    /// The digest that names this exact signed object.
+    pub fn hash(&self) -> Result<Digest, SyncError> {
+        Ok(object_hash(&self.canonical_bytes()?, &self.signature))
+    }
+
+    /// Every blob this version needs: its content, then its attachments.
+    pub fn blobs(&self) -> impl Iterator<Item = &Digest> {
+        self.content_hash.iter().chain(&self.attachments)
     }
 
     pub(crate) fn validate(&self) -> Result<(), SyncError> {
-        self.validate_fields()
-    }
-
-    /// Returns the immutable object digest, including the author's signature.
-    pub fn hash(&self) -> Result<Digest, SyncError> {
-        let canonical = self.canonical_bytes()?;
-        let mut hasher = Sha256::new();
-        hasher.update(OBJECT_DOMAIN);
-        hasher.update(canonical);
-        hasher.update(self.signature);
-        Ok(hasher.finalize().into())
-    }
-
-    fn validate_fields(&self) -> Result<(), SyncError> {
-        if is_zero_id(&self.vault_id)
-            || is_zero_id(&self.record_id)
-            || is_zero_id(&self.revision_id)
-            || self.parent_revision_ids.iter().any(is_zero_id)
-            || self
-                .parent_revision_ids
-                .windows(2)
-                .any(|pair| pair[0] >= pair[1])
+        let content_matches_kind = match self.record_kind {
+            RecordKind::Item => self.content_hash.is_some(),
+            RecordKind::Folder => self.content_hash.is_none(),
+        };
+        if is_zero_id(&self.record_id)
+            || is_zero_id(&self.version_id)
+            || self.parents.iter().any(is_zero_id)
+            || self.parents.contains(&self.version_id)
+            || !strictly_ascending(&self.parents)
+            || !strictly_ascending(&self.recipients)
+            || !strictly_ascending(&self.attachments)
+            || self.recipients.is_empty()
+            || self.state.is_empty()
+            || !content_matches_kind
         {
-            return Err(SyncError::InvalidRevision);
+            return Err(SyncError::InvalidObject);
         }
-        if self.parent_revision_ids.len() > SYNC_MAX_PARENTS
-            || self.ciphertext.len() > SYNC_MAX_CIPHERTEXT_BYTES
+        if self.parents.len() > SYNC_MAX_PARENTS
+            || self.recipients.len() > SYNC_MAX_RECIPIENTS
+            || self.attachments.len() > SYNC_MAX_ATTACHMENTS
+            || self.state.len() > SYNC_MAX_STATE_BYTES
         {
             return Err(SyncError::LimitExceeded);
-        }
-        match self.operation {
-            Operation::Write if self.ciphertext.is_empty() => {
-                return Err(SyncError::InvalidRevision);
-            }
-            Operation::Delete if !self.ciphertext.is_empty() => {
-                return Err(SyncError::InvalidRevision);
-            }
-            Operation::Write | Operation::Delete => {}
-        }
-        let expected_hash: Digest = Sha256::digest(&self.ciphertext).into();
-        if self.content_hash != expected_hash {
-            return Err(SyncError::InvalidRevision);
         }
         Ok(())
     }
 }
 
-/// One record head advertised by a manifest.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RevisionHead {
-    /// Logical record identifier.
+/// The fields of a deletion mark before it is signed.
+#[derive(Clone)]
+pub struct DeletionDraft {
+    pub record_kind: RecordKind,
     pub record_id: Id,
-    /// Immutable revision identifier.
-    pub revision_id: Id,
-    /// Digest committing to the complete signed revision.
-    pub revision_hash: Digest,
+    pub clock: Clock,
+    /// Recipients of the record's last version, to route the mark like it.
+    pub recipients: Vec<Fingerprint>,
+}
+
+/// A signed mark that a record was deleted for good. It carries no title,
+/// content or history; it only stops old versions from bringing it back.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Deletion {
+    pub record_kind: RecordKind,
+    pub record_id: Id,
+    pub author: DeviceId,
+    pub clock: Clock,
+    pub recipients: Vec<Fingerprint>,
+    pub signature: [u8; SIGNATURE_BYTES],
+}
+
+impl fmt::Debug for Deletion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Deletion([redacted])")
+    }
+}
+
+impl Deletion {
+    pub fn sign(draft: DeletionDraft, author: &DeviceIdentity) -> Result<Self, SyncError> {
+        let DeletionDraft {
+            record_kind,
+            record_id,
+            clock,
+            mut recipients,
+        } = draft;
+        recipients.sort_unstable();
+        let mut deletion = Self {
+            record_kind,
+            record_id,
+            author: author.device_id(),
+            clock,
+            recipients,
+            signature: [0; SIGNATURE_BYTES],
+        };
+        deletion.signature = author.sign(&deletion.canonical_bytes()?);
+        Ok(deletion)
+    }
+
+    pub fn verify(&self, author: &PublicIdentity) -> Result<(), SyncError> {
+        if author.validate().is_err() || author.device_id != self.author {
+            return Err(SyncError::InvalidSignature);
+        }
+        verify_signature(
+            &author.signing_public_key,
+            &self.canonical_bytes()?,
+            &self.signature,
+        )
+        .map_err(|_| SyncError::InvalidSignature)
+    }
+
+    pub fn canonical_bytes(&self) -> Result<Vec<u8>, SyncError> {
+        self.validate()?;
+        let mut bytes = Canonical::new(DELETION_DOMAIN);
+        bytes.u8(self.record_kind as u8);
+        bytes.raw(&self.record_id);
+        bytes.raw(self.author.as_bytes());
+        bytes.clock(self.clock);
+        bytes.list16(
+            self.recipients.iter().map(Fingerprint::as_bytes),
+            Canonical::bytes8,
+        )?;
+        Ok(bytes.finish())
+    }
+
+    pub fn hash(&self) -> Result<Digest, SyncError> {
+        Ok(object_hash(&self.canonical_bytes()?, &self.signature))
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), SyncError> {
+        if is_zero_id(&self.record_id)
+            || self.recipients.is_empty()
+            || !strictly_ascending(&self.recipients)
+        {
+            return Err(SyncError::InvalidObject);
+        }
+        if self.recipients.len() > SYNC_MAX_RECIPIENTS {
+            return Err(SyncError::LimitExceeded);
+        }
+        Ok(())
+    }
+}
+
+/// The name of a blob: the SHA-256 of its encrypted bytes.
+pub fn blob_hash(blob: &[u8]) -> Digest {
+    Sha256::digest(blob).into()
+}
+
+/// One entry of a manifest: a version head or a deletion mark.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Head {
+    pub record_kind: RecordKind,
+    pub record_id: Id,
+    /// `None` for a deletion mark.
+    pub version_id: Option<Id>,
+    pub object_hash: Digest,
+}
+
+fn object_hash(canonical: &[u8], signature: &[u8; SIGNATURE_BYTES]) -> Digest {
+    let mut hasher = Sha256::new();
+    hasher.update(OBJECT_DOMAIN);
+    hasher.update(canonical);
+    hasher.update(signature);
+    hasher.finalize().into()
+}
+
+fn strictly_ascending<T: Ord>(values: &[T]) -> bool {
+    values.windows(2).all(|pair| pair[0] < pair[1])
+}
+
+/// Big-endian canonical encoding: lists carry a `u16` count, fingerprints and
+/// optional hashes a `u8` length, the state a `u32` length.
+struct Canonical(Vec<u8>);
+
+impl Canonical {
+    fn new(domain: &[u8]) -> Self {
+        let mut bytes = Vec::with_capacity(512);
+        bytes.extend_from_slice(domain);
+        bytes.extend_from_slice(&FORMAT.to_be_bytes());
+        Self(bytes)
+    }
+
+    fn u8(&mut self, value: u8) {
+        self.0.push(value);
+    }
+
+    fn raw(&mut self, value: &[u8]) {
+        self.0.extend_from_slice(value);
+    }
+
+    fn clock(&mut self, clock: Clock) {
+        self.0.extend_from_slice(&clock.millis.to_be_bytes());
+        self.0.extend_from_slice(&clock.counter.to_be_bytes());
+    }
+
+    fn bytes8(&mut self, value: &[u8]) {
+        // Callers bound these to 32 bytes.
+        self.0.push(value.len() as u8);
+        self.0.extend_from_slice(value);
+    }
+
+    fn bytes32(&mut self, value: &[u8]) -> Result<(), SyncError> {
+        let length = u32::try_from(value.len()).map_err(|_| SyncError::LimitExceeded)?;
+        self.0.extend_from_slice(&length.to_be_bytes());
+        self.0.extend_from_slice(value);
+        Ok(())
+    }
+
+    fn list16<'a>(
+        &mut self,
+        items: impl ExactSizeIterator<Item = &'a [u8]>,
+        mut write: impl FnMut(&mut Self, &'a [u8]),
+    ) -> Result<(), SyncError> {
+        let count = u16::try_from(items.len()).map_err(|_| SyncError::LimitExceeded)?;
+        self.0.extend_from_slice(&count.to_be_bytes());
+        for item in items {
+            write(self, item);
+        }
+        Ok(())
+    }
+
+    fn finish(self) -> Vec<u8> {
+        self.0
+    }
 }
 
 /// Author lookup backed by explicit pairing trust or the local device identity.
@@ -263,7 +437,7 @@ pub trait TrustSource {
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError>;
 
     /// Returns the key that signed already stored history. A source may keep the
-    /// public key of an author it no longer trusts, so old revisions stay
+    /// public key of an author it no longer trusts, so old versions stay
     /// verifiable; such an author never passes [`TrustSource::lookup`], so it
     /// cannot sign or introduce anything new.
     fn lookup_history(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
@@ -276,7 +450,7 @@ impl<S: TrustStore + ?Sized> TrustSource for S {
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
         match self.lookup_trusted_peer(&device_id) {
             Ok(identity) if identity.device_id == device_id => Ok(Some(identity)),
-            Ok(_) => Err(SyncError::InvalidLedger),
+            Ok(_) => Err(SyncError::InvalidStore),
             Err(TrustStoreError::UnknownOrRevokedPeer) => Ok(None),
             Err(_) => Err(SyncError::Storage),
         }
@@ -329,33 +503,29 @@ pub(crate) fn is_zero_id(id: &Id) -> bool {
 /// should use the stable Display description for non-sensitive diagnostics.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SyncError {
-    /// Persistent ledger I/O failed.
+    /// The store failed to read or write.
     Storage,
-    /// The persisted ledger failed its integrity checks.
-    InvalidLedger,
-    /// A batch or operation is bound to another vault.
-    VaultMismatch,
-    /// A revision has invalid fields or content hash.
-    InvalidRevision,
-    /// A trusted identity did not authenticate the revision signature.
+    /// Stored data failed its integrity checks.
+    InvalidStore,
+    /// A version or deletion mark has invalid fields.
+    InvalidObject,
+    /// A trusted identity did not authenticate the signature.
     InvalidSignature,
     /// The author is not present in the applicable trust source.
     UnknownAuthor,
-    /// A referenced parent revision is absent.
+    /// A referenced parent version is absent.
     MissingParent,
-    /// A parent belongs to a different record.
+    /// A parent belongs to another record.
     CrossRecordParent,
-    /// A revision refers to itself as a parent.
-    SelfParent,
-    /// The revision graph contains a cycle.
+    /// The version graph contains a cycle.
     Cycle,
-    /// An existing revision ID was reused for different immutable bytes.
-    RevisionIdCollision,
-    /// An append's expected current heads do not match the ledger.
-    HeadConflict,
-    /// A configured revision, byte or graph limit was exceeded.
+    /// A referenced blob is absent or does not match its hash.
+    MissingBlob,
+    /// An id names different signed bytes on each side.
+    Collision,
+    /// A configured object, byte or graph limit was exceeded.
     LimitExceeded,
-    /// Protobuf encoding failed or could not represent the requested batch.
+    /// Protobuf encoding failed or could not represent the batch.
     Encode,
     /// Protobuf decoding or structural preflight failed.
     Decode,
@@ -375,17 +545,15 @@ impl fmt::Display for SyncError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Self::Storage => "sync storage operation failed",
-            Self::InvalidLedger => "sync ledger is invalid",
-            Self::VaultMismatch => "sync vault identifier mismatch",
-            Self::InvalidRevision => "sync revision is invalid",
-            Self::InvalidSignature => "sync revision signature is invalid",
-            Self::UnknownAuthor => "sync revision author is not trusted",
-            Self::MissingParent => "sync revision parent is missing",
-            Self::CrossRecordParent => "sync revision parent belongs to another record",
-            Self::SelfParent => "sync revision cannot be its own parent",
-            Self::Cycle => "sync revision graph contains a cycle",
-            Self::RevisionIdCollision => "sync revision identifier collision",
-            Self::HeadConflict => "sync revision heads changed",
+            Self::InvalidStore => "sync store is invalid",
+            Self::InvalidObject => "sync object is invalid",
+            Self::InvalidSignature => "sync object signature is invalid",
+            Self::UnknownAuthor => "sync object author is not trusted",
+            Self::MissingParent => "sync version parent is missing",
+            Self::CrossRecordParent => "sync version parent belongs to another record",
+            Self::Cycle => "sync version graph contains a cycle",
+            Self::MissingBlob => "sync blob is missing",
+            Self::Collision => "sync identifier collision",
             Self::LimitExceeded => "sync limit exceeded",
             Self::Encode => "sync batch encoding failed",
             Self::Decode => "sync batch decoding failed",

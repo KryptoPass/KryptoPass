@@ -32,7 +32,7 @@ use kryptopass_identity::{DeviceId, PublicIdentity};
 use kryptopass_pairing::{EstablishedSession, PairingError};
 use kryptopass_protocol::{Channel, MessagePayload, proto};
 use kryptopass_sync::{
-    Ledger, SyncOutbound, SyncProgress, SyncSession, SyncSessionError, TrustSource,
+    Fingerprint, SyncOutbound, SyncProgress, SyncSession, SyncSessionError, SyncStore, TrustSource,
 };
 use kryptopass_transport::PeerTransport;
 pub use kryptopass_transport::{ConnectionFamily, ConnectionInfo, ConnectionRoute};
@@ -92,40 +92,32 @@ pub struct SessionOptions {
     pub reconnect_port: u16,
 }
 
-/// Explicit opt-in binding for one existing ciphertext ledger and trust source.
+/// Explicit opt-in binding of a Sync store, a trust source and the keys this
+/// device syncs with the peer.
 ///
-/// Supplying this value is the only way to advertise Sync v1 from a session.
-/// It does not select a vault, create trust, or inspect an OpenPGP key.
+/// Supplying this value is the only way to advertise Sync from a session. It
+/// does not create trust or inspect an OpenPGP key; the keys only route what
+/// the peer is offered.
 pub struct SyncSessionBinding {
-    ledger: Ledger,
+    store: Box<dyn SyncStore + Send>,
     trust: Box<dyn TrustSource + Send>,
-    openpgp_fingerprint: Vec<u8>,
+    keys: Vec<Fingerprint>,
     automatic_rounds: bool,
-    key_agnostic_hello: bool,
 }
 
 impl SyncSessionBinding {
-    /// Binds an existing ledger and trust source to the caller-selected key fingerprint.
     #[must_use]
     pub fn new(
-        ledger: Ledger,
+        store: Box<dyn SyncStore + Send>,
         trust: Box<dyn TrustSource + Send>,
-        openpgp_fingerprint: Vec<u8>,
+        keys: Vec<Fingerprint>,
     ) -> Self {
         Self {
-            ledger,
+            store,
             trust,
-            openpgp_fingerprint,
+            keys,
             automatic_rounds: false,
-            key_agnostic_hello: false,
         }
-    }
-
-    /// Accepts any valid OpenPGP fingerprint in the peer's hello (random-vault-ID bindings).
-    #[must_use]
-    pub fn with_key_agnostic_hello(mut self, enabled: bool) -> Self {
-        self.key_agnostic_hello = enabled;
-        self
     }
 
     /// Opts this binding into automatic follow-up rounds when both peers
@@ -140,9 +132,8 @@ impl SyncSessionBinding {
 impl fmt::Debug for SyncSessionBinding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SyncSessionBinding")
-            .field("vault_id", &"[redacted]")
-            .field("fingerprint", &"[redacted]")
-            .finish()
+            .field("keys", &self.keys.len())
+            .finish_non_exhaustive()
     }
 }
 
@@ -193,8 +184,8 @@ pub enum DeviceDirectoryError {
     /// The local device cannot be trusted as its own peer.
     #[error("local device cannot appear in the trusted peer list")]
     SelfTrust,
-    /// An explicitly supplied Sync binding has an invalid fingerprint shape.
-    #[error("sync session binding fingerprint is invalid")]
+    /// An explicitly supplied Sync binding names no keys, or too many.
+    #[error("sync session binding keys are invalid")]
     InvalidSyncBinding,
     /// The input list contains the same device more than once.
     #[error("trusted device list contains a duplicate")]
@@ -1065,13 +1056,12 @@ fn spawn_sync_worker(
     let worker_cancelled = Arc::clone(&cancelled);
     tokio::task::spawn_blocking(move || {
         let continuous_rounds = continuous_rounds && binding.automatic_rounds;
-        let key_agnostic_hello = binding.key_agnostic_hello;
         let mut engine = match SyncSession::new(
-            binding.ledger,
+            binding.store,
             binding.trust,
             local_device_id,
             expected_peer,
-            binding.openpgp_fingerprint,
+            binding.keys,
             std::time::Instant::now(),
         ) {
             Ok(engine) => engine,
@@ -1080,7 +1070,6 @@ fn spawn_sync_worker(
                 return;
             }
         };
-        engine = engine.with_ignored_peer_key(key_agnostic_hello);
         if continuous_rounds {
             if let Err(error) = engine.enable_continuous_rounds() {
                 let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(error));
@@ -1133,7 +1122,7 @@ fn spawn_sync_worker(
                 }
             }
             if continuous_rounds && now >= next_local_change_check {
-                match engine.has_uncovered_local_revisions() {
+                match engine.has_uncovered_local_changes() {
                     Ok(true) => {
                         if !engine.request_round() {
                             let _ = output_tx.blocking_send(SyncWorkerOutput::Failed(
@@ -1162,7 +1151,7 @@ fn spawn_sync_worker(
                     if cfg!(debug_assertions) {
                         let counts = match &outbound {
                             SyncOutbound::Hello(message) => {
-                                format!("hello revisions={}", message.known_revision_count)
+                                format!("hello objects={}", message.known_object_count)
                             }
                             SyncOutbound::Manifest(message) => format!(
                                 "manifest page={} last={} heads={}",
@@ -1171,7 +1160,7 @@ fn spawn_sync_worker(
                                 message.heads.len()
                             ),
                             SyncOutbound::Request(message) => {
-                                format!("request revisions={}", message.revisions.len())
+                                format!("request wanted={}", message.wanted.len())
                             }
                             SyncOutbound::Chunk(message) => format!(
                                 "chunk index={} chunks={} bytes={}",
@@ -1246,7 +1235,7 @@ fn spawn_sync_worker(
                     if cfg!(debug_assertions) {
                         let counts = match &payload {
                             MessagePayload::SyncHello(message) => {
-                                format!("revisions={}", message.known_revision_count)
+                                format!("objects={}", message.known_object_count)
                             }
                             MessagePayload::SyncManifest(message) => format!(
                                 "page={} last={} heads={}",
@@ -1255,7 +1244,7 @@ fn spawn_sync_worker(
                                 message.heads.len()
                             ),
                             MessagePayload::SyncRequest(message) => {
-                                format!("revisions={}", message.revisions.len())
+                                format!("wanted={}", message.wanted.len())
                             }
                             MessagePayload::SyncChunk(message) => format!(
                                 "chunk={} chunks={} bytes={}",
@@ -1427,8 +1416,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
 ) -> Result<SessionHandle, DeviceDirectoryError> {
     let synthetic_key_transfer = synthetic_key_transfer && cfg!(debug_assertions);
     if sync_binding.as_ref().is_some_and(|binding| {
-        !matches!(binding.openpgp_fingerprint.len(), 20 | 32)
-            || binding.openpgp_fingerprint.iter().all(|byte| *byte == 0)
+        binding.keys.is_empty() || binding.keys.len() > kryptopass_sync::SYNC_MAX_RECIPIENTS
     }) {
         return Err(DeviceDirectoryError::InvalidSyncBinding);
     }
@@ -2296,7 +2284,6 @@ fn is_sync_message(message_type: proto::MessageType) -> bool {
             | proto::MessageType::SyncChunk
             | proto::MessageType::SyncCommit
             | proto::MessageType::SyncAck
-            | proto::MessageType::SyncConflict
     )
 }
 

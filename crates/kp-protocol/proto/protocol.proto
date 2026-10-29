@@ -19,7 +19,6 @@ enum MessageType {
   MESSAGE_TYPE_SYNC_CHUNK = 11;
   MESSAGE_TYPE_SYNC_COMMIT = 12;
   MESSAGE_TYPE_SYNC_ACK = 13;
-  MESSAGE_TYPE_SYNC_CONFLICT = 14;
   MESSAGE_TYPE_KEY_TRANSFER_OFFER = 15;
   MESSAGE_TYPE_KEY_TRANSFER_CHUNK = 16;
   MESSAGE_TYPE_KEY_TRANSFER_COMPLETE = 17;
@@ -94,38 +93,42 @@ message PairingAbort {
   AbortCode code = 1;
 }
 
+// Sync exchanges signed item and folder versions and deletion marks; the
+// contract is docs/sync/contrato.md. Signatures cover the canonical bytes
+// defined there, never these protobuf bytes.
 message SyncHello {
-  bytes vault_id = 1;              // 16 bytes
-  bytes device_id = 2;             // 32 bytes
-  uint64 known_revision_count = 3;
-  bytes openpgp_fingerprint = 4;   // 20/32 bytes
+  bytes device_id = 1;             // 32 bytes
+  uint64 known_object_count = 2;   // versions and deletion marks stored
+  repeated bytes keys = 3;         // 1..32 OpenPGP fingerprints this side syncs with the peer, 20/32 bytes
 }
 
-message RevisionHead {
-  bytes record_id = 1;             // 16 bytes
-  bytes revision_id = 2;           // 16 bytes
-  bytes revision_hash = 3;         // 32 bytes
+// One head or deletion mark offered by the sender. A deletion has no version.
+message SyncHead {
+  uint32 record_kind = 1;          // 1 item, 2 folder
+  bytes record_id = 2;             // 16 bytes
+  bytes version_id = 3;            // 16 bytes; empty for a deletion mark
+  bytes object_hash = 4;           // 32 bytes
 }
 
 // The manifest is streamed in pages; every page fits one protocol payload.
 message SyncManifest {
   bytes snapshot_id = 1;           // 16 bytes, equal on every page
-  repeated RevisionHead heads = 2; // at most 256 per page, sorted across pages
+  repeated SyncHead heads = 2;     // at most 256 per page, sorted across pages
   uint32 page_index = 3;           // zero-based, consecutive
   bool last_page = 4;              // true on the final page
 }
 
-message RequestedRevision {
+message SyncWanted {
   bytes record_id = 1;             // 16 bytes
-  bytes revision_id = 2;           // 16 bytes
+  bytes version_id = 2;            // 16 bytes; empty for a deletion mark
 }
 
 message SyncRequest {
   bytes snapshot_id = 1;           // 16 bytes
-  repeated RequestedRevision revisions = 2; // at most 256
+  repeated SyncWanted wanted = 2;  // at most 256; empty ends the receive phase
 }
 
-// `data` is an opaque encrypted object fragment, not plaintext vault content.
+// `data` is a fragment of an encoded SyncBatch, never plaintext vault content.
 message SyncChunk {
   bytes transfer_id = 1;           // 16 bytes
   uint32 chunk_index = 2;          // zero-based
@@ -151,35 +154,39 @@ message SyncAck {
   AckStatus status = 2;
 }
 
-message SyncConflict {
-  bytes record_id = 1;             // 16 bytes
-  repeated bytes revision_ids = 2; // 2 through 16 unique 16-byte IDs
+// An immutable signed version of an item or folder.
+message SyncVersion {
+  uint32 record_kind = 1;                   // 1 item, 2 folder
+  bytes record_id = 2;                      // 16 bytes
+  bytes version_id = 3;                     // 16 bytes
+  repeated bytes parents = 4;               // 0..16 unique sorted 16-byte ids
+  bytes author = 5;                         // 32-byte device id
+  uint64 clock_millis = 6;
+  uint32 clock_counter = 7;
+  repeated bytes recipients = 8;            // 1..32 sorted unique fingerprints, 20/32 bytes
+  bytes state = 9;                          // encrypted state, never empty
+  bytes content_hash = 10;                  // 32 bytes for an item, empty for a folder
+  repeated bytes attachments = 11;          // 0..16 sorted unique 32-byte blob hashes
+  bytes signature = 12;                     // strict Ed25519, 64 bytes
 }
 
-enum SyncOperation {
-  SYNC_OPERATION_UNSPECIFIED = 0;
-  SYNC_OPERATION_WRITE = 1;
-  SYNC_OPERATION_DELETE = 2;
+// A signed mark that a record was deleted for good.
+message SyncDeletion {
+  uint32 record_kind = 1;
+  bytes record_id = 2;
+  bytes author = 3;
+  uint64 clock_millis = 4;
+  uint32 clock_counter = 5;
+  repeated bytes recipients = 6;
+  bytes signature = 7;
 }
 
-// Immutable signed ciphertext object. Signature bytes use the canonical
-// representation documented in docs/sin-revisar/sync/modelo-ledger-sync-v1.md; protobuf bytes are not signed.
-message SyncRevision {
-  bytes vault_id = 1;                       // 16-byte ID; must not be all zero
-  bytes record_id = 2;                      // 16-byte ID; must not be all zero
-  bytes revision_id = 3;                    // 16-byte ID; must not be all zero
-  repeated bytes parent_revision_ids = 4;   // 0..16 unique sorted 16-byte IDs
-  bytes author_device_id = 5;               // 32 bytes
-  SyncOperation operation = 6;              // WRITE or DELETE
-  bytes ciphertext = 7;                     // opaque; <= 2 MiB for WRITE, empty for DELETE
-  bytes content_hash = 8;                   // SHA-256(ciphertext), 32 bytes
-  bytes signature = 9;                      // strict Ed25519 signature, 64 bytes
-}
-
-// One bounded transfer unit; every revision's vault_id must match this field.
-message SyncRevisionBatch {
-  bytes vault_id = 1;                 // 16-byte ID; must not be all zero
-  repeated SyncRevision revisions = 2; // 0..32 revisions; encoded batch <= 8 MiB
+// One bounded transfer unit: deletion marks first, then versions in
+// topological order, then the blobs they reference that the receiver lacks.
+message SyncBatch {
+  repeated SyncDeletion deletions = 1;
+  repeated SyncVersion versions = 2;
+  repeated bytes blobs = 3;
 }
 
 // These messages reserve the future key-provisioning wire format. Fase 1
