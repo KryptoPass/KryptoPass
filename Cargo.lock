@@ -2013,8 +2013,9 @@ dependencies = [
  "base64 0.22.1",
  "crc32fast",
  "deunicode",
- "getrandom 0.4.3",
+ "kp-generator",
  "kp-memsec",
+ "kp-template",
  "percent-encoding",
  "regex",
  "serde",
@@ -2088,6 +2089,16 @@ dependencies = [
  "tokio",
  "tracing",
  "zeroize",
+]
+
+[[package]]
+name = "kp-generator"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "kp-memsec",
+ "kp-template",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

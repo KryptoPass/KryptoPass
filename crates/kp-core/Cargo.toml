@@ -12,11 +12,12 @@ name = "kryptopass_core"
 
 [dependencies]
 kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
+kp-template = { path = "../kp-template", features = ["serde"] }
+kryptopass-generator = { package = "kp-generator", path = "../kp-generator" }
 anyhow = "1.0"
 base64 = "0.22"
 crc32fast = "1.5"
 deunicode = "1.6.2"
-getrandom = "0.4"
 percent-encoding = "2.3"
 regex = "1.13"
 serde = { version = "1.0", features = ["derive"] }

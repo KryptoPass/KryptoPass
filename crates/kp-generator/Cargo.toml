@@ -1,0 +1,20 @@
+[package]
+name = "kp-generator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Secret generators configured by item templates: passwords and PINs"
+publish = false
+
+[lib]
+name = "kryptopass_generator"
+
+[dependencies]
+kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
+kp-template = { path = "../kp-template" }
+getrandom = "0.4"
+thiserror = "2.0"
+
+[lints]
+workspace = true

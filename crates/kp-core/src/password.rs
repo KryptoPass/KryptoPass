@@ -1,7 +1,12 @@
-//! Cryptographically secure password generation.
+//! Password generation for the current editor, delegating to `kp-generator`.
+//!
+//! Kept so the existing UI keeps working; new code uses
+//! `kryptopass_generator` with the settings of the template's generator.
 
-use crate::{SensitiveBytes, SensitiveText};
-use anyhow::{Result, bail, ensure};
+use crate::SensitiveText;
+use anyhow::Result;
+use kp_template::CharClass;
+use kryptopass_generator::{Settings, generate};
 
 /// Character classes and length for a generated password.
 pub struct PasswordOptions {
@@ -14,121 +19,16 @@ pub struct PasswordOptions {
 }
 
 /// Generates a password with at least one character from every selected class.
-///
-/// Each draw uses rejection sampling, so mapping random words onto the class
-/// alphabets does not introduce modulo bias. The result is zeroized on drop.
 pub fn generate_password(options: &PasswordOptions) -> Result<SensitiveText> {
-    ensure!(
-        (4..=1024).contains(&options.length),
-        "password length must be between 4 and 1024"
-    );
-    ensure!(
-        options.excluded.len() <= 256,
-        "excluded characters list is too long"
-    );
-
-    let mut classes = Vec::with_capacity(4);
-    if options.lowercase {
-        classes.push(filtered_class(b"abcdefghijklmnopqrstuvwxyz", options));
+    let mut settings = Settings::new(options.length, &[])?;
+    for (class, enabled) in [
+        (CharClass::Lower, options.lowercase),
+        (CharClass::Upper, options.uppercase),
+        (CharClass::Digits, options.digits),
+        (CharClass::Symbols, options.symbols),
+    ] {
+        settings.set_class(class, enabled);
     }
-    if options.uppercase {
-        classes.push(filtered_class(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ", options));
-    }
-    if options.digits {
-        classes.push(filtered_class(b"0123456789", options));
-    }
-    if options.symbols {
-        classes.push(filtered_class(b"!@#$%^&*()-_=+[]{};:,.?", options));
-    }
-
-    ensure!(!classes.is_empty(), "select at least one character class");
-    ensure!(
-        options.length >= classes.len(),
-        "password length is too short for the selected character classes"
-    );
-    if classes.iter().any(Vec::is_empty) {
-        bail!("a selected character class has no allowed characters");
-    }
-
-    let alphabet: Vec<u8> = classes.iter().flatten().copied().collect();
-    let mut random = RandomWords::new()?;
-    let mut output = SensitiveBytes::with_capacity(options.length);
-    output.resize(options.length, 0);
-    let mut written = 0;
-
-    for class in &classes {
-        output.as_mut_slice()[written] = class[random.index(class.len())?];
-        written += 1;
-    }
-    while written < options.length {
-        output.as_mut_slice()[written] = alphabet[random.index(alphabet.len())?];
-        written += 1;
-    }
-
-    for index in (1..output.len()).rev() {
-        let swap_index = random.index(index + 1)?;
-        output.as_mut_slice().swap(index, swap_index);
-    }
-
-    SensitiveText::from_utf8(output).map_err(|_| anyhow::anyhow!("password generation failed"))
-}
-
-fn filtered_class(source: &[u8], options: &PasswordOptions) -> Vec<u8> {
-    source
-        .iter()
-        .copied()
-        .filter(|byte| !options.excluded.contains(char::from(*byte)))
-        .collect()
-}
-
-struct RandomWords {
-    bytes: SensitiveBytes,
-    offset: usize,
-}
-
-impl RandomWords {
-    fn new() -> Result<Self> {
-        let mut bytes = SensitiveBytes::with_capacity(256);
-        bytes.resize(256, 0);
-        let mut result = Self { bytes, offset: 256 };
-        result.refill()?;
-        Ok(result)
-    }
-
-    fn refill(&mut self) -> Result<()> {
-        getrandom::fill(self.bytes.as_mut_slice())
-            .map_err(|_| anyhow::anyhow!("secure randomness unavailable"))?;
-        self.offset = 0;
-        Ok(())
-    }
-
-    fn next_u32(&mut self) -> Result<u32> {
-        if self.offset + 4 > self.bytes.len() {
-            self.refill()?;
-        }
-        let word = u32::from_le_bytes([
-            self.bytes[self.offset],
-            self.bytes[self.offset + 1],
-            self.bytes[self.offset + 2],
-            self.bytes[self.offset + 3],
-        ]);
-        self.offset += 4;
-        Ok(word)
-    }
-
-    fn index(&mut self, upper_bound: usize) -> Result<usize> {
-        let bound = u64::try_from(upper_bound)
-            .map_err(|_| anyhow::anyhow!("invalid password character set"))?;
-        ensure!(bound > 0, "invalid password character set");
-        let range = u64::from(u32::MAX) + 1;
-        let acceptance_limit = (range / bound) * bound;
-        for _ in 0..128 {
-            let value = u64::from(self.next_u32()?);
-            if value < acceptance_limit {
-                return usize::try_from(value % bound)
-                    .map_err(|_| anyhow::anyhow!("password generation failed"));
-            }
-        }
-        bail!("password generation failed")
-    }
+    settings.set_excluded(&options.excluded)?;
+    Ok(generate(&settings)?)
 }
