@@ -95,15 +95,15 @@ check-p2p:
 
 # Señalización y transporte LAN independientes de Qt.
 check-lan:
-    cargo check -p kp-lan -p kp-pairing-lab
+    cargo check -p kp-lan -p kp-peers
 
 # Primitivas de dispositivos y sesiones, sin Qt ni una interfaz nueva.
 check-devices:
-    cargo check -p kp-devices -p kp-pairing-lab
+    cargo check -p kp-devices -p kp-peers
 
 # Network policy, route-generation, signaling and diagnostic privacy regressions.
 test-network-privacy:
-    cargo test -p kp-lan -p kp-pairing-lab -p kp-devices -p kp-protocol
+    cargo test -p kp-lan -p kp-peers -p kp-devices -p kp-protocol
     cargo test -p kp-desktop transport_diagnostics
 
 test-p2p:
@@ -145,10 +145,6 @@ sync-interop-host:
 # Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
 p2p-demo:
     cargo run -p kp-pairing --example pairing_demo
-
-# Contrato local de desarrollo para el emulador; no abre un puerto LAN.
-pairing-interop-host:
-    cargo build -p kp-pairing-lab --bin pairing-interop-host
 
 pairing-lab: build
     {{ quote(desktop_binary) }} --pairing-lab --new-instance
@@ -296,7 +292,7 @@ dev-reset:
 
 # Reset explícito con Secret Service separado y archivos temporales, sin datos del usuario.
 test-dev-reset:
-    cargo test -p kp-pairing-lab --test profile_reset dev_reset -- --ignored --nocapture
+    cargo test -p kp-peers --test profile_reset dev_reset -- --ignored --nocapture
 
 translations:
     python3 packaging/translations.py update

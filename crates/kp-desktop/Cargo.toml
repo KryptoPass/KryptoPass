@@ -42,7 +42,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 base64 = "0.22"
 kryptopass-browser = { package = "kp-browser", path = "../kp-browser" }
-kryptopass-pairing-lab = { package = "kp-pairing-lab", path = "../kp-pairing-lab" }
+kryptopass-peers = { package = "kp-peers", path = "../kp-peers" }
 kryptopass-identity = { package = "kp-identity", path = "../kp-identity" }
 kryptopass-pairing = { package = "kp-pairing", path = "../kp-pairing" }
 kryptopass-devices = { package = "kp-devices", path = "../kp-devices" }

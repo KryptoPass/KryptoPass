@@ -11,7 +11,7 @@ use crate::{
 use kryptopass_core::{LoginContent, SecretContent, SecretId, SensitiveText};
 use kryptopass_identity::DeviceId;
 #[cfg(debug_assertions)]
-use kryptopass_pairing_lab::{LabHost, VaultBindingInfo};
+use kryptopass_peers::{PeerHost, VaultBindingInfo};
 #[cfg(debug_assertions)]
 use kryptopass_sync::{Id, Operation};
 #[cfg(debug_assertions)]
@@ -105,7 +105,7 @@ pub(crate) fn run(
     let fixture = SyntheticFixture::load().map_err(|_| SyntheticSyncError::OpenPgpUnavailable)?;
     let fingerprint = fixture.fingerprint().clone();
     let fingerprint_bytes = fixture.fingerprint_bytes().to_vec();
-    let host = LabHost::open_existing_system_profile(profile_directory)
+    let host = PeerHost::open_existing_system_profile(profile_directory)
         .map_err(|_| SyntheticSyncError::ProfileUnavailable)?;
 
     let binding = match action {
@@ -198,7 +198,7 @@ pub(crate) fn run(
 
 #[cfg(debug_assertions)]
 fn select_binding(
-    host: &LabHost,
+    host: &PeerHost,
     peer: DeviceId,
     fingerprint: &[u8],
 ) -> Result<VaultBindingInfo, SyntheticSyncError> {
@@ -220,7 +220,7 @@ fn select_binding(
 
 #[cfg(debug_assertions)]
 fn existing_binding(
-    host: &LabHost,
+    host: &PeerHost,
     peer: DeviceId,
     fingerprint: &[u8],
 ) -> Result<VaultBindingInfo, SyntheticSyncError> {

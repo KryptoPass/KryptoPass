@@ -132,7 +132,7 @@ fn run_synthetic_sync_cli() -> bool {
         let directory = storage::paths::browser_state_directory(APP.desktop_file_id)?
             .join("emulator-pairing-lab-v1");
         if action == "peers" {
-            let host = kryptopass_pairing_lab::LabHost::open_existing_system_profile(&directory)?;
+            let host = kryptopass_peers::PeerHost::open_existing_system_profile(&directory)?;
             return Ok(
                 serde_json::json!({"devices":host.trusted_peers()?.iter().map(|peer| peer.device_id.to_string()).collect::<Vec<_>>()}),
             );

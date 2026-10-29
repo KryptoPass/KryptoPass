@@ -1,4 +1,5 @@
-//! Private local display metadata. It never participates in device authorization.
+//! Local names of paired devices, in their own private SQLite file inside the
+//! pairing profile. They never participate in device authorization.
 
 use kryptopass_identity::{DeviceId, PublicIdentity};
 use rusqlite::{Connection, OpenFlags, TransactionBehavior, params};
@@ -35,7 +36,7 @@ fn normalized(value: &str) -> Result<&str, AliasError> {
     Ok(value)
 }
 
-pub(super) fn read(
+pub fn read(
     directory: &Path,
     local_id: DeviceId,
     peers: &[PublicIdentity],
@@ -72,7 +73,7 @@ pub(super) fn read(
     Ok(result)
 }
 
-pub(super) fn write(
+pub fn write(
     directory: &Path,
     local_id: DeviceId,
     peer_id: DeviceId,
@@ -123,11 +124,7 @@ pub(super) fn write(
     Ok(())
 }
 
-pub(super) fn forget(
-    directory: &Path,
-    local_id: DeviceId,
-    peer_id: DeviceId,
-) -> Result<(), AliasError> {
+pub fn forget(directory: &Path, local_id: DeviceId, peer_id: DeviceId) -> Result<(), AliasError> {
     let path = directory.join(FILE);
     match fs::symlink_metadata(&path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -155,7 +152,7 @@ pub(super) fn forget(
     tx.commit().map_err(|_| AliasError::Storage)
 }
 
-pub(super) fn validate_reset_targets(directory: &Path) -> Result<(), AliasError> {
+pub fn validate_reset_targets(directory: &Path) -> Result<(), AliasError> {
     validate_directory(directory)?;
     for path in reset_paths(directory) {
         validate_reset_file(&path)?;
@@ -163,7 +160,7 @@ pub(super) fn validate_reset_targets(directory: &Path) -> Result<(), AliasError>
     Ok(())
 }
 
-pub(super) fn reset_profile_files(directory: &Path) -> Result<(), AliasError> {
+pub fn reset_profile_files(directory: &Path) -> Result<(), AliasError> {
     validate_reset_targets(directory)?;
     let paths = reset_paths(directory);
     for path in paths.iter().skip(1).chain(paths.first()) {

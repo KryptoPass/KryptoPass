@@ -1523,12 +1523,13 @@ impl SyncSession {
         Ok(())
     }
 
-    /// The trusted identity of a stored object's author, to recheck its
-    /// signature before serving it.
+    /// The identity of a stored object's author, to recheck its signature
+    /// before serving it. History signed by a device forgotten since then
+    /// stays servable; only receiving requires a currently trusted author.
     fn verified_author(&self, author: DeviceId) -> Result<PublicIdentity, SyncSessionError> {
         let identity = self
             .trust
-            .lookup(author)
+            .lookup_history(author)
             .map_err(map_sync_error)?
             .ok_or(SyncSessionError::UnknownAuthor)?;
         if identity.device_id != author || identity.validate().is_err() {
@@ -1682,7 +1683,7 @@ impl SyncSession {
         for author_device_id in author_device_ids {
             let author = self
                 .trust
-                .lookup(*author_device_id)
+                .lookup_history(*author_device_id)
                 .map_err(map_sync_error)?
                 .ok_or(SyncSessionError::UnknownAuthor)?;
             if author.device_id != *author_device_id || author.validate().is_err() {

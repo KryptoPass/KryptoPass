@@ -14,8 +14,8 @@ use kryptopass_lan::{
     NetworkPolicyError, NetworkPolicyGuard, NetworkPrivacyPolicy, VpnMode, VpnStatus,
 };
 use kryptopass_pairing::LocalDecision;
-use kryptopass_pairing_lab::{
-    HostEvent, LabHost, LabNetwork, NetworkPrivacySettings, ResumeOwnerSnapshot,
+use kryptopass_peers::{
+    HostEvent, NetworkPrivacySettings, PeerHost, PeerNetwork, ResumeOwnerSnapshot,
     ResumeProcessOwner, load_network_privacy_settings, save_network_privacy_settings,
     spawn_resume_process_owner,
 };
@@ -552,7 +552,10 @@ impl qobject::PairingLabController {
             };
             runtime.block_on(async move {
                 let mut updates = owner.subscribe();
-                if matches!(LabHost::system_profile_needs_pairing(&directory), Ok(false)) {
+                if matches!(
+                    PeerHost::system_profile_needs_pairing(&directory),
+                    Ok(false)
+                ) {
                     let _ = owner.ensure_ready().await;
                 }
                 let initial = updates.borrow().clone();
@@ -970,20 +973,20 @@ impl qobject::PairingLabController {
             let vault_fingerprint = super::synthetic_key_transfer::vault_identity_fingerprint();
             let result = (|| {
                 if *cancelled.borrow() {
-                    return Err(kryptopass_pairing_lab::LabError::Cancelled);
+                    return Err(kryptopass_peers::PeerError::Cancelled);
                 }
-                if LabHost::system_profile_needs_pairing(&directory)? {
+                if PeerHost::system_profile_needs_pairing(&directory)? {
                     return Ok(None);
                 }
                 let runtime = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Link)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Link)?;
                 let ready = runtime.block_on(owner.ensure_ready())?;
-                let host = LabHost::open_existing_system_profile(&directory)?;
+                let host = PeerHost::open_existing_system_profile(&directory)?;
                 let aliases = host.device_aliases();
                 if *cancelled.borrow() {
-                    return Err(kryptopass_pairing_lab::LabError::Cancelled);
+                    return Err(kryptopass_peers::PeerError::Cancelled);
                 }
                 Ok(Some((ready, aliases)))
             })();
@@ -1802,14 +1805,14 @@ impl qobject::PairingLabController {
                 let runtime = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Link)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Link)?;
                 runtime.block_on(async {
                     let ready = owner.refresh_trust().await?;
                     if !ready.trusted_peers.contains(&expected) {
-                        return Err(kryptopass_pairing_lab::LabError::Authentication);
+                        return Err(kryptopass_peers::PeerError::Authentication);
                     }
                     if ready.reconnect_port == 0 {
-                        return Err(kryptopass_pairing_lab::LabError::Link);
+                        return Err(kryptopass_peers::PeerError::Link);
                     }
                     // This is an explicit local reconnect action. It only clears
                     // Desktop's disconnect suppression; Android still decides
@@ -1832,7 +1835,7 @@ impl qobject::PairingLabController {
                             "Listener LAN listo. Abre KryptoPass en Android y pulsa Reconectar para este Desktop.",
                         ));
                     }
-                    Err(kryptopass_pairing_lab::LabError::Authentication) => {
+                    Err(kryptopass_peers::PeerError::Authentication) => {
                         object
                             .as_mut()
                             .set_status_code(QString::from("peer_not_authorized"));
@@ -1840,7 +1843,7 @@ impl qobject::PairingLabController {
                             "Este dispositivo ya no está autorizado en este equipo.",
                         ));
                     }
-                    Err(kryptopass_pairing_lab::LabError::Link) => {
+                    Err(kryptopass_peers::PeerError::Link) => {
                         object
                             .as_mut()
                             .set_status_code(QString::from("lan_error"));
@@ -1965,7 +1968,7 @@ impl qobject::PairingLabController {
         );
         let network = if *self.internet_enabled() && lan_bind_ip.is_some() {
             // One invitation with both routes: the phone tries LAN, then the relay.
-            match LabNetwork::auto(
+            match PeerNetwork::auto(
                 lan_bind_ip.unwrap_or(std::net::Ipv4Addr::UNSPECIFIED.into()),
                 self.rust().relay_origin.to_string().trim(),
             ) {
@@ -1980,7 +1983,7 @@ impl qobject::PairingLabController {
                 }
             }
         } else if *self.internet_enabled() {
-            match LabNetwork::internet(self.rust().relay_origin.to_string().trim()) {
+            match PeerNetwork::internet(self.rust().relay_origin.to_string().trim()) {
                 Ok(network) => network,
                 Err(_) => {
                     self.as_mut()
@@ -2002,9 +2005,9 @@ impl qobject::PairingLabController {
                 ));
                 return;
             };
-            LabNetwork::Lan { bind_ip }
+            PeerNetwork::Lan { bind_ip }
         } else {
-            LabNetwork::EmulatorLoopback
+            PeerNetwork::EmulatorLoopback
         };
         let directory = profile_directory;
         let (cancel, cancelled) = watch::channel(false);
@@ -2033,11 +2036,11 @@ impl qobject::PairingLabController {
             let _completed = WorkerCompletion(worker_completed);
             let result = (|| {
                 let host = (if reconnect {
-                    LabHost::open_existing_system_profile(&directory)
+                    PeerHost::open_existing_system_profile(&directory)
                 } else {
                     // This is the only path that may initialize a profile, and it
                     // is reached only after the user explicitly starts pairing.
-                    LabHost::open_system_profile(&directory)
+                    PeerHost::open_system_profile(&directory)
                 })
                 .inspect_err(|error| {
                     tracing::warn!(
@@ -2050,7 +2053,7 @@ impl qobject::PairingLabController {
                 let runtime = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Link)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Link)?;
                 runtime.block_on(async {
                     let (events, mut received) = mpsc::channel(8);
                     let mut cancelled = cancelled;
@@ -2097,9 +2100,9 @@ impl qobject::PairingLabController {
                     let peer = outcome.peer;
                     let ready = owner.refresh_trust().await?;
                     if !ready.trusted_peers.contains(&peer) {
-                        return Err(kryptopass_pairing_lab::LabError::Authentication);
+                        return Err(kryptopass_peers::PeerError::Authentication);
                     }
-                    let reconnect_port = if matches!(&network, LabNetwork::Lan { .. } | LabNetwork::Auto { .. }) {
+                    let reconnect_port = if matches!(&network, PeerNetwork::Lan { .. } | PeerNetwork::Auto { .. }) {
                         ready.reconnect_port
                     } else {
                         0
@@ -2112,14 +2115,14 @@ impl qobject::PairingLabController {
                         peer,
                         options,
                     )
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Session)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Session)?;
                     let session_generation = handle.generation();
                     owner
                         .register_synthetic_transfer_control(
                             handle.synthetic_key_transfer_control(),
                         )
                         .await
-                        .map_err(|_| kryptopass_pairing_lab::LabError::Session)?;
+                        .map_err(|_| kryptopass_peers::PeerError::Session)?;
                     let mut changes = devices.subscribe();
                     let ready_devices = devices.clone();
                     let peers = ready.trusted_peers;
@@ -2369,8 +2372,8 @@ impl qobject::PairingLabController {
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let result = (|| {
-                let host = LabHost::open_existing_system_profile(&directory)
-                    .map_err(|_| kryptopass_pairing_lab::AliasError::Storage)?;
+                let host = PeerHost::open_existing_system_profile(&directory)
+                    .map_err(|_| kryptopass_peers::AliasError::Storage)?;
                 host.set_device_alias(id, &value)?;
                 host.device_aliases()
             })();
@@ -2384,8 +2387,8 @@ impl qobject::PairingLabController {
                     },
                     Err(error) => {
                         let message = match error {
-                            kryptopass_pairing_lab::AliasError::InvalidName => "Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.",
-                            kryptopass_pairing_lab::AliasError::UnknownDevice => "El dispositivo ya no está autorizado.",
+                            kryptopass_peers::AliasError::InvalidName => "Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.",
+                            kryptopass_peers::AliasError::UnknownDevice => "El dispositivo ya no está autorizado.",
                             _ => "No se pudo guardar el nombre. La identidad y la confianza se conservan.",
                         };
                         object.as_mut().set_alias_error(QString::from(message));
@@ -2474,7 +2477,7 @@ impl qobject::PairingLabController {
                 if let Some(done) = completed {
                     while !done.load(Ordering::Acquire) {
                         if std::time::Instant::now() >= deadline {
-                            return Err(kryptopass_pairing_lab::LabError::Session);
+                            return Err(kryptopass_peers::PeerError::Session);
                         }
                         std::thread::sleep(Duration::from_millis(25));
                     }
@@ -2482,23 +2485,23 @@ impl qobject::PairingLabController {
                 if let Some(owner) = resume_owner {
                     let remaining = deadline.saturating_duration_since(std::time::Instant::now());
                     if !owner.shutdown_and_wait(remaining) {
-                        return Err(kryptopass_pairing_lab::LabError::Session);
+                        return Err(kryptopass_peers::PeerError::Session);
                     }
                 }
                 let Some(peer) = forget else {
-                    LabHost::reset_system_profile(&directory)?;
+                    PeerHost::reset_system_profile(&directory)?;
                     return Ok(None);
                 };
-                let host = LabHost::open_existing_system_profile(&directory)?;
+                let host = PeerHost::open_existing_system_profile(&directory)?;
                 host.forget_peer(peer)?;
                 let peers = host.trusted_peers()?;
                 let aliases = host
                     .device_aliases()
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Profile)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Profile)?;
                 let devices = DeviceDirectory::new(host.public_identity().device_id);
                 devices
                     .replace_trusted(peers.clone())
-                    .map_err(|_| kryptopass_pairing_lab::LabError::Profile)?;
+                    .map_err(|_| kryptopass_peers::PeerError::Profile)?;
                 Ok(Some((peers, aliases, devices)))
             })();
             let _ = thread.queue(move |mut object| {
@@ -2675,45 +2678,45 @@ fn persist_network_settings(lan_bind_ip: Option<IpAddr>) -> Result<(), ()> {
     .map_err(|_| ())
 }
 
-fn error_status(error: &kryptopass_pairing_lab::LabError) -> &'static str {
-    use kryptopass_pairing_lab::LabError;
+fn error_status(error: &kryptopass_peers::PeerError) -> &'static str {
+    use kryptopass_peers::PeerError;
     match error {
-        LabError::Cancelled => "Operación cancelada.",
-        LabError::Expired => "La invitación o conexión caducó. Genera otro código.",
-        LabError::Rejected => "Emparejamiento rechazado. No se concedió confianza.",
-        LabError::KeyStore => {
+        PeerError::Cancelled => "Operación cancelada.",
+        PeerError::Expired => "La invitación o conexión caducó. Genera otro código.",
+        PeerError::Rejected => "Emparejamiento rechazado. No se concedió confianza.",
+        PeerError::KeyStore => {
             "No se pudo acceder al llavero del sistema para abrir la identidad de este equipo."
         }
-        LabError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
-        LabError::SyncHistoryUntrusted => MirrorError::UntrustedHistory.message(),
-        LabError::Session => {
+        PeerError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
+        PeerError::SyncHistoryUntrusted => MirrorError::UntrustedHistory.message(),
+        PeerError::Session => {
             "La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar."
         }
-        LabError::Link => {
+        PeerError::Link => {
             "El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades."
         }
-        LabError::Authentication => {
+        PeerError::Authentication => {
             "La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::VpnUnverifiable) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::VpnUnverifiable) => {
             "No se puede comprobar si la conexión a Internet pasa por una VPN en este sistema, así que quedó en pausa."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::VpnInactive) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::VpnInactive) => {
             "Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::LanExceptionRequired) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::LanExceptionRequired) => {
             "La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RelayRequired) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RelayRequired) => {
             "Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::PolicyChanged) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::PolicyChanged) => {
             "La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RouteChanged) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RouteChanged) => {
             "La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz."
         }
-        LabError::NetworkPrivacyBlocked(NetworkPolicyError::RouteSnapshotUnavailable) => {
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RouteSnapshotUnavailable) => {
             "No se pudo verificar la ruta del sistema. La conexión quedó bloqueada."
         }
     }
@@ -2734,18 +2737,18 @@ const fn lan_permitted(require_vpn: bool, allow_lan_exception: bool, relay_only:
     !relay_only && (!require_vpn || allow_lan_exception)
 }
 
-fn error_code(error: &kryptopass_pairing_lab::LabError) -> &'static str {
-    use kryptopass_pairing_lab::LabError;
+fn error_code(error: &kryptopass_peers::PeerError) -> &'static str {
+    use kryptopass_peers::PeerError;
     match error {
-        LabError::Cancelled => "cancelled",
-        LabError::Expired => "expired",
-        LabError::Rejected => "rejected",
-        LabError::Profile => "profile_error",
-        LabError::SyncHistoryUntrusted => "sync_history_error",
-        LabError::KeyStore => "keystore_error",
-        LabError::Authentication => "authentication_error",
-        LabError::Link | LabError::Session => "transport_error",
-        LabError::NetworkPrivacyBlocked(_) => "network_policy_blocked",
+        PeerError::Cancelled => "cancelled",
+        PeerError::Expired => "expired",
+        PeerError::Rejected => "rejected",
+        PeerError::Profile => "profile_error",
+        PeerError::SyncHistoryUntrusted => "sync_history_error",
+        PeerError::KeyStore => "keystore_error",
+        PeerError::Authentication => "authentication_error",
+        PeerError::Link | PeerError::Session => "transport_error",
+        PeerError::NetworkPrivacyBlocked(_) => "network_policy_blocked",
     }
 }
 

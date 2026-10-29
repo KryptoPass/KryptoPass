@@ -1,7 +1,7 @@
 //! Process-lifetime owner for the durable LAN resume listener.
 //!
 //! The public DeviceId in signaling is only a selector. Each request is checked
-//! against SQLite before WebRTC and checked again by `LabHost` before a new
+//! against SQLite before WebRTC and checked again by `PeerHost` before a new
 //! Noise XX reconnect. The owner is independent of the Qt dialog lifecycle.
 
 use std::{
@@ -93,8 +93,8 @@ struct AcceptPolicy {
 }
 
 enum OwnerCommand {
-    EnsureReady(oneshot::Sender<Result<ResumeOwnerReady, super::LabError>>),
-    RefreshTrust(oneshot::Sender<Result<ResumeOwnerReady, super::LabError>>),
+    EnsureReady(oneshot::Sender<Result<ResumeOwnerReady, super::PeerError>>),
+    RefreshTrust(oneshot::Sender<Result<ResumeOwnerReady, super::PeerError>>),
     RefreshNetworkPolicy,
     Suppress(DeviceId),
     Renegotiate(DeviceId),
@@ -127,7 +127,7 @@ enum OwnerCommand {
     IncomingFinished(
         DeviceId,
         u64,
-        Box<Result<kryptopass_pairing::EstablishedSession<super::LabTransport>, AttemptFailure>>,
+        Box<Result<kryptopass_pairing::EstablishedSession<super::HostTransport>, AttemptFailure>>,
     ),
     RelayIncoming(Box<ResumeAttempt>),
     Shutdown,
@@ -149,9 +149,15 @@ struct OwnedSession {
     handle: SessionHandle,
 }
 
+/// Gives the Sync binding of a peer when a reconnected session starts, or
+/// `None` to run it without Sync. Called on the owner's thread.
+pub type SyncBinder =
+    Arc<dyn Fn(DeviceId) -> Option<kryptopass_devices::SyncSessionBinding> + Send + Sync>;
+
 struct OwnerRuntime {
     directory_path: PathBuf,
-    host: Option<Arc<super::LabHost>>,
+    sync: SyncBinder,
+    host: Option<Arc<super::PeerHost>>,
     devices: Option<DeviceDirectory>,
     ready: Option<ResumeOwnerReady>,
     listener: Option<Arc<ResumeListener>>,
@@ -179,25 +185,25 @@ impl ResumeProcessOwner {
 
     /// Opens the existing profile, binds the process listener if possible, and
     /// returns its shared directory. This method never creates or repairs data.
-    pub async fn ensure_ready(&self) -> Result<ResumeOwnerReady, super::LabError> {
+    pub async fn ensure_ready(&self) -> Result<ResumeOwnerReady, super::PeerError> {
         let (reply, response) = oneshot::channel();
         self.inner
             .commands
             .send(OwnerCommand::EnsureReady(reply))
             .await
-            .map_err(|_| super::LabError::Profile)?;
-        response.await.map_err(|_| super::LabError::Profile)?
+            .map_err(|_| super::PeerError::Profile)?;
+        response.await.map_err(|_| super::PeerError::Profile)?
     }
 
     /// Reloads exact trust records from SQLite after a successful pairing.
-    pub async fn refresh_trust(&self) -> Result<ResumeOwnerReady, super::LabError> {
+    pub async fn refresh_trust(&self) -> Result<ResumeOwnerReady, super::PeerError> {
         let (reply, response) = oneshot::channel();
         self.inner
             .commands
             .send(OwnerCommand::RefreshTrust(reply))
             .await
-            .map_err(|_| super::LabError::Profile)?;
-        response.await.map_err(|_| super::LabError::Profile)?
+            .map_err(|_| super::PeerError::Profile)?;
+        response.await.map_err(|_| super::PeerError::Profile)?
     }
 
     /// Registers the cloneable capability for an outgoing session, leaving
@@ -356,7 +362,8 @@ impl ResumeProcessOwner {
 /// the explicit pairing worker calling `ensure_ready` after initialization.
 pub fn spawn_resume_process_owner(
     directory: PathBuf,
-) -> Result<ResumeProcessOwner, super::LabError> {
+    sync: SyncBinder,
+) -> Result<ResumeProcessOwner, super::PeerError> {
     let (commands, receiver) = mpsc::channel(32);
     let (shutdown, cancelled) = watch::channel(false);
     let (snapshots, _snapshot_receiver) = watch::channel(ResumeOwnerSnapshot::default());
@@ -373,7 +380,7 @@ pub fn spawn_resume_process_owner(
             let runtime = Builder::new_current_thread().enable_all().build();
             if let Ok(runtime) = runtime {
                 runtime.block_on(run_owner(
-                    directory,
+                    OwnerProfile { directory, sync },
                     receiver,
                     cancelled,
                     thread_policy,
@@ -384,7 +391,7 @@ pub fn spawn_resume_process_owner(
             }
             thread_finished.store(true, Ordering::Release);
         })
-        .map_err(|_| super::LabError::Link)?;
+        .map_err(|_| super::PeerError::Link)?;
     Ok(ResumeProcessOwner {
         inner: Arc::new(ResumeOwnerInner {
             commands,
@@ -409,8 +416,14 @@ impl Drop for ResumeOwnerInner {
     }
 }
 
+/// The profile an owner serves and how it binds Sync for its sessions.
+struct OwnerProfile {
+    directory: PathBuf,
+    sync: SyncBinder,
+}
+
 async fn run_owner(
-    directory_path: PathBuf,
+    profile: OwnerProfile,
     mut commands: mpsc::Receiver<OwnerCommand>,
     mut cancelled: watch::Receiver<bool>,
     policy: Arc<Mutex<AcceptPolicy>>,
@@ -419,7 +432,8 @@ async fn run_owner(
     last_selector: Arc<Mutex<Option<DeviceId>>>,
 ) {
     let mut state = OwnerRuntime {
-        directory_path,
+        directory_path: profile.directory,
+        sync: profile.sync,
         host: None,
         devices: None,
         ready: None,
@@ -450,7 +464,7 @@ async fn run_owner(
 
     // Startup is read-only. If the directory is missing, wait for an explicit
     // pairing operation to initialize it and then call ensure_ready.
-    let profile_error = match super::LabHost::system_profile_needs_pairing(&state.directory_path) {
+    let profile_error = match super::PeerHost::system_profile_needs_pairing(&state.directory_path) {
         Ok(true) => false,
         Ok(false) => state.ensure_ready(&snapshots).await.is_err(),
         Err(_) => true,
@@ -717,15 +731,15 @@ impl OwnerRuntime {
     async fn ensure_ready(
         &mut self,
         snapshots: &watch::Sender<ResumeOwnerSnapshot>,
-    ) -> Result<ResumeOwnerReady, super::LabError> {
+    ) -> Result<ResumeOwnerReady, super::PeerError> {
         if self.ready.is_some() {
             if self.listener.is_none() {
                 self.bind_listener().await;
                 self.publish_ready(snapshots);
             }
-            return self.ready.clone().ok_or(super::LabError::Profile);
+            return self.ready.clone().ok_or(super::PeerError::Profile);
         }
-        let host = Arc::new(super::LabHost::open_existing_system_profile(
+        let host = Arc::new(super::PeerHost::open_existing_system_profile(
             &self.directory_path,
         )?);
         let peers = host.trusted_peers()?;
@@ -733,7 +747,7 @@ impl OwnerRuntime {
         let devices = DeviceDirectory::new(local_id);
         devices
             .replace_trusted(peers.clone())
-            .map_err(|_| super::LabError::Session)?;
+            .map_err(|_| super::PeerError::Session)?;
         self.host = Some(Arc::clone(&host));
         self.devices = Some(devices.clone());
         self.last_snapshot_revision = devices.snapshot().revision;
@@ -743,7 +757,7 @@ impl OwnerRuntime {
             reconnect_port: 0,
         });
         self.bind_listener().await;
-        let ready = self.ready.clone().ok_or(super::LabError::Profile)?;
+        let ready = self.ready.clone().ok_or(super::PeerError::Profile)?;
         snapshots.send_replace(ResumeOwnerSnapshot {
             ready: Some(ready.clone()),
             devices: Some(ready.devices.snapshot()),
@@ -756,24 +770,24 @@ impl OwnerRuntime {
     async fn refresh_trust(
         &mut self,
         snapshots: &watch::Sender<ResumeOwnerSnapshot>,
-    ) -> Result<ResumeOwnerReady, super::LabError> {
+    ) -> Result<ResumeOwnerReady, super::PeerError> {
         let host = self
             .host
             .as_ref()
             .cloned()
-            .ok_or(super::LabError::Profile)?;
+            .ok_or(super::PeerError::Profile)?;
         let devices = self
             .devices
             .as_ref()
             .cloned()
-            .ok_or(super::LabError::Profile)?;
+            .ok_or(super::PeerError::Profile)?;
         if self.listener.is_none() {
             self.bind_listener().await;
         }
         let peers = host.trusted_peers()?;
         devices
             .replace_trusted(peers.clone())
-            .map_err(|_| super::LabError::Session)?;
+            .map_err(|_| super::PeerError::Session)?;
         let ready = ResumeOwnerReady {
             trusted_peers: peers,
             devices,
@@ -1363,7 +1377,8 @@ impl OwnerRuntime {
                                 .as_ref()
                                 .map_or(0, |listener| listener.port()),
                         };
-                        match host.start_device_session(devices, session, expected, options) {
+                        let sync = (self.sync)(peer);
+                        match host.start_device_session(devices, session, expected, options, sync) {
                             Ok(handle) => {
                                 let generation = handle.generation();
                                 let control = handle.synthetic_key_transfer_control();
@@ -1444,14 +1459,14 @@ fn record_failure(policy: &Arc<Mutex<AcceptPolicy>>, peer: DeviceId) {
 }
 
 async fn open_incoming_attempt(
-    host: Arc<super::LabHost>,
+    host: Arc<super::PeerHost>,
     devices: DeviceDirectory,
     policy: Arc<Mutex<AcceptPolicy>>,
     network_guard: NetworkPolicyGuard,
     expected: PublicIdentity,
     attempt: ResumeAttempt,
     mut cancelled: watch::Receiver<bool>,
-) -> Result<kryptopass_pairing::EstablishedSession<super::LabTransport>, AttemptFailure> {
+) -> Result<kryptopass_pairing::EstablishedSession<super::HostTransport>, AttemptFailure> {
     let peer = expected.device_id;
     if *cancelled.borrow()
         || network_guard.ensure_current().is_err()
@@ -1471,7 +1486,7 @@ async fn open_incoming_attempt(
         _ = network_guard.wait_for_change(Duration::from_millis(250)) => return Err(AttemptFailure::Cancelled),
         result = timeout(Duration::from_secs(30), reconnect) => match result {
             Ok(Ok(outcome)) => outcome,
-            Ok(Err(super::LabError::Cancelled)) => return Err(AttemptFailure::Cancelled),
+            Ok(Err(super::PeerError::Cancelled)) => return Err(AttemptFailure::Cancelled),
             Ok(Err(_)) | Err(_) => return Err(AttemptFailure::Failed),
         },
     };

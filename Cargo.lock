@@ -2076,7 +2076,7 @@ dependencies = [
  "kp-lan",
  "kp-memsec",
  "kp-pairing",
- "kp-pairing-lab",
+ "kp-peers",
  "kp-search",
  "kp-sync",
  "kp-vault",
@@ -2227,7 +2227,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kp-pairing-lab"
+name = "kp-peers"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -2241,7 +2241,6 @@ dependencies = [
  "kp-store",
  "kp-sync",
  "kp-transport",
- "rusqlite",
  "rustix",
  "serde_json",
  "thiserror 2.0.21",
@@ -2282,6 +2281,7 @@ dependencies = [
  "rusqlite",
  "rustix",
  "sha2",
+ "thiserror 2.0.21",
  "tracing",
  "uuid",
 ]

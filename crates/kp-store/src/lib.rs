@@ -8,6 +8,7 @@
 //! Only ciphertext, ids and the metadata the list shows are stored; the
 //! store never sees plaintext or keys. It is not wired to the app yet.
 
+pub mod aliases;
 mod convert;
 mod filesystem;
 mod graph;

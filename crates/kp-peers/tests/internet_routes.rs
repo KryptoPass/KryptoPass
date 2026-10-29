@@ -7,7 +7,7 @@
 mod linux {
     use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
     use kryptopass_lan::RelayRoute;
-    use kryptopass_pairing_lab::{LabError, LabHost};
+    use kryptopass_peers::{PeerError, PeerHost};
     use std::{
         fs::{self, DirBuilder},
         os::unix::fs::DirBuilderExt,
@@ -52,14 +52,14 @@ mod linux {
     #[test]
     fn unknown_peer_cannot_create_a_relay_route_or_authorization() {
         let profile = PrivateTempProfile::new();
-        let host = LabHost::ephemeral_test_profile(profile.path())
+        let host = PeerHost::ephemeral_test_profile(profile.path())
             .expect("create isolated in-memory identity and trust profile");
         let unknown_peer = DeviceIdentity::generate().expect("generate in-memory peer identity");
         let route = route();
 
         assert!(matches!(
             host.set_internet_route(unknown_peer.device_id(), &route),
-            Err(LabError::Authentication)
+            Err(PeerError::Authentication)
         ));
         assert!(host.trusted_peers().expect("read trust list").is_empty());
         assert!(host.internet_routes().expect("read route list").is_empty());
@@ -72,7 +72,7 @@ mod linux {
     #[test]
     fn trusted_peer_route_is_persisted_and_bound_to_the_local_identity() {
         let profile = PrivateTempProfile::new();
-        let host = LabHost::ephemeral_test_profile(profile.path())
+        let host = PeerHost::ephemeral_test_profile(profile.path())
             .expect("create isolated in-memory identity and trust profile");
         let peer = DeviceIdentity::generate().expect("generate in-memory peer identity");
         authorize_peer(profile.path(), &host, &peer);
@@ -108,16 +108,16 @@ mod linux {
             serde_json::to_vec(&value).expect("serialize re-bound metadata"),
         )
         .expect("write route metadata with a mismatched local identity");
-        assert!(matches!(host.internet_routes(), Err(LabError::Profile)));
+        assert!(matches!(host.internet_routes(), Err(PeerError::Profile)));
 
         fs::write(&path, b"{").expect("corrupt route metadata for the fail-closed check");
-        assert!(matches!(host.internet_routes(), Err(LabError::Profile)));
+        assert!(matches!(host.internet_routes(), Err(PeerError::Profile)));
     }
 
     #[test]
     fn forgetting_peer_removes_its_route_and_trust() {
         let profile = PrivateTempProfile::new();
-        let host = LabHost::ephemeral_test_profile(profile.path())
+        let host = PeerHost::ephemeral_test_profile(profile.path())
             .expect("create isolated in-memory identity and trust profile");
         let peer = DeviceIdentity::generate().expect("generate in-memory peer identity");
         authorize_peer(profile.path(), &host, &peer);
@@ -135,15 +135,15 @@ mod linux {
         );
         assert!(matches!(
             host.lookup(peer.device_id()),
-            Err(LabError::Authentication)
+            Err(PeerError::Authentication)
         ));
         assert!(matches!(
             host.set_internet_route(peer.device_id(), &route()),
-            Err(LabError::Authentication)
+            Err(PeerError::Authentication)
         ));
     }
 
-    fn authorize_peer(profile: &Path, host: &LabHost, peer: &DeviceIdentity) {
+    fn authorize_peer(profile: &Path, host: &PeerHost, peer: &DeviceIdentity) {
         let mut trust = SqliteTrustStore::open_existing(profile, host.public_identity().device_id)
             .expect("open isolated trust database bound to the host identity");
         trust

@@ -26,7 +26,7 @@ use kryptopass_core::{
     encode_content, is_asset_record_id, parse_sha256_hex, png_sha256, sha256_hex, valid_theme_name,
 };
 use kryptopass_identity::{DeviceId, DeviceIdentity};
-use kryptopass_pairing_lab::LabHost;
+use kryptopass_peers::PeerHost;
 use kryptopass_sync::{Id, Ledger, Operation, RevisionHead, TrustSource};
 use kryptopass_vault::{AssetWrite, read_vault_asset};
 use serde::{Deserialize, Serialize};
@@ -110,10 +110,10 @@ impl MirrorError {
     }
 }
 
-impl From<kryptopass_pairing_lab::LabError> for MirrorError {
-    fn from(error: kryptopass_pairing_lab::LabError) -> Self {
+impl From<kryptopass_peers::PeerError> for MirrorError {
+    fn from(error: kryptopass_peers::PeerError) -> Self {
         match error {
-            kryptopass_pairing_lab::LabError::SyncHistoryUntrusted => Self::UntrustedHistory,
+            kryptopass_peers::PeerError::SyncHistoryUntrusted => Self::UntrustedHistory,
             _ => Self::Profile,
         }
     }
@@ -184,7 +184,7 @@ pub(crate) fn enable(
     }
     ActiveVault::open()?;
     let host =
-        LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
+        PeerHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
     if let Some(info) = host
         .sync_vault_info(peer)
         .map_err(|_| MirrorError::Profile)?
@@ -220,7 +220,7 @@ pub(crate) fn add_selected_key(
     key: &KeyFingerprint,
 ) -> Result<bool, MirrorError> {
     let host =
-        LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
+        PeerHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
     let Some(info) = host
         .sync_vault_info(peer)
         .map_err(|_| MirrorError::Profile)?
@@ -247,14 +247,14 @@ pub(crate) fn add_selected_key(
 /// Stops syncing with `peer`. The ledger stays, as the history of the vault.
 pub(crate) fn disable(lab_directory: &Path, peer: DeviceId) -> Result<(), MirrorError> {
     let host =
-        LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
+        PeerHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
     host.remove_sync_vault(peer)
         .map_err(|_| MirrorError::Profile)
 }
 
 /// Fingerprints (upper-case hex) that `peer` syncs, or none while it does not.
 pub(crate) fn selected_keys(lab_directory: &Path, peer: DeviceId) -> Vec<String> {
-    LabHost::open_existing_system_profile(lab_directory)
+    PeerHost::open_existing_system_profile(lab_directory)
         .ok()
         .and_then(|host| host.sync_vault_info(peer).ok().flatten())
         .filter(|info| info.vault_id != SYNTHETIC_VAULT_ID)
@@ -276,7 +276,7 @@ pub(crate) fn run(
     set_locked_key(None);
     let mut vault = ActiveVault::open()?;
     let host =
-        LabHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
+        PeerHost::open_existing_system_profile(lab_directory).map_err(|_| MirrorError::Profile)?;
     let peers = host.trusted_peers().map_err(|_| MirrorError::Profile)?;
     let mut total = MirrorOutcome::default();
     let mut selected = 0_usize;
@@ -330,10 +330,7 @@ pub(crate) fn run(
             })
             .map_err(|error| {
                 tracing::warn!(error = ?error, "Vault mirror could not open the selected ledger");
-                if matches!(
-                    error,
-                    kryptopass_pairing_lab::LabError::SyncHistoryUntrusted
-                ) {
+                if matches!(error, kryptopass_peers::PeerError::SyncHistoryUntrusted) {
                     MirrorError::UntrustedHistory
                 } else {
                     MirrorError::Storage

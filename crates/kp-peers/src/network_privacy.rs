@@ -1,4 +1,4 @@
-//! Persisted local network privacy choices for the pairing laboratory.
+//! Persisted local network privacy choices of the pairing profile.
 
 use std::{
     fs,
@@ -9,8 +9,9 @@ use std::{
 
 use kryptopass_lan::NetworkPrivacyPolicy;
 
-use super::LabError;
+use super::PeerError;
 
+/// Persisted file name; it keeps its original value so saved choices remain.
 const FILE: &str = "pairing-lab-network-privacy-v1.json";
 const MAX_BYTES: u64 = 16 * 1024;
 
@@ -28,7 +29,7 @@ pub struct NetworkPrivacySettings {
 /// FollowSystem with no VPN exception and no relay-only mode.
 pub fn load_network_privacy_settings(
     profile_directory: &Path,
-) -> Result<NetworkPrivacySettings, LabError> {
+) -> Result<NetworkPrivacySettings, PeerError> {
     let path = settings_path(profile_directory)?;
     validate_target(&path)?;
     let bytes = match fs::read(&path) {
@@ -36,21 +37,22 @@ pub fn load_network_privacy_settings(
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(NetworkPrivacySettings::default());
         }
-        Err(_) => return Err(LabError::Profile),
+        Err(_) => return Err(PeerError::Profile),
     };
     if bytes.len() as u64 > MAX_BYTES {
-        return Err(LabError::Profile);
+        return Err(PeerError::Profile);
     }
-    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|_| LabError::Profile)?;
-    let fields = value.as_object().ok_or(LabError::Profile)?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|_| PeerError::Profile)?;
+    let fields = value.as_object().ok_or(PeerError::Profile)?;
     if fields.len() != 3 || value["v"].as_u64() != Some(1) {
-        return Err(LabError::Profile);
+        return Err(PeerError::Profile);
     }
     let policy: NetworkPrivacyPolicy =
-        serde_json::from_value(value["policy"].clone()).map_err(|_| LabError::Profile)?;
+        serde_json::from_value(value["policy"].clone()).map_err(|_| PeerError::Profile)?;
     let lan_bind_ip = match &value["lan_bind_ip"] {
         serde_json::Value::Null => None,
-        value => Some(serde_json::from_value(value.clone()).map_err(|_| LabError::Profile)?),
+        value => Some(serde_json::from_value(value.clone()).map_err(|_| PeerError::Profile)?),
     };
     Ok(NetworkPrivacySettings {
         policy,
@@ -64,20 +66,20 @@ pub fn load_network_privacy_settings(
 pub fn save_network_privacy_settings(
     profile_directory: &Path,
     settings: NetworkPrivacySettings,
-) -> Result<(), LabError> {
+) -> Result<(), PeerError> {
     let path = settings_path(profile_directory)?;
-    let directory = path.parent().ok_or(LabError::Profile)?;
+    let directory = path.parent().ok_or(PeerError::Profile)?;
     let value = serde_json::json!({
         "v": 1,
         "policy": settings.policy,
         "lan_bind_ip": settings.lan_bind_ip,
     });
-    let bytes = serde_json::to_vec(&value).map_err(|_| LabError::Profile)?;
+    let bytes = serde_json::to_vec(&value).map_err(|_| PeerError::Profile)?;
     if bytes.len() as u64 > MAX_BYTES {
-        return Err(LabError::Profile);
+        return Err(PeerError::Profile);
     }
     let mut nonce = [0_u8; 8];
-    getrandom::fill(&mut nonce).map_err(|_| LabError::Profile)?;
+    getrandom::fill(&mut nonce).map_err(|_| PeerError::Profile)?;
     let temporary = directory.join(format!(
         ".pairing-lab-network-privacy-{}.tmp",
         super::hex(&nonce)
@@ -90,14 +92,14 @@ pub fn save_network_privacy_settings(
         options.mode(0o600);
     }
     let result = (|| {
-        let mut file = options.open(&temporary).map_err(|_| LabError::Profile)?;
-        file.write_all(&bytes).map_err(|_| LabError::Profile)?;
-        file.sync_all().map_err(|_| LabError::Profile)?;
+        let mut file = options.open(&temporary).map_err(|_| PeerError::Profile)?;
+        file.write_all(&bytes).map_err(|_| PeerError::Profile)?;
+        file.sync_all().map_err(|_| PeerError::Profile)?;
         validate_target(&path)?;
-        fs::rename(&temporary, &path).map_err(|_| LabError::Profile)?;
+        fs::rename(&temporary, &path).map_err(|_| PeerError::Profile)?;
         fs::File::open(directory)
             .and_then(|directory| directory.sync_all())
-            .map_err(|_| LabError::Profile)
+            .map_err(|_| PeerError::Profile)
     })();
     if result.is_err() {
         let _ = fs::remove_file(&temporary);
@@ -105,17 +107,17 @@ pub fn save_network_privacy_settings(
     result
 }
 
-fn settings_path(profile_directory: &Path) -> Result<PathBuf, LabError> {
+fn settings_path(profile_directory: &Path) -> Result<PathBuf, PeerError> {
     profile_directory
         .parent()
         .map(|directory| directory.join(FILE))
-        .ok_or(LabError::Profile)
+        .ok_or(PeerError::Profile)
 }
 
-fn validate_target(path: &Path) -> Result<(), LabError> {
+fn validate_target(path: &Path) -> Result<(), PeerError> {
     match fs::symlink_metadata(path) {
         Ok(_) => super::validate_private_artifact(path, MAX_BYTES),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(_) => Err(LabError::Profile),
+        Err(_) => Err(PeerError::Profile),
     }
 }

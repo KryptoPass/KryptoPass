@@ -6,7 +6,7 @@
 #[cfg(target_os = "linux")]
 mod linux {
     use kryptopass_identity::{DeviceIdentity, SqliteTrustStore, SystemSecretKeyStore};
-    use kryptopass_pairing_lab::{LabError, LabHost};
+    use kryptopass_peers::{PeerError, PeerHost};
     use std::{
         env,
         fs::{self, OpenOptions},
@@ -362,11 +362,11 @@ mod linux {
             }
         }
 
-        fn reset(&mut self) -> Result<(), LabError> {
-            let parent = self.directory.parent().ok_or(LabError::Profile)?;
+        fn reset(&mut self) -> Result<(), PeerError> {
+            let parent = self.directory.parent().ok_or(PeerError::Profile)?;
             ensure_private_directory(parent);
             ensure_private_directory(&self.directory);
-            LabHost::reset_system_profile(&self.directory)?;
+            PeerHost::reset_system_profile(&self.directory)?;
             self.armed = false;
             Ok(())
         }
@@ -383,7 +383,7 @@ mod linux {
                 .expect("isolated profile has a parent");
             ensure_private_directory(parent);
             ensure_private_directory(&self.directory);
-            if LabHost::reset_system_profile(&self.directory).is_err() {
+            if PeerHost::reset_system_profile(&self.directory).is_err() {
                 eprintln!("best-effort cleanup of the isolated test keyring profile failed");
             }
         }
@@ -412,7 +412,7 @@ mod linux {
         let profile_directory = app_data.join(PAIRING_PROFILE_DIRECTORY);
         let mut cleanup = IsolatedKeyringProfileCleanup::new(profile_directory.clone());
 
-        let host = LabHost::open_system_profile(&profile_directory)
+        let host = PeerHost::open_system_profile(&profile_directory)
             .expect("create the initial identity and trust DB in the isolated keyring/profile");
         let original_identity = host.public_identity();
         let peer = DeviceIdentity::generate().expect("generate an isolated trusted peer");
@@ -494,7 +494,7 @@ mod linux {
             0o600
         );
         assert!(
-            LabHost::system_profile_needs_pairing(&profile_directory)
+            PeerHost::system_profile_needs_pairing(&profile_directory)
                 .expect("the reset profile is valid and awaits explicit pairing"),
             "a valid reset marker means the UI should wait for the first explicit pairing"
         );
@@ -509,12 +509,12 @@ mod linux {
         let unexpected_sidecar = profile_directory.join("device-trust.sqlite3-wal");
         write_private_file(&unexpected_sidecar, b"unreconciled isolated WAL sidecar");
         assert!(matches!(
-            LabHost::system_profile_needs_pairing(&profile_directory),
-            Err(LabError::Profile)
+            PeerHost::system_profile_needs_pairing(&profile_directory),
+            Err(PeerError::Profile)
         ));
         fs::remove_file(&unexpected_sidecar).expect("remove the isolated sidecar probe");
         assert!(
-            LabHost::system_profile_needs_pairing(&profile_directory)
+            PeerHost::system_profile_needs_pairing(&profile_directory)
                 .expect("marker-only reset profile remains valid after sidecar rejection")
         );
 
@@ -525,11 +525,11 @@ mod linux {
             b"KryptoPass pairing profile reset v0\n",
         );
         assert!(matches!(
-            LabHost::system_profile_needs_pairing(&corrupt_marker_profile),
-            Err(LabError::Profile)
+            PeerHost::system_profile_needs_pairing(&corrupt_marker_profile),
+            Err(PeerError::Profile)
         ));
 
-        let reset_host = LabHost::open_system_profile(&profile_directory)
+        let reset_host = PeerHost::open_system_profile(&profile_directory)
             .expect("explicit pairing consumes the reset marker using the retained identity");
         assert_eq!(
             reset_host.public_identity().device_id,
@@ -547,7 +547,7 @@ mod linux {
         );
         drop(reset_host);
         assert!(
-            !LabHost::system_profile_needs_pairing(&profile_directory)
+            !PeerHost::system_profile_needs_pairing(&profile_directory)
                 .expect("the initialized profile no longer needs first pairing")
         );
 
@@ -560,14 +560,14 @@ mod linux {
         drop(retained_trust);
         write_private_file(&reset_marker, PROFILE_RESET_MARKER_CONTENT);
         assert!(
-            !LabHost::system_profile_needs_pairing(&profile_directory)
+            !PeerHost::system_profile_needs_pairing(&profile_directory)
                 .expect("a marker beside an existing trust DB is not a fresh profile")
         );
         assert_eq!(
             fs::read(&reset_marker).expect("classification leaves the marker untouched"),
             PROFILE_RESET_MARKER_CONTENT
         );
-        let retained_profile = LabHost::open_existing_system_profile(&profile_directory)
+        let retained_profile = PeerHost::open_existing_system_profile(&profile_directory)
             .expect("the existing-profile path still opens the retained trust DB");
         let retained_peers = retained_profile
             .trusted_peers()
@@ -585,11 +585,11 @@ mod linux {
             "the profile has no trust DB after the isolated test operation"
         );
         assert!(
-            !LabHost::system_profile_needs_pairing(&profile_directory)
+            !PeerHost::system_profile_needs_pairing(&profile_directory)
                 .expect("missing trust without reset intent is not a fresh pairing profile"),
             "trust loss without reset intent must not be classified as a new profile"
         );
-        let reopen_error = match LabHost::open_system_profile(&profile_directory) {
+        let reopen_error = match PeerHost::open_system_profile(&profile_directory) {
             Ok(host) => {
                 drop(host);
                 panic!(
@@ -598,7 +598,7 @@ mod linux {
             }
             Err(error) => error,
         };
-        assert!(matches!(reopen_error, LabError::Profile));
+        assert!(matches!(reopen_error, PeerError::Profile));
 
         let keyring = SystemSecretKeyStore::new(&profile_directory, SYSTEM_PROFILE_KEYRING_ID)
             .expect("reopen the same isolated keyring account");

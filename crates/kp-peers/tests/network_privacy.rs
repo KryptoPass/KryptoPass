@@ -6,7 +6,7 @@ use std::{
 };
 
 use kryptopass_lan::{NetworkPrivacyPolicy, VpnMode};
-use kryptopass_pairing_lab::{
+use kryptopass_peers::{
     NetworkPrivacySettings, load_network_privacy_settings, save_network_privacy_settings,
 };
 
