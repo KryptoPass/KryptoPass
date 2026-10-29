@@ -1,11 +1,13 @@
 //! Store identity and the layout of schema version 2.
 //!
-//! Items are version graphs. `items` holds identity, the head shown and the
-//! local revision; `item_versions` holds immutable states, `item_version_parents`
-//! the edges between them, `item_heads` the versions without children, and
-//! `item_payloads` the ciphertexts by SHA-256, so versions that only change
-//! metadata share their payload. `default_recipients` and `key_settings`
-//! hold the vault's settings; no table singles out a key.
+//! Two layers share the file. The Sync layer is the truth: every signed
+//! version (`versions` with its parents, recipients and attachments), the
+//! encrypted blobs they name, the deletion marks and which records were
+//! exchanged with each peer. It holds versions this device cannot open as
+//! they came. The local index is derived: `item_index` has the state of the
+//! versions this device opened, and `items` the head shown for each readable
+//! item with its local revision. `default_recipients` and `key_settings` hold
+//! the vault's settings; no table singles out a key.
 //!
 //! Version 1 is the store of `kp-desktop/src/storage`. Each refuses the
 //! other's files; there is no migration because no vault is in production.
@@ -37,20 +39,70 @@ CREATE TABLE entry_icon_assets (
     id TEXT PRIMARY KEY NOT NULL,
     png BLOB NOT NULL CHECK(typeof(png) = 'blob' AND length(png) BETWEEN 45 AND 524288)
 );
-CREATE TABLE items (
+-- Signed versions of items and folders, as Sync carries them.
+CREATE TABLE versions (
     id TEXT PRIMARY KEY NOT NULL,
-    head TEXT NOT NULL REFERENCES item_versions(id) DEFERRABLE INITIALLY DEFERRED,
-    revision INTEGER NOT NULL CHECK(revision >= 0 AND typeof(revision) = 'integer')
+    record_kind INTEGER NOT NULL CHECK(record_kind IN (1, 2)),
+    record_id TEXT NOT NULL,
+    author BLOB NOT NULL CHECK(typeof(author) = 'blob' AND length(author) = 32),
+    -- Hybrid logical clock: wall-clock milliseconds and a tie counter.
+    clock_millis INTEGER NOT NULL CHECK(clock_millis >= 0 AND typeof(clock_millis) = 'integer'),
+    clock_counter INTEGER NOT NULL
+        CHECK(clock_counter BETWEEN 0 AND 4294967295 AND typeof(clock_counter) = 'integer'),
+    state BLOB NOT NULL CHECK(typeof(state) = 'blob' AND length(state) BETWEEN 1 AND 262144),
+    content_hash BLOB CHECK(content_hash IS NULL
+        OR (typeof(content_hash) = 'blob' AND length(content_hash) = 32)),
+    signature BLOB NOT NULL CHECK(typeof(signature) = 'blob' AND length(signature) = 64),
+    hash BLOB NOT NULL UNIQUE CHECK(typeof(hash) = 'blob' AND length(hash) = 32),
+    CHECK((record_kind = 1) = (content_hash IS NOT NULL))
 );
-CREATE TABLE item_payloads (
+CREATE TABLE version_parents (
+    version_id TEXT NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    parent_id TEXT NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    PRIMARY KEY(version_id, parent_id),
+    CHECK(version_id <> parent_id)
+);
+CREATE TABLE version_recipients (
+    version_id TEXT NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64)),
+    PRIMARY KEY(version_id, fingerprint)
+);
+CREATE TABLE version_attachments (
+    version_id TEXT NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    hash BLOB NOT NULL CHECK(typeof(hash) = 'blob' AND length(hash) = 32),
+    PRIMARY KEY(version_id, hash)
+);
+-- Encrypted content and attachments, by SHA-256.
+CREATE TABLE blobs (
     hash BLOB PRIMARY KEY NOT NULL CHECK(typeof(hash) = 'blob' AND length(hash) = 32),
-    ciphertext BLOB NOT NULL CHECK(typeof(ciphertext) = 'blob' AND length(ciphertext) > 0)
+    bytes BLOB NOT NULL CHECK(typeof(bytes) = 'blob' AND length(bytes) BETWEEN 1 AND 2359296)
 );
-CREATE TABLE item_versions (
-    id TEXT PRIMARY KEY NOT NULL,
-    item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    payload BLOB NOT NULL REFERENCES item_payloads(hash) ON DELETE RESTRICT,
-    -- History may outlive a folder; the version then shows at the root.
+-- What stays of a record deleted for good.
+CREATE TABLE deletions (
+    record_id TEXT PRIMARY KEY NOT NULL,
+    record_kind INTEGER NOT NULL CHECK(record_kind IN (1, 2)),
+    author BLOB NOT NULL CHECK(typeof(author) = 'blob' AND length(author) = 32),
+    clock_millis INTEGER NOT NULL CHECK(clock_millis >= 0 AND typeof(clock_millis) = 'integer'),
+    clock_counter INTEGER NOT NULL
+        CHECK(clock_counter BETWEEN 0 AND 4294967295 AND typeof(clock_counter) = 'integer'),
+    signature BLOB NOT NULL CHECK(typeof(signature) = 'blob' AND length(signature) = 64),
+    hash BLOB NOT NULL UNIQUE CHECK(typeof(hash) = 'blob' AND length(hash) = 32)
+);
+CREATE TABLE deletion_recipients (
+    record_id TEXT NOT NULL REFERENCES deletions(record_id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64)),
+    PRIMARY KEY(record_id, fingerprint)
+);
+-- Records exchanged with each peer; they keep going to it.
+CREATE TABLE peer_records (
+    peer BLOB NOT NULL CHECK(typeof(peer) = 'blob' AND length(peer) = 32),
+    record_id TEXT NOT NULL,
+    PRIMARY KEY(peer, record_id)
+);
+-- The state of versions this device opened.
+CREATE TABLE item_index (
+    version_id TEXT PRIMARY KEY NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    -- A folder may be gone, or not known here; the item then shows at the root.
     folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL,
     title TEXT NOT NULL CHECK(length(trim(title)) > 0),
     template TEXT NOT NULL CHECK(length(template) > 0),
@@ -59,34 +111,19 @@ CREATE TABLE item_versions (
     icon_theme TEXT,
     icon_asset_id TEXT REFERENCES entry_icon_assets(id) ON DELETE RESTRICT,
     icon_favicon_host TEXT,
-    -- NULL for this device, otherwise the author's Sync device id.
-    author TEXT CHECK(author IS NULL OR length(author) BETWEEN 1 AND 128),
-    -- Hybrid logical clock: wall-clock milliseconds and a tie counter.
-    clock_millis INTEGER NOT NULL CHECK(clock_millis >= 0 AND typeof(clock_millis) = 'integer'),
-    clock_counter INTEGER NOT NULL
-        CHECK(clock_counter BETWEEN 0 AND 4294967295 AND typeof(clock_counter) = 'integer'),
     CHECK((icon_theme IS NOT NULL) + (icon_asset_id IS NOT NULL)
           + (icon_favicon_host IS NOT NULL) <= 1)
 );
-CREATE TABLE item_version_recipients (
-    version_id TEXT NOT NULL REFERENCES item_versions(id) ON DELETE CASCADE,
-    fingerprint TEXT NOT NULL,
-    PRIMARY KEY(version_id, fingerprint)
+-- Readable items: the head shown and the local revision.
+CREATE TABLE items (
+    id TEXT PRIMARY KEY NOT NULL,
+    head TEXT NOT NULL REFERENCES item_index(version_id) DEFERRABLE INITIALLY DEFERRED,
+    revision INTEGER NOT NULL CHECK(revision >= 0 AND typeof(revision) = 'integer')
 );
-CREATE TABLE item_version_parents (
-    version_id TEXT NOT NULL REFERENCES item_versions(id) ON DELETE CASCADE,
-    parent_id TEXT NOT NULL REFERENCES item_versions(id) ON DELETE CASCADE,
-    PRIMARY KEY(version_id, parent_id),
-    CHECK(version_id <> parent_id)
-);
-CREATE TABLE item_heads (
-    item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    version_id TEXT NOT NULL REFERENCES item_versions(id) ON DELETE CASCADE,
-    PRIMARY KEY(item_id, version_id)
-);
+-- Local only: a link relates two items, not two versions.
 CREATE TABLE item_links (
-    first_item_id TEXT PRIMARY KEY NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-    second_item_id TEXT NOT NULL UNIQUE REFERENCES items(id) ON DELETE CASCADE,
+    first_item_id TEXT PRIMARY KEY NOT NULL,
+    second_item_id TEXT NOT NULL UNIQUE,
     CHECK(first_item_id < second_item_id)
 );
 CREATE TRIGGER item_links_unique_endpoints_insert
@@ -110,28 +147,34 @@ CREATE TABLE key_settings (
     forget_on_lock INTEGER NOT NULL CHECK(forget_on_lock IN (0, 1))
 );
 CREATE INDEX folders_by_parent ON folders(parent_id);
-CREATE INDEX item_versions_by_item ON item_versions(item_id);
-CREATE INDEX item_versions_by_folder ON item_versions(folder_id);
-CREATE INDEX item_versions_by_payload ON item_versions(payload);
-CREATE INDEX item_versions_by_icon ON item_versions(icon_asset_id);
-CREATE INDEX item_version_parents_by_parent ON item_version_parents(parent_id);
-CREATE INDEX item_version_recipients_by_fingerprint ON item_version_recipients(fingerprint);
+CREATE INDEX versions_by_record ON versions(record_id);
+CREATE INDEX versions_by_content ON versions(content_hash);
+CREATE INDEX version_parents_by_parent ON version_parents(parent_id);
+CREATE INDEX version_recipients_by_fingerprint ON version_recipients(fingerprint);
+CREATE INDEX version_attachments_by_hash ON version_attachments(hash);
+CREATE INDEX item_index_by_folder ON item_index(folder_id);
+CREATE INDEX item_index_by_icon ON item_index(icon_asset_id);
 CREATE INDEX items_by_head ON items(head);
 ";
 
 /// One probe per table, so a damaged or foreign schema fails on open.
-const PROBES: [&str; 12] = [
+const PROBES: [&str; 16] = [
     "SELECT id, parent_id, name, icon, color, sort_position FROM folders LIMIT 0",
     "SELECT folder_id, fingerprint FROM folder_recipients LIMIT 0",
     "SELECT id, png FROM entry_icon_assets LIMIT 0",
+    "SELECT id, record_kind, record_id, author, clock_millis, clock_counter, state, \
+     content_hash, signature, hash FROM versions LIMIT 0",
+    "SELECT version_id, parent_id FROM version_parents LIMIT 0",
+    "SELECT version_id, fingerprint FROM version_recipients LIMIT 0",
+    "SELECT version_id, hash FROM version_attachments LIMIT 0",
+    "SELECT hash, bytes FROM blobs LIMIT 0",
+    "SELECT record_id, record_kind, author, clock_millis, clock_counter, signature, hash \
+     FROM deletions LIMIT 0",
+    "SELECT record_id, fingerprint FROM deletion_recipients LIMIT 0",
+    "SELECT peer, record_id FROM peer_records LIMIT 0",
+    "SELECT version_id, folder_id, title, template, favorite, trashed, icon_theme, \
+     icon_asset_id, icon_favicon_host FROM item_index LIMIT 0",
     "SELECT id, head, revision FROM items LIMIT 0",
-    "SELECT hash, ciphertext FROM item_payloads LIMIT 0",
-    "SELECT id, item_id, payload, folder_id, title, template, favorite, trashed, \
-     icon_theme, icon_asset_id, icon_favicon_host, author, clock_millis, clock_counter \
-     FROM item_versions LIMIT 0",
-    "SELECT version_id, fingerprint FROM item_version_recipients LIMIT 0",
-    "SELECT version_id, parent_id FROM item_version_parents LIMIT 0",
-    "SELECT item_id, version_id FROM item_heads LIMIT 0",
     "SELECT first_item_id, second_item_id FROM item_links LIMIT 0",
     "SELECT fingerprint FROM default_recipients LIMIT 0",
     "SELECT fingerprint, forget_on_lock FROM key_settings LIMIT 0",

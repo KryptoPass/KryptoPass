@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use kryptopass_core::vault::{TemplateRegistry, Vault};
+use kryptopass_identity::DeviceIdentity;
 use kryptopass_keyring::{Fingerprint, Keyring, KeyringCipher, Unlock};
 use kryptopass_store::SqliteStore;
 
@@ -18,23 +19,28 @@ pub type AppVault = Vault<SqliteStore, KeyringCipher>;
 pub struct VaultSession {
     path: PathBuf,
     keyring: Keyring,
+    /// Signs the versions this device writes.
+    identity: Arc<DeviceIdentity>,
     vault: AppVault,
 }
 
 impl VaultSession {
-    /// Opens the vault at `path`, creating it if it is new.
+    /// Opens the vault at `path`, creating it if it is new. Versions written
+    /// in it are signed with `identity`, this device's Sync identity.
     pub fn open(
         path: impl Into<PathBuf>,
         keyring: Keyring,
         templates: Arc<TemplateRegistry>,
+        identity: Arc<DeviceIdentity>,
     ) -> Result<Self, AppError> {
         let path = path.into();
-        let store = SqliteStore::open(&path).map_err(AppError::Store)?;
+        let store = SqliteStore::open(&path, Arc::clone(&identity)).map_err(AppError::Store)?;
         let cipher = KeyringCipher::new(keyring.clone(), Unlock::Ask);
         tracing::info!("vault session opened");
         Ok(Self {
             path,
             keyring,
+            identity,
             vault: Vault::new(store, cipher, templates),
         })
     }
@@ -55,6 +61,10 @@ impl VaultSession {
         &self.keyring
     }
 
+    pub fn identity(&self) -> &Arc<DeviceIdentity> {
+        &self.identity
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -63,7 +73,12 @@ impl VaultSession {
     /// passphrases gpg-agent already caches, for search and Sync. SQLite's
     /// journal lets it read while the session writes.
     pub fn background(&self) -> Result<AppVault, AppError> {
-        background_vault(&self.path, &self.keyring, Arc::clone(self.templates()))
+        background_vault(
+            &self.path,
+            &self.keyring,
+            Arc::clone(self.templates()),
+            Arc::clone(&self.identity),
+        )
     }
 
     /// Closes the vault and makes gpg-agent forget the passphrase of every
@@ -91,8 +106,9 @@ pub(crate) fn background_vault(
     path: &Path,
     keyring: &Keyring,
     templates: Arc<TemplateRegistry>,
+    identity: Arc<DeviceIdentity>,
 ) -> Result<AppVault, AppError> {
-    let store = SqliteStore::open_existing(path).map_err(AppError::Store)?;
+    let store = SqliteStore::open_existing(path, identity).map_err(AppError::Store)?;
     let cipher = KeyringCipher::new(keyring.clone(), Unlock::Cached);
     Ok(Vault::new(store, cipher, templates))
 }

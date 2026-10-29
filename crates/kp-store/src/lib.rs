@@ -15,23 +15,28 @@ mod graph;
 mod open;
 mod read;
 mod schema;
+mod sync;
 pub mod trust;
-mod write;
+pub(crate) mod write;
 
 use kryptopass_core::vault::{
-    Change, ItemMeta, ItemRecord, ItemVersion, KeySettings, Store, StoreError, VersionId,
-    VersionInfo,
+    Change, ItemMeta, ItemRecord, ItemVersion, KeySettings, OpaqueItem, SealedVersion, Store,
+    StoreError, VersionId, VersionInfo,
 };
 use kryptopass_core::{EntryIconAsset, Folder, FolderId, RecipientSet, SecretId, SecretLink};
+use kryptopass_identity::DeviceIdentity;
 use rusqlite::Connection;
+use std::sync::Arc;
 
 use convert::{SqlResult, StoreResult};
 
 pub use kryptopass_core::util::MAX_CIPHERTEXT_BYTES;
 
-/// The vault store on one SQLite file.
+/// The vault store on one SQLite file. It signs the versions and deletion
+/// marks this device writes with `identity`, the device's Sync identity.
 pub struct SqliteStore {
     connection: Connection,
+    identity: Arc<DeviceIdentity>,
 }
 
 impl SqliteStore {
@@ -114,7 +119,21 @@ impl Store for SqliteStore {
         self.read(read::key_settings)
     }
 
+    fn unindexed(&self) -> Result<Vec<SealedVersion>, StoreError> {
+        self.read(read::unindexed)
+    }
+
+    fn opaque_items(&self) -> Result<Vec<OpaqueItem>, StoreError> {
+        self.read(read::opaque_items)
+    }
+
     fn commit(&mut self, change: Change) -> Result<(), StoreError> {
-        write::commit(&mut self.connection, change)
+        write::commit(&mut self.connection, &self.identity, change)
     }
 }
+
+// A Sync session takes the store to its worker thread.
+const _: fn() = || {
+    fn send<T: Send>() {}
+    send::<SqliteStore>();
+};

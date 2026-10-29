@@ -5,8 +5,10 @@
 //! ciphertext is overwritten instead of left in free pages.
 
 use anyhow::{Context, Result};
+use kryptopass_identity::DeviceIdentity;
 use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::SqliteStore;
@@ -20,16 +22,17 @@ const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 impl SqliteStore {
     /// Opens the store, creating the file and its schema if it is new.
-    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        Self::open_internal(path.as_ref(), true)
+    /// Versions written through it are signed with `identity`.
+    pub fn open(path: impl AsRef<Path>, identity: Arc<DeviceIdentity>) -> Result<Self> {
+        Self::open_internal(path.as_ref(), true, identity)
     }
 
     /// Opens an existing store without creating the file or its directory.
-    pub fn open_existing(path: impl AsRef<Path>) -> Result<Self> {
-        Self::open_internal(path.as_ref(), false)
+    pub fn open_existing(path: impl AsRef<Path>, identity: Arc<DeviceIdentity>) -> Result<Self> {
+        Self::open_internal(path.as_ref(), false, identity)
     }
 
-    fn open_internal(path: &Path, create: bool) -> Result<Self> {
+    fn open_internal(path: &Path, create: bool, identity: Arc<DeviceIdentity>) -> Result<Self> {
         if create {
             ensure_database_parent(path)?;
         } else {
@@ -68,6 +71,9 @@ impl SqliteStore {
             .pragma_update(None, "synchronous", "FULL")
             .map_err(|_| anyhow::anyhow!("could not configure durable store journaling"))?;
         tracing::debug!(schema = schema::SCHEMA_VERSION, "store opened");
-        Ok(Self { connection })
+        Ok(Self {
+            connection,
+            identity,
+        })
     }
 }

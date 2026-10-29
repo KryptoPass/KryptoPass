@@ -11,10 +11,11 @@ use std::sync::Arc;
 use kp_template::{Field, SearchMode, Template};
 use kryptopass_core::SecretId;
 use kryptopass_core::vault::{ItemMeta, TemplateRegistry, VaultError};
+use kryptopass_identity::DeviceIdentity;
 use kryptopass_keyring::Keyring;
 use kryptopass_search::{CatalogRecord, Projection, RecordKey, SearchError, SearchSource};
 
-use crate::session::{AppVault, background_vault};
+use crate::session::{AppVault, VaultSession, background_vault};
 
 /// Largest projection of one item, the index's per-field limit.
 const MAX_PROJECTION_BYTES: usize = 64 * 1024;
@@ -50,23 +51,32 @@ pub struct VaultSearchSource {
     path: PathBuf,
     keyring: Keyring,
     templates: Arc<TemplateRegistry>,
+    identity: Arc<DeviceIdentity>,
     vault: Option<AppVault>,
 }
 
 impl VaultSearchSource {
-    pub fn new(path: PathBuf, keyring: Keyring, templates: Arc<TemplateRegistry>) -> Self {
+    /// A source over the vault `session` has open, through its own
+    /// background connection opened on first use.
+    pub fn new(session: &VaultSession) -> Self {
         Self {
-            path,
-            keyring,
-            templates,
+            path: session.path().to_path_buf(),
+            keyring: session.keyring().clone(),
+            templates: Arc::clone(session.templates()),
+            identity: Arc::clone(session.identity()),
             vault: None,
         }
     }
 
     fn vault(&mut self) -> Result<&AppVault, SearchError> {
         if self.vault.is_none() {
-            let vault = background_vault(&self.path, &self.keyring, Arc::clone(&self.templates))
-                .map_err(|_| SearchError::Unavailable)?;
+            let vault = background_vault(
+                &self.path,
+                &self.keyring,
+                Arc::clone(&self.templates),
+                Arc::clone(&self.identity),
+            )
+            .map_err(|_| SearchError::Unavailable)?;
             self.vault = Some(vault);
         }
         self.vault.as_ref().ok_or(SearchError::Unavailable)

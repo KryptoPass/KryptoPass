@@ -121,25 +121,24 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             content.normalize(template);
             let plaintext = encode_item_with(&content, template, &self.rules)?;
             let ciphertext = self.cipher.encrypt(plaintext.as_slice(), &recipients)?;
-            items.push(AppendItem {
-                record: ItemRecord {
-                    meta: ItemMeta {
-                        id: SecretId::new(),
-                        head: VersionId::new(),
-                        revision: 0,
-                        conflicted: false,
-                        state: ItemState {
-                            folder: folder_of(folder)?,
-                            title,
-                            template: template.id.clone(),
-                            recipients: recipients.clone(),
-                            icon: icon::automatic(&content, template),
-                            favorite,
-                            trashed,
-                        },
-                    },
-                    ciphertext,
+            let meta = ItemMeta {
+                id: SecretId::new(),
+                head: VersionId::new(),
+                revision: 0,
+                conflicted: false,
+                state: ItemState {
+                    folder: folder_of(folder)?,
+                    title,
+                    template: template.id.clone(),
+                    recipients: recipients.clone(),
+                    icon: icon::automatic(&content, template),
+                    favorite,
+                    trashed,
                 },
+            };
+            items.push(AppendItem {
+                sealed_state: self.seal(&meta.state)?,
+                record: ItemRecord { meta, ciphertext },
                 written_millis: written_millis.unwrap_or(now),
             });
         }

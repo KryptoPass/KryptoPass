@@ -11,9 +11,6 @@ use kryptopass_core::{EntryIcon, FolderId, KeyFingerprint, RecipientSet, SecretI
 use rusqlite::ErrorCode;
 use uuid::Uuid;
 
-/// Longest accepted Sync device id of a version author.
-const MAX_AUTHOR_BYTES: usize = 128;
-
 pub(crate) type StoreResult<T> = Result<T, StoreError>;
 
 /// Stored data that fails validation.
@@ -102,27 +99,50 @@ pub(crate) fn clock_params(clock: Hlc) -> StoreResult<(i64, i64)> {
     Ok((millis, i64::from(clock.counter)))
 }
 
-pub(crate) fn author(raw: Option<String>) -> StoreResult<Author> {
-    match raw {
-        None => Ok(Author::Local),
-        Some(device) if valid_device(&device) => Ok(Author::Device(device)),
-        Some(_) => Err(corrupt("version author")),
-    }
+pub(crate) fn author(raw: &[u8]) -> StoreResult<Author> {
+    raw.try_into()
+        .map(Author)
+        .map_err(|_| corrupt("version author"))
 }
 
-pub(crate) fn author_param(author: &Author) -> StoreResult<Option<&str>> {
-    match author {
-        Author::Local => Ok(None),
-        Author::Device(device) if valid_device(device) => Ok(Some(device)),
-        Author::Device(_) => Err(StoreError::Rejected("invalid version author")),
-    }
+/// A record or version id as the 16 bytes Sync signs.
+pub(crate) fn id_bytes(id: Uuid) -> [u8; 16] {
+    *id.as_bytes()
 }
 
-/// Printable ASCII, so an author id can be logged and shown safely.
-fn valid_device(device: &str) -> bool {
-    !device.is_empty()
-        && device.len() <= MAX_AUTHOR_BYTES
-        && device.bytes().all(|byte| byte.is_ascii_graphic())
+/// An id received from Sync, which must not be nil.
+pub(crate) fn id_from_bytes(bytes: [u8; 16]) -> StoreResult<Uuid> {
+    let id = Uuid::from_bytes(bytes);
+    if id.is_nil() {
+        return Err(StoreError::Rejected("nil identifier"));
+    }
+    Ok(id)
+}
+
+pub(crate) fn uuid_text(raw: &str) -> StoreResult<Uuid> {
+    uuid(raw)
+}
+
+/// A fingerprint as Sync carries it: raw bytes.
+pub(crate) fn fingerprint_bytes(fingerprint: &str) -> StoreResult<Vec<u8>> {
+    if fingerprint.len() % 2 != 0 {
+        return Err(corrupt("recipient fingerprint"));
+    }
+    (0..fingerprint.len())
+        .step_by(2)
+        .map(|at| {
+            u8::from_str_radix(&fingerprint[at..at + 2], 16)
+                .map_err(|_| corrupt("recipient fingerprint"))
+        })
+        .collect()
+}
+
+/// A fingerprint received from Sync, as this store writes it: upper-case hex.
+pub(crate) fn fingerprint_text(bytes: &[u8]) -> StoreResult<String> {
+    let text: String = bytes.iter().map(|byte| format!("{byte:02X}")).collect();
+    KeyFingerprint::parse(&text)
+        .map(|fingerprint| fingerprint.as_str().to_owned())
+        .map_err(|_| StoreError::Rejected("invalid recipient fingerprint"))
 }
 
 /// The three icon columns: theme name, image asset id, favicon host.

@@ -34,14 +34,9 @@ impl Default for VersionId {
     }
 }
 
-/// Who wrote a version.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Author {
-    /// This device.
-    Local,
-    /// Another device, by its identifier in Sync.
-    Device(String),
-}
+/// The device that wrote and signed a version, by its Sync device id.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Author(pub [u8; 32]);
 
 /// Everything a version records besides its encrypted content.
 ///
@@ -87,7 +82,9 @@ pub struct VersionInfo {
     pub item: SecretId,
     /// Versions this one was based on: none for the first, two or more for a merge.
     pub parents: Vec<VersionId>,
-    pub state: ItemState,
+    /// `None` when no key on this device can open the version.
+    pub state: Option<ItemState>,
+    pub recipients: RecipientSet,
     pub author: Author,
     /// When it was written; later than every parent's clock.
     pub clock: Hlc,

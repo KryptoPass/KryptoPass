@@ -9,27 +9,28 @@ mod items;
 mod links;
 mod settings;
 
-pub(crate) use items::belongs;
+pub(crate) use items::{belongs, insert_deletion, insert_signed, purge_record, refresh_item};
 
 use kryptopass_core::vault::{Change, StoreError};
 use kryptopass_core::{EntryIcon, EntryIconAsset, FolderId, SecretId};
+use kryptopass_identity::DeviceIdentity;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 
 use crate::convert::{SqlResult, StoreResult, text};
 use kryptopass_core::util::MAX_CIPHERTEXT_BYTES;
 
-pub(crate) fn commit(connection: &mut Connection, change: Change) -> StoreResult<()> {
+pub(crate) fn commit(
+    connection: &mut Connection,
+    identity: &DeviceIdentity,
+    change: Change,
+) -> StoreResult<()> {
     let kind = change_kind(&change);
     let transaction = connection
         .transaction_with_behavior(TransactionBehavior::Immediate)
         .sql()?;
     match change {
-        Change::PutItem(put) => items::put(&transaction, *put)?,
-        Change::AddVersion {
-            version,
-            icon_asset,
-        } => items::add_version(&transaction, *version, icon_asset)?,
-        Change::RemoveItem { id, base } => items::remove(&transaction, id, base)?,
+        Change::PutItem(put) => items::put(&transaction, identity, *put)?,
+        Change::RemoveItem { id, base } => items::remove(&transaction, identity, id, base)?,
         Change::AddFolder(folder) => folders::add(&transaction, &folder)?,
         Change::UpdateFolder(folder) => folders::update(&transaction, &folder)?,
         Change::MoveFolder {
@@ -37,12 +38,15 @@ pub(crate) fn commit(connection: &mut Connection, change: Change) -> StoreResult
             destination,
             before,
         } => folders::move_to(&transaction, id, destination, before)?,
-        Change::RemoveFolder { id, contents } => folders::remove(&transaction, id, contents)?,
+        Change::RemoveFolder { id, contents } => {
+            folders::remove(&transaction, identity, id, contents)?;
+        }
         Change::Append {
             folders,
             items,
             links,
-        } => folders::append(&transaction, &folders, items, &links)?,
+        } => folders::append(&transaction, identity, &folders, items, &links)?,
+        Change::Index(versions) => items::index(&transaction, versions)?,
         Change::SetDefaultRecipients(recipients) => {
             settings::set_default_recipients(&transaction, recipients.as_ref())?;
         }
@@ -56,13 +60,13 @@ pub(crate) fn commit(connection: &mut Connection, change: Change) -> StoreResult
 fn change_kind(change: &Change) -> &'static str {
     match change {
         Change::PutItem(_) => "put_item",
-        Change::AddVersion { .. } => "add_version",
         Change::RemoveItem { .. } => "remove_item",
         Change::AddFolder(_) => "add_folder",
         Change::UpdateFolder(_) => "update_folder",
         Change::MoveFolder { .. } => "move_folder",
         Change::RemoveFolder { .. } => "remove_folder",
         Change::Append { .. } => "append",
+        Change::Index(_) => "index",
         Change::SetDefaultRecipients(_) => "set_default_recipients",
         Change::SetKeySettings(_) => "set_key_settings",
     }
@@ -138,14 +142,16 @@ pub(super) fn store_icon_asset(
     Ok(())
 }
 
-/// Removes payloads and icon images no version refers to any more. Only
+/// Removes blobs and icon images no version refers to any more. Only
 /// deletions orphan them, so only they call this.
-pub(super) fn collect_garbage(connection: &Connection) -> StoreResult<()> {
+pub(crate) fn collect_garbage(connection: &Connection) -> StoreResult<()> {
     connection
         .execute_batch(
-            "DELETE FROM item_payloads WHERE hash NOT IN (SELECT payload FROM item_versions);
+            "DELETE FROM blobs WHERE hash NOT IN
+                 (SELECT content_hash FROM versions WHERE content_hash IS NOT NULL)
+                 AND hash NOT IN (SELECT hash FROM version_attachments);
              DELETE FROM entry_icon_assets WHERE id NOT IN
-                 (SELECT icon_asset_id FROM item_versions WHERE icon_asset_id IS NOT NULL);",
+                 (SELECT icon_asset_id FROM item_index WHERE icon_asset_id IS NOT NULL);",
         )
         .sql()
 }

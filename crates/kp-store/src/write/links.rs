@@ -64,7 +64,7 @@ pub(super) fn insert(connection: &Connection, a: SecretId, b: SecretId) -> Store
 fn trashed(connection: &Connection, id: SecretId) -> StoreResult<Option<bool>> {
     connection
         .query_row(
-            "SELECT v.trashed FROM items i JOIN item_versions v ON v.id = i.head \
+            "SELECT x.trashed FROM items i JOIN item_index x ON x.version_id = i.head \
              WHERE i.id = ?1",
             [text(id.0)],
             |row| row.get::<_, i64>(0),

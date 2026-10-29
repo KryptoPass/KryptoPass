@@ -12,12 +12,14 @@ mod folders;
 mod history;
 mod icon;
 mod import;
+mod index;
 mod item;
 mod items;
 mod record;
 mod registry;
 mod settings;
 mod sharing;
+mod state;
 mod store;
 
 use std::sync::Arc;
@@ -34,8 +36,10 @@ pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};
 pub use record::{Author, ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo};
 pub use registry::TemplateRegistry;
 pub use settings::KeySettings;
+pub use state::{OpenedState, open_state, seal_state};
 pub use store::{
-    AppendItem, Base, Change, FolderContents, LinkChange, Parents, PutItem, Store, StoreError,
+    AppendItem, Base, Change, FolderContents, IndexedVersion, LinkChange, OpaqueItem, Parents,
+    PutItem, SealedVersion, Store, StoreError,
 };
 
 /// An open vault: storage, the keys to read it and the templates it uses.

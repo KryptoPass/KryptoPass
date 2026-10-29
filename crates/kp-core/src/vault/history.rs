@@ -3,7 +3,7 @@
 use super::error::VaultError;
 use super::item::Item;
 use super::record::{ItemMeta, VersionId, VersionInfo};
-use super::{Cipher, Store, Vault, logged};
+use super::{Cipher, CipherError, Store, Vault, logged};
 use crate::domain::SecretId;
 
 impl<S: Store, C: Cipher> Vault<S, C> {
@@ -46,7 +46,8 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             .ok_or(VaultError::ItemNotFound)?;
         let meta = ItemMeta {
             head: version,
-            state: stored.info.state,
+            // A version no key here opens has no state to show.
+            state: stored.info.state.ok_or(CipherError::NotARecipient)?,
             ..current
         };
         let (content, migrated_from) = self.decrypt(&meta, &stored.ciphertext)?;

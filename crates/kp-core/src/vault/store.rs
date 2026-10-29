@@ -13,6 +13,7 @@ use thiserror::Error;
 
 use super::record::{ItemMeta, ItemRecord, ItemVersion, VersionId, VersionInfo};
 use super::settings::KeySettings;
+use super::state::OpenedState;
 use crate::EntryIconAsset;
 use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink};
 use uuid::Uuid;
@@ -70,10 +71,12 @@ pub enum LinkChange {
 /// What happens to the contents of a removed folder.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FolderContents {
-    /// Subfolders and items move to the removed folder's parent; each moved
-    /// item gets a new version.
+    /// Subfolders move to the removed folder's parent. The folder must hold
+    /// no items: the vault moves them first, since each move is a new
+    /// version with its state encrypted.
     Reparent,
-    /// The whole subtree and its items are deleted, trashed ones included.
+    /// The whole subtree and its items are deleted for good, trashed ones
+    /// included; each item leaves a deletion mark.
     Delete,
 }
 
@@ -81,11 +84,14 @@ pub enum FolderContents {
 ///
 /// The record's `meta.head` is the new version's id and its revision is the
 /// one the item will have: 0 for a new item, the next one for an update. The
-/// store checks `base` and the parents, stores the version and moves the head
-/// to it.
+/// store checks `base` and the parents, signs and stores the version and
+/// moves the head to it.
 #[derive(Clone, Debug)]
 pub struct PutItem {
+    /// The head's state and its content encrypted to `meta.state.recipients`.
     pub record: ItemRecord,
+    /// The head's state (see `seal_state`) encrypted to the same recipients.
+    pub sealed_state: Vec<u8>,
     pub base: Base,
     /// Ignored for a new item, which has no parents.
     pub parents: Parents,
@@ -101,6 +107,7 @@ pub struct PutItem {
 #[derive(Clone, Debug)]
 pub struct AppendItem {
     pub record: ItemRecord,
+    pub sealed_state: Vec<u8>,
     /// When the item was last written, in milliseconds since the Unix epoch:
     /// at its source for an import. The first version's clock starts there.
     pub written_millis: u64,
@@ -114,17 +121,9 @@ pub struct AppendItem {
 pub enum Change {
     /// Adds a local version; also how flags, folder and recipients change.
     PutItem(Box<PutItem>),
-    /// Stores a version written elsewhere, such as one received through Sync.
-    ///
-    /// Its parents must already be stored; the item is created if this is its
-    /// first version. The head moves to it only when it descends from the
-    /// current head; otherwise the item is left in conflict. Storing a version
-    /// that is already there does nothing.
-    AddVersion {
-        version: Box<ItemVersion>,
-        icon_asset: Option<EntryIconAsset>,
-    },
-    /// Deletes an item with all its versions and its link, only at `base`.
+    /// Deletes an item for good, only at `base`: every version, blob and its
+    /// link go, and only a signed deletion mark stays so Sync cannot bring
+    /// it back.
     RemoveItem { id: SecretId, base: u64 },
     /// Adds a folder after its siblings; `sort_position` is assigned by the store.
     AddFolder(Folder),
@@ -153,9 +152,37 @@ pub enum Change {
     /// Replaces the recipients of new items outside a folder with defaults;
     /// `None` clears them.
     SetDefaultRecipients(Option<RecipientSet>),
+    /// Indexes versions this device opened: their state becomes listable.
+    /// Versions already indexed or no longer stored are skipped.
+    Index(Vec<IndexedVersion>),
     /// Replaces one key's settings. Settings equal to the defaults are not
     /// kept, so forgetting a key leaves nothing behind.
     SetKeySettings(KeySettings),
+}
+
+/// A stored version not indexed yet, with its encrypted state.
+#[derive(Clone, Debug)]
+pub struct SealedVersion {
+    pub id: VersionId,
+    pub item: SecretId,
+    pub recipients: RecipientSet,
+    pub state: Vec<u8>,
+}
+
+/// The opened state of a version, to index.
+#[derive(Clone, Debug)]
+pub struct IndexedVersion {
+    pub id: VersionId,
+    pub item: SecretId,
+    pub state: OpenedState,
+}
+
+/// An item stored here whose current versions this device cannot open.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpaqueItem {
+    pub id: SecretId,
+    /// Recipients of its newest head.
+    pub recipients: RecipientSet,
 }
 
 /// Storage the vault runs on.
@@ -207,6 +234,13 @@ pub trait Store {
 
     /// Settings of every key that has any besides the defaults.
     fn key_settings(&self) -> Result<Vec<KeySettings>, StoreError>;
+
+    /// Item versions stored but not indexed, such as ones received through
+    /// Sync; the vault opens those it can and indexes them.
+    fn unindexed(&self) -> Result<Vec<SealedVersion>, StoreError>;
+
+    /// Items with no current version this device can open.
+    fn opaque_items(&self) -> Result<Vec<OpaqueItem>, StoreError>;
 
     fn commit(&mut self, change: Change) -> Result<(), StoreError>;
 }

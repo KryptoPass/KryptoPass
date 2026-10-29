@@ -62,7 +62,9 @@ Un mensaje OpenPGP cifrado exactamente para `recipients`, sin `encrypt-to`
 implícitos. Su texto es JSON, como máximo 64 KiB:
 
 - **Ítem:** `{"schemaVersion":1, "title", "folder": uuid|null, "favorite",
-  "trashed", "template", "icon": null | {"theme": nombre} | {"image": sha256}}`.
+  "trashed", "template", "icon": null | {"theme": nombre} | {"favicon": host} |
+  {"image": sha256}}`. El favicon viaja solo como host: cada lado descarga o
+  deriva la imagen.
   La plantilla va aquí para listar el ítem sin descifrar su contenido.
 - **Carpeta:** `{"schemaVersion":1, "name", "parent": uuid|null, "icon",
   "color", "defaultRecipients": [huellas]}`.

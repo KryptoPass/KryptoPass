@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use super::error::VaultError;
+use super::item::ItemEdit;
 use super::store::{Change, FolderContents};
 use super::{Cipher, Store, Vault, logged};
 use crate::domain::{Folder, FolderAppearance, FolderId, RecipientSet};
@@ -177,7 +178,20 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         id: FolderId,
         contents: FolderContents,
     ) -> Result<(), VaultError> {
-        self.require_folder(id)?;
+        let folder = self.require_folder(id)?;
+        if contents == FolderContents::Reparent {
+            // Each move is a new version with its state encrypted, which only
+            // the vault can write; the store then removes an empty folder.
+            let items: Vec<_> = self
+                .store
+                .items()?
+                .into_iter()
+                .filter(|meta| meta.state.folder == Some(id))
+                .collect();
+            for meta in items {
+                self.update_item(ItemEdit::new(meta.id, meta.revision).folder(folder.parent_id))?;
+            }
+        }
         self.store.commit(Change::RemoveFolder { id, contents })?;
         tracing::debug!(folder = %id.0, ?contents, "folder removed");
         Ok(())

@@ -4,9 +4,10 @@ use std::collections::{HashMap, HashSet};
 
 use kryptopass_core::vault::{AppendItem, FolderContents, StoreError};
 use kryptopass_core::{Folder, FolderId, RecipientSet, SecretId, SecretLink};
+use kryptopass_identity::DeviceIdentity;
 use rusqlite::{Connection, params};
 
-use super::{bump_revision, collect_garbage, items, links, require_folder};
+use super::{collect_garbage, items, links, require_folder};
 use crate::convert::{SqlResult, StoreResult, folder_id, item_id, text};
 use crate::read;
 use kryptopass_core::util::{Ancestry, ancestry, is_clean_line};
@@ -117,6 +118,7 @@ pub(super) fn move_to(
 
 pub(super) fn remove(
     connection: &Connection,
+    identity: &DeviceIdentity,
     id: FolderId,
     contents: FolderContents,
 ) -> StoreResult<()> {
@@ -128,8 +130,8 @@ pub(super) fn remove(
     let parent = folder.parent_id;
     match contents {
         FolderContents::Reparent => {
-            for item in items_in(connection, &HashSet::from([id]))? {
-                items::move_head(connection, item, parent)?;
+            if !items_in(connection, &HashSet::from([id]))?.is_empty() {
+                return Err(StoreError::Rejected("the folder still holds items"));
             }
             // Subfolders take the removed folder's place among its siblings.
             let mut order = Vec::new();
@@ -162,15 +164,7 @@ pub(super) fn remove(
                     .into_iter()
                     .collect();
             for item in &removed {
-                // A partner inside the subtree goes too; only survivors are bumped.
-                if let Some(other) = read::link_of(connection, *item)?
-                    && !removed.contains(&other)
-                {
-                    bump_revision(connection, other)?;
-                }
-                connection
-                    .execute("DELETE FROM items WHERE id = ?1", [text(item.0)])
-                    .sql()?;
+                items::delete_with_mark(connection, identity, *item)?;
             }
             // Deepest first: a folder cannot go while it has children.
             for folder in subtree.iter().rev() {
@@ -194,6 +188,7 @@ pub(super) fn remove(
 /// first; each item becomes its record's first version.
 pub(super) fn append(
     connection: &Connection,
+    identity: &DeviceIdentity,
     folders: &[Folder],
     items: Vec<AppendItem>,
     pairs: &[SecretLink],
@@ -201,8 +196,8 @@ pub(super) fn append(
     for folder in folders {
         add(connection, folder)?;
     }
-    for item in &items {
-        items::create_from_record(connection, &item.record, item.written_millis)?;
+    for item in items {
+        items::create_imported(connection, identity, item)?;
     }
     for link in pairs {
         if link.first.0 >= link.second.0 {
@@ -219,8 +214,8 @@ pub(super) fn append(
 fn items_in(connection: &Connection, folders: &HashSet<FolderId>) -> StoreResult<Vec<SecretId>> {
     let mut statement = connection
         .prepare(
-            "SELECT i.id, v.folder_id FROM items i JOIN item_versions v ON v.id = i.head \
-             WHERE v.folder_id IS NOT NULL",
+            "SELECT i.id, x.folder_id FROM items i JOIN item_index x ON x.version_id = i.head \
+             WHERE x.folder_id IS NOT NULL",
         )
         .sql()?;
     let rows = statement

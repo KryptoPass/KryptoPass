@@ -47,7 +47,9 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         meta.revision = next_revision(base)?;
         meta.head = VersionId::new();
 
+        let sealed_state = self.seal(&meta.state)?;
         self.store.commit(Change::PutItem(Box::new(PutItem {
+            sealed_state,
             record: ItemRecord {
                 meta: meta.clone(),
                 ciphertext,

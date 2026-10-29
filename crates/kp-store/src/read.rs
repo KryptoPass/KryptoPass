@@ -6,7 +6,8 @@
 use std::collections::HashMap;
 
 use kryptopass_core::vault::{
-    ItemMeta, ItemRecord, ItemState, ItemVersion, KeySettings, VersionId, VersionInfo,
+    ItemMeta, ItemRecord, ItemState, ItemVersion, KeySettings, OpaqueItem, SealedVersion,
+    VersionId, VersionInfo,
 };
 use kryptopass_core::{
     EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, MAX_ENTRY_ICON_BYTES,
@@ -98,22 +99,24 @@ fn build_folder(raw: RawFolder, fingerprints: Vec<String>) -> StoreResult<Folder
     })
 }
 
-/// Head state columns, shared by the item queries. `v` is the head version.
+/// Head state columns, shared by the item queries. `x` is the head's index
+/// row; the count is of every head of the graph, readable here or not.
 const HEAD_COLUMNS: &str = "i.id, i.head, i.revision, \
-     (SELECT COUNT(*) FROM item_heads h WHERE h.item_id = i.id), \
-     v.folder_id, v.title, v.template, v.favorite, v.trashed, \
-     v.icon_theme, v.icon_asset_id, v.icon_favicon_host";
+     (SELECT COUNT(*) FROM versions h WHERE h.record_id = i.id AND NOT EXISTS \
+         (SELECT 1 FROM version_parents p WHERE p.parent_id = h.id)), \
+     x.folder_id, x.title, x.template, x.favorite, x.trashed, \
+     x.icon_theme, x.icon_asset_id, x.icon_favicon_host";
 
 pub(crate) fn items(connection: &Connection) -> StoreResult<Vec<ItemMeta>> {
     let mut recipients = fingerprints_by(
         connection,
-        "SELECT r.version_id, r.fingerprint FROM item_version_recipients r \
+        "SELECT r.version_id, r.fingerprint FROM version_recipients r \
          JOIN items i ON i.head = r.version_id ORDER BY r.version_id, r.fingerprint",
         [],
     )?;
     let sql = format!(
-        "SELECT {HEAD_COLUMNS} FROM items i JOIN item_versions v ON v.id = i.head \
-         ORDER BY v.title COLLATE NOCASE, i.id"
+        "SELECT {HEAD_COLUMNS} FROM items i JOIN item_index x ON x.version_id = i.head \
+         ORDER BY x.title COLLATE NOCASE, i.id"
     );
     let mut statement = connection.prepare(&sql).sql()?;
     let rows = statement
@@ -131,7 +134,7 @@ pub(crate) fn items(connection: &Connection) -> StoreResult<Vec<ItemMeta>> {
 
 pub(crate) fn item_meta(connection: &Connection, id: SecretId) -> StoreResult<Option<ItemMeta>> {
     let sql = format!(
-        "SELECT {HEAD_COLUMNS} FROM items i JOIN item_versions v ON v.id = i.head \
+        "SELECT {HEAD_COLUMNS} FROM items i JOIN item_index x ON x.version_id = i.head \
          WHERE i.id = ?1"
     );
     let Some(raw) = connection
@@ -176,21 +179,28 @@ fn raw_meta(row: &Row<'_>) -> rusqlite::Result<RawMeta> {
         head: row.get(1)?,
         revision: row.get(2)?,
         heads: row.get(3)?,
-        state: raw_state(row, 4)?,
+        state: raw_state(row, 4)?.ok_or(rusqlite::Error::InvalidColumnType(
+            4,
+            "state".into(),
+            rusqlite::types::Type::Null,
+        ))?,
     })
 }
 
-/// Seven state columns starting at `at`: folder, title, template, favorite,
-/// trashed and the three icon columns.
-fn raw_state(row: &Row<'_>, at: usize) -> rusqlite::Result<RawState> {
-    Ok(RawState {
+/// Eight state columns starting at `at`: folder, title, template, favorite,
+/// trashed and the three icon columns. `None` when the version is not indexed.
+fn raw_state(row: &Row<'_>, at: usize) -> rusqlite::Result<Option<RawState>> {
+    let Some(title) = row.get::<_, Option<String>>(at + 1)? else {
+        return Ok(None);
+    };
+    Ok(Some(RawState {
         folder: row.get(at)?,
-        title: row.get(at + 1)?,
+        title,
         template: row.get(at + 2)?,
         favorite: row.get(at + 3)?,
         trashed: row.get(at + 4)?,
         icon: (row.get(at + 5)?, row.get(at + 6)?, row.get(at + 7)?),
-    })
+    }))
 }
 
 fn meta(raw: RawMeta, fingerprints: Vec<String>) -> StoreResult<ItemMeta> {
@@ -202,28 +212,28 @@ fn meta(raw: RawMeta, fingerprints: Vec<String>) -> StoreResult<ItemMeta> {
         head: version_id(&raw.head)?,
         revision: revision(raw.revision)?,
         conflicted: raw.heads > 1,
-        state: state(raw.state, fingerprints)?,
+        state: state(raw.state, convert::recipients(fingerprints)?)?,
     })
 }
 
-fn state(raw: RawState, fingerprints: Vec<String>) -> StoreResult<ItemState> {
+fn state(raw: RawState, recipients: RecipientSet) -> StoreResult<ItemState> {
     Ok(ItemState {
         folder: raw.folder.as_deref().map(folder_id).transpose()?,
         title: raw.title,
         template: convert::template(&raw.template)?,
-        recipients: convert::recipients(fingerprints)?,
+        recipients,
         icon: convert::icon(raw.icon)?,
         favorite: flag(raw.favorite)?,
         trashed: flag(raw.trashed)?,
     })
 }
 
-/// The ciphertext of a version, bounded before it is copied out of SQLite.
+/// The encrypted content of a version, bounded before it is copied out.
 pub(crate) fn payload(connection: &Connection, version: VersionId) -> StoreResult<Vec<u8>> {
     connection
         .query_row(
-            "SELECT p.ciphertext FROM item_versions v \
-             JOIN item_payloads p ON p.hash = v.payload WHERE v.id = ?1",
+            "SELECT b.bytes FROM versions v JOIN blobs b ON b.hash = v.content_hash \
+             WHERE v.id = ?1",
             [text(version.0)],
             |row| match row.get_ref(0)? {
                 ValueRef::Blob(bytes)
@@ -310,7 +320,7 @@ pub(crate) enum Versions {
     One(VersionId),
 }
 
-/// Versions of an item, newest first by local storage order.
+/// Versions of an item, readable here or not, newest first by storage order.
 pub(crate) fn versions(
     connection: &Connection,
     id: SecretId,
@@ -320,22 +330,23 @@ pub(crate) fn versions(
     let (filter, extra) = match which {
         Versions::All => ("", None),
         Versions::Heads => (
-            "AND v.id IN (SELECT version_id FROM item_heads WHERE item_id = ?1)",
+            "AND NOT EXISTS (SELECT 1 FROM version_parents p WHERE p.parent_id = v.id)",
             None,
         ),
         Versions::One(version) => ("AND v.id = ?2", Some(text(version.0))),
     };
     let sql = format!(
-        "SELECT v.id, v.author, v.clock_millis, v.clock_counter, v.folder_id, v.title, \
-                v.template, v.favorite, \
-                v.trashed, v.icon_theme, v.icon_asset_id, v.icon_favicon_host \
-         FROM item_versions v WHERE v.item_id = ?1 {filter} ORDER BY v.rowid DESC"
+        "SELECT v.id, v.author, v.clock_millis, v.clock_counter, x.folder_id, x.title, \
+                x.template, x.favorite, x.trashed, x.icon_theme, x.icon_asset_id, \
+                x.icon_favicon_host \
+         FROM versions v LEFT JOIN item_index x ON x.version_id = v.id \
+         WHERE v.record_id = ?1 AND v.record_kind = 1 {filter} ORDER BY v.rowid DESC"
     );
     let mut statement = connection.prepare(&sql).sql()?;
     let map = |row: &Row<'_>| {
         Ok((
             row.get::<_, String>(0)?,
-            row.get::<_, Option<String>>(1)?,
+            row.get::<_, Vec<u8>>(1)?,
             (row.get::<_, i64>(2)?, row.get::<_, i64>(3)?),
             raw_state(row, 4)?,
         ))
@@ -353,22 +364,23 @@ pub(crate) fn versions(
 
     let mut recipients = fingerprints_by(
         connection,
-        "SELECT r.version_id, r.fingerprint FROM item_version_recipients r \
-         JOIN item_versions v ON v.id = r.version_id WHERE v.item_id = ?1 \
+        "SELECT r.version_id, r.fingerprint FROM version_recipients r \
+         JOIN versions v ON v.id = r.version_id WHERE v.record_id = ?1 \
          ORDER BY r.version_id, r.fingerprint",
         [&item],
     )?;
     let mut parents = parents_of(connection, id)?;
     rows.into_iter()
         .map(|(version, author, (millis, counter), raw)| {
-            let fingerprints = recipients.remove(&version).unwrap_or_default();
+            let recipients = convert::recipients(recipients.remove(&version).unwrap_or_default())?;
             let id_value = version_id(&version)?;
             Ok(VersionInfo {
                 id: id_value,
                 item: id,
                 parents: parents.remove(&id_value).unwrap_or_default(),
-                state: state(raw, fingerprints)?,
-                author: convert::author(author)?,
+                state: raw.map(|raw| state(raw, recipients.clone())).transpose()?,
+                recipients,
+                author: convert::author(&author)?,
                 clock: convert::clock(millis, counter)?,
             })
         })
@@ -394,8 +406,8 @@ pub(crate) fn parents_of(
 ) -> StoreResult<HashMap<VersionId, Vec<VersionId>>> {
     let mut statement = connection
         .prepare(
-            "SELECT p.version_id, p.parent_id FROM item_version_parents p \
-             JOIN item_versions v ON v.id = p.version_id WHERE v.item_id = ?1",
+            "SELECT p.version_id, p.parent_id FROM version_parents p \
+             JOIN versions v ON v.id = p.version_id WHERE v.record_id = ?1",
         )
         .sql()?;
     let rows = statement
@@ -416,15 +428,82 @@ pub(crate) fn parents_of(
     Ok(edges)
 }
 
-fn version_fingerprints(connection: &Connection, version: &str) -> StoreResult<Vec<String>> {
+pub(crate) fn version_fingerprints(
+    connection: &Connection,
+    version: &str,
+) -> StoreResult<Vec<String>> {
     Ok(fingerprints_by(
         connection,
-        "SELECT version_id, fingerprint FROM item_version_recipients WHERE version_id = ?1 \
+        "SELECT version_id, fingerprint FROM version_recipients WHERE version_id = ?1 \
          ORDER BY fingerprint",
         [version],
     )?
     .remove(version)
     .unwrap_or_default())
+}
+
+/// Item versions without an index row, with their encrypted state.
+pub(crate) fn unindexed(connection: &Connection) -> StoreResult<Vec<SealedVersion>> {
+    let mut statement = connection
+        .prepare(
+            "SELECT v.id, v.record_id, v.state FROM versions v WHERE v.record_kind = 1 \
+             AND NOT EXISTS (SELECT 1 FROM item_index x WHERE x.version_id = v.id) \
+             ORDER BY v.rowid",
+        )
+        .sql()?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Vec<u8>>(2)?,
+            ))
+        })
+        .sql()?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .sql()?;
+    rows.into_iter()
+        .map(|(version, record, state)| {
+            Ok(SealedVersion {
+                id: version_id(&version)?,
+                item: item_id(&record)?,
+                recipients: convert::recipients(version_fingerprints(connection, &version)?)?,
+                state,
+            })
+        })
+        .collect()
+}
+
+/// Items with versions but no readable head, each with its newest head's
+/// recipients.
+pub(crate) fn opaque_items(connection: &Connection) -> StoreResult<Vec<OpaqueItem>> {
+    let mut statement = connection
+        .prepare(
+            "SELECT v.record_id, v.id FROM versions v WHERE v.record_kind = 1 \
+             AND NOT EXISTS (SELECT 1 FROM items i WHERE i.id = v.record_id) \
+             AND NOT EXISTS (SELECT 1 FROM version_parents p WHERE p.parent_id = v.id) \
+             ORDER BY v.record_id, v.clock_millis DESC, v.clock_counter DESC, v.id DESC",
+        )
+        .sql()?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .sql()?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .sql()?;
+    let mut opaque: Vec<OpaqueItem> = Vec::new();
+    for (record, version) in rows {
+        let id = item_id(&record)?;
+        if opaque.last().is_some_and(|last| last.id == id) {
+            continue;
+        }
+        opaque.push(OpaqueItem {
+            id,
+            recipients: convert::recipients(version_fingerprints(connection, &version)?)?,
+        });
+    }
+    Ok(opaque)
 }
 
 /// Rows of `(owner, fingerprint)` grouped by owner.

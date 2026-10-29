@@ -110,7 +110,9 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                 trashed: false,
             },
         };
+        let sealed_state = self.seal(&meta.state)?;
         self.store.commit(Change::PutItem(Box::new(PutItem {
+            sealed_state,
             record: ItemRecord {
                 meta: meta.clone(),
                 ciphertext,
@@ -224,7 +226,9 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         meta.head = VersionId::new();
 
         let ciphertext = resealed.map_or(ciphertext, |(ciphertext, _, _)| ciphertext);
+        let sealed_state = self.seal(&meta.state)?;
         self.store.commit(Change::PutItem(Box::new(PutItem {
+            sealed_state,
             record: ItemRecord { meta, ciphertext },
             base: Base::Revision(base),
             parents,
