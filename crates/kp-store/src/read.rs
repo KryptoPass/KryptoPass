@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 
 use kryptopass_core::vault::{
-    ItemMeta, ItemRecord, ItemState, ItemVersion, KeySettings, OpaqueItem, SealedVersion,
-    VersionId, VersionInfo,
+    ItemMeta, ItemRecord, ItemState, ItemVersion, KeySettings, OpaqueItem, SealedRecord,
+    SealedVersion, VersionId, VersionInfo,
 };
 use kryptopass_core::{
     EntryIconAsset, Folder, FolderAppearance, FolderId, KeyFingerprint, MAX_ENTRY_ICON_BYTES,
@@ -442,12 +442,13 @@ pub(crate) fn version_fingerprints(
     .unwrap_or_default())
 }
 
-/// Item versions without an index row, with their encrypted state.
+/// Item and folder versions without an index row, with their encrypted state.
 pub(crate) fn unindexed(connection: &Connection) -> StoreResult<Vec<SealedVersion>> {
     let mut statement = connection
         .prepare(
-            "SELECT v.id, v.record_id, v.state FROM versions v WHERE v.record_kind = 1 \
-             AND NOT EXISTS (SELECT 1 FROM item_index x WHERE x.version_id = v.id) \
+            "SELECT v.id, v.record_kind, v.record_id, v.state FROM versions v \
+             WHERE NOT EXISTS (SELECT 1 FROM item_index x WHERE x.version_id = v.id) \
+               AND NOT EXISTS (SELECT 1 FROM folder_index f WHERE f.version_id = v.id) \
              ORDER BY v.rowid",
         )
         .sql()?;
@@ -455,18 +456,23 @@ pub(crate) fn unindexed(connection: &Connection) -> StoreResult<Vec<SealedVersio
         .query_map([], |row| {
             Ok((
                 row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, Vec<u8>>(2)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Vec<u8>>(3)?,
             ))
         })
         .sql()?
         .collect::<rusqlite::Result<Vec<_>>>()
         .sql()?;
     rows.into_iter()
-        .map(|(version, record, state)| {
+        .map(|(version, kind, record, state)| {
             Ok(SealedVersion {
                 id: version_id(&version)?,
-                item: item_id(&record)?,
+                record: match kind {
+                    1 => SealedRecord::Item(item_id(&record)?),
+                    2 => SealedRecord::Folder(folder_id(&record)?),
+                    _ => return Err(corrupt("record kind")),
+                },
                 recipients: convert::recipients(version_fingerprints(connection, &version)?)?,
                 state,
             })

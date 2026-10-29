@@ -1,34 +1,49 @@
-//! Folder writes, sibling order and imports.
+//! Folder writes: signed folder versions, the folders shown, sibling order
+//! and imports. The order among siblings is this device's own; it does not
+//! travel.
 
 use std::collections::{HashMap, HashSet};
 
-use kryptopass_core::vault::{AppendItem, FolderContents, StoreError};
-use kryptopass_core::{Folder, FolderId, RecipientSet, SecretId, SecretLink};
+use kryptopass_core::vault::{
+    AppendItem, FolderContents, Hlc, IndexedFolder, SealedFolder, StoreError, VersionId,
+};
+use kryptopass_core::{Folder, FolderAppearance, FolderId, RecipientSet, SecretId, SecretLink};
 use kryptopass_identity::DeviceIdentity;
-use rusqlite::{Connection, params};
+use kryptopass_sync::{Clock, Fingerprint, RecordKind, Version, VersionDraft};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use super::{collect_garbage, items, links, require_folder};
-use crate::convert::{SqlResult, StoreResult, folder_id, item_id, text};
+use crate::convert::{
+    SqlResult, StoreResult, fingerprint_bytes, folder_id, id_bytes, item_id, text,
+};
 use crate::read;
-use kryptopass_core::util::{Ancestry, ancestry, is_clean_line};
+use kryptopass_core::util::{Ancestry, ancestry, is_clean_line, unix_millis};
 
 /// Sanity bound on a stored name; the vault applies the real, smaller limit.
 const MAX_NAME_BYTES: usize = 1024;
 
-pub(super) fn add(connection: &Connection, folder: &Folder) -> StoreResult<()> {
+pub(super) fn add(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    folder: &Folder,
+    sealed: SealedFolder,
+) -> StoreResult<()> {
     check_name(&folder.name)?;
     if let Some(parent) = folder.parent_id {
         require_folder(connection, parent)?;
     }
+    require_new(connection, folder.id)?;
+    let head = write_version(connection, identity, folder, &[], sealed)?;
     let parent = folder.parent_id.map(|id| text(id.0));
     connection
         .execute(
-            "INSERT INTO folders(id, parent_id, name, icon, color, sort_position) \
-             VALUES (?1, ?2, ?3, ?4, ?5, \
+            "INSERT INTO folders(id, head, parent_id, name, icon, color, sort_position) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, \
                  (SELECT COALESCE(MAX(sort_position), -1) + 1 FROM folders \
-                  WHERE parent_id IS ?2))",
+                  WHERE parent_id IS ?3))",
             params![
                 text(folder.id.0),
+                text(head.0),
                 parent,
                 folder.name,
                 folder.appearance.icon(),
@@ -36,15 +51,27 @@ pub(super) fn add(connection: &Connection, folder: &Folder) -> StoreResult<()> {
             ],
         )
         .sql()?;
-    set_recipients(connection, folder.id, folder.default_recipients.as_ref())
+    set_recipients(connection, folder.id, folder.default_recipients.as_ref())?;
+    attach_items(connection, folder.id)
 }
 
-pub(super) fn update(connection: &Connection, folder: &Folder) -> StoreResult<()> {
+/// Writes a new version of a folder that joins every current one, so
+/// concurrent edits from other devices end with this one.
+pub(super) fn update(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    folder: &Folder,
+    sealed: SealedFolder,
+) -> StoreResult<()> {
     check_name(&folder.name)?;
-    let changed = connection
+    require_folder(connection, folder.id)?;
+    let heads = items::record_heads(connection, &text(folder.id.0))?;
+    let head = write_version(connection, identity, folder, &heads, sealed)?;
+    connection
         .execute(
-            "UPDATE folders SET name = ?1, icon = ?2, color = ?3 WHERE id = ?4",
+            "UPDATE folders SET head = ?1, name = ?2, icon = ?3, color = ?4 WHERE id = ?5",
             params![
+                text(head.0),
                 folder.name,
                 folder.appearance.icon(),
                 folder.appearance.color(),
@@ -52,17 +79,16 @@ pub(super) fn update(connection: &Connection, folder: &Folder) -> StoreResult<()
             ],
         )
         .sql()?;
-    if changed != 1 {
-        return Err(StoreError::FolderNotFound);
-    }
     set_recipients(connection, folder.id, folder.default_recipients.as_ref())
 }
 
 pub(super) fn move_to(
     connection: &Connection,
+    identity: &DeviceIdentity,
     id: FolderId,
     destination: Option<FolderId>,
     before: Option<FolderId>,
+    sealed: Option<SealedFolder>,
 ) -> StoreResult<()> {
     let all = read::folders(connection)?;
     let parents: HashMap<FolderId, Option<FolderId>> = all
@@ -98,12 +124,32 @@ pub(super) fn move_to(
         .and_then(|anchor| siblings.iter().position(|sibling| *sibling == anchor))
         .unwrap_or(siblings.len());
     siblings.insert(position, id);
-    connection
-        .execute(
-            "UPDATE folders SET parent_id = ?1 WHERE id = ?2",
-            params![destination.map(|parent| text(parent.0)), text(id.0)],
-        )
-        .sql()?;
+    match sealed {
+        Some(sealed) => {
+            let mut moved = all
+                .iter()
+                .find(|folder| folder.id == id)
+                .cloned()
+                .ok_or(StoreError::FolderNotFound)?;
+            moved.parent_id = destination;
+            let heads = items::record_heads(connection, &text(id.0))?;
+            let head = write_version(connection, identity, &moved, &heads, sealed)?;
+            connection
+                .execute(
+                    "UPDATE folders SET head = ?1, parent_id = ?2 WHERE id = ?3",
+                    params![
+                        text(head.0),
+                        destination.map(|parent| text(parent.0)),
+                        text(id.0)
+                    ],
+                )
+                .sql()?;
+        }
+        None if former != destination => {
+            return Err(StoreError::Rejected("a new parent needs a new version"));
+        }
+        None => {}
+    }
     persist_order(connection, &siblings)?;
     if former != destination {
         let left: Vec<FolderId> = all
@@ -130,32 +176,19 @@ pub(super) fn remove(
     let parent = folder.parent_id;
     match contents {
         FolderContents::Reparent => {
-            if !items_in(connection, &HashSet::from([id]))?.is_empty() {
-                return Err(StoreError::Rejected("the folder still holds items"));
+            // The vault moved items and subfolders out with new versions.
+            if !items_in(connection, &HashSet::from([id]))?.is_empty()
+                || all.iter().any(|folder| folder.parent_id == Some(id))
+            {
+                return Err(StoreError::Rejected("the folder is not empty"));
             }
-            // Subfolders take the removed folder's place among its siblings.
-            let mut order = Vec::new();
-            for sibling in all.iter().filter(|folder| folder.parent_id == parent) {
-                if sibling.id == id {
-                    order.extend(
-                        all.iter()
-                            .filter(|folder| folder.parent_id == Some(id))
-                            .map(|folder| folder.id),
-                    );
-                } else {
-                    order.push(sibling.id);
-                }
-            }
-            connection
-                .execute(
-                    "UPDATE folders SET parent_id = ?1 WHERE parent_id = ?2",
-                    params![parent.map(|parent| text(parent.0)), text(id.0)],
-                )
-                .sql()?;
-            connection
-                .execute("DELETE FROM folders WHERE id = ?1", [text(id.0)])
-                .sql()?;
-            persist_order(connection, &order)?;
+            delete_with_mark(connection, identity, id)?;
+            let left: Vec<FolderId> = all
+                .iter()
+                .filter(|folder| folder.parent_id == parent && folder.id != id)
+                .map(|folder| folder.id)
+                .collect();
+            persist_order(connection, &left)?;
         }
         FolderContents::Delete => {
             let subtree = subtree(&all, id);
@@ -168,9 +201,7 @@ pub(super) fn remove(
             }
             // Deepest first: a folder cannot go while it has children.
             for folder in subtree.iter().rev() {
-                connection
-                    .execute("DELETE FROM folders WHERE id = ?1", [text(folder.0)])
-                    .sql()?;
+                delete_with_mark(connection, identity, *folder)?;
             }
             let left: Vec<FolderId> = all
                 .iter()
@@ -189,12 +220,12 @@ pub(super) fn remove(
 pub(super) fn append(
     connection: &Connection,
     identity: &DeviceIdentity,
-    folders: &[Folder],
+    folders: Vec<(Folder, SealedFolder)>,
     items: Vec<AppendItem>,
     pairs: &[SecretLink],
 ) -> StoreResult<()> {
-    for folder in folders {
-        add(connection, folder)?;
+    for (folder, sealed) in folders {
+        add(connection, identity, &folder, sealed)?;
     }
     for item in items {
         items::create_imported(connection, identity, item)?;
@@ -208,6 +239,327 @@ pub(super) fn append(
         links::insert(connection, link.first, link.second)?;
     }
     Ok(())
+}
+
+/// Indexes folder versions the vault opened, then shows each folder as its
+/// newest readable version and places folders and items under parents that
+/// are now known.
+pub(super) fn index(connection: &Connection, versions: Vec<IndexedFolder>) -> StoreResult<()> {
+    let mut touched = Vec::new();
+    for IndexedFolder { id, folder, state } in versions {
+        let key = text(id.0);
+        let owner: Option<String> = connection
+            .query_row(
+                "SELECT record_id FROM versions WHERE id = ?1 AND record_kind = 2",
+                [&key],
+                |row| row.get(0),
+            )
+            .optional()
+            .sql()?;
+        let indexed: bool = connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM folder_index WHERE version_id = ?1)",
+                [&key],
+                |row| row.get(0),
+            )
+            .sql()?;
+        if owner.as_deref() != Some(text(folder.0).as_str())
+            || indexed
+            || !is_clean_line(&state.name, MAX_NAME_BYTES)
+        {
+            continue;
+        }
+        insert_index(
+            connection,
+            id,
+            &state.name,
+            state.parent,
+            &state.appearance,
+            state.default_recipients.as_ref(),
+        )?;
+        if !touched.contains(&folder) {
+            touched.push(folder);
+        }
+    }
+    for folder in &touched {
+        refresh(connection, *folder)?;
+    }
+    if !touched.is_empty() {
+        place_folders(connection)?;
+    }
+    Ok(())
+}
+
+/// Shows a folder as its newest readable version. With none it leaves the
+/// tree, and its items show at the root.
+fn refresh(connection: &Connection, folder: FolderId) -> StoreResult<()> {
+    let key = text(folder.0);
+    let mut readable = Vec::new();
+    for head in items::record_heads(connection, &key)? {
+        let indexed: bool = connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM folder_index WHERE version_id = ?1)",
+                [text(head.0)],
+                |row| row.get(0),
+            )
+            .sql()?;
+        if indexed {
+            readable.push(head);
+        }
+    }
+    let clocks = items::clocks_of(connection, &readable)?;
+    let Some(head) = readable
+        .into_iter()
+        .zip(clocks)
+        .max_by_key(|(version, clock)| (*clock, *version))
+        .map(|(version, _)| version)
+    else {
+        return purge(connection, &key);
+    };
+    let (name, icon, color): (String, String, String) = connection
+        .query_row(
+            "SELECT name, icon, color FROM folder_index WHERE version_id = ?1",
+            [text(head.0)],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .sql()?;
+    let shown: bool = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM folders WHERE id = ?1)",
+            [&key],
+            |row| row.get(0),
+        )
+        .sql()?;
+    if shown {
+        connection
+            .execute(
+                "UPDATE folders SET head = ?1, name = ?2, icon = ?3, color = ?4 WHERE id = ?5",
+                params![text(head.0), name, icon, color, key],
+            )
+            .sql()?;
+    } else {
+        // It starts at the root; `place_folders` gives it its parent.
+        connection
+            .execute(
+                "INSERT INTO folders(id, head, parent_id, name, icon, color, sort_position) \
+                 VALUES (?1, ?2, NULL, ?3, ?4, ?5, \
+                     (SELECT COALESCE(MAX(sort_position), -1) + 1 FROM folders \
+                      WHERE parent_id IS NULL))",
+                params![key, text(head.0), name, icon, color],
+            )
+            .sql()?;
+    }
+    connection
+        .execute("DELETE FROM folder_recipients WHERE folder_id = ?1", [&key])
+        .sql()?;
+    connection
+        .execute(
+            "INSERT INTO folder_recipients(folder_id, fingerprint) \
+             SELECT ?1, fingerprint FROM folder_index_recipients WHERE version_id = ?2",
+            params![key, text(head.0)],
+        )
+        .sql()?;
+    attach_items(connection, folder)
+}
+
+/// Gives each folder the parent its version names when that parent is known
+/// here and would not close a cycle; otherwise it stays at the root. Two
+/// devices can each move one folder into the other.
+fn place_folders(connection: &Connection) -> StoreResult<()> {
+    let mut statement = connection
+        .prepare(
+            "SELECT f.id, f.parent_id, x.parent FROM folders f \
+             JOIN folder_index x ON x.version_id = f.head ORDER BY f.id",
+        )
+        .sql()?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })
+        .sql()?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .sql()?;
+    let mut parents: HashMap<FolderId, Option<FolderId>> = HashMap::new();
+    let mut wanted = Vec::new();
+    for (id, current, chosen) in rows {
+        let id = folder_id(&id)?;
+        parents.insert(id, current.as_deref().map(folder_id).transpose()?);
+        wanted.push((id, chosen.as_deref().map(folder_id).transpose()?));
+    }
+    for (id, chosen) in wanted {
+        let target = chosen.filter(|parent| {
+            parents.contains_key(parent)
+                && *parent != id
+                && ancestry(&parents, *parent, id) == Ancestry::Outside
+        });
+        if parents.get(&id) == Some(&target) {
+            continue;
+        }
+        connection
+            .execute(
+                "UPDATE folders SET parent_id = ?1, sort_position = \
+                     (SELECT COALESCE(MAX(sort_position), -1) + 1 FROM folders \
+                      WHERE parent_id IS ?1) WHERE id = ?2",
+                params![target.map(|parent| text(parent.0)), text(id.0)],
+            )
+            .sql()?;
+        parents.insert(id, target);
+    }
+    Ok(())
+}
+
+/// Items whose state names `folder` go into it now that it is known.
+fn attach_items(connection: &Connection, folder: FolderId) -> StoreResult<()> {
+    connection
+        .execute(
+            "UPDATE item_index SET folder_id = ?1 WHERE wanted_folder = ?1 AND folder_id IS NULL",
+            [text(folder.0)],
+        )
+        .sql()?;
+    Ok(())
+}
+
+/// Signs a deletion mark for a folder and deletes everything else of it.
+fn delete_with_mark(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    id: FolderId,
+) -> StoreResult<()> {
+    let deletion = items::sign_deletion(connection, identity, RecordKind::Folder, id.0)?;
+    purge(connection, &text(id.0))?;
+    items::insert_deletion(connection, &deletion)
+}
+
+/// Deletes a folder's versions and its row. Its subfolders move to its
+/// parent and its items to the root, so a deletion received from another
+/// device never leaves anything pointing at it.
+pub(crate) fn purge(connection: &Connection, record: &str) -> StoreResult<()> {
+    let parent: Option<Option<String>> = connection
+        .query_row(
+            "SELECT parent_id FROM folders WHERE id = ?1",
+            [record],
+            |row| row.get(0),
+        )
+        .optional()
+        .sql()?;
+    if let Some(parent) = parent {
+        connection
+            .execute(
+                "UPDATE folders SET parent_id = ?1 WHERE parent_id = ?2",
+                params![parent, record],
+            )
+            .sql()?;
+        connection
+            .execute("DELETE FROM folders WHERE id = ?1", [record])
+            .sql()?;
+    }
+    connection
+        .execute("DELETE FROM versions WHERE record_id = ?1", [record])
+        .sql()?;
+    Ok(())
+}
+
+/// Signs and stores a version of `folder` as this device writes it, and
+/// indexes it.
+fn write_version(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    folder: &Folder,
+    parents: &[VersionId],
+    sealed: SealedFolder,
+) -> StoreResult<VersionId> {
+    let version = VersionId::new();
+    let clock = Hlc::next(unix_millis(), items::clocks_of(connection, parents)?);
+    let recipients = sealed
+        .recipients
+        .as_slice()
+        .iter()
+        .map(|key| {
+            Fingerprint::new(fingerprint_bytes(key.as_str())?)
+                .map_err(|_| StoreError::Rejected("invalid recipient fingerprint"))
+        })
+        .collect::<StoreResult<Vec<_>>>()?;
+    let signed = Version::sign(
+        VersionDraft {
+            record_kind: RecordKind::Folder,
+            record_id: id_bytes(folder.id.0),
+            version_id: id_bytes(version.0),
+            parents: parents.iter().map(|parent| id_bytes(parent.0)).collect(),
+            clock: Clock {
+                millis: clock.millis,
+                counter: clock.counter,
+            },
+            recipients,
+            state: sealed.state,
+            content_hash: None,
+            attachments: Vec::new(),
+        },
+        identity,
+    )
+    .map_err(|_| StoreError::Rejected("version could not be signed"))?;
+    items::insert_signed(connection, &signed, [])?;
+    insert_index(
+        connection,
+        version,
+        &folder.name,
+        folder.parent_id,
+        &folder.appearance,
+        folder.default_recipients.as_ref(),
+    )?;
+    Ok(version)
+}
+
+fn insert_index(
+    connection: &Connection,
+    version: VersionId,
+    name: &str,
+    parent: Option<FolderId>,
+    appearance: &FolderAppearance,
+    recipients: Option<&RecipientSet>,
+) -> StoreResult<()> {
+    connection
+        .execute(
+            "INSERT INTO folder_index(version_id, name, parent, icon, color) \
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                text(version.0),
+                name,
+                parent.map(|parent| text(parent.0)),
+                appearance.icon(),
+                appearance.color(),
+            ],
+        )
+        .sql()?;
+    for fingerprint in recipients.map_or(&[][..], RecipientSet::as_slice) {
+        connection
+            .execute(
+                "INSERT INTO folder_index_recipients(version_id, fingerprint) VALUES (?1, ?2)",
+                params![text(version.0), fingerprint.as_str()],
+            )
+            .sql()?;
+    }
+    Ok(())
+}
+
+/// A new folder's id must be unused, and never one deleted for good.
+fn require_new(connection: &Connection, id: FolderId) -> StoreResult<()> {
+    let used: bool = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM versions WHERE record_id = ?1) \
+                 OR EXISTS(SELECT 1 FROM deletions WHERE record_id = ?1)",
+            [text(id.0)],
+            |row| row.get(0),
+        )
+        .sql()?;
+    if used {
+        Err(StoreError::Rejected("folder already exists"))
+    } else {
+        Ok(())
+    }
 }
 
 /// Items whose head is in one of `folders`.

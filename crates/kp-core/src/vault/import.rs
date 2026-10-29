@@ -14,7 +14,7 @@ use super::icon;
 use super::item::Recipients;
 use super::items::MAX_TITLE_BYTES;
 use super::record::{ItemMeta, ItemRecord, ItemState, VersionId};
-use super::store::{AppendItem, Change};
+use super::store::{AppendItem, Change, SealedFolder};
 use super::{Cipher, Store, Vault, logged};
 use crate::domain::item::{ItemContent, encode_item_with};
 use crate::domain::{Folder, FolderAppearance, FolderId, SecretId};
@@ -93,7 +93,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         let mut folders = Vec::with_capacity(batch.folders.len());
         for index in parents_first(&batch.folders)? {
             let folder = &batch.folders[index];
-            folders.push(Folder {
+            let folder = Folder {
                 id: ids[index],
                 parent_id: folder_of(folder.parent)?,
                 sort_position: 0,
@@ -101,7 +101,15 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                     .ok_or(VaultError::InvalidFolderName)?,
                 appearance: FolderAppearance::default(),
                 default_recipients: None,
-            });
+            };
+            let state = self.seal_folder(&folder, &recipients)?;
+            folders.push((
+                folder,
+                SealedFolder {
+                    state,
+                    recipients: recipients.clone(),
+                },
+            ));
         }
 
         let templates = Arc::clone(&self.templates);

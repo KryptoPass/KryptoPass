@@ -20,8 +20,11 @@ pub(crate) const SCHEMA_VERSION: i64 = 2;
 pub(crate) const APPLICATION_ID: i64 = 0x4b50_5331;
 
 const SCHEMA: &str = "
+-- Folders as this device shows them: each one's newest readable version,
+-- with a parent known here and its own sibling order.
 CREATE TABLE folders (
     id TEXT PRIMARY KEY NOT NULL,
+    head TEXT NOT NULL REFERENCES folder_index(version_id) DEFERRABLE INITIALLY DEFERRED,
     parent_id TEXT REFERENCES folders(id) ON DELETE RESTRICT,
     name TEXT NOT NULL CHECK(length(trim(name)) > 0),
     icon TEXT NOT NULL DEFAULT 'folder',
@@ -99,10 +102,26 @@ CREATE TABLE peer_records (
     record_id TEXT NOT NULL,
     PRIMARY KEY(peer, record_id)
 );
--- The state of versions this device opened.
+-- The state of folder versions this device opened.
+CREATE TABLE folder_index (
+    version_id TEXT PRIMARY KEY NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
+    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+    -- The parent its writer chose; it may not be known here.
+    parent TEXT,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL
+);
+CREATE TABLE folder_index_recipients (
+    version_id TEXT NOT NULL REFERENCES folder_index(version_id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL CHECK(length(fingerprint) IN (40, 64)),
+    PRIMARY KEY(version_id, fingerprint)
+);
+-- The state of item versions this device opened.
 CREATE TABLE item_index (
     version_id TEXT PRIMARY KEY NOT NULL REFERENCES versions(id) ON DELETE CASCADE,
-    -- A folder may be gone, or not known here; the item then shows at the root.
+    -- The folder the state names, and the same folder once it is known here;
+    -- until then, or once it is gone, the item shows at the root.
+    wanted_folder TEXT,
     folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL,
     title TEXT NOT NULL CHECK(length(trim(title)) > 0),
     template TEXT NOT NULL CHECK(length(template) > 0),
@@ -153,13 +172,15 @@ CREATE INDEX version_parents_by_parent ON version_parents(parent_id);
 CREATE INDEX version_recipients_by_fingerprint ON version_recipients(fingerprint);
 CREATE INDEX version_attachments_by_hash ON version_attachments(hash);
 CREATE INDEX item_index_by_folder ON item_index(folder_id);
+CREATE INDEX item_index_by_wanted_folder ON item_index(wanted_folder);
+CREATE INDEX folders_by_head ON folders(head);
 CREATE INDEX item_index_by_icon ON item_index(icon_asset_id);
 CREATE INDEX items_by_head ON items(head);
 ";
 
 /// One probe per table, so a damaged or foreign schema fails on open.
-const PROBES: [&str; 16] = [
-    "SELECT id, parent_id, name, icon, color, sort_position FROM folders LIMIT 0",
+const PROBES: [&str; 18] = [
+    "SELECT id, head, parent_id, name, icon, color, sort_position FROM folders LIMIT 0",
     "SELECT folder_id, fingerprint FROM folder_recipients LIMIT 0",
     "SELECT id, png FROM entry_icon_assets LIMIT 0",
     "SELECT id, record_kind, record_id, author, clock_millis, clock_counter, state, \
@@ -172,8 +193,10 @@ const PROBES: [&str; 16] = [
      FROM deletions LIMIT 0",
     "SELECT record_id, fingerprint FROM deletion_recipients LIMIT 0",
     "SELECT peer, record_id FROM peer_records LIMIT 0",
-    "SELECT version_id, folder_id, title, template, favorite, trashed, icon_theme, \
-     icon_asset_id, icon_favicon_host FROM item_index LIMIT 0",
+    "SELECT version_id, name, parent, icon, color FROM folder_index LIMIT 0",
+    "SELECT version_id, fingerprint FROM folder_index_recipients LIMIT 0",
+    "SELECT version_id, wanted_folder, folder_id, title, template, favorite, trashed, \
+     icon_theme, icon_asset_id, icon_favicon_host FROM item_index LIMIT 0",
     "SELECT id, head, revision FROM items LIMIT 0",
     "SELECT first_item_id, second_item_id FROM item_links LIMIT 0",
     "SELECT fingerprint FROM default_recipients LIMIT 0",

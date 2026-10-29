@@ -9,6 +9,7 @@ mod items;
 mod links;
 mod settings;
 
+pub(crate) use folders::purge as purge_folder;
 pub(crate) use items::{belongs, insert_deletion, insert_signed, purge_record, refresh_item};
 
 use kryptopass_core::vault::{Change, StoreError};
@@ -31,13 +32,18 @@ pub(crate) fn commit(
     match change {
         Change::PutItem(put) => items::put(&transaction, identity, *put)?,
         Change::RemoveItem { id, base } => items::remove(&transaction, identity, id, base)?,
-        Change::AddFolder(folder) => folders::add(&transaction, &folder)?,
-        Change::UpdateFolder(folder) => folders::update(&transaction, &folder)?,
+        Change::AddFolder { folder, sealed } => {
+            folders::add(&transaction, identity, &folder, sealed)?;
+        }
+        Change::UpdateFolder { folder, sealed } => {
+            folders::update(&transaction, identity, &folder, sealed)?;
+        }
         Change::MoveFolder {
             id,
             destination,
             before,
-        } => folders::move_to(&transaction, id, destination, before)?,
+            sealed,
+        } => folders::move_to(&transaction, identity, id, destination, before, sealed)?,
         Change::RemoveFolder { id, contents } => {
             folders::remove(&transaction, identity, id, contents)?;
         }
@@ -45,8 +51,9 @@ pub(crate) fn commit(
             folders,
             items,
             links,
-        } => folders::append(&transaction, identity, &folders, items, &links)?,
+        } => folders::append(&transaction, identity, folders, items, &links)?,
         Change::Index(versions) => items::index(&transaction, versions)?,
+        Change::IndexFolders(versions) => folders::index(&transaction, versions)?,
         Change::SetDefaultRecipients(recipients) => {
             settings::set_default_recipients(&transaction, recipients.as_ref())?;
         }
@@ -61,12 +68,13 @@ fn change_kind(change: &Change) -> &'static str {
     match change {
         Change::PutItem(_) => "put_item",
         Change::RemoveItem { .. } => "remove_item",
-        Change::AddFolder(_) => "add_folder",
-        Change::UpdateFolder(_) => "update_folder",
+        Change::AddFolder { .. } => "add_folder",
+        Change::UpdateFolder { .. } => "update_folder",
         Change::MoveFolder { .. } => "move_folder",
         Change::RemoveFolder { .. } => "remove_folder",
         Change::Append { .. } => "append",
         Change::Index(_) => "index",
+        Change::IndexFolders(_) => "index_folders",
         Change::SetDefaultRecipients(_) => "set_default_recipients",
         Change::SetKeySettings(_) => "set_key_settings",
     }

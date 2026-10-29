@@ -110,7 +110,11 @@ impl SyncStore for SqliteStore {
         let purged = !plan.deletions.is_empty();
         for deletion in &plan.deletions {
             let record = record_text(&deletion.record_id)?;
-            write::purge_record(&transaction, &record).map_err(storage)?;
+            match deletion.record_kind {
+                RecordKind::Item => write::purge_record(&transaction, &record),
+                RecordKind::Folder => write::purge_folder(&transaction, &record),
+            }
+            .map_err(storage)?;
             write::insert_deletion(&transaction, deletion).map_err(storage)?;
         }
         for version in &plan.versions {

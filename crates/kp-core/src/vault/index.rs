@@ -6,8 +6,8 @@
 //! every version encrypted to a key whose secret part is on this device.
 
 use super::error::VaultError;
-use super::state::open_state;
-use super::store::{Change, IndexedVersion, OpaqueItem};
+use super::state::{open_folder, open_state};
+use super::store::{Change, IndexedFolder, IndexedVersion, OpaqueItem, SealedRecord};
 use super::{Cipher, CipherError, Store, Vault, logged};
 
 impl<S: Store, C: Cipher> Vault<S, C> {
@@ -31,6 +31,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
     fn try_reindex(&mut self) -> Result<usize, VaultError> {
         let keys = self.secret_keys()?;
         let mut indexed = Vec::new();
+        let mut folders = Vec::new();
         let mut corrupt = 0_usize;
         for sealed in self.store.unindexed()? {
             if !sealed.recipients.includes_any(&keys) {
@@ -42,17 +43,32 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                 Err(CipherError::KeyUnavailable | CipherError::Canceled) => break,
                 Err(error) => return Err(error.into()),
             };
-            match open_state(plaintext.as_slice()) {
-                Ok(state) => indexed.push(IndexedVersion {
-                    id: sealed.id,
-                    item: sealed.item,
-                    state,
+            let opened = match sealed.record {
+                SealedRecord::Item(item) => open_state(plaintext.as_slice()).map(|state| {
+                    indexed.push(IndexedVersion {
+                        id: sealed.id,
+                        item,
+                        state,
+                    });
                 }),
-                Err(_) => corrupt += 1,
+                SealedRecord::Folder(folder) => open_folder(plaintext.as_slice()).map(|state| {
+                    folders.push(IndexedFolder {
+                        id: sealed.id,
+                        folder,
+                        state,
+                    });
+                }),
+            };
+            if opened.is_err() {
+                corrupt += 1;
             }
         }
-        let count = indexed.len();
-        if count > 0 {
+        let count = indexed.len() + folders.len();
+        // Folders first, so items indexed with them find their folder.
+        if !folders.is_empty() {
+            self.store.commit(Change::IndexFolders(folders))?;
+        }
+        if !indexed.is_empty() {
             self.store.commit(Change::Index(indexed))?;
         }
         if corrupt > 0 {

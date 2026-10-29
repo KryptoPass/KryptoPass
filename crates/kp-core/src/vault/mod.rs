@@ -36,10 +36,10 @@ pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};
 pub use record::{Author, ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo};
 pub use registry::TemplateRegistry;
 pub use settings::KeySettings;
-pub use state::{OpenedState, open_state, seal_state};
+pub use state::{OpenedFolder, OpenedState, open_folder, open_state, seal_folder, seal_state};
 pub use store::{
-    AppendItem, Base, Change, FolderContents, IndexedVersion, LinkChange, OpaqueItem, Parents,
-    PutItem, SealedVersion, Store, StoreError,
+    AppendItem, Base, Change, FolderContents, IndexedFolder, IndexedVersion, LinkChange,
+    OpaqueItem, Parents, PutItem, SealedFolder, SealedRecord, SealedVersion, Store, StoreError,
 };
 
 /// An open vault: storage, the keys to read it and the templates it uses.

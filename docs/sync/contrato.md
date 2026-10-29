@@ -230,9 +230,15 @@ crate `kp-vault`.
 ## 8. Decisiones
 
 - **Carpetas:** se sincronizan como registros propios (`record_kind = 2`),
-  cifradas para los destinatarios por defecto de quien las crea; si no tiene
+  cifradas para los destinatarios por defecto de quien las escribe; si no tiene
   ninguno, para sus claves privadas. Un dispositivo sin esas claves ve sus ítems
-  en la raíz.
+  en la raíz. Las versiones de carpeta no van a revisión: se muestra la cabeza
+  legible con el reloj más reciente, y la siguiente edición local las une a
+  todas. El orden entre carpetas hermanas es de cada dispositivo y no viaja.
+  Si la carpeta padre que nombra una versión no se conoce aquí, o cerraría un
+  ciclo, la carpeta se muestra en la raíz. Un ítem cuya carpeta todavía no ha
+  llegado se muestra en la raíz y pasa a ella cuando llega. Al borrar una
+  carpeta, sus subcarpetas pasan a su padre y sus ítems a la raíz.
 - **Imágenes de icono:** son blobs cifrados con los destinatarios del ítem.
 - **Vínculos entre ítems:** de momento solo locales. Más adelante, en el estado.
 - **Autoría:** la firma es del dispositivo. Firmar también con OpenPGP, para

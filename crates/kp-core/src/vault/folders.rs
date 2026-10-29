@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use super::error::VaultError;
 use super::item::ItemEdit;
-use super::store::{Change, FolderContents};
+use super::store::{Change, FolderContents, SealedFolder};
 use super::{Cipher, Store, Vault, logged};
 use crate::domain::{Folder, FolderAppearance, FolderId, RecipientSet};
 use crate::util::{Ancestry, ancestry, clean_line};
@@ -106,7 +106,11 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             appearance: new.appearance,
             default_recipients: new.default_recipients,
         };
-        self.store.commit(Change::AddFolder(folder.clone()))?;
+        let sealed = self.sealed_folder(&folder)?;
+        self.store.commit(Change::AddFolder {
+            folder: folder.clone(),
+            sealed,
+        })?;
         tracing::debug!(folder = %folder.id.0, "folder created");
         Ok(folder)
     }
@@ -126,7 +130,11 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             }
             folder.default_recipients = recipients;
         }
-        self.store.commit(Change::UpdateFolder(folder.clone()))?;
+        let sealed = self.sealed_folder(&folder)?;
+        self.store.commit(Change::UpdateFolder {
+            folder: folder.clone(),
+            sealed,
+        })?;
         tracing::debug!(folder = %folder.id.0, "folder updated");
         Ok(folder)
     }
@@ -137,15 +145,15 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         destination: Option<FolderId>,
         before: Option<FolderId>,
     ) -> Result<(), VaultError> {
-        let parents: HashMap<FolderId, Option<FolderId>> = self
-            .store
-            .folders()?
-            .into_iter()
+        let folders = self.store.folders()?;
+        let parents: HashMap<FolderId, Option<FolderId>> = folders
+            .iter()
             .map(|folder| (folder.id, folder.parent_id))
             .collect();
-        if !parents.contains_key(&id) {
-            return Err(VaultError::FolderNotFound);
-        }
+        let mut moved = folders
+            .into_iter()
+            .find(|folder| folder.id == id)
+            .ok_or(VaultError::FolderNotFound)?;
         if let Some(destination) = destination {
             match ancestry(&parents, destination, id) {
                 Ancestry::Outside => {}
@@ -164,10 +172,18 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                 None => return Err(VaultError::FolderNotFound),
             }
         }
+        // Another parent is a new version; reordering among siblings is local.
+        let sealed = if moved.parent_id == destination {
+            None
+        } else {
+            moved.parent_id = destination;
+            Some(self.sealed_folder(&moved)?)
+        };
         self.store.commit(Change::MoveFolder {
             id,
             destination,
             before,
+            sealed,
         })?;
         tracing::debug!(folder = %id.0, "folder moved");
         Ok(())
@@ -182,6 +198,16 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         if contents == FolderContents::Reparent {
             // Each move is a new version with its state encrypted, which only
             // the vault can write; the store then removes an empty folder.
+            let children: Vec<FolderId> = self
+                .store
+                .folders()?
+                .into_iter()
+                .filter(|child| child.parent_id == Some(id))
+                .map(|child| child.id)
+                .collect();
+            for child in children {
+                self.try_move_folder(child, folder.parent_id, None)?;
+            }
             let items: Vec<_> = self
                 .store
                 .items()?
@@ -195,5 +221,23 @@ impl<S: Store, C: Cipher> Vault<S, C> {
         self.store.commit(Change::RemoveFolder { id, contents })?;
         tracing::debug!(folder = %id.0, ?contents, "folder removed");
         Ok(())
+    }
+
+    /// A folder's state sealed for a new version.
+    fn sealed_folder(&self, folder: &Folder) -> Result<SealedFolder, VaultError> {
+        let recipients = self.folder_recipients()?;
+        let state = self.seal_folder(folder, &recipients)?;
+        Ok(SealedFolder { state, recipients })
+    }
+
+    /// Who folder versions are encrypted to: the vault's default recipients,
+    /// or else every key whose secret part is on this device. A device
+    /// without them sees the folder's items at the root.
+    fn folder_recipients(&self) -> Result<RecipientSet, VaultError> {
+        if let Some(recipients) = self.store.default_recipients()? {
+            return Ok(recipients);
+        }
+        RecipientSet::new(self.secret_keys()?.into_iter().collect())
+            .map_err(|_| VaultError::NoRecipients)
     }
 }

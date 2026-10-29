@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use super::record::{ItemMeta, ItemRecord, ItemVersion, VersionId, VersionInfo};
 use super::settings::KeySettings;
-use super::state::OpenedState;
+use super::state::{OpenedFolder, OpenedState};
 use crate::EntryIconAsset;
 use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink};
 use uuid::Uuid;
@@ -125,17 +125,27 @@ pub enum Change {
     /// link go, and only a signed deletion mark stays so Sync cannot bring
     /// it back.
     RemoveItem { id: SecretId, base: u64 },
-    /// Adds a folder after its siblings; `sort_position` is assigned by the store.
-    AddFolder(Folder),
-    /// Replaces name, appearance and default recipients. Parent and position
-    /// change only through [`Change::MoveFolder`].
-    UpdateFolder(Folder),
+    /// Adds a folder after its siblings, with its first version;
+    /// `sort_position` is assigned by the store.
+    AddFolder {
+        folder: Folder,
+        sealed: SealedFolder,
+    },
+    /// Replaces name, appearance and default recipients with a new version
+    /// that joins every current one. Parent and position change only through
+    /// [`Change::MoveFolder`].
+    UpdateFolder {
+        folder: Folder,
+        sealed: SealedFolder,
+    },
     /// Moves before `before`, or after the last sibling when it is `None`.
-    /// Items do not change: they reference the folder, not its place.
+    /// A new parent is a new version, `sealed`; the order among siblings is
+    /// this device's own. Items do not change: they reference the folder.
     MoveFolder {
         id: FolderId,
         destination: Option<FolderId>,
         before: Option<FolderId>,
+        sealed: Option<SealedFolder>,
     },
     RemoveFolder {
         id: FolderId,
@@ -145,7 +155,7 @@ pub enum Change {
     /// Each item gets its record as a first version. Folders come parents
     /// first.
     Append {
-        folders: Vec<Folder>,
+        folders: Vec<(Folder, SealedFolder)>,
         items: Vec<AppendItem>,
         links: Vec<SecretLink>,
     },
@@ -155,18 +165,42 @@ pub enum Change {
     /// Indexes versions this device opened: their state becomes listable.
     /// Versions already indexed or no longer stored are skipped.
     Index(Vec<IndexedVersion>),
+    /// Indexes folder versions this device opened, as `Index` does for items.
+    IndexFolders(Vec<IndexedFolder>),
     /// Replaces one key's settings. Settings equal to the defaults are not
     /// kept, so forgetting a key leaves nothing behind.
     SetKeySettings(KeySettings),
+}
+
+/// A folder's state encrypted for a new version, and who it is encrypted to.
+#[derive(Clone, Debug)]
+pub struct SealedFolder {
+    pub state: Vec<u8>,
+    pub recipients: RecipientSet,
+}
+
+/// The record a stored version belongs to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SealedRecord {
+    Item(SecretId),
+    Folder(FolderId),
 }
 
 /// A stored version not indexed yet, with its encrypted state.
 #[derive(Clone, Debug)]
 pub struct SealedVersion {
     pub id: VersionId,
-    pub item: SecretId,
+    pub record: SealedRecord,
     pub recipients: RecipientSet,
     pub state: Vec<u8>,
+}
+
+/// The opened state of a folder version, to index.
+#[derive(Clone, Debug)]
+pub struct IndexedFolder {
+    pub id: VersionId,
+    pub folder: FolderId,
+    pub state: OpenedFolder,
 }
 
 /// The opened state of a version, to index.
@@ -235,8 +269,8 @@ pub trait Store {
     /// Settings of every key that has any besides the defaults.
     fn key_settings(&self) -> Result<Vec<KeySettings>, StoreError>;
 
-    /// Item versions stored but not indexed, such as ones received through
-    /// Sync; the vault opens those it can and indexes them.
+    /// Item and folder versions stored but not indexed, such as ones
+    /// received through Sync; the vault opens those it can and indexes them.
     fn unindexed(&self) -> Result<Vec<SealedVersion>, StoreError>;
 
     /// Items with no current version this device can open.

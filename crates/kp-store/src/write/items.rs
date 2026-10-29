@@ -158,14 +158,26 @@ pub(super) fn remove(
     collect_garbage(connection)
 }
 
-/// Signs a deletion mark for an item and deletes everything else of it. The
-/// mark is routed like the item: to the recipients of its current heads.
+/// Signs a deletion mark for an item and deletes everything else of it.
 pub(super) fn delete_with_mark(
     connection: &Connection,
     identity: &DeviceIdentity,
     id: SecretId,
 ) -> StoreResult<()> {
-    let heads = graph_heads(connection, id)?;
+    let deletion = sign_deletion(connection, identity, RecordKind::Item, id.0)?;
+    purge_record(connection, &text(id.0))?;
+    insert_deletion(connection, &deletion)
+}
+
+/// A signed deletion mark for a record, routed like it: to the recipients
+/// of its current heads.
+pub(super) fn sign_deletion(
+    connection: &Connection,
+    identity: &DeviceIdentity,
+    kind: RecordKind,
+    record: uuid::Uuid,
+) -> StoreResult<Deletion> {
+    let heads = record_heads(connection, &text(record))?;
     let mut recipients = Vec::new();
     for head in &heads {
         for fingerprint in read::version_fingerprints(connection, &text(head.0))? {
@@ -177,10 +189,10 @@ pub(super) fn delete_with_mark(
         }
     }
     let clock = Hlc::next(unix_millis(), clocks_of(connection, &heads)?);
-    let deletion = Deletion::sign(
+    Deletion::sign(
         DeletionDraft {
-            record_kind: RecordKind::Item,
-            record_id: id_bytes(id.0),
+            record_kind: kind,
+            record_id: id_bytes(record),
             clock: Clock {
                 millis: clock.millis,
                 counter: clock.counter,
@@ -189,9 +201,7 @@ pub(super) fn delete_with_mark(
         },
         identity,
     )
-    .map_err(|_| StoreError::Rejected("deletion mark could not be signed"))?;
-    purge_record(connection, &text(id.0))?;
-    insert_deletion(connection, &deletion)
+    .map_err(|_| StoreError::Rejected("deletion mark could not be signed"))
 }
 
 /// Deletes every version of a record with its index, item row and link.
@@ -464,6 +474,8 @@ impl LocalVersion<'_> {
 
 /// The columns of an index row.
 struct IndexColumns {
+    /// The folder the state names, known here or not.
+    wanted_folder: Option<String>,
     folder: Option<String>,
     title: String,
     template: String,
@@ -475,6 +487,7 @@ struct IndexColumns {
 impl IndexColumns {
     fn from_state(state: &ItemState) -> Self {
         Self {
+            wanted_folder: state.folder.map(|folder| text(folder.0)),
             folder: state.folder.map(|folder| text(folder.0)),
             title: state.title.clone(),
             template: state.template.as_str().to_owned(),
@@ -485,8 +498,9 @@ impl IndexColumns {
     }
 }
 
-/// The columns of a received state. A folder or icon image not known here is
-/// left out: the item shows at the root, with the automatic icon.
+/// The columns of a received state. A folder not known here is only wanted:
+/// the item shows at the root until it arrives. An icon image not known here
+/// is left out, for the automatic icon.
 fn received_columns(connection: &Connection, state: OpenedState) -> StoreResult<IndexColumns> {
     let exists = |sql: &str, key: &str| -> StoreResult<bool> {
         connection.query_row(sql, [key], |row| row.get(0)).sql()
@@ -512,6 +526,7 @@ fn received_columns(connection: &Connection, state: OpenedState) -> StoreResult<
         icon = (None, None, None);
     }
     Ok(IndexColumns {
+        wanted_folder: state.folder.map(|folder| text(folder.0)),
         folder,
         title: state.title,
         template: state.template.as_str().to_owned(),
@@ -529,11 +544,12 @@ fn insert_index(
     let (theme, asset, host) = &columns.icon;
     connection
         .execute(
-            "INSERT INTO item_index(version_id, folder_id, title, template, favorite, trashed, \
-                 icon_theme, icon_asset_id, icon_favicon_host) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO item_index(version_id, wanted_folder, folder_id, title, template, \
+                 favorite, trashed, icon_theme, icon_asset_id, icon_favicon_host) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 text(version.0),
+                columns.wanted_folder,
                 columns.folder,
                 columns.title,
                 columns.template,
@@ -623,6 +639,11 @@ fn merge_parents(
 
 /// Versions of an item without children, readable here or not.
 pub(crate) fn graph_heads(connection: &Connection, item: SecretId) -> StoreResult<Vec<VersionId>> {
+    record_heads(connection, &text(item.0))
+}
+
+/// Versions of a record without children, readable here or not.
+pub(crate) fn record_heads(connection: &Connection, record: &str) -> StoreResult<Vec<VersionId>> {
     let mut statement = connection
         .prepare(
             "SELECT v.id FROM versions v WHERE v.record_id = ?1 AND NOT EXISTS \
@@ -630,7 +651,7 @@ pub(crate) fn graph_heads(connection: &Connection, item: SecretId) -> StoreResul
         )
         .sql()?;
     let rows = statement
-        .query_map([text(item.0)], |row| row.get::<_, String>(0))
+        .query_map([record], |row| row.get::<_, String>(0))
         .sql()?
         .collect::<rusqlite::Result<Vec<_>>>()
         .sql()?;
@@ -668,7 +689,7 @@ pub(crate) fn belongs(
 }
 
 /// The clocks of `versions`, which must be stored.
-fn clocks_of(connection: &Connection, versions: &[VersionId]) -> StoreResult<Vec<Hlc>> {
+pub(crate) fn clocks_of(connection: &Connection, versions: &[VersionId]) -> StoreResult<Vec<Hlc>> {
     versions
         .iter()
         .map(|version| {
