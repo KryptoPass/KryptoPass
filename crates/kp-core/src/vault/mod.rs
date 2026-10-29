@@ -11,6 +11,7 @@
 mod cipher;
 mod error;
 mod folders;
+mod history;
 mod icon;
 mod item;
 mod items;

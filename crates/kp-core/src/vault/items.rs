@@ -8,8 +8,9 @@ use super::item::{Item, ItemEdit, NewItem, Recipients};
 use super::record::{ItemMeta, ItemRecord, ItemState, VersionId};
 use super::store::{Base, Change, LinkChange, Parents, PutItem};
 use super::{Cipher, Store, Vault, logged, next_revision};
+use crate::EntryIconAsset;
 use crate::domain::item::{ItemContent, decode_item, encode_item_with};
-use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLinkError};
+use crate::domain::{Folder, FolderId, RecipientSet, SecretId, SecretLink, SecretLinkError};
 use crate::util::{clean_line, unix_now};
 
 const MAX_TITLE_BYTES: usize = 512;
@@ -38,6 +39,16 @@ impl<S: Store, C: Cipher> Vault<S, C> {
     /// Applies an edit and returns the metadata at the new revision.
     pub fn update_item(&mut self, edit: ItemEdit) -> Result<ItemMeta, VaultError> {
         logged("update_item", self.try_update_item(edit))
+    }
+
+    /// Every pair of linked items.
+    pub fn list_links(&self) -> Result<Vec<SecretLink>, VaultError> {
+        logged("list_links", self.store.links().map_err(Into::into))
+    }
+
+    /// The image of a picture icon, for display.
+    pub fn icon_asset(&self, id: uuid::Uuid) -> Result<Option<EntryIconAsset>, VaultError> {
+        logged("icon_asset", self.store.icon_asset(id).map_err(Into::into))
     }
 
     /// Deletes an item for good, only if it is still at revision `base`.
@@ -260,7 +271,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
     /// Decrypts, decodes, checks the content belongs to the record and
     /// migrates it to the current template version. Returns the version it
     /// was migrated from, if any.
-    fn decrypt(
+    pub(super) fn decrypt(
         &self,
         meta: &ItemMeta,
         ciphertext: &[u8],

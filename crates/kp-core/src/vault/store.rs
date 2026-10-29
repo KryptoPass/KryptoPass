@@ -14,6 +14,7 @@ use thiserror::Error;
 use super::record::{ItemMeta, ItemRecord, ItemVersion, VersionId, VersionInfo};
 use crate::EntryIconAsset;
 use crate::domain::{Folder, FolderId, SecretId, SecretLink};
+use uuid::Uuid;
 
 /// Why the store refused or failed a read or a change.
 #[derive(Debug, Error)]
@@ -155,6 +156,9 @@ pub trait Store {
     fn item(&self, id: SecretId) -> Result<Option<ItemRecord>, StoreError>;
 
     fn links(&self) -> Result<Vec<SecretLink>, StoreError>;
+
+    /// A stored icon image, validated; `None` when no version uses it.
+    fn icon_asset(&self, id: Uuid) -> Result<Option<EntryIconAsset>, StoreError>;
 
     /// The item paired with `id`, if any.
     fn link_of(&self, id: SecretId) -> Result<Option<SecretId>, StoreError>;

@@ -8,9 +8,12 @@ use std::collections::HashMap;
 use kryptopass_core::vault::{
     ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo,
 };
-use kryptopass_core::{Folder, FolderAppearance, FolderId, SecretId, SecretLink};
+use kryptopass_core::{
+    EntryIconAsset, Folder, FolderAppearance, FolderId, MAX_ENTRY_ICON_BYTES, SecretId, SecretLink,
+};
 use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OptionalExtension, Row, params};
+use uuid::Uuid;
 
 use crate::convert::{
     self, SqlResult, StoreResult, corrupt, flag, folder_id, item_id, revision, text, version_id,
@@ -271,6 +274,32 @@ pub(crate) fn link_of(connection: &Connection, id: SecretId) -> StoreResult<Opti
         .sql()?
         .map(|other| item_id(&other))
         .transpose()
+}
+
+/// A stored icon image, bounded before it is copied and validated after.
+pub(crate) fn icon_asset(connection: &Connection, id: Uuid) -> StoreResult<Option<EntryIconAsset>> {
+    let png = connection
+        .query_row(
+            "SELECT png FROM entry_icon_assets WHERE id = ?1",
+            [text(id)],
+            |row| match row.get_ref(0)? {
+                ValueRef::Blob(bytes) if bytes.len() <= MAX_ENTRY_ICON_BYTES => {
+                    Ok(Some(bytes.to_vec()))
+                }
+                _ => Ok(None),
+            },
+        )
+        .optional()
+        .sql()?;
+    match png {
+        None => Ok(None),
+        Some(None) => Err(corrupt("icon image")),
+        Some(Some(png)) => {
+            let asset = EntryIconAsset { id, png };
+            asset.validate().map_err(|_| corrupt("icon image"))?;
+            Ok(Some(asset))
+        }
+    }
 }
 
 /// Which versions of an item to load.

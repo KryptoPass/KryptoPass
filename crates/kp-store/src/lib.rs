@@ -19,7 +19,7 @@ mod write;
 use kryptopass_core::vault::{
     Change, ItemMeta, ItemRecord, ItemVersion, Store, StoreError, VersionId, VersionInfo,
 };
-use kryptopass_core::{Folder, FolderId, SecretId, SecretLink};
+use kryptopass_core::{EntryIconAsset, Folder, FolderId, SecretId, SecretLink};
 use rusqlite::Connection;
 
 use convert::{SqlResult, StoreResult};
@@ -68,6 +68,10 @@ impl Store for SqliteStore {
 
     fn link_of(&self, id: SecretId) -> Result<Option<SecretId>, StoreError> {
         self.read(|connection| read::link_of(connection, id))
+    }
+
+    fn icon_asset(&self, id: uuid::Uuid) -> Result<Option<EntryIconAsset>, StoreError> {
+        self.read(|connection| read::icon_asset(connection, id))
     }
 
     fn heads(&self, id: SecretId) -> Result<Vec<VersionInfo>, StoreError> {
