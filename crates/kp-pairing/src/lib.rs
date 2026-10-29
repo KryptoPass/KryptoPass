@@ -3,7 +3,7 @@
 //! Pairing consumes a locally hosted one-shot invitation before reading peer
 //! bytes. Both devices authenticate their long-term identities inside Noise,
 //! compare a transcript-bound emoji SAS, and exchange authenticated readiness
-//! messages before the local SQLite trust transaction. The two devices' local
+//! messages before the local trust transaction. The two devices' local
 //! databases are independent and are not an atomic distributed transaction.
 
 use std::fmt;
@@ -12,8 +12,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use hkdf::Hkdf;
 use kryptopass_identity::{
-    DeviceId, DeviceIdentity, InvitationTokenHash, PublicIdentity, SqliteTrustStore,
-    TrustStoreError, verify_signature,
+    DeviceId, DeviceIdentity, InvitationTokenHash, PublicIdentity, TrustStore, TrustStoreError,
+    verify_signature,
 };
 use kryptopass_protocol::{
     Channel, HandshakeRole, MessagePayload, NoiseHandshakeOrder, ProtocolError, SessionCodec,
@@ -142,7 +142,7 @@ pub struct PairingConfig {
     /// rejuvenate an invitation.
     now_ms: i64,
     /// Deadline for asynchronous pairing work. Checked before the synchronous
-    /// SQLite commit, which cannot be preempted after it starts.
+    /// trust commit, which cannot be preempted after it starts.
     pub timeout: Duration,
     /// The exact peer identity expected during reconnect; required in that mode.
     pub expected_peer: Option<PublicIdentity>,
@@ -196,7 +196,7 @@ impl PairingConfig {
     fn validate(
         &self,
         identity: &DeviceIdentity,
-        store: &SqliteTrustStore,
+        store: &dyn TrustStore,
     ) -> Result<(), PairingError> {
         if self.session_id.iter().all(|byte| *byte == 0)
             || self.now_ms < 0
@@ -233,7 +233,7 @@ pub struct PairingInvitation {
 impl PairingInvitation {
     /// Creates a random invitation and registers its hash in the local ledger.
     pub fn create(
-        store: &mut SqliteTrustStore,
+        store: &mut dyn TrustStore,
         now_ms: i64,
         lifetime: Duration,
     ) -> Result<Self, PairingError> {
@@ -736,7 +736,7 @@ pub enum PairingError {
 pub struct PairingEngine<'a, T> {
     transport: T,
     identity: &'a DeviceIdentity,
-    store: SqliteTrustStore,
+    store: Box<dyn TrustStore + Send>,
     config: PairingConfig,
     state: PairingState,
 }
@@ -746,10 +746,10 @@ impl<'a, T: PeerTransport> PairingEngine<'a, T> {
     pub fn new(
         transport: T,
         identity: &'a DeviceIdentity,
-        store: SqliteTrustStore,
+        store: Box<dyn TrustStore + Send>,
         config: PairingConfig,
     ) -> Result<Self, PairingError> {
-        config.validate(identity, &store)?;
+        config.validate(identity, store.as_ref())?;
         if let Some(expected) = config.expected_peer {
             let stored = store.lookup_trusted_peer(&expected.device_id)?;
             if stored != expected {
@@ -772,7 +772,7 @@ impl<'a, T: PeerTransport> PairingEngine<'a, T> {
     }
 
     /// Runs authentication, explicit approval, readiness exchange, then the
-    /// local SQLite trust transaction. On success, the returned session keeps
+    /// local trust transaction. On success, the returned session keeps
     /// the transport alive while the peer finishes its own local commit.
     pub async fn run(
         mut self,

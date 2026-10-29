@@ -2,7 +2,8 @@
 
 use crate::{LabError, LabHost, hex};
 use kryptopass_devices::SyncSessionBinding;
-use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity, SqliteTrustStore};
+use kryptopass_identity::{DeviceId, DeviceIdentity, PublicIdentity};
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_sync::{Id, Ledger, SyncError, TrustSource};
 use serde_json::{Value, json};
 use std::{

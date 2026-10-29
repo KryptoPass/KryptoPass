@@ -18,7 +18,6 @@ test-support = []
 ed25519-dalek = { version = "2.2", default-features = false, features = ["std", "zeroize"] }
 getrandom = "0.3"
 kp-memsec = { path = "../kp-memsec" }
-rusqlite = { version = "0.40.2", default-features = false }
 rustix = { version = "1.1", features = ["fs", "process", "std"] }
 sha2 = "0.10"
 thiserror = "2"

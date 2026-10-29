@@ -1,7 +1,7 @@
 //! Canonical signed revision objects and their identity trust boundary.
 
 use kryptopass_identity::{
-    DeviceId, DeviceIdentity, PublicIdentity, SqliteTrustStore, TrustStoreError, verify_signature,
+    DeviceId, DeviceIdentity, PublicIdentity, TrustStore, TrustStoreError, verify_signature,
 };
 use sha2::{Digest as _, Sha256};
 use std::fmt;
@@ -272,7 +272,7 @@ pub trait TrustSource {
 }
 
 /// Reads only the remote identities explicitly authorized in the trust store.
-impl TrustSource for SqliteTrustStore {
+impl<S: TrustStore + ?Sized> TrustSource for S {
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
         match self.lookup_trusted_peer(&device_id) {
             Ok(identity) if identity.device_id == device_id => Ok(Some(identity)),
@@ -289,12 +289,12 @@ impl TrustSource for SqliteTrustStore {
 /// identity store. It is never inserted into or authorized by the peer store.
 pub struct LocalAndTrustedPeers<'a> {
     local: PublicIdentity,
-    peers: &'a SqliteTrustStore,
+    peers: &'a dyn TrustStore,
 }
 
 impl<'a> LocalAndTrustedPeers<'a> {
     /// Combines the supplied local identity with the existing remote trust store.
-    pub fn new(local: &DeviceIdentity, peers: &'a SqliteTrustStore) -> Result<Self, SyncError> {
+    pub fn new(local: &DeviceIdentity, peers: &'a dyn TrustStore) -> Result<Self, SyncError> {
         let local = local.public_identity();
         local.validate().map_err(|_| SyncError::InvalidSignature)?;
         Ok(Self { local, peers })

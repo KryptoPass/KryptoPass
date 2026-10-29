@@ -14,6 +14,7 @@ mod graph;
 mod open;
 mod read;
 mod schema;
+pub mod trust;
 mod write;
 
 use kryptopass_core::vault::{

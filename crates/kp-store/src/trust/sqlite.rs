@@ -1,7 +1,10 @@
-use crate::{DeviceId, InvitationTokenHash, PublicIdentity, SignatureError};
-use rusqlite::{Connection, OpenFlags, OptionalExtension, TransactionBehavior, params};
+//! The trust store in a private SQLite file inside the pairing profile.
+
+use kryptopass_identity::{
+    DeviceId, InvitationTokenHash, PublicIdentity, TrustStore, TrustStoreError,
+};
+use rusqlite::{Connection, ErrorCode, OpenFlags, OptionalExtension, TransactionBehavior, params};
 use std::path::{Path, PathBuf};
-use thiserror::Error;
 
 const DATABASE_FILENAME: &str = "device-trust.sqlite3";
 const APPLICATION_ID: i64 = 0x4b50_4944;
@@ -66,202 +69,6 @@ impl SqliteTrustStore {
         })
     }
 
-    /// Returns the identity to which this database is bound.
-    pub const fn local_device_id(&self) -> DeviceId {
-        self.local_device_id
-    }
-
-    /// Persists explicit authorization for an authenticated peer.
-    ///
-    /// Call only after the pairing engine has authenticated the remote signing
-    /// key and the local user has approved the peer. The transaction commits
-    /// all peer fields together; it never replaces a key for an existing ID.
-    pub fn authorize_peer(
-        &mut self,
-        peer: &PublicIdentity,
-        approved_at_ms: i64,
-    ) -> Result<(), TrustStoreError> {
-        if approved_at_ms < 0 {
-            return Err(TrustStoreError::InvalidTimestamp);
-        }
-        peer.validate().map_err(TrustStoreError::InvalidIdentity)?;
-        if peer.device_id == self.local_device_id {
-            return Err(TrustStoreError::SelfTrust);
-        }
-
-        let tx = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let existing = tx
-            .query_row(
-                "SELECT signing_public_key, static_public_key, state
-                 FROM trusted_peers WHERE device_id = ?1",
-                [peer.device_id.as_bytes().as_slice()],
-                |row| {
-                    Ok((
-                        row.get::<_, Vec<u8>>(0)?,
-                        row.get::<_, Vec<u8>>(1)?,
-                        row.get::<_, i64>(2)?,
-                    ))
-                },
-            )
-            .optional()?;
-
-        if let Some((signing, static_key, state)) = existing {
-            if signing.as_slice() != peer.signing_public_key
-                || static_key.as_slice() != peer.static_public_key
-            {
-                return Err(TrustStoreError::KeyConflict);
-            }
-            if state != 1 {
-                return Err(TrustStoreError::PeerRevoked);
-            }
-            tx.commit()?;
-            return Ok(());
-        }
-
-        let peer_count: i64 =
-            tx.query_row("SELECT count(*) FROM trusted_peers", [], |row| row.get(0))?;
-        if peer_count >= MAX_TRUSTED_PEERS {
-            return Err(TrustStoreError::PeerLimitReached);
-        }
-        tx.execute(
-            "INSERT INTO trusted_peers
-             (device_id, signing_public_key, static_public_key, state, authorized_at_ms)
-             VALUES (?1, ?2, ?3, 1, ?4)",
-            params![
-                peer.device_id.as_bytes().as_slice(),
-                peer.signing_public_key.as_slice(),
-                peer.static_public_key.as_slice(),
-                approved_at_ms,
-            ],
-        )?;
-        tx.commit()?;
-        Ok(())
-    }
-
-    /// Returns an authorized peer or fails closed for unknown and revoked IDs.
-    pub fn lookup_trusted_peer(
-        &self,
-        device_id: &DeviceId,
-    ) -> Result<PublicIdentity, TrustStoreError> {
-        let row = self
-            .connection
-            .query_row(
-                "SELECT signing_public_key, static_public_key, state
-                 FROM trusted_peers WHERE device_id = ?1",
-                [device_id.as_bytes().as_slice()],
-                |row| {
-                    Ok((
-                        row.get::<_, Vec<u8>>(0)?,
-                        row.get::<_, Vec<u8>>(1)?,
-                        row.get::<_, i64>(2)?,
-                    ))
-                },
-            )
-            .optional()?
-            .ok_or(TrustStoreError::UnknownOrRevokedPeer)?;
-        if row.2 != 1 {
-            return Err(TrustStoreError::UnknownOrRevokedPeer);
-        }
-        let signing_public_key = array32(&row.0).ok_or(TrustStoreError::CorruptDatabase)?;
-        let static_public_key = array32(&row.1).ok_or(TrustStoreError::CorruptDatabase)?;
-        let peer = PublicIdentity::new(signing_public_key, static_public_key)
-            .map_err(TrustStoreError::InvalidIdentity)?;
-        if peer.device_id != *device_id {
-            return Err(TrustStoreError::CorruptDatabase);
-        }
-        Ok(peer)
-    }
-
-    /// Lists every currently authorized peer in stable device-ID order.
-    ///
-    /// The operation reads at most one row beyond the configured maximum and
-    /// fails if the database contains more than 1024 authorized peers. It
-    /// never returns a silently truncated list. Every stored ID and key is
-    /// validated, including the prohibition on trusting the local device.
-    pub fn list_trusted_peers(&self) -> Result<Vec<PublicIdentity>, TrustStoreError> {
-        let mut statement = self.connection.prepare(
-            "SELECT device_id, signing_public_key, static_public_key
-             FROM trusted_peers WHERE state = 1
-             ORDER BY device_id LIMIT ?1",
-        )?;
-        let mut rows = statement.query([MAX_TRUSTED_PEERS + 1])?;
-        let mut peers = Vec::new();
-        while let Some(row) = rows.next()? {
-            if peers.len() == MAX_TRUSTED_PEERS as usize {
-                return Err(TrustStoreError::TrustedPeerListTooLarge);
-            }
-            let device_id =
-                array32(&row.get::<_, Vec<u8>>(0)?).ok_or(TrustStoreError::CorruptDatabase)?;
-            let signing_public_key =
-                array32(&row.get::<_, Vec<u8>>(1)?).ok_or(TrustStoreError::CorruptDatabase)?;
-            let static_public_key =
-                array32(&row.get::<_, Vec<u8>>(2)?).ok_or(TrustStoreError::CorruptDatabase)?;
-            let peer = PublicIdentity::new(signing_public_key, static_public_key)
-                .map_err(TrustStoreError::InvalidIdentity)?;
-            if peer.device_id != DeviceId::from_bytes(device_id) {
-                return Err(TrustStoreError::CorruptDatabase);
-            }
-            if peer.device_id == self.local_device_id {
-                return Err(TrustStoreError::SelfTrust);
-            }
-            peers.push(peer);
-        }
-        Ok(peers)
-    }
-
-    /// Permanently revokes an authorized peer without deleting its key history.
-    pub fn revoke_peer(
-        &mut self,
-        device_id: &DeviceId,
-        revoked_at_ms: i64,
-    ) -> Result<(), TrustStoreError> {
-        if revoked_at_ms < 0 {
-            return Err(TrustStoreError::InvalidTimestamp);
-        }
-        if *device_id == self.local_device_id {
-            return Err(TrustStoreError::SelfTrust);
-        }
-        let tx = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let changed = tx.execute(
-            "UPDATE trusted_peers SET state = 2, revoked_at_ms = ?2
-             WHERE device_id = ?1 AND state = 1",
-            params![device_id.as_bytes().as_slice(), revoked_at_ms],
-        )?;
-        if changed != 1 {
-            return Err(TrustStoreError::UnknownOrRevokedPeer);
-        }
-        tx.commit()?;
-        Ok(())
-    }
-
-    /// Removes an active authorization so the peer can be explicitly paired again.
-    ///
-    /// This operation never removes a revoked row. A caller must close any
-    /// session and serialize profile operations before invoking it. The row is
-    /// deleted transactionally; absent and revoked peers return
-    /// [`TrustStoreError::UnknownOrRevokedPeer`].
-    pub fn forget_authorized_peer(&mut self, device_id: &DeviceId) -> Result<(), TrustStoreError> {
-        if *device_id == self.local_device_id {
-            return Err(TrustStoreError::SelfTrust);
-        }
-        let tx = self
-            .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let removed = tx.execute(
-            "DELETE FROM trusted_peers WHERE device_id = ?1 AND state = 1",
-            [device_id.as_bytes().as_slice()],
-        )?;
-        if removed != 1 {
-            return Err(TrustStoreError::UnknownOrRevokedPeer);
-        }
-        tx.commit()?;
-        Ok(())
-    }
-
     /// Validates the exact pairing trust-database paths before a profile reset.
     ///
     /// Only the fixed trust database and its SQLite sidecars are considered;
@@ -301,11 +108,225 @@ impl SqliteTrustStore {
         Ok(())
     }
 
+    /// Returns the profile directory used to open this database.
+    pub fn profile_dir(&self) -> &Path {
+        &self.profile_dir
+    }
+}
+
+impl TrustStore for SqliteTrustStore {
+    /// Returns the identity to which this database is bound.
+    fn local_device_id(&self) -> DeviceId {
+        self.local_device_id
+    }
+
+    /// Persists explicit authorization for an authenticated peer.
+    ///
+    /// Call only after the pairing engine has authenticated the remote signing
+    /// key and the local user has approved the peer. The transaction commits
+    /// all peer fields together; it never replaces a key for an existing ID.
+    fn authorize_peer(
+        &mut self,
+        peer: &PublicIdentity,
+        approved_at_ms: i64,
+    ) -> Result<(), TrustStoreError> {
+        if approved_at_ms < 0 {
+            return Err(TrustStoreError::InvalidTimestamp);
+        }
+        peer.validate().map_err(TrustStoreError::InvalidIdentity)?;
+        if peer.device_id == self.local_device_id {
+            return Err(TrustStoreError::SelfTrust);
+        }
+
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .sql()?;
+        let existing = tx
+            .query_row(
+                "SELECT signing_public_key, static_public_key, state
+                 FROM trusted_peers WHERE device_id = ?1",
+                [peer.device_id.as_bytes().as_slice()],
+                |row| {
+                    Ok((
+                        row.get::<_, Vec<u8>>(0)?,
+                        row.get::<_, Vec<u8>>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .optional()
+            .sql()?;
+
+        if let Some((signing, static_key, state)) = existing {
+            if signing.as_slice() != peer.signing_public_key
+                || static_key.as_slice() != peer.static_public_key
+            {
+                return Err(TrustStoreError::KeyConflict);
+            }
+            if state != 1 {
+                return Err(TrustStoreError::PeerRevoked);
+            }
+            tx.commit().sql()?;
+            return Ok(());
+        }
+
+        let peer_count: i64 = tx
+            .query_row("SELECT count(*) FROM trusted_peers", [], |row| row.get(0))
+            .sql()?;
+        if peer_count >= MAX_TRUSTED_PEERS {
+            return Err(TrustStoreError::PeerLimitReached);
+        }
+        tx.execute(
+            "INSERT INTO trusted_peers
+             (device_id, signing_public_key, static_public_key, state, authorized_at_ms)
+             VALUES (?1, ?2, ?3, 1, ?4)",
+            params![
+                peer.device_id.as_bytes().as_slice(),
+                peer.signing_public_key.as_slice(),
+                peer.static_public_key.as_slice(),
+                approved_at_ms,
+            ],
+        )
+        .sql()?;
+        tx.commit().sql()?;
+        Ok(())
+    }
+
+    /// Returns an authorized peer or fails closed for unknown and revoked IDs.
+    fn lookup_trusted_peer(&self, device_id: &DeviceId) -> Result<PublicIdentity, TrustStoreError> {
+        let row = self
+            .connection
+            .query_row(
+                "SELECT signing_public_key, static_public_key, state
+                 FROM trusted_peers WHERE device_id = ?1",
+                [device_id.as_bytes().as_slice()],
+                |row| {
+                    Ok((
+                        row.get::<_, Vec<u8>>(0)?,
+                        row.get::<_, Vec<u8>>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .optional()
+            .sql()?
+            .ok_or(TrustStoreError::UnknownOrRevokedPeer)?;
+        if row.2 != 1 {
+            return Err(TrustStoreError::UnknownOrRevokedPeer);
+        }
+        let signing_public_key = array32(&row.0).ok_or(TrustStoreError::CorruptDatabase)?;
+        let static_public_key = array32(&row.1).ok_or(TrustStoreError::CorruptDatabase)?;
+        let peer = PublicIdentity::new(signing_public_key, static_public_key)
+            .map_err(TrustStoreError::InvalidIdentity)?;
+        if peer.device_id != *device_id {
+            return Err(TrustStoreError::CorruptDatabase);
+        }
+        Ok(peer)
+    }
+
+    /// Lists every currently authorized peer in stable device-ID order.
+    ///
+    /// The operation reads at most one row beyond the configured maximum and
+    /// fails if the database contains more than 1024 authorized peers. It
+    /// never returns a silently truncated list. Every stored ID and key is
+    /// validated, including the prohibition on trusting the local device.
+    fn list_trusted_peers(&self) -> Result<Vec<PublicIdentity>, TrustStoreError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT device_id, signing_public_key, static_public_key
+             FROM trusted_peers WHERE state = 1
+             ORDER BY device_id LIMIT ?1",
+            )
+            .sql()?;
+        let mut rows = statement.query([MAX_TRUSTED_PEERS + 1]).sql()?;
+        let mut peers = Vec::new();
+        while let Some(row) = rows.next().sql()? {
+            if peers.len() == MAX_TRUSTED_PEERS as usize {
+                return Err(TrustStoreError::TrustedPeerListTooLarge);
+            }
+            let device_id = array32(&row.get::<_, Vec<u8>>(0).sql()?)
+                .ok_or(TrustStoreError::CorruptDatabase)?;
+            let signing_public_key = array32(&row.get::<_, Vec<u8>>(1).sql()?)
+                .ok_or(TrustStoreError::CorruptDatabase)?;
+            let static_public_key = array32(&row.get::<_, Vec<u8>>(2).sql()?)
+                .ok_or(TrustStoreError::CorruptDatabase)?;
+            let peer = PublicIdentity::new(signing_public_key, static_public_key)
+                .map_err(TrustStoreError::InvalidIdentity)?;
+            if peer.device_id != DeviceId::from_bytes(device_id) {
+                return Err(TrustStoreError::CorruptDatabase);
+            }
+            if peer.device_id == self.local_device_id {
+                return Err(TrustStoreError::SelfTrust);
+            }
+            peers.push(peer);
+        }
+        Ok(peers)
+    }
+
+    /// Permanently revokes an authorized peer without deleting its key history.
+    fn revoke_peer(
+        &mut self,
+        device_id: &DeviceId,
+        revoked_at_ms: i64,
+    ) -> Result<(), TrustStoreError> {
+        if revoked_at_ms < 0 {
+            return Err(TrustStoreError::InvalidTimestamp);
+        }
+        if *device_id == self.local_device_id {
+            return Err(TrustStoreError::SelfTrust);
+        }
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .sql()?;
+        let changed = tx
+            .execute(
+                "UPDATE trusted_peers SET state = 2, revoked_at_ms = ?2
+             WHERE device_id = ?1 AND state = 1",
+                params![device_id.as_bytes().as_slice(), revoked_at_ms],
+            )
+            .sql()?;
+        if changed != 1 {
+            return Err(TrustStoreError::UnknownOrRevokedPeer);
+        }
+        tx.commit().sql()?;
+        Ok(())
+    }
+
+    /// Removes an active authorization so the peer can be explicitly paired again.
+    ///
+    /// This operation never removes a revoked row. A caller must close any
+    /// session and serialize profile operations before invoking it. The row is
+    /// deleted transactionally; absent and revoked peers return
+    /// [`TrustStoreError::UnknownOrRevokedPeer`].
+    fn forget_authorized_peer(&mut self, device_id: &DeviceId) -> Result<(), TrustStoreError> {
+        if *device_id == self.local_device_id {
+            return Err(TrustStoreError::SelfTrust);
+        }
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .sql()?;
+        let removed = tx
+            .execute(
+                "DELETE FROM trusted_peers WHERE device_id = ?1 AND state = 1",
+                [device_id.as_bytes().as_slice()],
+            )
+            .sql()?;
+        if removed != 1 {
+            return Err(TrustStoreError::UnknownOrRevokedPeer);
+        }
+        tx.commit().sql()?;
+        Ok(())
+    }
+
     /// Stores a one-time invitation digest without persisting the raw token.
     ///
     /// Expired rows are pruned in the same transaction so the ledger remains
     /// bounded. `now_ms` and `expires_at_ms` are Unix epoch milliseconds.
-    pub fn register_invitation(
+    fn register_invitation(
         &mut self,
         invite_id: [u8; 16],
         raw_token: &[u8; 32],
@@ -321,24 +342,29 @@ impl SqliteTrustStore {
         let token_hash = InvitationTokenHash::from_token(raw_token);
         let tx = self
             .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .sql()?;
         tx.execute(
             "DELETE FROM invitation_ledger WHERE expires_at_ms <= ?1",
             [now_ms],
-        )?;
-        let existing: bool = tx.query_row(
-            "SELECT EXISTS(SELECT 1 FROM invitation_ledger
+        )
+        .sql()?;
+        let existing: bool = tx
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM invitation_ledger
              WHERE invite_id = ?1 OR token_hash = ?2)",
-            params![invite_id.as_slice(), token_hash.as_bytes().as_slice()],
-            |row| row.get(0),
-        )?;
+                params![invite_id.as_slice(), token_hash.as_bytes().as_slice()],
+                |row| row.get(0),
+            )
+            .sql()?;
         if existing {
             return Err(TrustStoreError::InvitationAlreadyRegistered);
         }
-        let invite_count: i64 =
-            tx.query_row("SELECT count(*) FROM invitation_ledger", [], |row| {
+        let invite_count: i64 = tx
+            .query_row("SELECT count(*) FROM invitation_ledger", [], |row| {
                 row.get(0)
-            })?;
+            })
+            .sql()?;
         if invite_count >= MAX_INVITATIONS {
             return Err(TrustStoreError::InvitationLimitReached);
         }
@@ -350,13 +376,14 @@ impl SqliteTrustStore {
                 token_hash.as_bytes().as_slice(),
                 expires_at_ms
             ],
-        )?;
-        tx.commit()?;
+        )
+        .sql()?;
+        tx.commit().sql()?;
         Ok(token_hash)
     }
 
     /// Atomically consumes a registered invitation once and before expiry.
-    pub fn consume_invitation(
+    fn consume_invitation(
         &mut self,
         invite_id: &[u8; 16],
         token_hash: &InvitationTokenHash,
@@ -367,100 +394,52 @@ impl SqliteTrustStore {
         }
         let tx = self
             .connection
-            .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let changed = tx.execute(
-            "UPDATE invitation_ledger SET consumed_at_ms = ?3
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .sql()?;
+        let changed = tx
+            .execute(
+                "UPDATE invitation_ledger SET consumed_at_ms = ?3
              WHERE invite_id = ?1 AND token_hash = ?2
              AND consumed_at_ms IS NULL AND expires_at_ms > ?3",
-            params![
-                invite_id.as_slice(),
-                token_hash.as_bytes().as_slice(),
-                now_ms
-            ],
-        )?;
+                params![
+                    invite_id.as_slice(),
+                    token_hash.as_bytes().as_slice(),
+                    now_ms
+                ],
+            )
+            .sql()?;
         if changed != 1 {
             return Err(TrustStoreError::InvitationUnavailable);
         }
-        tx.commit()?;
+        tx.commit().sql()?;
         Ok(())
-    }
-
-    /// Returns the profile directory used to open this database.
-    pub fn profile_dir(&self) -> &Path {
-        &self.profile_dir
     }
 }
 
-/// Errors returned by the persistent trust and invitation store.
-#[derive(Debug, Error)]
-pub enum TrustStoreError {
-    /// This platform has no hardened profile database implementation.
-    #[error("private SQLite trust storage is unsupported on this platform")]
-    UnsupportedPlatform,
-    /// The profile path or its permissions are unsafe.
-    #[error("profile directory or database file has unsafe permissions")]
-    InvalidProfile,
-    /// A new database cannot replace an existing file.
-    #[error("trust database already exists")]
-    DatabaseExists,
-    /// The expected database does not exist.
-    #[error("trust database is missing")]
-    MissingDatabase,
-    /// SQLite reports corruption or the integrity check failed.
-    #[error("trust database is corrupt")]
-    CorruptDatabase,
-    /// The schema, application ID, or schema version is unsupported.
-    #[error("trust database schema is unsupported")]
-    SchemaMismatch,
-    /// The database belongs to another local device identity.
-    #[error("trust database is bound to a different device identity")]
-    IdentityMismatch,
-    /// Attempted to authorize or revoke the local device itself.
-    #[error("a device cannot be trusted or revoked as its own peer")]
-    SelfTrust,
-    /// A peer ID was reused with different public keys.
-    #[error("peer keys conflict with an existing device identifier")]
-    KeyConflict,
-    /// A peer was explicitly revoked and cannot be silently reauthorized.
-    #[error("peer is revoked")]
-    PeerRevoked,
-    /// The peer is absent or is not currently authorized.
-    #[error("peer is unknown or revoked")]
-    UnknownOrRevokedPeer,
-    /// The configured peer count limit has been reached.
-    #[error("trusted peer limit reached")]
-    PeerLimitReached,
-    /// A peer listing exceeded the maximum number of authorized peers.
-    #[error("trusted peer list exceeds the configured limit")]
-    TrustedPeerListTooLarge,
-    /// The invitation ID or digest has already been registered.
-    #[error("invitation is already registered")]
-    InvitationAlreadyRegistered,
-    /// The configured active invitation limit has been reached.
-    #[error("invitation ledger limit reached")]
-    InvitationLimitReached,
-    /// The invitation is unknown, expired, or already consumed.
-    #[error("invitation is unavailable")]
-    InvitationUnavailable,
-    /// An invitation identifier or token is the prohibited all-zero value.
-    #[error("invalid invitation identifier or token")]
-    InvalidInvitation,
-    /// A timestamp is negative or the invitation expiry is not in the future.
-    #[error("invalid timestamp")]
-    InvalidTimestamp,
-    /// Public identity fields do not form a valid identity.
-    #[error(transparent)]
-    InvalidIdentity(SignatureError),
-    /// A database operation failed; SQL values are not included in this error.
-    #[error("trust database operation failed: {0}")]
-    Database(#[from] rusqlite::Error),
+/// SQLite failures as trust errors: corruption is told apart, the rest is a
+/// storage failure without the SQL values.
+trait Sql<T> {
+    fn sql(self) -> Result<T, TrustStoreError>;
+}
+
+impl<T> Sql<T> for rusqlite::Result<T> {
+    fn sql(self) -> Result<T, TrustStoreError> {
+        self.map_err(|error| match error.sqlite_error_code() {
+            Some(ErrorCode::DatabaseCorrupt | ErrorCode::NotADatabase) => {
+                TrustStoreError::CorruptDatabase
+            }
+            _ => TrustStoreError::Storage,
+        })
+    }
 }
 
 fn initialize_schema(
     connection: &mut Connection,
     local_device_id: DeviceId,
 ) -> Result<(), TrustStoreError> {
-    let tx = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let tx = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .sql()?;
     tx.execute_batch(&format!(
         r#"PRAGMA application_id = {APPLICATION_ID};
            PRAGMA user_version = {SCHEMA_VERSION};
@@ -484,12 +463,14 @@ fn initialize_schema(
                expires_at_ms INTEGER NOT NULL CHECK(expires_at_ms >= 0),
                consumed_at_ms INTEGER CHECK(consumed_at_ms IS NULL OR consumed_at_ms >= 0)
            ) STRICT, WITHOUT ROWID;"#
-    ))?;
+    ))
+    .sql()?;
     tx.execute(
         "INSERT INTO metadata(singleton, local_device_id) VALUES (1, ?1)",
         [local_device_id.as_bytes().as_slice()],
-    )?;
-    tx.commit()?;
+    )
+    .sql()?;
+    tx.commit().sql()?;
     Ok(())
 }
 
@@ -497,29 +478,37 @@ fn validate_schema(
     connection: &Connection,
     expected_local_device_id: DeviceId,
 ) -> Result<(), TrustStoreError> {
-    let application_id: i64 =
-        connection.pragma_query_value(None, "application_id", |row| row.get(0))?;
-    let schema_version: i64 =
-        connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
+    let application_id: i64 = connection
+        .pragma_query_value(None, "application_id", |row| row.get(0))
+        .sql()?;
+    let schema_version: i64 = connection
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .sql()?;
     if application_id != APPLICATION_ID || schema_version != SCHEMA_VERSION {
         return Err(TrustStoreError::SchemaMismatch);
     }
     let quick_check: Vec<String> = connection
-        .prepare("PRAGMA quick_check")?
-        .query_map([], |row| row.get(0))?
-        .collect::<Result<_, _>>()?;
+        .prepare("PRAGMA quick_check")
+        .sql()?
+        .query_map([], |row| row.get(0))
+        .sql()?
+        .collect::<Result<_, _>>()
+        .sql()?;
     if quick_check.as_slice() != ["ok"] {
         return Err(TrustStoreError::CorruptDatabase);
     }
-    let user_objects: Vec<String> = {
-        let mut statement = connection.prepare(
+    let user_objects: Vec<String> =
+        {
+            let mut statement = connection.prepare(
             "SELECT name FROM sqlite_schema WHERE type IN ('table', 'index', 'view', 'trigger')
              AND name NOT LIKE 'sqlite_%' ORDER BY name",
-        )?;
-        statement
-            .query_map([], |row| row.get(0))?
-            .collect::<Result<_, _>>()?
-    };
+        ).sql()?;
+            statement
+                .query_map([], |row| row.get(0))
+                .sql()?
+                .collect::<Result<_, _>>()
+                .sql()?
+        };
     if user_objects.iter().map(String::as_str).ne([
         "invitation_ledger",
         "metadata",
@@ -527,11 +516,13 @@ fn validate_schema(
     ]) {
         return Err(TrustStoreError::SchemaMismatch);
     }
-    let stored_local_id: Vec<u8> = connection.query_row(
-        "SELECT local_device_id FROM metadata WHERE singleton = 1",
-        [],
-        |row| row.get(0),
-    )?;
+    let stored_local_id: Vec<u8> = connection
+        .query_row(
+            "SELECT local_device_id FROM metadata WHERE singleton = 1",
+            [],
+            |row| row.get(0),
+        )
+        .sql()?;
     if stored_local_id.as_slice() != expected_local_device_id.as_bytes() {
         return Err(TrustStoreError::IdentityMismatch);
     }
@@ -539,21 +530,29 @@ fn validate_schema(
 }
 
 fn configure_connection(connection: &Connection) -> Result<(), TrustStoreError> {
-    connection.busy_timeout(std::time::Duration::from_secs(5))?;
-    connection.execute_batch(
-        "PRAGMA journal_mode = DELETE;
+    connection
+        .busy_timeout(std::time::Duration::from_secs(5))
+        .sql()?;
+    connection
+        .execute_batch(
+            "PRAGMA journal_mode = DELETE;
          PRAGMA synchronous = FULL;
          PRAGMA secure_delete = ON;
          PRAGMA trusted_schema = OFF;
          PRAGMA foreign_keys = ON;
          PRAGMA temp_store = MEMORY;",
-    )?;
+        )
+        .sql()?;
     Ok(())
 }
 
 fn configure_readonly_connection(connection: &Connection) -> Result<(), TrustStoreError> {
-    connection.busy_timeout(std::time::Duration::from_secs(5))?;
-    connection.execute_batch("PRAGMA query_only = ON; PRAGMA trusted_schema = OFF;")?;
+    connection
+        .busy_timeout(std::time::Duration::from_secs(5))
+        .sql()?;
+    connection
+        .execute_batch("PRAGMA query_only = ON; PRAGMA trusted_schema = OFF;")
+        .sql()?;
     Ok(())
 }
 
@@ -563,7 +562,7 @@ fn open_connection(path: &Path) -> Result<Connection, TrustStoreError> {
         path,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
     )
-    .map_err(TrustStoreError::Database)
+    .sql()
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -577,7 +576,7 @@ fn open_readonly_connection(path: &Path) -> Result<Connection, TrustStoreError> 
         path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NOFOLLOW,
     )
-    .map_err(TrustStoreError::Database)
+    .sql()
 }
 
 #[cfg(not(target_os = "linux"))]

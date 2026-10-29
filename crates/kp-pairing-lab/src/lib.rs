@@ -25,8 +25,8 @@ use std::{
 use async_trait::async_trait;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use kryptopass_identity::{
-    DeviceId, DeviceIdentity, PublicIdentity, SecureKeyStore, SqliteTrustStore,
-    SystemSecretKeyStore, TrustStoreError,
+    DeviceId, DeviceIdentity, PublicIdentity, SecureKeyStore, SystemSecretKeyStore, TrustStore,
+    TrustStoreError,
 };
 use kryptopass_lan::{
     InternetIceConfig, InternetIceTransportPolicy, LanHost, NetworkPolicyError, NetworkPolicyGuard,
@@ -37,6 +37,7 @@ use kryptopass_pairing::{
     PairingOutcome, PairingRole, SasDisplay,
 };
 use kryptopass_protocol::Channel;
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_transport::{LoopbackTransport, PeerTransport, TransportError, TransportFrame};
 use thiserror::Error;
 use tokio::{
@@ -602,11 +603,16 @@ impl LabHost {
         config.timeout = RECONNECT_PAIRING_TIMEOUT;
         let mut approval = RejectUnexpectedApproval;
         let operation = async {
-            PairingEngine::new(LabTransport::Lan(transport), &self.identity, store, config)
-                .map_err(classify_reconnect)?
-                .run(None, &mut approval)
-                .await
-                .map_err(classify_reconnect)
+            PairingEngine::new(
+                LabTransport::Lan(transport),
+                &self.identity,
+                Box::new(store),
+                config,
+            )
+            .map_err(classify_reconnect)?
+            .run(None, &mut approval)
+            .await
+            .map_err(classify_reconnect)
         };
         tokio::select! {
             result = timeout(RECONNECT_PAIRING_TIMEOUT, operation) => {
@@ -879,7 +885,7 @@ impl LabHost {
         invitation: Option<&PairingInvitation>,
         approval: &mut UiApproval,
     ) -> Result<PairingOutcome<LabTransport>, LabError> {
-        PairingEngine::new(transport, &self.identity, store, config)
+        PairingEngine::new(transport, &self.identity, Box::new(store), config)
             .map_err(classify)?
             .run(invitation, approval)
             .await

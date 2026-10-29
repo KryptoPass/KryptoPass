@@ -22,6 +22,7 @@ getrandom = "0.3"
 kryptopass_identity = { package = "kp-identity", path = "../kp-identity" }
 kryptopass_devices = { package = "kp-devices", path = "../kp-devices" }
 kryptopass_sync = { package = "kp-sync", path = "../kp-sync" }
+kryptopass_store = { package = "kp-store", path = "../kp-store" }
 kryptopass_lan = { package = "kp-lan", path = "../kp-lan" }
 kryptopass_pairing = { package = "kp-pairing", path = "../kp-pairing" }
 kryptopass_protocol = { package = "kp-protocol", path = "../kp-protocol" }
