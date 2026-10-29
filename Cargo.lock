@@ -2254,6 +2254,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "kp-store"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kp-core",
+ "kp-template",
+ "libc",
+ "rusqlite",
+ "sha2",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "kp-sync"
 version = "0.1.0"
 dependencies = [

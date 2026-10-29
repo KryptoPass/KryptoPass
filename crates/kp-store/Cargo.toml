@@ -1,0 +1,24 @@
+[package]
+name = "kp-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "SQLite store for the vault: items as version graphs, folders and links"
+publish = false
+
+[lib]
+name = "kryptopass_store"
+
+[dependencies]
+kryptopass-core = { package = "kp-core", path = "../kp-core" }
+kp-template = { path = "../kp-template" }
+anyhow = "1"
+libc = "0.2"
+rusqlite = { version = "0.40.2", default-features = false }
+sha2 = "0.10"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+
+[lints]
+workspace = true
