@@ -231,7 +231,7 @@ pub(super) fn delete(connection: &Connection, id: SecretId) -> StoreResult<()> {
 pub(super) fn create_from_record(
     connection: &Connection,
     record: &ItemRecord,
-    now_millis: u64,
+    written_millis: u64,
 ) -> StoreResult<()> {
     let ItemRecord { meta, ciphertext } = record;
     check_ciphertext(ciphertext)?;
@@ -248,7 +248,7 @@ pub(super) fn create_from_record(
         meta.head,
         &meta.state,
         &Author::Local,
-        Hlc::next(now_millis, []),
+        Hlc::next(written_millis, []),
         ciphertext,
     )
 }

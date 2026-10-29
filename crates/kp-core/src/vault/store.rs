@@ -97,6 +97,15 @@ pub struct PutItem {
     pub link: LinkChange,
 }
 
+/// A new item in a [`Change::Append`].
+#[derive(Clone, Debug)]
+pub struct AppendItem {
+    pub record: ItemRecord,
+    /// When the item was last written, in milliseconds since the Unix epoch:
+    /// at its source for an import. The first version's clock starts there.
+    pub written_millis: u64,
+}
+
 /// One atomic write. Either all of it persists or none of it does.
 ///
 /// Changes that move or delete items must give every item they touch a new
@@ -134,10 +143,11 @@ pub enum Change {
         contents: FolderContents,
     },
     /// Adds a batch without replacing anything; any collision rejects it all.
-    /// Each item gets its record as a first version.
+    /// Each item gets its record as a first version. Folders come parents
+    /// first.
     Append {
         folders: Vec<Folder>,
-        items: Vec<ItemRecord>,
+        items: Vec<AppendItem>,
         links: Vec<SecretLink>,
     },
     /// Replaces the recipients of new items outside a folder with defaults;

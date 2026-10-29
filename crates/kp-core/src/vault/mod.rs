@@ -14,6 +14,7 @@ mod error;
 mod folders;
 mod history;
 mod icon;
+mod import;
 mod item;
 mod items;
 mod record;
@@ -31,11 +32,14 @@ pub use cipher::{Cipher, CipherError};
 pub use conflict::Conflict;
 pub use error::VaultError;
 pub use folders::{FolderEdit, NewFolder};
+pub use import::{ImportBatch, ImportFolder, ImportItem, ImportReceipt};
 pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};
 pub use record::{Author, ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo};
 pub use registry::TemplateRegistry;
 pub use settings::KeySettings;
-pub use store::{Base, Change, FolderContents, LinkChange, Parents, PutItem, Store, StoreError};
+pub use store::{
+    AppendItem, Base, Change, FolderContents, LinkChange, Parents, PutItem, Store, StoreError,
+};
 
 /// An open vault: storage, the keys to read it and the templates it uses.
 pub struct Vault<S, C> {

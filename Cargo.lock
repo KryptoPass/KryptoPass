@@ -2000,6 +2000,7 @@ dependencies = [
  "anyhow",
  "kp-core",
  "kp-generator",
+ "kp-import",
  "kp-keyring",
  "kp-search",
  "kp-store",

@@ -4,6 +4,7 @@ use kp_template::LibraryError;
 use kryptopass_core::ActionError;
 use kryptopass_core::vault::VaultError;
 use kryptopass_generator::GeneratorError;
+use kryptopass_import::ImportError;
 use thiserror::Error;
 
 /// Why an application operation failed. Like the layers below, it never
@@ -32,6 +33,10 @@ pub enum AppError {
     InvalidTotp,
     #[error(transparent)]
     Action(ActionError),
+    #[error(transparent)]
+    Import(#[from] ImportError),
+    #[error("the import file could not be read")]
+    ImportFile,
 }
 
 impl AppError {
@@ -51,6 +56,13 @@ impl AppError {
             Self::InvalidTotp => "invalid-totp",
             Self::Action(ActionError::Unsupported) => "action-unsupported",
             Self::Action(_) => "action-failed",
+            Self::Import(ImportError::Limit) => "import-too-large",
+            Self::Import(ImportError::DecryptionRequired | ImportError::Decryption) => {
+                "import-decryption-failed"
+            }
+            Self::Import(ImportError::Unsupported) => "import-unsupported",
+            Self::Import(_) => "import-invalid",
+            Self::ImportFile => "import-unreadable",
         }
     }
 }

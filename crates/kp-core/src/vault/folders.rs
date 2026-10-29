@@ -8,7 +8,7 @@ use super::{Cipher, Store, Vault, logged};
 use crate::domain::{Folder, FolderAppearance, FolderId, RecipientSet};
 use crate::util::{Ancestry, ancestry, clean_line};
 
-const MAX_FOLDER_NAME_BYTES: usize = 256;
+pub(super) const MAX_FOLDER_NAME_BYTES: usize = 256;
 
 /// A folder to create.
 pub struct NewFolder {

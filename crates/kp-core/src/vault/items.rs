@@ -13,7 +13,7 @@ use crate::domain::item::{ItemContent, decode_item, encode_item_with};
 use crate::domain::{Folder, FolderId, SecretId, SecretLink, SecretLinkError};
 use crate::util::{clean_line, unix_millis};
 
-const MAX_TITLE_BYTES: usize = 512;
+pub(super) const MAX_TITLE_BYTES: usize = 512;
 
 impl<S: Store, C: Cipher> Vault<S, C> {
     /// Metadata of every item, for lists and search, without decrypting.

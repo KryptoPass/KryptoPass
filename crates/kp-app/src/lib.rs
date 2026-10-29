@@ -17,6 +17,7 @@ mod draft;
 mod error;
 mod form;
 mod generator;
+mod import;
 mod search;
 mod session;
 
@@ -26,5 +27,6 @@ pub use draft::{Draft, Origin};
 pub use error::AppError;
 pub use form::{Form, FormChoice, FormField, FormSection};
 pub use generator::{generate_for, settings_for};
+pub use import::{Adaptations, PreparedImport, importers, prepare_import, read_export};
 pub use search::{VaultSearchSource, catalog_records};
 pub use session::{AppVault, VaultSession};

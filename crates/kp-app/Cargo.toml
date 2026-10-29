@@ -17,6 +17,7 @@ kryptopass-store = { package = "kp-store", path = "../kp-store" }
 kryptopass-keyring = { package = "kp-keyring", path = "../kp-keyring", features = ["vault"] }
 kryptopass-generator = { package = "kp-generator", path = "../kp-generator" }
 kryptopass-search = { package = "kp-search", path = "../kp-search" }
+kryptopass-import = { package = "kp-import", path = "../kp-import" }
 kp-template = { path = "../kp-template" }
 anyhow = "1"
 thiserror = "2.0"
