@@ -44,7 +44,7 @@ impl Keyring {
         }
     }
 
-    fn session(&self) -> Result<Session> {
+    pub(crate) fn session(&self) -> Result<Session> {
         Session::open(self.home.as_deref())
     }
 

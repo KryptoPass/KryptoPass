@@ -13,11 +13,17 @@ name = "kryptopass_keyring"
 
 [dependencies]
 kryptopass-secure-memory = { package = "kp-memsec", path = "../kp-memsec" }
+kryptopass-core = { package = "kp-core", path = "../kp-core", optional = true }
+anyhow = { version = "1", optional = true }
 gpgme = { version = "0.11", features = ["v1_15"] }
 tempfile = "3.27"
 thiserror = "2.0"
 tracing = "0.1"
 url = "2.5"
+
+[features]
+# The vault's encryption port (`KeyringCipher`) on this keyring.
+vault = ["dep:kryptopass-core", "dep:anyhow"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

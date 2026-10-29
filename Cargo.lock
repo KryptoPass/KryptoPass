@@ -2143,7 +2143,9 @@ dependencies = [
 name = "kp-keyring"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "gpgme",
+ "kp-core",
  "kp-memsec",
  "libc",
  "tempfile",

@@ -46,6 +46,24 @@ pub enum Error {
     NoSecretMaterial(Fingerprint),
     #[error("the keyring has no secret key")]
     NoSecretKey,
+    /// Under [`Unlock::Cached`](crate::Unlock::Cached), the passphrase is not
+    /// cached and asking for it is not allowed.
+    #[error("the secret key is locked")]
+    Locked,
+    #[error("the passphrase is wrong")]
+    BadPassphrase,
+    #[error("{0} has no usable encryption subkey")]
+    CannotEncrypt(Fingerprint),
+    /// The person's own key is in the keyring with its secret part but not
+    /// marked as theirs, so GnuPG will not encrypt to it.
+    #[error("{0} is the user's key but is not trusted as such")]
+    OwnKeyNotTrusted(Fingerprint),
+    #[error("the data exceeds the size limit")]
+    TooLarge,
+    #[error("the ciphertext has no integrity protection")]
+    UnprotectedCiphertext,
+    #[error("the ciphertext uses an unsupported algorithm")]
+    UnsupportedAlgorithm,
     #[error("{0} still has secret material; GnuPG cannot delete only its public part")]
     SecretMaterialPresent(Fingerprint),
     #[error("the input holds no OpenPGP keys or revocations GnuPG can import")]
@@ -99,6 +117,10 @@ pub enum InvalidInput {
     DuplicateUserId,
     #[error("a key cannot certify itself")]
     SelfCertification,
+    #[error("encrypt to between 1 and 64 recipients")]
+    RecipientCount,
+    #[error("the ciphertext is empty")]
+    EmptyCiphertext,
 }
 
 /// GnuPG reported success, but reading the keyring back disagreed.
@@ -149,6 +171,8 @@ pub enum Step {
     Certify,
     Sign,
     Delete,
+    Encrypt,
+    Decrypt,
 }
 
 impl std::fmt::Display for Step {
@@ -170,6 +194,8 @@ impl std::fmt::Display for Step {
             Self::Certify => "certify",
             Self::Sign => "sign",
             Self::Delete => "delete",
+            Self::Encrypt => "encrypt",
+            Self::Decrypt => "decrypt",
         })
     }
 }
