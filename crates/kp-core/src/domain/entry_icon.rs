@@ -204,11 +204,17 @@ pub fn favicon_for_url(value: &str) -> Option<EntryIcon> {
     valid_favicon_host(&host).then_some(EntryIcon::Favicon { host })
 }
 
+/// Icon derived from a web address: the site's favicon, or a server theme icon
+/// when the address has no usable favicon host.
+pub fn automatic_icon_for_url(value: &str) -> Option<EntryIcon> {
+    favicon_for_url(value).or_else(|| server_theme_for_url(value))
+}
+
 pub fn automatic_entry_icon(content: &SecretContent) -> Option<EntryIcon> {
     match content {
         SecretContent::Login(login) => {
             let url = login.urls.first().map_or("", crate::SensitiveText::as_str);
-            favicon_for_url(url).or_else(|| server_theme_for_url(url))
+            automatic_icon_for_url(url)
         }
         SecretContent::Note(_)
         | SecretContent::Custom(_)

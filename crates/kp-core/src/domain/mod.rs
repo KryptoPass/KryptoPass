@@ -2,6 +2,8 @@
 
 pub mod content;
 pub mod entry_icon;
+pub mod item;
+pub(crate) mod wifi;
 
 use thiserror::Error;
 use uuid::Uuid;
@@ -73,6 +75,35 @@ impl Default for SecretId {
 pub struct SecretLink {
     pub first: SecretId,
     pub second: SecretId,
+}
+
+impl SecretLink {
+    /// The link between two different items, endpoints in UUID order so each
+    /// pair has one representation. `None` when both are the same item.
+    pub fn new(a: SecretId, b: SecretId) -> Option<Self> {
+        match a.0.cmp(&b.0) {
+            std::cmp::Ordering::Less => Some(Self {
+                first: a,
+                second: b,
+            }),
+            std::cmp::Ordering::Greater => Some(Self {
+                first: b,
+                second: a,
+            }),
+            std::cmp::Ordering::Equal => None,
+        }
+    }
+
+    /// The other end of the link, or `None` when `endpoint` is not on it.
+    pub fn other(self, endpoint: SecretId) -> Option<SecretId> {
+        if endpoint == self.first {
+            Some(self.second)
+        } else if endpoint == self.second {
+            Some(self.first)
+        } else {
+            None
+        }
+    }
 }
 
 /// Canonical OpenPGP fingerprint used as a recipient reference.

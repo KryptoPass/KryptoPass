@@ -8,6 +8,7 @@ pub mod password;
 pub mod ports;
 pub mod search;
 pub mod service;
+pub mod util;
 pub mod vault_asset;
 pub mod vault_object;
 
@@ -20,8 +21,13 @@ pub use domain::content::{
 };
 pub use domain::entry_icon::{
     EntryAppearanceUpdate, EntryIcon, EntryIconAsset, MAX_ENTRY_ICON_BYTES,
-    MAX_ENTRY_ICON_DIMENSION, automatic_entry_icon, favicon_for_url, png_sha256,
-    valid_favicon_host, validate_normalized_png,
+    MAX_ENTRY_ICON_DIMENSION, automatic_entry_icon, automatic_icon_for_url, favicon_for_url,
+    png_sha256, valid_favicon_host, validate_normalized_png,
+};
+pub use domain::item::{
+    ActionError, CodecError, CustomValue, FieldValue, FormatCheck, FormatRules,
+    ITEM_SCHEMA_VERSION, IssueCode, IssueTarget, ItemContent, ItemIssue, ItemIssues, ItemValue,
+    MigrationError, decode_item, encode_item, encode_item_with,
 };
 pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,

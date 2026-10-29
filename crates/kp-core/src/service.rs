@@ -2,7 +2,6 @@
 
 use crate::SensitiveBytes;
 use anyhow::{Context, Result, ensure};
-use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroize;
 
 use crate::domain::content::LoginHistoryEventKind;
@@ -338,7 +337,7 @@ impl<S: Storage, G: OpenPgp> SecretsService<S, G> {
             previous_content.as_mut(),
             existing.as_ref().map_or("", |secret| secret.title.as_str()),
             metadata_changed,
-            unix_seconds(),
+            crate::util::unix_now(),
         )?;
 
         let plaintext = encode_content(&content)?;
@@ -586,13 +585,6 @@ fn validate_folder_name(name: &str) -> Result<String> {
         "folder name exceeds the maximum size"
     );
     Ok(name.to_owned())
-}
-
-fn unix_seconds() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
 }
 
 impl<S: crate::ports::ImportStorage, G: OpenPgp> crate::import::ImportReceiver

@@ -2,11 +2,12 @@
 
 use crate::SensitiveText;
 
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::ensure_field_size;
+use crate::domain::wifi;
 
 const MAX_NOTES_BYTES: usize = 256 * 1024;
 
@@ -40,19 +41,10 @@ impl WifiContent {
         );
         ensure_field_size("Wi-Fi password", &self.password, 64)?;
         ensure_field_size("Wi-Fi notes", &self.notes, MAX_NOTES_BYTES)?;
-        match &self.security {
-            WifiSecurity::Open => ensure!(
-                self.password.is_empty(),
-                "open Wi-Fi cannot have a password"
-            ),
-            WifiSecurity::Wep => {
-                ensure!(valid_wep_password(&self.password), "invalid WEP password")
-            }
-            WifiSecurity::Wpa | WifiSecurity::Wpa3 => ensure!(
-                valid_wpa_password(&self.password),
-                "WPA password must contain 8 to 63 bytes or 64 hexadecimal digits"
-            ),
-        }
+        ensure!(
+            wifi::password_fits(self.security.shared(), &self.password),
+            "Wi-Fi password does not fit the security mode"
+        );
         Ok(())
     }
 }
@@ -60,51 +52,22 @@ impl WifiContent {
 /// Builds a ZXing-compatible Wi-Fi provisioning payload for a QR encoder.
 pub fn wifi_qr_payload(content: &WifiContent) -> Result<SensitiveText> {
     content.validate()?;
-    ensure!(
-        content.security != WifiSecurity::Wpa3,
-        "WPA3 uses SAE and cannot be represented by the compatible Wi-Fi QR format"
-    );
-    let security = match &content.security {
-        WifiSecurity::Open => "nopass",
-        WifiSecurity::Wep => "WEP",
-        WifiSecurity::Wpa => "WPA",
-        WifiSecurity::Wpa3 => unreachable!("WPA3 is rejected above"),
-    };
-    let mut payload =
-        SensitiveText::with_capacity(content.ssid.len() + content.password.len() + 32);
-    payload.push_str("WIFI:T:");
-    payload.push_str(security);
-    payload.push_str(";S:");
-    push_wifi_escaped(&mut payload, &content.ssid);
-    if content.security != WifiSecurity::Open {
-        payload.push_str(";P:");
-        push_wifi_escaped(&mut payload, &content.password);
-    }
-    if content.hidden {
-        payload.push_str(";H:true");
-    }
-    payload.push_str(";;");
-    Ok(payload)
+    wifi::qr_payload(
+        &content.ssid,
+        content.security.shared(),
+        &content.password,
+        content.hidden,
+    )
+    .context("WPA3 uses SAE and cannot be represented by the compatible Wi-Fi QR format")
 }
 
-fn valid_wep_password(value: &str) -> bool {
-    (matches!(value.len(), 5 | 13) && value.is_ascii())
-        || matches!(value.len(), 10 | 26) && value.bytes().all(|b| b.is_ascii_hexdigit())
-}
-
-fn valid_wpa_password(value: &str) -> bool {
-    (8..=63).contains(&value.len())
-        || (value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
-}
-
-fn push_wifi_escaped(output: &mut SensitiveText, value: &str) {
-    for character in value.chars() {
-        match character {
-            '\\' | ';' | ',' | ':' | '"' => {
-                output.push('\\');
-                output.push(character);
-            }
-            character => output.push(character),
+impl WifiSecurity {
+    fn shared(&self) -> wifi::Security {
+        match self {
+            Self::Open => wifi::Security::Open,
+            Self::Wep => wifi::Security::Wep,
+            Self::Wpa => wifi::Security::Wpa,
+            Self::Wpa3 => wifi::Security::Wpa3,
         }
     }
 }
