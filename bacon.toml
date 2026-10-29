@@ -248,7 +248,7 @@ watch = ["crates/kp-devices", "crates/kp-pairing", "crates/kp-pairing-lab", "cra
 command = ["just", "prepare-synthetic-sync-fixture"]
 need_stdout = true
 default_watch = false
-watch = ["scripts/prepare_synthetic_sync_fixture.py"]
+watch = ["tools/prepare_synthetic_sync_fixture.py"]
 
 [jobs.test-synthetic-key-transfer]
 command = ["just", "test-synthetic-key-transfer"]

@@ -22,7 +22,7 @@ _default:
 
 # Prepara o valida la clave pública sintética de Sync en la caché privada local.
 prepare-synthetic-sync-fixture:
-    python3 scripts/prepare_synthetic_sync_fixture.py
+    python3 tools/prepare_synthetic_sync_fixture.py
 
 alias r := run
 

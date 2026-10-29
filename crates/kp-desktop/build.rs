@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../packaging/icons");
     println!("cargo:rerun-if-changed=../../po");
     println!("cargo:rerun-if-changed=../../packaging/translations.py");
-    println!("cargo:rerun-if-changed=../../scripts/prepare_synthetic_sync_fixture.py");
+    println!("cargo:rerun-if-changed=../../tools/prepare_synthetic_sync_fixture.py");
     println!("cargo:rerun-if-env-changed=KP_SYNTHETIC_FIXTURE_DIR");
     println!("cargo:rerun-if-env-changed=XDG_CACHE_HOME");
     println!("cargo:rerun-if-env-changed=HOME");
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fixture_manifest = fixture_directory.join("fixture.json");
     if env::var("PROFILE").as_deref() == Ok("debug") {
         let fixture_script =
-            manifest_directory.join("../../scripts/prepare_synthetic_sync_fixture.py");
+            manifest_directory.join("../../tools/prepare_synthetic_sync_fixture.py");
         let prepared = Command::new("python3")
             .arg(&fixture_script)
             .arg("--directory")
