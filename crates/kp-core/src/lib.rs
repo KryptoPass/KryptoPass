@@ -9,6 +9,7 @@ pub mod ports;
 pub mod search;
 pub mod service;
 pub mod util;
+pub mod vault;
 pub mod vault_asset;
 pub mod vault_object;
 
