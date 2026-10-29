@@ -16,6 +16,7 @@
 mod checks;
 mod codec;
 mod content;
+mod diff;
 mod format;
 mod issue;
 mod json_text;
@@ -28,6 +29,7 @@ mod value;
 pub use checks::ActionError;
 pub use codec::{CodecError, decode_item, encode_item, encode_item_with};
 pub use content::{CustomValue, ITEM_SCHEMA_VERSION, ItemContent, ItemValue};
+pub use diff::{DiffKind, DiffTarget, Difference, Side, compare};
 pub use format::{FormatCheck, FormatRules};
 pub use issue::{IssueCode, IssueTarget, ItemIssue, ItemIssues};
 pub use migrate::MigrationError;

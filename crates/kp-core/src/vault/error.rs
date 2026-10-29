@@ -55,6 +55,9 @@ pub enum VaultError {
     /// Decrypted content is unreadable or does not belong to its record.
     #[error("stored content is corrupt")]
     CorruptContent,
+    /// A conflicting difference was left without a choice.
+    #[error("a conflict was left unresolved")]
+    ConflictUnresolved,
     #[error(transparent)]
     Invalid(ItemIssues),
     #[error(transparent)]
@@ -86,6 +89,7 @@ impl VaultError {
             Self::NoRecipients => "no-recipients",
             Self::ContentTooLarge => "content-too-large",
             Self::CorruptContent => "corrupt-content",
+            Self::ConflictUnresolved => "conflict-unresolved",
             Self::Invalid(_) => "invalid-content",
             Self::Link(SecretLinkError::InvalidTarget) => "link-invalid-target",
             Self::Link(SecretLinkError::Occupied) => "link-occupied",

@@ -152,7 +152,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             link,
             favorite,
             trashed,
-            resolve,
+            merge_with,
         } = edit;
         let ItemRecord {
             mut meta,
@@ -214,20 +214,14 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                 Ok(icon::automatic(&content, template))
             })?,
         };
+        let parents = match merge_with {
+            Some(other) => Parents::Merge(vec![meta.head, other]),
+            None => Parents::Head,
+        };
         meta.state.icon = icon;
         meta.revision = next_revision(base)?;
+        // `parents` was built from the head being replaced.
         meta.head = VersionId::new();
-        // Resolving an item that is not in conflict is an ordinary edit.
-        let heads = if resolve {
-            self.store.heads(id)?
-        } else {
-            Vec::new()
-        };
-        let parents = if heads.len() > 1 {
-            Parents::Merge(heads.into_iter().map(|head| head.id).collect())
-        } else {
-            Parents::Head
-        };
 
         let ciphertext = resealed.map_or(ciphertext, |(ciphertext, _, _)| ciphertext);
         self.store.commit(Change::PutItem(Box::new(PutItem {
@@ -244,7 +238,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
             item = %id.0,
             revision = meta.revision,
             conflicted = meta.conflicted,
-            resolved = resolve,
+            merged = merge_with.is_some(),
             "item updated"
         );
         Ok(meta)

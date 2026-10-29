@@ -9,6 +9,7 @@
 //! yet; it is meant to replace it.
 
 mod cipher;
+mod conflict;
 mod error;
 mod folders;
 mod history;
@@ -26,6 +27,7 @@ use crate::domain::item::FormatRules;
 
 pub use crate::domain::clock::Hlc;
 pub use cipher::{Cipher, CipherError};
+pub use conflict::Conflict;
 pub use error::VaultError;
 pub use folders::{FolderEdit, NewFolder};
 pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};

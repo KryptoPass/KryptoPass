@@ -37,7 +37,7 @@ pub struct ItemValue {
 }
 
 /// A field the person added, kept in a section whose template allows it.
-#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CustomValue {
     #[zeroize(skip)]

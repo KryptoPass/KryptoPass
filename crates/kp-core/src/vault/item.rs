@@ -1,6 +1,6 @@
 //! Inputs and outputs of item operations.
 
-use super::record::ItemMeta;
+use super::record::{ItemMeta, VersionId};
 use super::store::LinkChange;
 use crate::EntryIconAsset;
 use crate::domain::item::ItemContent;
@@ -61,7 +61,7 @@ pub struct ItemEdit {
     pub(super) link: LinkChange,
     pub(super) favorite: Option<bool>,
     pub(super) trashed: Option<bool>,
-    pub(super) resolve: bool,
+    pub(super) merge_with: Option<VersionId>,
 }
 
 impl ItemEdit {
@@ -74,7 +74,7 @@ impl ItemEdit {
             && self.link == LinkChange::Keep
             && self.favorite.is_none()
             && self.trashed.is_none()
-            && !self.resolve
+            && self.merge_with.is_none()
     }
 
     /// An edit of `id` as it was at revision `base`.
@@ -89,7 +89,7 @@ impl ItemEdit {
             link: LinkChange::Keep,
             favorite: None,
             trashed: None,
-            resolve: false,
+            merge_with: None,
         }
     }
 
@@ -131,10 +131,11 @@ impl ItemEdit {
         self
     }
 
-    /// Saves the result as the merge of every diverging version, which ends
-    /// the conflict. The edit should carry the content the person settled on.
-    pub fn resolve_conflict(mut self) -> Self {
-        self.resolve = true;
+    /// Saves the result as the merge of the head with `version`, a diverging
+    /// head. The edit should carry what the person settled on; see
+    /// [`Vault::resolve_conflict`](super::Vault::resolve_conflict).
+    pub fn merge_with(mut self, version: VersionId) -> Self {
+        self.merge_with = Some(version);
         self
     }
 }

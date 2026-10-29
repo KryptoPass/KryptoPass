@@ -12,7 +12,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 ///
 /// Serialized as a JSON string or array. It is read from the raw JSON text
 /// (see `json_text`) so no decoded copy is left in a parser buffer.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, PartialEq, Eq, Zeroize, ZeroizeOnDrop)]
 pub enum FieldValue {
     One(SensitiveText),
     Many(Vec<SensitiveText>),

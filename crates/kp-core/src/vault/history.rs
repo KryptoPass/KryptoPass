@@ -1,4 +1,4 @@
-//! An item's versions: its history and the heads that diverge.
+//! An item's versions: its history and the sides of a conflict.
 
 use super::error::VaultError;
 use super::item::Item;
@@ -8,7 +8,7 @@ use crate::domain::SecretId;
 
 impl<S: Store, C: Cipher> Vault<S, C> {
     /// Versions without children, the head among them. More than one means
-    /// the item is in conflict.
+    /// the item is in conflict; see [`Vault::open_conflict`].
     pub fn item_heads(&self, id: SecretId) -> Result<Vec<VersionInfo>, VaultError> {
         logged("item_heads", self.store.heads(id).map_err(Into::into))
     }

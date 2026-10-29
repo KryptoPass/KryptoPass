@@ -26,9 +26,9 @@ pub use domain::entry_icon::{
     png_sha256, valid_favicon_host, validate_normalized_png,
 };
 pub use domain::item::{
-    ActionError, CodecError, CustomValue, FieldValue, FormatCheck, FormatRules,
-    ITEM_SCHEMA_VERSION, IssueCode, IssueTarget, ItemContent, ItemIssue, ItemIssues, ItemValue,
-    MigrationError, decode_item, encode_item, encode_item_with,
+    ActionError, CodecError, CustomValue, DiffKind, DiffTarget, Difference, FieldValue,
+    FormatCheck, FormatRules, ITEM_SCHEMA_VERSION, IssueCode, IssueTarget, ItemContent, ItemIssue,
+    ItemIssues, ItemValue, MigrationError, Side, decode_item, encode_item, encode_item_with,
 };
 pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, Secret,
