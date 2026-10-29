@@ -11,7 +11,7 @@ mod validate;
 pub use error::LibraryError;
 pub use validate::referenced_messages;
 
-use crate::model::{Catalog, GeneratorDef, Template};
+use crate::model::{Catalog, GeneratorDef, MessageId, MessageRef, MessageScope, Template, Text};
 
 /// Templates together with the catalogs and generators they refer to.
 ///
@@ -77,6 +77,56 @@ impl Library {
             .find(|catalog| catalog.language.as_str() == language)
     }
 
+    /// The text to show for `text` in `language`.
+    ///
+    /// Falls back to the base language (`pt` for `pt-BR`), then English, then
+    /// any language, so a gap shows other text instead of nothing. `None` only
+    /// when no language has it.
+    pub fn text<'a>(&'a self, text: &'a Text, language: &str) -> Option<&'a str> {
+        match text {
+            Text::Key(key) => self.message(key, language),
+            Text::Literal(literals) => fallback_order(language)
+                .find_map(|wanted| {
+                    literals
+                        .iter()
+                        .find(|literal| wanted.is_none_or(|tag| literal.language == tag))
+                })
+                .map(|literal| literal.text.as_str()),
+        }
+    }
+
+    /// The translation of `key` in `language`, with the same fallbacks.
+    pub fn message(&self, key: &MessageRef, language: &str) -> Option<&str> {
+        fallback_order(language)
+            .flat_map(|wanted| {
+                self.catalogs.iter().filter(move |catalog| {
+                    wanted.is_none_or(|tag| catalog.language.as_str() == tag)
+                })
+            })
+            .find_map(|catalog| catalog.messages.get(key))
+            .map(String::as_str)
+    }
+
+    /// The title of a section; its id when no catalog has one, as for user
+    /// templates.
+    pub fn section_title<'a>(&'a self, section: &'a str, language: &str) -> &'a str {
+        self.scoped(MessageScope::Section, section, language)
+    }
+
+    /// The label of a `choice` option; the option id itself when untranslated,
+    /// as for product names.
+    pub fn option_label<'a>(&'a self, option: &'a str, language: &str) -> &'a str {
+        self.scoped(MessageScope::Option, option, language)
+    }
+
+    fn scoped<'a>(&'a self, scope: MessageScope, id: &'a str, language: &str) -> &'a str {
+        let key = MessageRef {
+            scope,
+            id: MessageId::from_validated(id.to_owned()),
+        };
+        self.message(&key, language).unwrap_or(id)
+    }
+
     /// All generators.
     pub fn generators(&self) -> &[GeneratorDef] {
         &self.generators
@@ -88,4 +138,17 @@ impl Library {
             .iter()
             .find(|generator| generator.id.as_str() == id)
     }
+}
+
+/// Languages to try for `language`: itself, its base, English, then any
+/// (`None`).
+fn fallback_order(language: &str) -> impl Iterator<Item = Option<&str>> {
+    let base = language.split_once('-').map(|(base, _)| base);
+    [Some(language), base, Some("en"), None]
+        .into_iter()
+        .enumerate()
+        .filter_map(move |(index, tag)| match (index, tag) {
+            (1 | 2, None) => None,
+            (_, tag) => Some(tag),
+        })
 }
