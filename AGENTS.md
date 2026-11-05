@@ -158,3 +158,11 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   bidireccional; falta teléfono → Desktop con importación create-only en
   GnuPG, aceptación local y recibo con desafío. Va después de validar Sync.
   Detalle en `../kryptopass-android/docs/key-provisioning-flow.md`.
+
+- 2026-11-05: Desktop quedó sobre `kp-app`/`kp-store` con el contrato de Sync
+  (`docs/sync/contrato.md`). `src/vault_access.rs` abre la bóveda y la identidad
+  que firma cada versión; esa identidad ya se crea al abrir la bóveda en un equipo
+  sin perfil, nunca regenera una existente o corrupta. La bóveda vieja
+  (`kryptopass.sqlite3`) y los `.kpb` del formato anterior no se abren. Los eventos
+  de uso (copias) ya no se registran. Las pruebas que usaban el modelo anterior no
+  compilan: están pendientes del agente de tests.

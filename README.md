@@ -66,9 +66,9 @@ Tú creas la entrada, OpenPGP la cifra con tu clave de GnuPG y el resultado se
 guarda en una base SQLite local. KryptoPass no necesita subir tus secretos a
 ningún servidor para funcionar.
 
-> Los nombres, las carpetas y las huellas de destinatarios quedan como metadatos
-> sin cifrar. Es una decisión de diseño para poder organizar y buscar la bóveda
-> antes de desbloquearla.
+> Cada versión viaja y se guarda con su nombre y carpeta cifrados. Para poder
+> listar y buscar la bóveda, este equipo mantiene un índice local con esos datos
+> sin cifrar, junto con las huellas de los destinatarios.
 
 La bóveda se bloquea al bloquear la sesión, al suspender el equipo o tras un
 periodo de inactividad. El acceso del navegador y las lecturas pendientes se
@@ -95,7 +95,8 @@ dispositivos ya autorizados no vuelve a pedir el QR ni el SAS.
 
 Sync entre dispositivos, el transporte por Internet y la transferencia de la
 identidad OpenPGP al teléfono están en fase de laboratorio. No se presentan como
-una función auditada para producción.
+una función auditada para producción. El nuevo formato de Sync ya está en Desktop;
+hasta que llegue a Android, Desktop y el teléfono no sincronizan entre sí.
 
 ## Estado
 

@@ -34,6 +34,24 @@ impl DerivedKey {
     }
 }
 
+/// The public values of an OpenSSH private key, for the editor to show before
+/// saving. `None` when the text is not a valid key. Never needs the passphrase.
+pub fn inspect_ssh_key(private_key: &str) -> Option<SshKeyInfo> {
+    let key = PrivateKey::from_openssh(private_key).ok()?;
+    Some(SshKeyInfo {
+        public_key: key.public_key().to_openssh().ok()?,
+        fingerprint: key.fingerprint(HashAlg::Sha256).to_string(),
+        algorithm: key.algorithm().to_string(),
+    })
+}
+
+/// See [`inspect_ssh_key`].
+pub struct SshKeyInfo {
+    pub public_key: String,
+    pub fingerprint: String,
+    pub algorithm: String,
+}
+
 /// The template's private-key field id, if it has one.
 pub(super) fn private_key_field(template: &Template) -> Option<&str> {
     template

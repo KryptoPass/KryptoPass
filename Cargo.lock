@@ -2006,6 +2006,7 @@ dependencies = [
  "kp-search",
  "kp-store",
  "kp-template",
+ "serde_json",
  "thiserror 2.0.21",
  "tracing",
  "uuid",
@@ -2068,9 +2069,11 @@ dependencies = [
  "getrandom 0.3.4",
  "gpgme",
  "image",
+ "kp-app",
  "kp-browser",
  "kp-core",
  "kp-devices",
+ "kp-generator",
  "kp-identity",
  "kp-import",
  "kp-keyring",
@@ -2079,8 +2082,9 @@ dependencies = [
  "kp-pairing",
  "kp-peers",
  "kp-search",
+ "kp-store",
  "kp-sync",
- "kp-vault",
+ "kp-template",
  "libc",
  "qrcode",
  "rqrr",
@@ -2320,16 +2324,6 @@ dependencies = [
  "kp-protocol",
  "thiserror 2.0.21",
  "tokio",
-]
-
-[[package]]
-name = "kp-vault"
-version = "0.1.0"
-dependencies = [
- "kp-core",
- "kp-identity",
- "kp-sync",
- "uuid",
 ]
 
 [[package]]

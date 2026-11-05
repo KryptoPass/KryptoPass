@@ -15,7 +15,8 @@ pub use domain::entry_icon::{
 pub use domain::item::{
     ActionError, CodecError, CustomValue, DiffKind, DiffTarget, Difference, FieldValue,
     FormatCheck, FormatRules, ITEM_SCHEMA_VERSION, IssueCode, IssueTarget, ItemContent, ItemIssue,
-    ItemIssues, ItemValue, MigrationError, Side, decode_item, encode_item, encode_item_with,
+    ItemIssues, ItemValue, MigrationError, Side, SshKeyInfo, decode_item, encode_item,
+    encode_item_with, inspect_ssh_key,
 };
 pub use domain::{
     DomainError, Folder, FolderAppearance, FolderId, KeyFingerprint, RecipientSet, SecretId,

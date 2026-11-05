@@ -16,4 +16,3 @@ pub mod secrets_controller;
 mod secrets_projection;
 pub mod sensitive_clipboard;
 pub(crate) mod synthetic_key_transfer;
-pub(crate) mod synthetic_sync;

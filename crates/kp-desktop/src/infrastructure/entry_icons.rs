@@ -79,10 +79,6 @@ pub(crate) fn prepare_image(path: &Path) -> Result<EntryIconAsset> {
     Ok(asset)
 }
 
-pub(crate) fn valid_normalized_image(png: &[u8]) -> bool {
-    crate::ui_adapters::native_ffi::ffi::valid_entry_icon(png)
-}
-
 pub(crate) fn entry_icon_bytes(source: &str) -> Vec<u8> {
     read_resource(source).unwrap_or_default()
 }
@@ -108,5 +104,11 @@ fn read_resource(source: &str) -> Result<Vec<u8>> {
             .clone()
             .ok_or_else(|| anyhow::anyhow!("no icon store"))?
     };
-    crate::storage::read_icon_asset(&path, id)
+    use kryptopass_core::vault::Store as _;
+    let store =
+        kryptopass_store::SqliteStore::open_existing(&path, crate::vault_access::identity()?)?;
+    store
+        .icon_asset(id)?
+        .map(|asset| asset.png)
+        .ok_or_else(|| anyhow::anyhow!("icon not found"))
 }

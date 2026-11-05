@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Result, ensure};
+use kryptopass_app::Credentials;
 use kryptopass_browser::{Candidate, CredentialProvider, Login};
-use kryptopass_core::{SecretContent, SecretId, SecretKind, SecretsService};
+use kryptopass_core::SecretId;
 use kryptopass_secure_memory::SensitiveText;
 
-use super::GnuPgOpenPgp;
-use crate::storage::{SqliteStorage, paths as app_paths};
+use crate::storage::paths as app_paths;
 
 struct VaultProvider(PathBuf);
 
@@ -24,11 +24,9 @@ pub fn configure(path: &std::path::Path) -> Result<()> {
 
 impl CredentialProvider for VaultProvider {
     fn candidates(&self) -> Result<Vec<Candidate>> {
-        let service = SecretsService::new(SqliteStorage::open_existing(&self.0)?, GnuPgOpenPgp);
-        Ok(service
-            .list_secret_metadata()?
+        let session = crate::vault_access::open_existing_session(self.0.clone())?;
+        Ok(kryptopass_app::candidates(session.vault())?
             .into_iter()
-            .filter(|entry| entry.kind == SecretKind::Login && !entry.trashed)
             .map(|entry| Candidate {
                 id: entry.id.0.to_string(),
                 name: entry.title,
@@ -38,15 +36,11 @@ impl CredentialProvider for VaultProvider {
     }
 
     fn login(&self, candidate: &Candidate, still_authorized: &dyn Fn() -> bool) -> Result<Login> {
-        let mut content = self.read_current(candidate, still_authorized)?;
-        let SecretContent::Login(login) = &mut content else {
-            anyhow::bail!("not a login");
-        };
-        let urls = std::mem::take(&mut login.urls);
+        let credentials = self.read_current(candidate, still_authorized)?;
         Ok(Login {
-            username: std::mem::take(&mut login.username),
-            password: std::mem::take(&mut login.password),
-            urls,
+            username: credentials.username.unwrap_or_default(),
+            password: credentials.password.unwrap_or_default(),
+            urls: credentials.urls,
         })
     }
 
@@ -55,11 +49,8 @@ impl CredentialProvider for VaultProvider {
         candidate: &Candidate,
         still_current: &dyn Fn() -> bool,
     ) -> Result<Option<SensitiveText>> {
-        let mut content = self.read_current(candidate, still_current)?;
-        let SecretContent::Login(login) = &mut content else {
-            anyhow::bail!("not a login");
-        };
-        Ok(Some(std::mem::take(&mut login.username)))
+        let credentials = self.read_current(candidate, still_current)?;
+        Ok(Some(credentials.username.unwrap_or_default()))
     }
 }
 
@@ -68,27 +59,20 @@ impl VaultProvider {
         &self,
         candidate: &Candidate,
         still_authorized: &dyn Fn() -> bool,
-    ) -> Result<SecretContent> {
+    ) -> Result<Credentials> {
         ensure!(still_authorized(), "browser request cancelled");
         let id = SecretId(uuid::Uuid::parse_str(&candidate.id)?);
-        let service = SecretsService::new(SqliteStorage::open_existing(&self.0)?, GnuPgOpenPgp);
-        let valid = || -> Result<()> {
-            ensure!(still_authorized(), "browser request cancelled");
-            ensure!(
-                service
-                    .list_secret_metadata()?
-                    .iter()
-                    .any(|entry| entry.id == id
-                        && entry.revision == candidate.revision
-                        && !entry.trashed
-                        && entry.kind == SecretKind::Login),
-                "browser entry changed"
-            );
-            Ok(())
-        };
-        valid()?;
-        let content = service.read_content(id)?;
-        valid()?;
-        Ok(content)
+        let session = crate::vault_access::open_existing_session(self.0.clone())?;
+        // `credentials` refuses a revision other than the one the browser was offered.
+        let credentials = kryptopass_app::credentials(
+            session.vault(),
+            &kryptopass_app::Candidate {
+                id,
+                title: candidate.name.clone(),
+                revision: candidate.revision,
+            },
+        )?;
+        ensure!(still_authorized(), "browser request cancelled");
+        Ok(credentials)
     }
 }

@@ -26,7 +26,7 @@ fn entry_type_display(kind: EntryType) -> (&'static str, &'static str) {
     match kind {
         EntryType::Login => ("login", "Inicios de sesión"),
         EntryType::Note => ("note", "Notas"),
-        EntryType::Alias => ("note", "Alias (se guardan como notas)"),
+        EntryType::Alias => ("login", "Alias (se guardan como inicios de sesión)"),
         EntryType::Card => ("card", "Tarjetas de pago"),
         EntryType::Identity => ("identity", "Identidades"),
         EntryType::Custom => ("custom", "Secretos personalizados"),
@@ -94,13 +94,8 @@ pub(crate) fn warnings_json(plan: &PreparedImport) -> String {
     }
     let adaptations = &plan.adaptations;
     push(
-        adaptations.aliases_as_notes,
-        "%1 alias se guardarán como notas.",
-        false,
-    );
-    push(
-        adaptations.additional_entries,
-        "%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.",
+        adaptations.aliases_as_logins,
+        "%1 alias se guardarán como inicios de sesión con su correo.",
         false,
     );
     push(
@@ -109,9 +104,19 @@ pub(crate) fn warnings_json(plan: &PreparedImport) -> String {
         false,
     );
     push(
-        adaptations.timestamps_as_fields,
-        "%1 elementos guardarán sus fechas originales en las notas.",
+        adaptations.values_as_custom,
+        "%1 valores no encajan en su campo y se guardarán como campos añadidos.",
         false,
+    );
+    push(
+        adaptations.entries_as_custom,
+        "%1 elementos no encajan en su plantilla y se guardarán como personalizados.",
+        false,
+    );
+    push(
+        adaptations.rejected,
+        "%1 elementos no encajan en ninguna plantilla y no se importarán.",
+        true,
     );
     serde_json::Value::Array(notes).to_string()
 }

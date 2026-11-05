@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
-const DATABASE_FILE: &str = "kryptopass.sqlite3";
+const DATABASE_FILE: &str = "vault.sqlite";
 const ACTIVE_VAULT_FILE: &str = "active-vault.json";
 const MAX_ACTIVE_VAULT_FILE_BYTES: u64 = 4096;
 const SETUP_FILE: &str = "setup.json";

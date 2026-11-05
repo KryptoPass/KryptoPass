@@ -7,21 +7,27 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use cxx_qt::{CxxQtType, Threading, casting::Upcast};
 use cxx_qt_lib::{QDateTime, QObjectMutPtr, QString, QStringList, QTimeZone, QUrl};
+use kryptopass_app::{VaultSession, qr_payload};
+use kryptopass_core::vault::{
+    Conflict, FolderContents, FolderEdit, IconChoice, Item, ItemEdit, ItemMeta, KeySettings,
+    NewFolder, NewItem, Recipients, VaultError, VersionId,
+};
 use kryptopass_core::{
-    FolderAppearance, FolderId, KeyFingerprint, LoginHistoryEventKind, OpenPgp, PasswordOptions,
-    RecipientSet, SecretContent, SecretId, SecretsService,
-    generate_password as generate_secure_password, generate_totp,
+    DiffKind, DiffTarget, EntryIcon, EntryIconAsset, FieldValue, FolderAppearance, FolderId,
+    ItemContent, KeyFingerprint, RecipientSet, SecretId, SecretLinkError, Side, generate_totp,
+    inspect_ssh_key, parse_totp_input,
 };
 use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use uuid::Uuid;
 
 use crate::infrastructure::GnuPgOpenPgp;
-use crate::storage::{SqliteStorage, paths as app_paths};
+use crate::storage::paths as app_paths;
+use crate::vault_access::{open_existing_session, open_session};
 
 use super::secrets_projection::{
-    EntryDraft, OpenedEntry, StoreSnapshot, content_field, content_projection,
-    content_projection_with_state, draft_matches_session, editor_projection, new_editor_projection,
-    prepare_save, snapshot_revision, store_snapshot_with_links,
+    DetailView, EntryDraft, OpenedEntry, SshKeyMaterial, StoreSnapshot, content_field,
+    content_projection, draft_matches_session, earlier_versions, editor_projection, field_text,
+    kind_of, new_editor_projection, prepare_save, snapshot_revision, store_snapshot, template_of,
 };
 
 #[cxx_qt::bridge]
@@ -45,6 +51,7 @@ pub mod qobject {
         #[qproperty(QString, detail_json, cxx_name = "detailJson", READ, NOTIFY)]
         #[qproperty(QString, version_json, cxx_name = "versionJson", READ, NOTIFY)]
         #[qproperty(QString, editor_json, cxx_name = "editorJson", READ, NOTIFY)]
+        #[qproperty(QString, conflict_json, cxx_name = "conflictJson", READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
         #[qproperty(QString, browser_access, cxx_name = "browserAccess", READ, NOTIFY)]
         #[qproperty(QString, browser_pairing, cxx_name = "browserPairing", READ, NOTIFY)]
@@ -207,6 +214,18 @@ pub mod qobject {
         #[cxx_name = "removeFolder"]
         fn remove_folder(self: Pin<&mut Self>, id: &QString, delete_contents: bool);
         #[qinvokable]
+        #[cxx_name = "openConflict"]
+        fn open_conflict(self: Pin<&mut Self>, id: &QString);
+        #[qinvokable]
+        #[cxx_name = "closeConflict"]
+        fn close_conflict(self: Pin<&mut Self>);
+        #[qinvokable]
+        #[cxx_name = "toggleConflictValue"]
+        fn toggle_conflict_value(self: Pin<&mut Self>, key: &QString);
+        #[qinvokable]
+        #[cxx_name = "resolveConflict"]
+        fn resolve_conflict(self: Pin<&mut Self>, choices_json: &QString);
+        #[qinvokable]
         #[cxx_name = "generatePassword"]
         fn generate_password(
             self: Pin<&mut Self>,
@@ -242,9 +261,6 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "activityExported"]
         fn activity_exported(self: Pin<&mut Self>, path: &QUrl);
-        #[qsignal]
-        #[cxx_name = "historyRecordFailed"]
-        fn history_record_failed(self: Pin<&mut Self>);
         #[qsignal]
         #[cxx_name = "passwordGenerated"]
         fn password_generated(self: Pin<&mut Self>, value: &QString);
@@ -284,27 +300,35 @@ pub struct SecretsControllerRust {
     detail_busy: bool,
     editor_busy: bool,
     icon_busy: bool,
-    staged_icon: Option<kryptopass_core::EntryIconAsset>,
+    staged_icon: Option<EntryIconAsset>,
     saving: bool,
     locked: bool,
     unlocking: bool,
     setup_required: bool,
     primary_key: QString,
     forget_on_lock: bool,
-    primary: Option<crate::storage::PrimaryKey>,
+    primary: Option<PrimaryKey>,
     /// Invalidates an in-flight unlock check when the vault is locked again.
     unlock_operation: u64,
     session_blocked: bool,
     selected_entry: Option<SecretId>,
     selected_revision: Option<u64>,
-    detail_content: Option<SecretContent>,
+    detail_content: Option<ItemContent>,
+    /// Earlier versions of the selected item, newest first.
+    detail_versions: Vec<(VersionId, u64)>,
+    /// The earlier version open in the history view.
+    history_item: Option<Item>,
+    conflict_json: QString,
+    /// The conflict open for merging; its dialog reads it through `conflict_json`.
+    conflict: Option<Conflict>,
+    conflict_revealed: std::collections::BTreeSet<String>,
     password_revealed: bool,
     revealed_fields: std::collections::BTreeSet<String>,
     qr_source: Option<SensitiveText>,
-    editor_ssh: Option<kryptopass_core::SshKeyContent>,
-    staged_ssh: Option<(String, kryptopass_core::SshKeyContent)>,
+    /// The content the editor opened; saving keeps what the form does not show.
+    editor_content: Option<ItemContent>,
+    staged_ssh: Option<(String, SshKeyMaterial)>,
     prepare_operation: u64,
-    pending_copy: Option<PendingCopy>,
     editor_session: Option<EditorSession>,
     load_operation: u64,
     active_vault_operation: u64,
@@ -348,13 +372,17 @@ impl Default for SecretsControllerRust {
             selected_entry: None,
             selected_revision: None,
             detail_content: None,
+            detail_versions: Vec::new(),
+            history_item: None,
+            conflict_json: QString::default(),
+            conflict: None,
+            conflict_revealed: std::collections::BTreeSet::new(),
             password_revealed: false,
             revealed_fields: std::collections::BTreeSet::new(),
             qr_source: None,
-            editor_ssh: None,
+            editor_content: None,
             staged_ssh: None,
             prepare_operation: 0,
-            pending_copy: None,
             editor_session: None,
             load_operation: 0,
             active_vault_operation: 0,
@@ -370,8 +398,15 @@ impl Default for SecretsControllerRust {
 
 impl Drop for SecretsControllerRust {
     fn drop(&mut self) {
-        crate::search::set_locked(true, None);
+        crate::search::set_locked(true);
     }
+}
+
+/// The key new items go to, and whether locking forgets its passphrase.
+#[derive(Clone)]
+struct PrimaryKey {
+    fingerprint: KeyFingerprint,
+    forget_on_lock: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -380,32 +415,10 @@ struct EditorSession {
     revision: Option<u64>,
 }
 
-#[derive(Clone, Copy)]
-struct PendingCopy {
-    id: SecretId,
-    selection_operation: u64,
-    kind: CopyKind,
-}
-
-#[derive(Clone, Copy)]
-enum CopyKind {
-    Username,
-    Password,
-    Totp,
-    NextTotp,
-}
-
 struct MutationResult {
     snapshot: Result<StoreSnapshot, ()>,
     signal: MutationSignal,
     editor_operation: Option<u64>,
-}
-
-struct CopyHistoryResult {
-    content: SecretContent,
-    write_revision: u64,
-    observed_revision: Option<u64>,
-    snapshot: Result<StoreSnapshot, ()>,
 }
 
 enum MutationSignal {
@@ -484,15 +497,15 @@ impl qobject::SecretsController {
             self.qt_thread(),
             || {
                 let snapshot = load_store_snapshot()?;
-                let setup = resolve_setup_state(&snapshot)?;
-                let primary = open_storage()?.primary_key()?;
+                let primary = read_primary_key(&open_session()?)?;
+                let setup = resolve_setup_state(&snapshot, primary.is_some())?;
                 Ok((snapshot, setup, primary))
             },
             move |mut controller,
                   result: anyhow::Result<(
                 StoreSnapshot,
                 Option<app_paths::SetupState>,
-                Option<crate::storage::PrimaryKey>,
+                Option<PrimaryKey>,
             )>| {
                 if controller.as_ref().rust().load_operation != operation {
                     return;
@@ -508,7 +521,10 @@ impl qobject::SecretsController {
                             .as_mut()
                             .set_status(QString::from("Bóveda cargada"));
                     }
-                    Err(_) => controller.as_mut().fail("No se pudo cargar la bóveda."),
+                    Err(error) => {
+                        tracing::warn!(error = %format!("{error:#}"), "the vault did not load");
+                        controller.as_mut().fail("No se pudo cargar la bóveda.");
+                    }
                 }
             },
         );
@@ -660,7 +676,9 @@ impl qobject::SecretsController {
         {
             return;
         }
-        let state = app_paths::SetupState { version: 1 };
+        let state = app_paths::SetupState {
+            version: SETUP_VERSION,
+        };
         if app_paths::save_setup_state(crate::app_info::APP.desktop_file_id, &state).is_err() {
             self.as_mut()
                 .fail("No se pudo guardar la configuración inicial.");
@@ -679,10 +697,7 @@ impl qobject::SecretsController {
             return;
         };
         key.forget_on_lock = enabled;
-        if open_storage()
-            .and_then(|mut storage| storage.set_primary_key(&key))
-            .is_err()
-        {
+        if write_primary_key(&key).is_err() {
             self.as_mut()
                 .fail("No se pudo guardar la preferencia de la clave principal.");
             return;
@@ -700,14 +715,11 @@ impl qobject::SecretsController {
                 .fail("La clave elegida para la bóveda no es válida.");
             return false;
         };
-        let key = crate::storage::PrimaryKey {
+        let key = PrimaryKey {
             fingerprint,
             forget_on_lock,
         };
-        if open_storage()
-            .and_then(|mut storage| storage.set_primary_key(&key))
-            .is_err()
-        {
+        if write_primary_key(&key).is_err() {
             self.as_mut()
                 .fail("No se pudo guardar la clave principal de la bóveda.");
             return false;
@@ -723,7 +735,7 @@ impl qobject::SecretsController {
         }
     }
 
-    fn apply_primary_key(mut self: Pin<&mut Self>, key: Option<crate::storage::PrimaryKey>) {
+    fn apply_primary_key(mut self: Pin<&mut Self>, key: Option<PrimaryKey>) {
         let value = QString::from(key.as_ref().map_or("", |key| key.fingerprint.as_str()));
         let forget = key.as_ref().is_some_and(|key| key.forget_on_lock);
         self.as_mut().rust_mut().primary = key;
@@ -838,12 +850,12 @@ impl qobject::SecretsController {
         let cancel_epoch = self.as_ref().rust().selection_cancel_epoch.clone();
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || -> anyhow::Result<Option<(SecretContent, u64)>> {
-                let (content, revision) = load_detail_content(secret_id)?;
+            move || -> anyhow::Result<Option<LoadedDetail>> {
+                let detail = load_detail(secret_id)?;
                 if cancel_epoch.load(Ordering::Acquire) == operation {
-                    Ok(Some((content, revision)))
+                    Ok(Some(detail))
                 } else {
-                    drop(content);
+                    drop(detail);
                     Ok(None)
                 }
             },
@@ -870,15 +882,26 @@ impl qobject::SecretsController {
 
                 controller.as_mut().set_detail_busy(false);
                 match result {
-                    Ok(Some((content, revision))) => {
-                        let detail = content_projection(secret_id, &content, false, unix_seconds());
+                    Ok(Some(loaded)) => {
+                        let detail = content_projection(
+                            secret_id,
+                            &loaded.content,
+                            &DetailView {
+                                reveal_password: false,
+                                unix_seconds: unix_seconds(),
+                                revealed_fields: &std::collections::BTreeSet::new(),
+                                qr_source: None,
+                                versions: &loaded.versions,
+                            },
+                        );
                         match detail {
                             Ok(detail) => {
                                 controller.as_mut().clear_detail_error();
                                 {
                                     let mut state = controller.as_mut().rust_mut();
-                                    state.detail_content = Some(content);
-                                    state.selected_revision = Some(revision);
+                                    state.detail_content = Some(loaded.content);
+                                    state.detail_versions = loaded.versions;
+                                    state.selected_revision = Some(loaded.revision);
                                 }
                                 controller
                                     .as_mut()
@@ -887,15 +910,24 @@ impl qobject::SecretsController {
                                     .as_mut()
                                     .set_status(QString::from("Elemento cargado"));
                             }
-                            Err(_) => controller
-                                .as_mut()
-                                .fail_detail("No se pudo mostrar el contenido del elemento."),
+                            Err(error) => {
+                                tracing::warn!(error = %format!("{error:#}"), "item detail projection failed");
+                                controller
+                                    .as_mut()
+                                    .fail_detail("No se pudo mostrar el contenido del elemento.");
+                            }
                         }
                     }
                     Ok(None) => (),
-                    Err(_) => controller
-                        .as_mut()
-                        .fail_detail("No se pudo abrir el contenido del elemento."),
+                    Err(error) => {
+                        tracing::warn!(error = %format!("{error:#}"), "item did not open");
+                        let message = if is_unreadable(&error) {
+                            "Este elemento está cifrado para una clave que no está en este dispositivo."
+                        } else {
+                            "No se pudo abrir el contenido del elemento."
+                        };
+                        controller.as_mut().fail_detail(message);
+                    }
                 }
             },
         );
@@ -962,10 +994,8 @@ impl qobject::SecretsController {
                         let draft = editor_projection(&entry);
                         match draft {
                             Ok(draft) => {
-                                if let SecretContent::SshKey(content) = &entry.content {
-                                    controller.as_mut().rust_mut().editor_ssh =
-                                        Some(content.clone());
-                                }
+                                controller.as_mut().rust_mut().editor_content =
+                                    Some(entry.content.clone());
                                 controller.as_mut().rust_mut().editor_session =
                                     Some(EditorSession {
                                         id: Some(entry.id),
@@ -1035,25 +1065,32 @@ impl qobject::SecretsController {
         if let Some(token) = draft.ssh_import_token() {
             let object = self.as_ref();
             let state = object.rust();
-            let content = if token.is_empty() {
-                state.editor_ssh.clone()
-            } else {
-                state
-                    .staged_ssh
-                    .as_ref()
-                    .filter(|(staged_token, _)| staged_token == token)
-                    .map(|(_, content)| content.clone())
-            };
-            let Some(content) = content else {
+            let staged = state
+                .staged_ssh
+                .as_ref()
+                .filter(|(staged_token, _)| staged_token == token)
+                .map(|(_, key)| key.clone());
+            let has_saved_key = state.editor_content.is_some();
+            if token.is_empty() && !has_saved_key {
                 self.as_mut()
                     .fail("Importa una clave SSH antes de guardar el elemento.");
                 return;
-            };
-            draft.attach_ssh(content);
+            }
+            match staged {
+                Some(key) => draft.attach_ssh(key),
+                None if token.is_empty() => {}
+                None => {
+                    self.as_mut()
+                        .fail("Importa una clave SSH antes de guardar el elemento.");
+                    return;
+                }
+            }
         }
-        let prepared = match prepare_save(&mut draft, session.id, session.revision) {
+        let base = self.as_ref().rust().editor_content.clone();
+        let prepared = match prepare_save(&mut draft, session.id, session.revision, base) {
             Ok(prepared) => prepared,
-            Err(_) => {
+            Err(error) => {
+                tracing::debug!(error = %format!("{error:#}"), "draft refused before saving");
                 self.as_mut()
                     .fail("Revisa los datos del elemento y quién tiene acceso.");
                 return;
@@ -1066,35 +1103,47 @@ impl qobject::SecretsController {
             true,
             "No se pudo guardar el elemento.",
             move || {
-                let mut service = open_service()?;
-                let request = kryptopass_core::SaveContentRequest {
-                    id: prepared.id,
-                    folder_id: prepared.folder,
-                    title: prepared.title,
-                    recipients: prepared.recipients,
-                    content: prepared.content,
-                    expected_revision: prepared.expected_revision,
-                };
-                let appearance = prepared.icon_update.map(|icon| {
-                    let asset = staged_icon.filter(|asset| {
-                        icon == Some(kryptopass_core::EntryIcon::Image { asset_id: asset.id })
-                    });
-                    kryptopass_core::EntryAppearanceUpdate { icon, asset }
+                let mut session = open_session()?;
+                let vault = session.vault_mut();
+                let icon = prepared.icon_update.and_then(|icon| match icon {
+                    Some(EntryIcon::Theme { name }) => Some(IconChoice::Theme(name)),
+                    Some(EntryIcon::Image { asset_id }) => staged_icon
+                        .filter(|asset| asset.id == asset_id)
+                        .map(IconChoice::Image),
+                    Some(EntryIcon::Favicon { .. }) | None => Some(IconChoice::Automatic),
                 });
-                let id = if let Some(related) = prepared.link_update {
-                    service.save_content_with_link(request, appearance, related)?
-                } else if let Some(appearance) = appearance {
-                    service.save_content_with_appearance(request, appearance)?
-                } else {
-                    service.save_content(
-                        request.id,
-                        request.folder_id,
-                        request.title,
-                        request.recipients,
-                        request.content,
-                        request.expected_revision,
-                    )?
+                let id = match (prepared.id, prepared.expected_revision) {
+                    (Some(id), Some(revision)) => {
+                        let mut edit = ItemEdit::new(id, revision)
+                            .title(prepared.title)
+                            .folder(prepared.folder)
+                            .content(prepared.content);
+                        if let Some(icon) = icon {
+                            edit = edit.icon(icon);
+                        }
+                        if let Some(link) = prepared.link_update {
+                            edit = edit.link(link);
+                        }
+                        let meta = vault.update_item(edit)?;
+                        if meta.state.recipients != prepared.recipients {
+                            vault.change_recipients(id, meta.revision, prepared.recipients)?;
+                        }
+                        id
+                    }
+                    _ => {
+                        vault
+                            .create_item(NewItem {
+                                folder: prepared.folder,
+                                title: prepared.title,
+                                content: prepared.content,
+                                recipients: Recipients::Explicit(prepared.recipients),
+                                icon: icon.unwrap_or(IconChoice::Automatic),
+                                link: prepared.link_update.flatten(),
+                            })?
+                            .id
+                    }
                 };
+                drop(session);
                 let snapshot = snapshot_after_mutation();
                 Ok(MutationResult {
                     snapshot,
@@ -1131,7 +1180,7 @@ impl qobject::SecretsController {
                 match result {
                     Ok(asset) => {
                         crate::infrastructure::entry_icons::stage(&asset);
-                        let icon = kryptopass_core::EntryIcon::Image { asset_id: asset.id };
+                        let icon = EntryIcon::Image { asset_id: asset.id };
                         let json = serde_json::json!({ "icon": icon, "iconSource": crate::infrastructure::entry_icons::source_for(Some(&icon)) }).to_string();
                         controller.as_mut().rust_mut().staged_icon = Some(asset);
                         controller.as_mut().icon_prepared(&QString::from(json));
@@ -1161,13 +1210,16 @@ impl qobject::SecretsController {
                 .selected_entry
                 .zip(state.detail_content.as_ref())
                 .map(|(id, content)| {
-                    content_projection_with_state(
+                    content_projection(
                         id,
                         content,
-                        state.password_revealed,
-                        unix_seconds(),
-                        &state.revealed_fields,
-                        state.qr_source.as_ref().map(|value| value.as_str()),
+                        &DetailView {
+                            reveal_password: state.password_revealed,
+                            unix_seconds: unix_seconds(),
+                            revealed_fields: &state.revealed_fields,
+                            qr_source: state.qr_source.as_ref().map(|value| value.as_str()),
+                            versions: &state.detail_versions,
+                        },
                     )
                 })
         };
@@ -1212,9 +1264,9 @@ impl qobject::SecretsController {
             .as_ref()
             .and_then(|content| content_field(content, &field.to_string()))
             .filter(|(value, _)| !value.is_empty())
-            .map(|(value, _)| value.into_owned());
+            .map(|(value, _)| value);
         if let Some(value) = value {
-            self.as_mut().request_copy(CopyKind::Password, value);
+            self.as_mut().request_copy(value);
         }
     }
 
@@ -1230,12 +1282,16 @@ impl qobject::SecretsController {
         let result = (|| -> anyhow::Result<SensitiveText> {
             let object = self.as_ref();
             let state = object.rust();
-            let payload = match state.detail_content.as_ref() {
-                Some(SecretContent::Wifi(value)) => kryptopass_core::wifi_qr_payload(value)?,
-                Some(SecretContent::Totp(value)) => {
-                    kryptopass_core::format_totp_input(&value.config)?
-                }
-                _ => anyhow::bail!("QR unavailable for this item"),
+            let content = state
+                .detail_content
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no item is open"))?;
+            let payload = if kind_of(content.template().as_str()) == "totp" {
+                super::secrets_projection::totp_uri(content)?
+            } else {
+                let (_templates, template) = template_of(content.template().as_str())?;
+                qr_payload(template, content)?
+                    .ok_or_else(|| anyhow::anyhow!("QR unavailable for this item"))?
             };
             super::secret_qr::source(&payload)
         })();
@@ -1281,9 +1337,20 @@ impl qobject::SecretsController {
                 anyhow::ensure!(file.metadata()?.is_file(), "select a regular key file");
                 let mut raw = SensitiveBytes::default();
                 std::io::copy(&mut file.take(256 * 1024 + 1), &mut raw)?;
-                let bytes = SensitiveText::from_utf8(raw)?;
-                anyhow::ensure!(bytes.len() <= 256 * 1024, "SSH key exceeds size limit");
-                kryptopass_core::SshKeyContent::import(bytes, passphrase)
+                let private_key = SensitiveText::from_utf8(raw)?;
+                anyhow::ensure!(
+                    private_key.len() <= 256 * 1024,
+                    "SSH key exceeds size limit"
+                );
+                let info = inspect_ssh_key(&private_key)
+                    .ok_or_else(|| anyhow::anyhow!("not an OpenSSH private key"))?;
+                Ok((
+                    info,
+                    SshKeyMaterial {
+                        private_key,
+                        passphrase,
+                    },
+                ))
             },
             move |mut controller, result| {
                 let object = controller.as_ref();
@@ -1297,11 +1364,11 @@ impl qobject::SecretsController {
                 }
                 controller.as_mut().set_editor_busy(false);
                 match result {
-                Ok(content) => {
+                Ok((info, key)) => {
                     let token = Uuid::new_v4().to_string();
-                    let json = serde_json::json!({"importToken": token, "publicKey": content.public_key,
-                        "fingerprint": content.fingerprint, "algorithm": content.algorithm}).to_string();
-                    controller.as_mut().rust_mut().staged_ssh = Some((token, content));
+                    let json = serde_json::json!({"importToken": token, "publicKey": info.public_key,
+                        "fingerprint": info.fingerprint, "algorithm": info.algorithm}).to_string();
+                    controller.as_mut().rust_mut().staged_ssh = Some((token, key));
                     controller.as_mut().ssh_key_prepared(&QString::from(json));
                 }
                 Err(_) => controller.as_mut().fail("No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña."),
@@ -1380,66 +1447,46 @@ impl qobject::SecretsController {
         if *self.locked() || *self.busy() {
             return;
         }
-        let (id, revealed) = {
+        {
             let mut state = self.as_mut().rust_mut();
-            let Some(id) = state.selected_entry else {
-                return;
-            };
-            if !matches!(state.detail_content.as_ref(), Some(SecretContent::Login(_))) {
+            let is_login = state
+                .detail_content
+                .as_ref()
+                .is_some_and(|content| kind_of(content.template().as_str()) == "login");
+            if state.selected_entry.is_none() || !is_login {
                 return;
             }
             state.password_revealed = !state.password_revealed;
-            (id, state.password_revealed)
-        };
-
-        let projection = {
-            let object = self.as_ref();
-            let state = object.rust();
-            state
-                .detail_content
-                .as_ref()
-                .map(|content| content_projection(id, content, revealed, unix_seconds()))
-        };
-        if let Some(Ok(detail)) = projection {
-            self.as_mut()
-                .set_detail_json(QString::from(detail.as_str()));
         }
+        self.publish_detail();
     }
 
     pub fn copy_username(mut self: Pin<&mut Self>) {
-        if !self.as_ref().can_copy_login_value() {
-            return;
-        }
-        let value = {
-            let object = self.as_ref();
-            let state = object.rust();
-            let Some(content) = state.detail_content.as_ref() else {
-                return;
-            };
-            match content {
-                SecretContent::Login(login) if !login.username.is_empty() => login.username.clone(),
-                _ => return,
-            }
-        };
-        self.as_mut().request_copy(CopyKind::Username, value);
+        self.as_mut().copy_login_field(&["username", "email"]);
     }
 
     pub fn copy_password(mut self: Pin<&mut Self>) {
+        self.as_mut().copy_login_field(&["password"]);
+    }
+
+    fn copy_login_field(mut self: Pin<&mut Self>, fields: &[&str]) {
         if !self.as_ref().can_copy_login_value() {
             return;
         }
-        let value = {
-            let object = self.as_ref();
-            let state = object.rust();
-            let Some(content) = state.detail_content.as_ref() else {
-                return;
-            };
-            match content {
-                SecretContent::Login(login) if !login.password.is_empty() => login.password.clone(),
-                _ => return,
-            }
-        };
-        self.as_mut().request_copy(CopyKind::Password, value);
+        let value = self
+            .as_ref()
+            .rust()
+            .detail_content
+            .as_ref()
+            .and_then(|content| {
+                fields
+                    .iter()
+                    .map(|field| field_text(content, field))
+                    .find(|value| !value.is_empty())
+            });
+        if let Some(value) = value {
+            self.as_mut().request_copy(value);
+        }
     }
 
     pub fn open_history_version(mut self: Pin<&mut Self>, index: i32) {
@@ -1450,80 +1497,91 @@ impl qobject::SecretsController {
         let Ok(index) = usize::try_from(index) else {
             return;
         };
-        let projection = {
+        let (id, selection, version) = {
             let object = self.as_ref();
             let state = object.rust();
-            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
+            let (Some(id), Some(version)) =
+                (state.selected_entry, state.detail_versions.get(index))
+            else {
                 return;
             };
-            let Some(version) = login.history.version_content(index) else {
-                return;
-            };
-            let Some(at) = login.history.version_metadata().get(index).copied() else {
-                return;
-            };
-            #[derive(serde::Serialize)]
-            #[serde(rename_all = "camelCase")]
-            struct VersionProjection<'a> {
-                at: u64,
-                title: Option<&'a str>,
-                username: &'a str,
-                urls: &'a [SensitiveText],
-                notes: &'a str,
-                has_password: bool,
-                has_totp: bool,
-            }
-            let projection = VersionProjection {
-                at,
-                title: login.history.version_title(index),
-                username: &version.username,
-                urls: &version.urls,
-                notes: &version.notes,
-                has_password: !version.password.is_empty(),
-                has_totp: version.totp.is_some(),
-            };
-            super::secrets_projection::sensitive_json(&projection)
+            (id, state.selection_operation, *version)
         };
-        if let Ok(projection) = projection {
-            self.as_mut().rust_mut().history_version_index = Some(index);
-            self.set_version_json(QString::from(projection.as_str()));
-        }
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || -> anyhow::Result<Item> {
+                Ok(open_session()?.vault().open_version(id, version.0)?)
+            },
+            move |mut controller, result| {
+                if controller.as_ref().rust().selection_operation != selection
+                    || *controller.locked()
+                {
+                    return;
+                }
+                let item = match result {
+                    Ok(item) => item,
+                    Err(error) => {
+                        tracing::warn!(error = %format!("{error:#}"), "item version did not open");
+                        controller
+                            .as_mut()
+                            .fail_detail("No se pudo abrir esa versión del elemento.");
+                        return;
+                    }
+                };
+                #[derive(serde::Serialize)]
+                #[serde(rename_all = "camelCase")]
+                struct VersionProjection<'a> {
+                    at: u64,
+                    title: &'a str,
+                    username: SensitiveText,
+                    urls: &'a [SensitiveText],
+                    notes: SensitiveText,
+                    has_password: bool,
+                    has_totp: bool,
+                }
+                let projection = super::secrets_projection::sensitive_json(&VersionProjection {
+                    at: version.1,
+                    title: &item.meta.state.title,
+                    username: field_text(&item.content, "username"),
+                    urls: item.content.value("urls").map_or(&[], FieldValue::texts),
+                    notes: field_text(&item.content, "notes"),
+                    has_password: !field_text(&item.content, "password").is_empty(),
+                    has_totp: !field_text(&item.content, "totp").is_empty(),
+                });
+                if let Ok(projection) = projection {
+                    controller.as_mut().rust_mut().history_version_index = Some(index);
+                    controller.as_mut().rust_mut().history_item = Some(item);
+                    controller.set_version_json(QString::from(projection.as_str()));
+                }
+            },
+        );
     }
 
     pub fn close_history_version(mut self: Pin<&mut Self>) {
         self.as_mut().rust_mut().history_version_index = None;
+        self.as_mut().rust_mut().history_item = None;
         self.set_version_json(QString::default());
     }
 
-    pub fn copy_history_value(mut self: Pin<&mut Self>, field: &QString) {
+    pub fn copy_history_value(self: Pin<&mut Self>, field: &QString) {
         if !self.as_ref().can_copy_login_value() {
             return;
         }
         let value = {
             let object = self.as_ref();
             let state = object.rust();
-            let Some(index) = state.history_version_index else {
-                return;
-            };
-            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
-                return;
-            };
-            let Some(version) = login.history.version_content(index) else {
+            let Some(item) = state.history_item.as_ref() else {
                 return;
             };
             match field.to_string().as_str() {
-                "password" => version.password.clone(),
-                "username" => version.username.clone(),
-                "title" => SensitiveText::from(
-                    login
-                        .history
-                        .version_title(index)
-                        .unwrap_or_default()
-                        .to_owned(),
-                ),
+                "title" => SensitiveText::from(item.meta.state.title.clone()),
                 "urls" => {
                     let mut text = SensitiveText::new();
-                    for (index, url) in version.urls.iter().enumerate() {
+                    let urls = item
+                        .content
+                        .value("urls")
+                        .map_or(&[][..], FieldValue::texts);
+                    for (index, url) in urls.iter().enumerate() {
                         if index != 0 {
                             text.push('\n');
                         }
@@ -1531,15 +1589,8 @@ impl qobject::SecretsController {
                     }
                     text
                 }
-                "notes" => version.notes.clone(),
-                "totp" => {
-                    let Some(config) = version.totp.as_ref() else {
-                        return;
-                    };
-                    let Ok(value) = kryptopass_core::format_totp_input(config) else {
-                        return;
-                    };
-                    value
+                name @ ("password" | "username" | "notes" | "totp") => {
+                    field_text(&item.content, name)
                 }
                 _ => return,
             }
@@ -1547,7 +1598,6 @@ impl qobject::SecretsController {
         if value.is_empty() {
             return;
         }
-        self.as_mut().rust_mut().pending_copy = None;
         self.clipboard_requested(&QString::from(value.as_str()));
     }
 
@@ -1555,53 +1605,27 @@ impl qobject::SecretsController {
         if !self.as_ref().can_copy_login_value() {
             return;
         }
-        let report = {
-            let object = self.as_ref();
-            let state = object.rust();
-            let Some(SecretContent::Login(login)) = state.detail_content.as_ref() else {
-                return;
-            };
-            activity_report(&login.history)
-        };
+        let report = activity_report(&self.as_ref().rust().detail_versions);
         match report.and_then(|report| write_activity_report(&report)) {
             Ok(path) => self.activity_exported(&QUrl::from_local_file(&QString::from(path.to_string_lossy().as_ref()))),
             Err(_) => self.fail("No se pudo generar el archivo de actividad. Comprueba el espacio disponible e inténtalo de nuevo."),
         }
     }
 
-    pub fn refresh_totp(mut self: Pin<&mut Self>) {
+    pub fn refresh_totp(self: Pin<&mut Self>) {
         if *self.locked() || *self.busy() {
             return;
         }
-        let (id, projection) = {
-            let object = self.as_ref();
-            let state = object.rust();
-            let Some(id) = state.selected_entry else {
-                return;
-            };
-            let Some(content) = state.detail_content.as_ref() else {
-                return;
-            };
-            if !matches!(content, SecretContent::Login(_) | SecretContent::Totp(_)) {
-                return;
-            }
-            (
-                id,
-                content_projection_with_state(
-                    id,
-                    content,
-                    state.password_revealed,
-                    unix_seconds(),
-                    &state.revealed_fields,
-                    state.qr_source.as_ref().map(|value| value.as_str()),
-                ),
-            )
-        };
-        if let Ok(projection) = projection {
-            if self.as_ref().rust().selected_entry == Some(id) {
-                self.as_mut()
-                    .set_detail_json(QString::from(projection.as_str()));
-            }
+        let has_code = self
+            .as_ref()
+            .rust()
+            .detail_content
+            .as_ref()
+            .is_some_and(|content| {
+                matches!(kind_of(content.template().as_str()), "login" | "totp")
+            });
+        if has_code {
+            self.publish_detail();
         }
     }
 
@@ -1612,15 +1636,18 @@ impl qobject::SecretsController {
         let value = {
             let object = self.as_ref();
             let state = object.rust();
-            let config = match state.detail_content.as_ref() {
-                Some(SecretContent::Login(login)) => login.totp.as_ref(),
-                Some(SecretContent::Totp(value)) => Some(&value.config),
-                _ => None,
-            };
-            let Some(config) = config else {
+            let Some(content) = state.detail_content.as_ref() else {
                 return;
             };
-            let Ok(mut snapshot) = generate_totp(config, unix_seconds()) else {
+            let field = if kind_of(content.template().as_str()) == "login" {
+                "totp"
+            } else {
+                "uri"
+            };
+            let Ok(Some(config)) = parse_totp_input(&field_text(content, field)) else {
+                return;
+            };
+            let Ok(mut snapshot) = generate_totp(&config, unix_seconds()) else {
                 return;
             };
             if next {
@@ -1629,44 +1656,11 @@ impl qobject::SecretsController {
                 std::mem::take(&mut snapshot.current)
             }
         };
-        self.as_mut().request_copy(
-            if next {
-                CopyKind::NextTotp
-            } else {
-                CopyKind::Totp
-            },
-            value,
-        );
+        self.as_mut().request_copy(value);
     }
 
-    pub fn confirm_copy(mut self: Pin<&mut Self>, copied: bool) {
-        let pending = self.as_mut().rust_mut().pending_copy.take();
-        if !copied {
-            return;
-        }
-        let Some(pending) = pending else {
-            return;
-        };
-        let valid = {
-            let object = self.as_ref();
-            let state = object.rust();
-            !*self.locked()
-                && state.selection_operation == pending.selection_operation
-                && state.selected_entry == Some(pending.id)
-                && state.editor_session.is_none()
-                && state.selected_revision.is_some()
-                && state.detail_content.is_some()
-        };
-        if !valid || *self.busy() {
-            return;
-        }
-        if matches!(
-            self.as_ref().rust().detail_content,
-            Some(SecretContent::Login(_))
-        ) {
-            self.as_mut().start_copy_history_record(pending);
-        }
-    }
+    /// Usage events are no longer recorded, so a finished copy changes nothing.
+    pub fn confirm_copy(self: Pin<&mut Self>, _copied: bool) {}
 
     fn can_copy_login_value(self: Pin<&Self>) -> bool {
         let state = self.rust();
@@ -1675,140 +1669,25 @@ impl qobject::SecretsController {
             && !*self.saving()
             && state.editor_session.is_none()
             && state.selected_revision.is_some()
-            && matches!(state.detail_content.as_ref(), Some(SecretContent::Login(_)))
+            && state
+                .detail_content
+                .as_ref()
+                .is_some_and(|content| kind_of(content.template().as_str()) == "login")
     }
 
-    fn request_copy(mut self: Pin<&mut Self>, kind: CopyKind, value: SensitiveText) {
+    fn request_copy(mut self: Pin<&mut Self>, value: SensitiveText) {
         {
-            let mut state = self.as_mut().rust_mut();
-            let Some(id) = state.selected_entry else {
-                return;
-            };
-            if state.selected_revision.is_none() || state.editor_session.is_some() {
+            let state = self.as_ref();
+            let state = state.rust();
+            if state.selected_entry.is_none()
+                || state.selected_revision.is_none()
+                || state.editor_session.is_some()
+            {
                 return;
             }
-            let pending = PendingCopy {
-                id,
-                selection_operation: state.selection_operation,
-                kind,
-            };
-            state.pending_copy = Some(pending);
         }
         let value = QString::from(value.as_str());
         self.as_mut().clipboard_requested(&value);
-    }
-
-    fn start_copy_history_record(mut self: Pin<&mut Self>, pending: PendingCopy) {
-        let copy_snapshot = {
-            let object = self.as_ref();
-            let state = object.rust();
-            state
-                .selected_revision
-                .zip(state.detail_content.as_ref().cloned())
-        };
-        let Some((revision, content_snapshot)) = copy_snapshot else {
-            self.as_mut().history_record_failed();
-            return;
-        };
-        let kind = match pending.kind {
-            CopyKind::Username => LoginHistoryEventKind::CopyUsername,
-            CopyKind::Password => LoginHistoryEventKind::CopyPassword,
-            CopyKind::Totp => LoginHistoryEventKind::CopyTotp,
-            CopyKind::NextTotp => LoginHistoryEventKind::CopyNextTotp,
-        };
-        let timestamp = unix_seconds();
-        self.as_mut().set_busy(true);
-
-        crate::qt::jobs::run_blocking(
-            self.qt_thread(),
-            move || -> anyhow::Result<CopyHistoryResult> {
-                let mut service = open_service()?;
-                let content = service.record_login_event(
-                    pending.id,
-                    revision,
-                    content_snapshot,
-                    kind,
-                    timestamp,
-                )?;
-                let write_revision = revision
-                    .checked_add(1)
-                    .ok_or_else(|| anyhow::anyhow!("secret revision is exhausted"))?;
-                let observed_revision = find_entry_metadata(pending.id)
-                    .ok()
-                    .map(|metadata| metadata.revision);
-                let snapshot = snapshot_after_mutation();
-                Ok(CopyHistoryResult {
-                    content,
-                    write_revision,
-                    observed_revision,
-                    snapshot,
-                })
-            },
-            move |mut controller, result| {
-                controller.as_mut().set_busy(false);
-                match result {
-                    Ok(saved) => {
-                        let (has_snapshot, snapshot_revision) = match saved.snapshot {
-                            Ok(snapshot) => {
-                                let revision = snapshot_revision(&snapshot, pending.id);
-                                controller.as_mut().publish_snapshot(snapshot);
-                                (true, revision)
-                            }
-                            Err(()) => (false, None),
-                        };
-
-                        let still_selected = {
-                            let object = controller.as_ref();
-                            let state = object.rust();
-                            state.selected_entry == Some(pending.id)
-                                && state.selection_operation == pending.selection_operation
-                                && !*controller.as_ref().locked()
-                        };
-                        if !still_selected {
-                            return;
-                        }
-
-                        let revision_matches_snapshot = match snapshot_revision {
-                            Some(snapshot_revision) => {
-                                snapshot_revision == saved.write_revision
-                                    && saved.observed_revision == Some(saved.write_revision)
-                            }
-                            None => {
-                                !has_snapshot
-                                    && saved.observed_revision == Some(saved.write_revision)
-                            }
-                        };
-                        if !revision_matches_snapshot {
-                            controller.as_mut().history_record_failed();
-                            return;
-                        }
-
-                        let revision = snapshot_revision.unwrap_or(saved.write_revision);
-                        let detail = content_projection(
-                            pending.id,
-                            &saved.content,
-                            controller.as_ref().rust().password_revealed,
-                            unix_seconds(),
-                        );
-                        if let Ok(detail) = detail {
-                            {
-                                let mut state = controller.as_mut().rust_mut();
-                                state.selected_revision = Some(revision);
-                                state.detail_content = Some(saved.content);
-                            }
-                            controller
-                                .as_mut()
-                                .set_detail_json(QString::from(detail.as_str()));
-                        } else {
-                            controller.as_mut().history_record_failed();
-                        }
-                    }
-                    Err(_) => {
-                        controller.as_mut().history_record_failed();
-                    }
-                }
-            },
-        );
     }
 
     pub fn save_folder(
@@ -1863,16 +1742,26 @@ impl qobject::SecretsController {
             false,
             "No se pudo guardar la carpeta.",
             move || {
-                let mut service = open_service()?;
+                let mut session = open_session()?;
+                let vault = session.vault_mut();
                 let saved_id = match folder_id {
                     Some(id) => {
-                        service.update_folder_details(id, name, appearance)?;
+                        vault
+                            .update_folder(FolderEdit::new(id).name(name).appearance(appearance))?;
                         id
                     }
                     None => {
-                        service.create_folder_with_appearance(name, parent_id, None, appearance)?
+                        vault
+                            .create_folder(NewFolder {
+                                name,
+                                parent: parent_id,
+                                appearance,
+                                default_recipients: None,
+                            })?
+                            .id
                     }
                 };
+                drop(session);
                 let snapshot = snapshot_after_mutation();
                 Ok(MutationResult {
                     snapshot,
@@ -1896,8 +1785,7 @@ impl qobject::SecretsController {
             false,
             "No se pudo cambiar el orden de la carpeta.",
             move || {
-                let mut service = open_service()?;
-                step_folder_in_service(&mut service, id, direction)?;
+                step_folder(&mut open_session()?, id, direction)?;
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: MutationSignal::None,
@@ -1938,7 +1826,7 @@ impl qobject::SecretsController {
             "Moviendo carpeta…", false,
             "No se pudo mover la carpeta. No puede colocarse dentro de sí misma ni de sus descendientes.",
             move || {
-                open_service()?.move_folder(id, parent, before)?;
+                open_session()?.vault_mut().move_folder(id, parent, before)?;
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: MutationSignal::None,
@@ -1974,9 +1862,12 @@ impl qobject::SecretsController {
             false,
             "No se pudo mover el elemento.",
             move || {
-                let mut service = open_service()?;
-                let before_revision = find_entry_metadata(id)?.revision;
-                service.move_secret(id, folder_id)?;
+                let mut session = open_session()?;
+                let before_revision = item_meta(&session, id)?.revision;
+                session
+                    .vault_mut()
+                    .update_item(ItemEdit::new(id, before_revision).folder(folder_id))?;
+                drop(session);
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: MutationSignal::MetadataChanged(id, before_revision),
@@ -2011,8 +1902,10 @@ impl qobject::SecretsController {
             false,
             "No se pudo eliminar el elemento.",
             move || {
-                let mut service = open_service()?;
-                service.remove_secret(id)?;
+                let mut session = open_session()?;
+                let revision = item_meta(&session, id)?.revision;
+                session.vault_mut().remove_item(id, revision)?;
+                drop(session);
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: MutationSignal::EntryRemoved(id),
@@ -2041,21 +1934,25 @@ impl qobject::SecretsController {
             false,
             "No se pudo eliminar la carpeta.",
             move || {
-                let mut service = open_service()?;
+                let mut session = open_session()?;
                 let affected_selection =
                     selected_id
                         .filter(|_| !delete_contents)
                         .and_then(|selected| {
-                            find_entry_metadata(selected)
+                            item_meta(&session, selected)
                                 .ok()
-                                .filter(|entry| entry.folder == Some(id))
+                                .filter(|entry| entry.state.folder == Some(id))
                                 .map(|entry| (selected, entry.revision))
                         });
-                if delete_contents {
-                    service.remove_folder_tree(id)?;
-                } else {
-                    service.remove_folder(id)?;
-                }
+                session.vault_mut().remove_folder(
+                    id,
+                    if delete_contents {
+                        FolderContents::Delete
+                    } else {
+                        FolderContents::Reparent
+                    },
+                )?;
+                drop(session);
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: affected_selection
@@ -2066,6 +1963,156 @@ impl qobject::SecretsController {
                 })
             },
         );
+    }
+
+    /// Opens the merge of a conflicted item. Decrypting may ask for a passphrase.
+    pub fn open_conflict(mut self: Pin<&mut Self>, id: &QString) {
+        if *self.locked() || *self.busy() || *self.saving() {
+            return;
+        }
+        let Some(id) = parse_secret_id(&id.to_string()) else {
+            self.as_mut().fail("El elemento seleccionado no es válido.");
+            return;
+        };
+        self.as_mut().close_conflict();
+        self.as_mut().clear_error();
+        self.as_mut().set_busy(true);
+        self.as_mut()
+            .set_status(QString::from("Abriendo las dos versiones…"));
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || -> anyhow::Result<Option<Conflict>> {
+                Ok(open_session()?.vault().open_conflict(id)?)
+            },
+            |mut controller, result| {
+                controller.as_mut().set_busy(false);
+                match result {
+                    Ok(Some(conflict)) => {
+                        controller.as_mut().rust_mut().conflict = Some(conflict);
+                        controller.as_mut().publish_conflict();
+                        controller
+                            .as_mut()
+                            .set_status(QString::from("Revisa las diferencias"));
+                    }
+                    Ok(None) => controller
+                        .as_mut()
+                        .fail("Este elemento ya no tiene conflictos."),
+                    Err(error) => {
+                        tracing::warn!(error = %format!("{error:#}"), "conflict did not open");
+                        let message = match error.downcast_ref::<VaultError>() {
+                            Some(VaultError::ConflictUnreadable) => {
+                                "Una de las versiones usa una clave que no está en este dispositivo. Resuélvelo desde un dispositivo que la tenga."
+                            }
+                            _ => "No se pudieron abrir las versiones en conflicto.",
+                        };
+                        controller.as_mut().fail(message);
+                    }
+                }
+            },
+        );
+    }
+
+    pub fn close_conflict(mut self: Pin<&mut Self>) {
+        {
+            let mut state = self.as_mut().rust_mut();
+            state.conflict = None;
+            state.conflict_revealed.clear();
+        }
+        self.set_conflict_json(QString::default());
+    }
+
+    /// Shows or hides the two values of a concealed difference.
+    pub fn toggle_conflict_value(mut self: Pin<&mut Self>, key: &QString) {
+        let key = key.to_string();
+        {
+            let mut state = self.as_mut().rust_mut();
+            if !state.conflict_revealed.remove(&key) {
+                state.conflict_revealed.insert(key);
+            }
+        }
+        self.publish_conflict();
+    }
+
+    /// Saves the merge with one side per difference, as `{"key": "ours"|"theirs"}`.
+    pub fn resolve_conflict(mut self: Pin<&mut Self>, choices_json: &QString) {
+        if *self.busy() || self.as_ref().rust().conflict.is_none() {
+            return;
+        }
+        let Ok(picked) = serde_json::from_str::<std::collections::HashMap<String, String>>(
+            &choices_json.to_string(),
+        ) else {
+            self.as_mut()
+                .fail("La selección de la combinación no es válida.");
+            return;
+        };
+        let choices = {
+            let object = self.as_ref();
+            let Some(conflict) = object.rust().conflict.as_ref() else {
+                return;
+            };
+            conflict
+                .differences
+                .iter()
+                .filter_map(|difference| {
+                    let side = match picked.get(&conflict_key(&difference.target))?.as_str() {
+                        "ours" => Side::Ours,
+                        "theirs" => Side::Theirs,
+                        _ => return None,
+                    };
+                    Some((difference.target.clone(), side))
+                })
+                .collect::<std::collections::HashMap<_, _>>()
+        };
+        let Some(conflict) = self.as_mut().rust_mut().conflict.take() else {
+            return;
+        };
+        let operation = self.as_ref().rust().editor_operation;
+        self.as_mut().set_conflict_json(QString::default());
+        self.as_mut().start_mutation(
+            "Guardando la combinación…",
+            true,
+            "No se pudo guardar la combinación. El conflicto sigue abierto.",
+            move || {
+                let meta = open_session()?
+                    .vault_mut()
+                    .resolve_conflict(&conflict, &choices)?;
+                Ok(MutationResult {
+                    snapshot: snapshot_after_mutation(),
+                    signal: MutationSignal::EntrySaved(meta.id.0.to_string()),
+                    editor_operation: Some(operation),
+                })
+            },
+        );
+    }
+
+    fn publish_conflict(mut self: Pin<&mut Self>) {
+        let projection = {
+            let object = self.as_ref();
+            let state = object.rust();
+            state
+                .conflict
+                .as_ref()
+                .map(|conflict| conflict_projection(conflict, &state.conflict_revealed))
+        };
+        match projection {
+            Some(Ok(projection)) => self
+                .as_mut()
+                .set_conflict_json(QString::from(projection.as_str())),
+            Some(Err(error)) => {
+                tracing::warn!(error = %format!("{error:#}"), "conflict projection failed");
+                self.as_mut().rust_mut().conflict = None;
+                self.as_mut()
+                    .fail("No se pudieron mostrar las versiones en conflicto.");
+            }
+            None => {}
+        }
+    }
+
+    fn set_conflict_json(mut self: Pin<&mut Self>, value: QString) {
+        if self.conflict_json() != &value {
+            self.as_mut().rust_mut().conflict_json = value;
+            self.conflict_json_changed();
+        }
     }
 
     pub fn generate_password(
@@ -2086,15 +2133,14 @@ impl qobject::SecretsController {
             self.as_mut().fail("No se pudo generar la contraseña.");
             return;
         };
-        let options = PasswordOptions {
+        match generate_password_value(
             length,
             lowercase,
             uppercase,
             digits,
             symbols,
-            excluded: excluded.to_string(),
-        };
-        match generate_secure_password(&options) {
+            &excluded.to_string(),
+        ) {
             Ok(password) => {
                 let password = QString::from(password.as_str());
                 self.password_generated(&password);
@@ -2122,9 +2168,17 @@ impl qobject::SecretsController {
             false,
             "No se pudo actualizar el elemento.",
             move || {
-                let mut service = open_service()?;
-                let before_revision = find_entry_metadata(id)?.revision;
-                service.update_flags(id, favorite, trashed)?;
+                let mut session = open_session()?;
+                let before_revision = item_meta(&session, id)?.revision;
+                let mut edit = ItemEdit::new(id, before_revision);
+                if let Some(favorite) = favorite {
+                    edit = edit.favorite(favorite);
+                }
+                if let Some(trashed) = trashed {
+                    edit = edit.trashed(trashed);
+                }
+                session.vault_mut().update_item(edit)?;
+                drop(session);
                 Ok(MutationResult {
                     snapshot: snapshot_after_mutation(),
                     signal: MutationSignal::MetadataChanged(id, before_revision),
@@ -2218,14 +2272,22 @@ impl qobject::SecretsController {
                     controller.as_mut().operation_succeeded();
                 }
                 Err(error) => {
-                    let message = match error.downcast_ref::<kryptopass_core::SecretLinkError>() {
-                        Some(kryptopass_core::SecretLinkError::Occupied) => {
+                    tracing::warn!(error = %format!("{error:#}"), "vault change failed");
+                    let vault_error = error.downcast_ref::<VaultError>();
+                    let message = match vault_error {
+                        Some(VaultError::Link(SecretLinkError::Occupied)) => {
                             "El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero."
                         }
-                        Some(kryptopass_core::SecretLinkError::InvalidTarget) => {
+                        Some(VaultError::Link(SecretLinkError::InvalidTarget)) => {
                             "El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo."
                         }
-                        None => failure_message,
+                        Some(VaultError::Invalid(_)) => {
+                            "Revisa los campos: falta alguno obligatorio o tiene un formato no válido. Las fechas van como AAAA-MM-DD."
+                        }
+                        Some(VaultError::StaleRevision) => {
+                            "Este elemento cambió mientras lo editabas. Ábrelo de nuevo para no perder esos cambios."
+                        }
+                        _ => failure_message,
                     };
                     controller.as_mut().fail(message);
                 }
@@ -2332,17 +2394,18 @@ impl qobject::SecretsController {
         self.as_mut().close_history_version();
         let mut state = self.as_mut().rust_mut();
         state.detail_content = None;
+        state.detail_versions.clear();
         state.selected_entry = None;
         state.selected_revision = None;
         state.password_revealed = false;
         state.revealed_fields.clear();
         state.qr_source = None;
-        state.pending_copy = None;
         self.as_mut().set_detail_json(QString::default());
     }
 
     fn clear_sensitive_state_contents(mut self: Pin<&mut Self>) {
-        crate::search::set_locked(true, None);
+        crate::search::set_locked(true);
+        self.as_mut().close_conflict();
         {
             let mut state = self.as_mut().rust_mut();
             state.selection_operation = state.selection_operation.wrapping_add(1);
@@ -2381,7 +2444,7 @@ impl qobject::SecretsController {
         {
             let mut state = self.as_mut().rust_mut();
             state.staged_icon = None;
-            state.editor_ssh = None;
+            state.editor_content = None;
             state.staged_ssh = None;
             state.prepare_operation = state.prepare_operation.wrapping_add(1);
         }
@@ -2452,10 +2515,7 @@ impl qobject::SecretsController {
 
     fn set_locked(mut self: Pin<&mut Self>, value: bool) {
         if *self.locked() != value {
-            crate::search::set_locked(
-                value,
-                self.rust().primary.as_ref().map(|key| &key.fingerprint),
-            );
+            crate::search::set_locked(value);
             kryptopass_browser::set_locked(value, false);
             self.as_mut().rust_mut().locked = value;
             self.as_mut().locked_changed();
@@ -2465,23 +2525,32 @@ impl qobject::SecretsController {
 }
 
 fn load_editor_entry(id: SecretId) -> anyhow::Result<OpenedEntry> {
-    let service = open_service()?;
-    let before = find_entry_metadata(id)?;
-    let content = service.read_content(id)?;
-    let after = find_entry_metadata(id)?;
-    anyhow::ensure!(
-        before.revision == after.revision,
-        "secret changed while opening"
-    );
-
+    let session = open_session()?;
+    let item = session.vault().open_item(id)?;
+    let related_entry = session.vault().list_links()?.into_iter().find_map(|link| {
+        if link.first == id {
+            Some(link.second)
+        } else if link.second == id {
+            Some(link.first)
+        } else {
+            None
+        }
+    });
+    let Item { meta, content, .. } = item;
     Ok(OpenedEntry {
         id,
-        folder: after.folder,
-        title: after.title,
-        revision: after.revision,
-        recipients: after.recipients,
-        icon: after.icon,
-        related_entry: after.related_entry,
+        folder: meta.state.folder,
+        title: meta.state.title,
+        revision: meta.revision,
+        recipients: meta
+            .state
+            .recipients
+            .as_slice()
+            .iter()
+            .map(|key| key.as_str().to_owned())
+            .collect(),
+        icon: meta.state.icon,
+        related_entry,
         content,
     })
 }
@@ -2509,13 +2578,13 @@ fn verify_vault_access(primary: Option<&KeyFingerprint>) -> anyhow::Result<()> {
     let owned: Vec<KeyFingerprint> = match primary.filter(|key| local.contains(key)) {
         Some(primary) => vec![primary.clone()],
         None => {
-            let metadata = open_service()?.list_secret_metadata()?;
+            let metadata = open_session()?.vault().list_items()?;
             if metadata.is_empty() {
                 return Ok(());
             }
             metadata
                 .iter()
-                .flat_map(|entry| entry.recipients.as_slice().iter())
+                .flat_map(|entry| entry.state.recipients.as_slice().iter())
                 .filter(|fingerprint| local.contains(fingerprint))
                 .cloned()
                 .collect()
@@ -2527,6 +2596,12 @@ fn verify_vault_access(primary: Option<&KeyFingerprint>) -> anyhow::Result<()> {
     challenge.extend_from_slice(Uuid::new_v4().as_bytes());
     let ciphertext = crypto.encrypt(&challenge, &recipients)?;
     let plaintext = crypto.decrypt(&ciphertext)?;
+    // What arrived through Sync while locked becomes listable with the key open.
+    let indexed = crate::vault_access::open_background()
+        .and_then(|mut vault| Ok(kryptopass_app::index_received(&mut vault)?));
+    if let Err(error) = indexed {
+        tracing::warn!(error = %format!("{error:#}"), "versions were not indexed after unlocking");
+    }
     anyhow::ensure!(
         plaintext.as_slice() == challenge.as_slice(),
         "unlock challenge mismatch"
@@ -2534,65 +2609,189 @@ fn verify_vault_access(primary: Option<&KeyFingerprint>) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_detail_content(id: SecretId) -> anyhow::Result<(SecretContent, u64)> {
-    let service = open_service()?;
-    let before = find_entry_metadata(id)?;
-    let content = service.read_content(id)?;
-    let after = find_entry_metadata(id)?;
-    anyhow::ensure!(
-        before.revision == after.revision,
-        "secret changed while opening"
-    );
-    Ok((content, after.revision))
-}
-
-struct EntryMetadata {
-    icon: Option<kryptopass_core::EntryIcon>,
-    folder: Option<FolderId>,
-    title: String,
+struct LoadedDetail {
+    content: ItemContent,
     revision: u64,
-    recipients: Vec<String>,
-    related_entry: Option<SecretId>,
+    versions: Vec<(VersionId, u64)>,
 }
 
-fn find_entry_metadata(id: SecretId) -> anyhow::Result<EntryMetadata> {
-    let storage = open_storage()?;
-    let (_, secrets, links) = storage.read_snapshot_with_links()?;
-    let secret = secrets
-        .into_iter()
-        .find(|secret| secret.id == id)
-        .ok_or_else(|| anyhow::anyhow!("secret does not exist"))?;
-    let metadata = EntryMetadata {
-        icon: secret.icon,
-        folder: secret.folder_id,
-        title: secret.title,
-        revision: secret.revision,
-        recipients: secret
-            .recipients
-            .as_slice()
-            .iter()
-            .map(|key| key.as_str().to_owned())
-            .collect(),
-        related_entry: links.iter().find_map(|link| {
-            if link.first == id {
-                Some(link.second)
-            } else if link.second == id {
-                Some(link.first)
-            } else {
-                None
+fn load_detail(id: SecretId) -> anyhow::Result<LoadedDetail> {
+    let session = open_session()?;
+    let Item { meta, content, .. } = session.vault().open_item(id)?;
+    let versions = earlier_versions(meta.head, session.vault().item_history(id)?);
+    Ok(LoadedDetail {
+        content,
+        revision: meta.revision,
+        versions,
+    })
+}
+
+/// Whether opening failed only because no key on this device can read the item.
+fn is_unreadable(error: &anyhow::Error) -> bool {
+    matches!(
+        error.downcast_ref::<VaultError>(),
+        Some(
+            VaultError::Cipher(kryptopass_core::vault::CipherError::NotARecipient)
+                | VaultError::ItemNotFound
+        )
+    )
+}
+
+/// The stable name of a difference, for the dialog to answer with.
+fn conflict_key(target: &DiffTarget) -> String {
+    match target {
+        DiffTarget::Title => "title".to_owned(),
+        DiffTarget::Folder => "folder".to_owned(),
+        DiffTarget::Favorite => "favorite".to_owned(),
+        DiffTarget::Trashed => "trashed".to_owned(),
+        DiffTarget::Icon => "icon".to_owned(),
+        DiffTarget::Field(field) => format!("field:{}", field.as_str()),
+        DiffTarget::Custom(id) => format!("custom:{id}"),
+    }
+}
+
+/// What the merge dialog shows. Concealed values stay out until revealed, and
+/// values come from the versions the conflict already holds.
+fn conflict_projection(
+    conflict: &Conflict,
+    revealed: &std::collections::BTreeSet<String>,
+) -> anyhow::Result<SensitiveText> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Row {
+        key: String,
+        label: SensitiveText,
+        needs_review: bool,
+        concealed: bool,
+        revealed: bool,
+        suggested: &'static str,
+        ours: SensitiveText,
+        theirs: SensitiveText,
+    }
+    #[derive(serde::Serialize)]
+    struct Projection {
+        id: String,
+        title: String,
+        rows: Vec<Row>,
+    }
+    let (templates, template) = template_of(conflict.ours.meta.state.template.as_str())?;
+    let form = kryptopass_app::Form::build(
+        templates.library(),
+        template,
+        &crate::vault_access::language(),
+    );
+    let yes_no = |value: bool| crate::i18n::text(if value { "Sí" } else { "No" });
+    let value_of = |item: &Item, target: &DiffTarget| -> SensitiveText {
+        let state = &item.meta.state;
+        match target {
+            DiffTarget::Title => state.title.clone().into(),
+            DiffTarget::Folder => state
+                .folder
+                .map_or_else(String::new, |folder| folder.0.to_string())
+                .into(),
+            DiffTarget::Favorite => yes_no(state.favorite).into(),
+            DiffTarget::Trashed => yes_no(state.trashed).into(),
+            DiffTarget::Icon => crate::i18n::text("Icono elegido").into(),
+            DiffTarget::Field(field) => {
+                let mut text = SensitiveText::new();
+                let values = item
+                    .content
+                    .value(field.as_str())
+                    .map_or(&[][..], FieldValue::texts);
+                for (index, value) in values.iter().enumerate() {
+                    if index != 0 {
+                        text.push('\n');
+                    }
+                    text.push_str(value);
+                }
+                text
             }
-        }),
+            DiffTarget::Custom(id) => item
+                .content
+                .custom()
+                .iter()
+                .find(|custom| custom.id() == *id)
+                .map(|custom| custom.value.clone())
+                .unwrap_or_default(),
+        }
     };
-    Ok(metadata)
+    let label_of = |target: &DiffTarget| -> SensitiveText {
+        match target {
+            DiffTarget::Title => crate::i18n::text("Nombre").into(),
+            DiffTarget::Folder => crate::i18n::text("Carpeta").into(),
+            DiffTarget::Favorite => crate::i18n::text("Favorito").into(),
+            DiffTarget::Trashed => crate::i18n::text("En la papelera").into(),
+            DiffTarget::Icon => crate::i18n::text("Icono").into(),
+            DiffTarget::Field(field) => form
+                .sections
+                .iter()
+                .flat_map(|section| &section.fields)
+                .find(|candidate| candidate.id == *field)
+                .map_or_else(
+                    || field.as_str().to_owned(),
+                    |candidate| candidate.label.clone(),
+                )
+                .into(),
+            DiffTarget::Custom(id) => [&conflict.ours, &conflict.theirs]
+                .iter()
+                .find_map(|item| {
+                    item.content
+                        .custom()
+                        .iter()
+                        .find(|custom| custom.id() == *id)
+                        .map(|custom| custom.key.clone())
+                })
+                .unwrap_or_default(),
+        }
+    };
+    let rows = conflict
+        .differences
+        .iter()
+        .map(|difference| {
+            let key = conflict_key(&difference.target);
+            let show = !difference.concealed || revealed.contains(&key);
+            let value = |item: &Item| {
+                if show {
+                    value_of(item, &difference.target)
+                } else {
+                    SensitiveText::new()
+                }
+            };
+            Row {
+                label: label_of(&difference.target),
+                needs_review: difference.kind == DiffKind::Conflict,
+                concealed: difference.concealed,
+                revealed: difference.concealed && show,
+                suggested: match difference.suggested {
+                    Some(Side::Ours) => "ours",
+                    Some(Side::Theirs) => "theirs",
+                    _ => "",
+                },
+                ours: value(&conflict.ours),
+                theirs: value(&conflict.theirs),
+                key,
+            }
+        })
+        .collect();
+    super::secrets_projection::sensitive_json(&Projection {
+        id: conflict.ours.meta.id.0.to_string(),
+        title: conflict.ours.meta.state.title.clone(),
+        rows,
+    })
 }
 
-fn step_folder_in_service(
-    service: &mut SecretsService<SqliteStorage, GnuPgOpenPgp>,
-    id: FolderId,
-    direction: i32,
-) -> anyhow::Result<()> {
+fn item_meta(session: &VaultSession, id: SecretId) -> anyhow::Result<ItemMeta> {
+    session
+        .vault()
+        .list_items()?
+        .into_iter()
+        .find(|meta| meta.id == id)
+        .ok_or_else(|| anyhow::anyhow!("secret does not exist"))
+}
+
+fn step_folder(session: &mut VaultSession, id: FolderId, direction: i32) -> anyhow::Result<()> {
     anyhow::ensure!([-1, 1].contains(&direction), "invalid folder direction");
-    let folders = service.list_folders()?;
+    let folders = session.vault().list_folders()?;
     let folder = folders
         .iter()
         .find(|folder| folder.id == id)
@@ -2618,73 +2817,124 @@ fn step_folder_in_service(
         siblings.get(index + 2).map(|next| next.id)
     };
     if (direction < 0 && index > 0) || (direction > 0 && index + 1 < siblings.len()) {
-        service.move_folder(id, folder.parent_id, before)?;
+        session
+            .vault_mut()
+            .move_folder(id, folder.parent_id, before)?;
     }
     Ok(())
 }
 
-fn open_service() -> anyhow::Result<SecretsService<SqliteStorage, GnuPgOpenPgp>> {
-    Ok(SecretsService::new(open_storage()?, GnuPgOpenPgp))
+/// The vault's primary key: its single default recipient, with its settings.
+fn read_primary_key(session: &VaultSession) -> anyhow::Result<Option<PrimaryKey>> {
+    let Some(recipients) = session.vault().default_recipients()? else {
+        return Ok(None);
+    };
+    let Some(fingerprint) = recipients.as_slice().first().cloned() else {
+        return Ok(None);
+    };
+    let forget_on_lock = session.vault().settings_of(&fingerprint)?.forget_on_lock;
+    Ok(Some(PrimaryKey {
+        fingerprint,
+        forget_on_lock,
+    }))
+}
+
+fn write_primary_key(key: &PrimaryKey) -> anyhow::Result<()> {
+    let mut session = open_session()?;
+    let vault = session.vault_mut();
+    vault.set_default_recipients(Some(RecipientSet::new(vec![key.fingerprint.clone()])?))?;
+    let mut settings = KeySettings::new(key.fingerprint.clone());
+    settings.forget_on_lock = key.forget_on_lock;
+    vault.set_key_settings(settings)?;
+    Ok(())
+}
+
+fn generate_password_value(
+    length: usize,
+    lowercase: bool,
+    uppercase: bool,
+    digits: bool,
+    symbols: bool,
+    excluded: &str,
+) -> anyhow::Result<SensitiveText> {
+    use kp_template::CharClass;
+    use kryptopass_generator::{Settings, generate};
+    let classes: Vec<CharClass> = [
+        (lowercase, CharClass::Lower),
+        (uppercase, CharClass::Upper),
+        (digits, CharClass::Digits),
+        (symbols, CharClass::Symbols),
+    ]
+    .into_iter()
+    .filter_map(|(enabled, class)| enabled.then_some(class))
+    .collect();
+    let mut settings = Settings::new(length, &classes)?;
+    settings.set_excluded(excluded)?;
+    Ok(generate(&settings)?)
 }
 
 fn load_store_snapshot() -> anyhow::Result<StoreSnapshot> {
     let snapshot = read_store_snapshot()?;
-    let path = app_paths::database_path(crate::app_info::APP.desktop_file_id)?;
-    crate::infrastructure::browser::configure(&path)?;
+    crate::infrastructure::browser::configure(&crate::vault_access::vault_path()?)?;
     Ok(snapshot)
 }
 
-/// Setup is pending only on a fresh installation; a vault with data predates it.
-fn resolve_setup_state(snapshot: &StoreSnapshot) -> anyhow::Result<Option<app_paths::SetupState>> {
+/// Bumped when the vault format changes: a mark from before it belongs to a
+/// vault this version does not open, so the first run must be offered again.
+const SETUP_VERSION: u32 = 2;
+
+/// Setup is pending on a fresh installation; a vault with data predates it.
+fn resolve_setup_state(
+    snapshot: &StoreSnapshot,
+    has_primary: bool,
+) -> anyhow::Result<Option<app_paths::SetupState>> {
     let app_id = crate::app_info::APP.desktop_file_id;
     match app_paths::setup_state(app_id) {
-        Ok(Some(state)) => return Ok(Some(state)),
-        Ok(None) => {}
+        Ok(Some(state)) if state.version >= SETUP_VERSION => return Ok(Some(state)),
+        Ok(_) => {}
         // A damaged preference must not lock the user out of the vault.
         Err(error) => {
             tracing::warn!(%error, "ignoring unreadable setup state");
-            return Ok(Some(app_paths::SetupState { version: 1 }));
+            return Ok(Some(app_paths::SetupState {
+                version: SETUP_VERSION,
+            }));
         }
     }
-    if snapshot.entries.is_empty() && snapshot.folders.is_empty() {
+    if snapshot.entries.is_empty() && snapshot.folders.is_empty() && !has_primary {
         return Ok(None);
     }
-    let state = app_paths::SetupState { version: 1 };
+    let state = app_paths::SetupState {
+        version: SETUP_VERSION,
+    };
     app_paths::save_setup_state(app_id, &state)?;
     Ok(Some(state))
 }
 
+fn snapshot_of(session: &VaultSession) -> anyhow::Result<StoreSnapshot> {
+    let vault = session.vault();
+    Ok(store_snapshot(
+        vault.list_folders()?,
+        vault.list_items()?,
+        vault.list_links()?,
+        vault.opaque_items()?,
+    ))
+}
+
 fn read_store_snapshot() -> anyhow::Result<StoreSnapshot> {
-    let storage = open_storage()?;
-    let (folders, secrets, links) = storage.read_snapshot_with_links()?;
-    Ok(store_snapshot_with_links(folders, secrets, links))
+    snapshot_of(&open_session()?)
 }
 
 fn activate_store_snapshot(
     path: std::path::PathBuf,
-) -> anyhow::Result<(StoreSnapshot, bool, Option<crate::storage::PrimaryKey>)> {
-    let storage = SqliteStorage::open_existing(&path)?;
-    let (folders, secrets, links) = storage.read_snapshot_with_links()?;
-    let primary = storage.primary_key()?;
+) -> anyhow::Result<(StoreSnapshot, bool, Option<PrimaryKey>)> {
+    let session = open_existing_session(path.clone())?;
+    let snapshot = snapshot_of(&session)?;
+    let primary = read_primary_key(&session)?;
+    drop(session);
     let durable = app_paths::set_active_vault_path(crate::app_info::APP.desktop_file_id, &path)?;
     crate::infrastructure::browser::configure(&path)?;
     crate::infrastructure::entry_icons::bind_store(&path);
-    let snapshot = store_snapshot_with_links(folders, secrets, links);
     Ok((snapshot, durable, primary))
-}
-
-fn open_storage() -> anyhow::Result<SqliteStorage> {
-    let app_id = crate::app_info::APP.desktop_file_id;
-    if let Some(path) = app_paths::active_vault_path(app_id)? {
-        let storage = SqliteStorage::open_existing(&path)?;
-        crate::infrastructure::entry_icons::bind_store(&path);
-        Ok(storage)
-    } else {
-        let path = app_paths::database_path(app_id)?;
-        let storage = SqliteStorage::open(&path)?;
-        crate::infrastructure::entry_icons::bind_store(&path);
-        Ok(storage)
-    }
 }
 
 fn snapshot_after_mutation() -> Result<StoreSnapshot, ()> {
@@ -2730,26 +2980,16 @@ fn write_activity_report(report: &str) -> anyhow::Result<std::path::PathBuf> {
     Ok(path)
 }
 
-fn activity_report(history: &kryptopass_core::LoginHistory) -> anyhow::Result<String> {
+fn activity_report(versions: &[(VersionId, u64)]) -> anyhow::Result<String> {
     let zone = QTimeZone::system_time_zone();
     let zone = zone
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("local time zone unavailable"))?;
     let mut report = String::from(
-        "Actividad en KryptoPass\nEventos conservados, del más reciente al más antiguo.\nNo incluye contraseñas ni valores de credenciales.\n\n",
+        "Actividad en KryptoPass\nVersiones anteriores, de la más reciente a la más antigua.\nNo incluye contraseñas ni valores de credenciales.\n\n",
     );
-    for event in history.events() {
-        let label = match event.kind {
-            LoginHistoryEventKind::Create => "Credencial creada",
-            LoginHistoryEventKind::LoginUse => "Credencial utilizada en KryptoPass",
-            LoginHistoryEventKind::PasswordRotated => "Contraseña actualizada",
-            LoginHistoryEventKind::Edited => "Datos editados",
-            LoginHistoryEventKind::CopyUsername => "Usuario copiado",
-            LoginHistoryEventKind::CopyPassword => "Contraseña copiada",
-            LoginHistoryEventKind::CopyTotp => "Código de verificación copiado",
-            LoginHistoryEventKind::CopyNextTotp => "Próximo código de verificación copiado",
-        };
-        let date = i64::try_from(event.timestamp)
+    for (_, at) in versions {
+        let date = i64::try_from(*at)
             .ok()
             .map(|timestamp| QDateTime::from_secs_since_epoch(timestamp, zone))
             .filter(QDateTime::is_valid)
@@ -2757,16 +2997,8 @@ fn activity_report(history: &kryptopass_core::LoginHistory) -> anyhow::Result<St
                 date.format_enum(cxx_qt_lib::DateFormat::ISODate)
                     .to_string()
             })
-            .unwrap_or_else(|| format!("Unix {}", event.timestamp));
-        report.push_str(&format!("{date}  {label}\n"));
+            .unwrap_or_else(|| format!("Unix {at}"));
+        report.push_str(&format!("{date}  Datos editados\n"));
     }
     Ok(report)
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/ui_adapters/activity_export.rs"]
-mod activity_export_tests;
-
-#[cfg(test)]
-#[path = "../../tests/unit/ui_adapters/folder_step.rs"]
-mod folder_step_tests;

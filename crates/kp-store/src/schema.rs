@@ -9,8 +9,8 @@
 //! item with its local revision. `default_recipients` and `key_settings` hold
 //! the vault's settings; no table singles out a key.
 //!
-//! Version 1 is the store of `kp-desktop/src/storage`. Each refuses the
-//! other's files; there is no migration because no vault is in production.
+//! Version 1 was the store Desktop had before this one. Its files are refused
+//! and left untouched; there is no migration because no vault is in production.
 
 use anyhow::{Context, Result, ensure};
 use rusqlite::{Connection, OpenFlags, TransactionBehavior};

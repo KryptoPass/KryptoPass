@@ -21,9 +21,10 @@ kryptopass-import = { package = "kp-import", path = "../kp-import" }
 kryptopass-identity = { package = "kp-identity", path = "../kp-identity" }
 kp-template = { path = "../kp-template" }
 anyhow = "1"
+serde_json = "1"
 thiserror = "2.0"
 tracing = "0.1"
-uuid = "1"
+uuid = { version = "1", features = ["v4"] }
 
 [lints]
 workspace = true

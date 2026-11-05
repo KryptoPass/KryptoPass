@@ -88,39 +88,24 @@ pub(crate) fn prepare_selected_identity(
 /// Whether `offered` (hex) belongs to the active vault: it is the primary key or a
 /// recipient of at least one of its secrets, so importing it restores access.
 fn vault_owns_key(offered: &str) -> bool {
-    use crate::storage::{SqliteStorage, paths};
-    use kryptopass_core::Storage as _;
-
-    let app_id = crate::app_info::APP.desktop_file_id;
-    let path = match paths::active_vault_path(app_id).ok().flatten() {
-        Some(path) => path,
-        None => match paths::database_path(app_id) {
-            Ok(path) => path,
-            Err(_) => return false,
-        },
-    };
-    if !path.exists() {
-        return false;
-    }
-    let Ok(storage) = SqliteStorage::open_existing(&path) else {
+    let Ok(session) = crate::vault_access::open_session() else {
         return false;
     };
-    if storage
-        .primary_key()
+    let matches =
+        |key: &kryptopass_core::KeyFingerprint| key.as_str().eq_ignore_ascii_case(offered);
+    if session
+        .vault()
+        .default_recipients()
         .ok()
         .flatten()
-        .is_some_and(|primary| primary.fingerprint.as_str().eq_ignore_ascii_case(offered))
+        .is_some_and(|recipients| recipients.as_slice().iter().any(matches))
     {
         return true;
     }
-    storage.list_secret_metadata().is_ok_and(|secrets| {
-        secrets.iter().any(|secret| {
-            secret
-                .recipients
-                .as_slice()
-                .iter()
-                .any(|key| key.as_str().eq_ignore_ascii_case(offered))
-        })
+    session.vault().list_items().is_ok_and(|items| {
+        items
+            .iter()
+            .any(|item| item.state.recipients.as_slice().iter().any(matches))
     })
 }
 
@@ -136,18 +121,15 @@ fn vault_exists() -> bool {
 }
 
 fn vault_primary_key() -> Option<kryptopass_core::KeyFingerprint> {
-    use crate::storage::{SqliteStorage, paths};
-
-    let app_id = crate::app_info::APP.desktop_file_id;
-    let path = match paths::active_vault_path(app_id).ok()? {
-        Some(path) => path,
-        None => paths::database_path(app_id).ok()?,
-    };
-    if !path.exists() {
-        return None;
-    }
-    let storage = SqliteStorage::open_existing(&path).ok()?;
-    Some(storage.primary_key().ok()??.fingerprint)
+    crate::vault_access::open_session()
+        .ok()?
+        .vault()
+        .default_recipients()
+        .ok()
+        .flatten()?
+        .as_slice()
+        .first()
+        .cloned()
 }
 
 /// What accepting an inbound vault identity from the phone would do.

@@ -82,7 +82,7 @@ watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp
 command = ["just", "test-vault-sync"]
 need_stdout = true
 allow_warnings = false
-watch = ["crates/kp-core", "crates/kp-sync", "crates/kp-vault", "crates/kp-desktop/src/vault_sync", "crates/kp-desktop/tests/unit/vault_sync.rs", "Cargo.toml", "Cargo.lock"]
+watch = ["crates/kp-core", "crates/kp-sync", "crates/kp-desktop/src/vault_sync", "crates/kp-desktop/tests/unit/vault_sync.rs", "Cargo.toml", "Cargo.lock"]
 
 [jobs.verify-sync-session]
 command = ["just", "verify-sync-session"]

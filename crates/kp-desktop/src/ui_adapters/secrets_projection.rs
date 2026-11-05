@@ -3,10 +3,10 @@
 mod content;
 mod expanded;
 
+use kryptopass_core::vault::{ItemMeta, OpaqueItem, VersionId, VersionInfo};
 use kryptopass_core::{
-    EntryIcon, Folder, FolderId, KeyFingerprint, LoginHistory, LoginHistoryEventKind,
-    RecipientSelection, RecipientSet, SecretContent, SecretId, SecretLink, SecretMetadata,
-    TotpConfig, generate_totp,
+    EntryIcon, Folder, FolderId, ItemContent, KeyFingerprint, RecipientSet, SecretId, SecretLink,
+    generate_totp, otp::TotpAlgorithm, otp::TotpConfig,
 };
 use kryptopass_secure_memory::{SensitiveBytes, SensitiveText};
 use serde::Deserialize;
@@ -15,6 +15,7 @@ use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use content::{DetailContent, DraftContent, EditorContent};
+pub(super) use content::{field_text, kind_of, template_of, totp_uri};
 
 /// Serialized records for the two metadata-only list properties.
 pub(super) struct StoreSnapshot {
@@ -46,15 +47,15 @@ pub(super) struct OpenedEntry {
     pub(super) recipients: Vec<String>,
     pub(super) icon: Option<EntryIcon>,
     pub(super) related_entry: Option<SecretId>,
-    pub(super) content: SecretContent,
+    pub(super) content: ItemContent,
 }
 
 pub(super) struct PreparedSave {
     pub(super) id: Option<SecretId>,
     pub(super) folder: Option<FolderId>,
     pub(super) title: String,
-    pub(super) recipients: RecipientSelection,
-    pub(super) content: SecretContent,
+    pub(super) recipients: RecipientSet,
+    pub(super) content: ItemContent,
     pub(super) expected_revision: Option<u64>,
     pub(super) icon_update: Option<Option<EntryIcon>>,
     pub(super) link_update: Option<Option<SecretId>>,
@@ -80,9 +81,11 @@ struct TotpProjection {
     digits: u8,
 }
 
-#[derive(serde::Serialize)]
-struct HistoryProjection {
-    events: Vec<HistoryEventProjection>,
+/// An item's earlier versions as the history list shows them. Usage events are
+/// no longer recorded, so `events` stays empty.
+#[derive(serde::Serialize, Default)]
+pub(super) struct HistoryProjection {
+    events: Vec<serde_json::Value>,
     versions: Vec<VersionMetadataProjection>,
 }
 
@@ -93,26 +96,50 @@ struct VersionMetadataProjection {
     at: u64,
 }
 
-#[derive(serde::Serialize)]
-struct HistoryEventProjection {
-    kind: &'static str,
-    at: u64,
+/// The earlier versions of an item, newest first: readable ones without the
+/// head, which the detail already shows.
+pub(super) fn earlier_versions(
+    head: VersionId,
+    history: Vec<VersionInfo>,
+) -> Vec<(VersionId, u64)> {
+    let mut versions: Vec<_> = history
+        .into_iter()
+        .filter(|version| version.id != head && version.state.is_some())
+        .map(|version| (version.clock, version.id))
+        .collect();
+    versions.sort_by(|a, b| b.cmp(a));
+    versions
+        .into_iter()
+        .map(|(clock, id)| (id, clock.millis / 1000))
+        .collect()
+}
+
+fn history_projection(versions: &[(VersionId, u64)]) -> HistoryProjection {
+    HistoryProjection {
+        events: Vec::new(),
+        versions: versions
+            .iter()
+            .enumerate()
+            .map(|(index, (_, at))| VersionMetadataProjection { index, at: *at })
+            .collect(),
+    }
 }
 
 /// Projects list data without copying encrypted payload bytes into QML.
-pub(super) fn store_snapshot_with_links(
+pub(super) fn store_snapshot(
     folders: Vec<Folder>,
-    secrets: Vec<SecretMetadata>,
+    items: Vec<ItemMeta>,
     links: Vec<SecretLink>,
+    opaque: Vec<OpaqueItem>,
 ) -> StoreSnapshot {
     let mut companions = std::collections::HashMap::new();
     for link in links {
         companions.insert(link.first, link.second);
         companions.insert(link.second, link.first);
     }
-    let favicon_hosts = secrets
+    let favicon_hosts = items
         .iter()
-        .filter_map(|secret| match secret.icon.as_ref() {
+        .filter_map(|item| match item.state.icon.as_ref() {
             Some(EntryIcon::Favicon { host }) => Some(host.clone()),
             _ => None,
         })
@@ -134,23 +161,26 @@ pub(super) fn store_snapshot_with_links(
         })
         .collect();
 
-    let entries = secrets
+    let mut entries: Vec<String> = items
         .into_iter()
-        .map(|secret| {
-            let display_icon = secret.icon.as_ref();
+        .map(|item| {
+            let state = &item.state;
+            let display_icon = state.icon.as_ref();
             json!({
-                "id": secret.id.0.to_string(),
-                "folder": secret.folder_id.map_or_else(String::new, |id| id.0.to_string()),
-                "title": secret.title,
-                "relatedEntryId": companions.get(&secret.id).map_or_else(String::new, |id| id.0.to_string()),
-                "kind": secret.kind.as_str(),
+                "id": item.id.0.to_string(),
+                "folder": state.folder.map_or_else(String::new, |id| id.0.to_string()),
+                "title": state.title,
+                "relatedEntryId": companions.get(&item.id).map_or_else(String::new, |id| id.0.to_string()),
+                "kind": kind_of(state.template.as_str()),
                 "format": "Texto",
                 "iconSource": crate::infrastructure::entry_icons::source_for(display_icon),
-                "icon": secret.icon,
-                "revision": secret.revision,
-                "recipients": secret.recipients.as_slice().iter().map(|key| key.as_str()).collect::<Vec<_>>(),
-                "favorite": secret.favorite,
-                "trashed": secret.trashed,
+                "icon": state.icon,
+                "revision": item.revision,
+                "recipients": state.recipients.as_slice().iter().map(|key| key.as_str()).collect::<Vec<_>>(),
+                "favorite": state.favorite,
+                "trashed": state.trashed,
+                "conflicted": item.conflicted,
+                "readable": true,
                 "value": "",
                 "notes": "",
                 "details": {},
@@ -158,6 +188,30 @@ pub(super) fn store_snapshot_with_links(
             .to_string()
         })
         .collect();
+    // Without a readable version there is no title: the list says so instead
+    // of hiding what this device stores but cannot open.
+    entries.extend(opaque.into_iter().map(|item| {
+        json!({
+            "id": item.id.0.to_string(),
+            "folder": "",
+            "title": crate::i18n::text("No legible en este dispositivo"),
+            "relatedEntryId": "",
+            "kind": "custom",
+            "format": "Texto",
+            "iconSource": "",
+            "icon": null,
+            "revision": 0,
+            "recipients": item.recipients.as_slice().iter().map(|key| key.as_str()).collect::<Vec<_>>(),
+            "favorite": false,
+            "trashed": false,
+            "conflicted": false,
+            "readable": false,
+            "value": "",
+            "notes": "",
+            "details": {},
+        })
+        .to_string()
+    }));
 
     StoreSnapshot {
         entries,
@@ -200,22 +254,24 @@ impl<'de> Deserialize<'de> for DraftIcon {
 
 impl EntryDraft {
     pub(super) fn ssh_import_token(&self) -> Option<&str> {
-        match &self.content {
-            DraftContent::SshKey(value) => Some(&value.import_token),
-            _ => None,
-        }
+        self.content.ssh_import_token()
     }
-    pub(super) fn attach_ssh(&mut self, content: kryptopass_core::SshKeyContent) {
-        if let DraftContent::SshKey(value) = &mut self.content {
-            value.prepared = Some(content);
-        }
+
+    /// Replaces the private key with one imported in this editor session.
+    pub(super) fn attach_ssh(&mut self, key: SshKeyMaterial) {
+        self.content.attach_ssh(key);
     }
 }
 
-pub(super) fn content_field<'a>(
-    content: &'a SecretContent,
-    id: &str,
-) -> Option<(expanded::SensitiveValue<'a>, bool)> {
+/// A private key read from a file, waiting for the editor to save it.
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+pub(super) struct SshKeyMaterial {
+    pub(super) private_key: SensitiveText,
+    pub(super) passphrase: SensitiveText,
+}
+
+/// A concealed or plain value of a detail row, and whether it is concealed.
+pub(super) fn content_field(content: &ItemContent, id: &str) -> Option<(SensitiveText, bool)> {
     expanded::field(content, id)
 }
 
@@ -234,10 +290,13 @@ pub(super) fn draft_matches_session(
     }
 }
 
+/// Turns the editor's draft into a write. `base` is the content the editor
+/// opened: fields the editor does not show are kept as they are.
 pub(super) fn prepare_save(
     draft: &mut EntryDraft,
     session_id: Option<SecretId>,
     session_revision: Option<u64>,
+    base: Option<ItemContent>,
 ) -> anyhow::Result<PreparedSave> {
     if let Some(icon) = &draft.icon.value {
         icon.validate()?;
@@ -268,10 +327,8 @@ pub(super) fn prepare_save(
         !recipients.is_empty(),
         "at least one explicit recipient is required"
     );
-    let recipients = RecipientSelection::Explicit(RecipientSet::new(recipients)?);
-
-    let content = draft.content.prepare()?;
-    content.validate()?;
+    let recipients = RecipientSet::new(recipients)?;
+    let content = draft.content.prepare(base)?;
 
     Ok(PreparedSave {
         id: session_id,
@@ -285,39 +342,22 @@ pub(super) fn prepare_save(
     })
 }
 
-pub(super) fn content_projection(
-    id: SecretId,
-    content: &SecretContent,
-    reveal_password: bool,
-    unix_seconds: u64,
-) -> anyhow::Result<SensitiveText> {
-    content_projection_with_state(
-        id,
-        content,
-        reveal_password,
-        unix_seconds,
-        &std::collections::BTreeSet::new(),
-        None,
-    )
+pub(super) struct DetailView<'a> {
+    pub(super) reveal_password: bool,
+    pub(super) unix_seconds: u64,
+    pub(super) revealed_fields: &'a std::collections::BTreeSet<String>,
+    pub(super) qr_source: Option<&'a str>,
+    pub(super) versions: &'a [(VersionId, u64)],
 }
 
-pub(super) fn content_projection_with_state(
+pub(super) fn content_projection(
     id: SecretId,
-    content: &SecretContent,
-    reveal_password: bool,
-    unix_seconds: u64,
-    revealed_fields: &std::collections::BTreeSet<String>,
-    qr_source: Option<&str>,
+    content: &ItemContent,
+    view: &DetailView<'_>,
 ) -> anyhow::Result<SensitiveText> {
     sensitive_json(&ContentProjection {
         id: id.0.to_string(),
-        content: DetailContent::new(
-            content,
-            reveal_password,
-            unix_seconds,
-            revealed_fields,
-            qr_source,
-        )?,
+        content: DetailContent::new(content, view)?,
     })
 }
 
@@ -338,7 +378,7 @@ pub(super) fn editor_projection(entry: &OpenedEntry) -> anyhow::Result<Sensitive
 }
 
 pub(super) fn new_editor_projection() -> anyhow::Result<SensitiveText> {
-    let content = SecretContent::Login(kryptopass_core::LoginContent::default());
+    let content = ItemContent::new(template_of("login")?.1);
     let projection = EditorProjection {
         id: String::new(),
         revision: None,
@@ -403,52 +443,13 @@ fn totp_projection(config: &TotpConfig, unix_seconds: u64) -> anyhow::Result<Tot
         issuer: config.issuer.clone(),
         account: config.account.clone(),
         algorithm: match config.algorithm {
-            kryptopass_core::TotpAlgorithm::Sha1 => "SHA1",
-            kryptopass_core::TotpAlgorithm::Sha256 => "SHA256",
-            kryptopass_core::TotpAlgorithm::Sha512 => "SHA512",
+            TotpAlgorithm::Sha1 => "SHA1",
+            TotpAlgorithm::Sha256 => "SHA256",
+            TotpAlgorithm::Sha512 => "SHA512",
         },
         digits: config.digits,
     })
 }
-
-fn history_projection(history: &LoginHistory) -> HistoryProjection {
-    let events = history
-        .events()
-        .iter()
-        .map(|event| HistoryEventProjection {
-            kind: history_event_kind_name(&event.kind),
-            at: event.timestamp,
-        })
-        .collect();
-    let versions = history
-        .version_metadata()
-        .into_iter()
-        .enumerate()
-        .map(|(index, at)| VersionMetadataProjection { index, at })
-        .collect();
-    HistoryProjection { events, versions }
-}
-
-fn history_event_kind_name(kind: &LoginHistoryEventKind) -> &'static str {
-    match kind {
-        LoginHistoryEventKind::Create => "create",
-        LoginHistoryEventKind::LoginUse => "loginUse",
-        LoginHistoryEventKind::PasswordRotated => "passwordRotated",
-        LoginHistoryEventKind::Edited => "edited",
-        LoginHistoryEventKind::CopyUsername => "copyUsername",
-        LoginHistoryEventKind::CopyPassword => "copyPassword",
-        LoginHistoryEventKind::CopyTotp => "copyTotp",
-        LoginHistoryEventKind::CopyNextTotp => "copyNextTotp",
-    }
-}
-
-#[cfg(test)]
-#[path = "../../tests/unit/ui_adapters/secrets_projection.rs"]
-mod tests;
-
-#[cfg(test)]
-#[path = "../../tests/unit/ui_adapters/expanded_projection.rs"]
-mod expanded_tests;
 
 pub(super) fn sensitive_json(value: &impl serde::Serialize) -> anyhow::Result<SensitiveText> {
     let mut bytes = SensitiveBytes::default();

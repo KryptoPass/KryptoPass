@@ -422,6 +422,37 @@ impl PeerHost {
         })
     }
 
+    /// The identity that signs this device's vault versions, without changing
+    /// any pairing state an existing profile already has.
+    ///
+    /// A vault needs it before anything is paired, so a device with no profile
+    /// gets a new one. An existing identity is loaded and never replaced: an
+    /// absent or malformed key fails, as does a profile that is not reset. A
+    /// reset profile keeps its marker for the next pairing unless the keyring
+    /// lost the identity too, the one case that may create it.
+    pub fn signing_identity(directory: &Path) -> Result<DeviceIdentity, PeerError> {
+        match fs::symlink_metadata(directory) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                tracing::info!("creating the device profile for the vault");
+                return Self::open_system_profile(directory).map(|host| host.identity);
+            }
+            Err(_) => return Err(PeerError::Profile),
+            Ok(metadata) if !metadata.is_dir() || metadata.file_type().is_symlink() => {
+                return Err(PeerError::Profile);
+            }
+            Ok(_) => {}
+        }
+        let keys = SystemSecretKeyStore::new(directory, SYSTEM_PROFILE_KEYRING_ID)
+            .map_err(|_| PeerError::KeyStore)?;
+        if reset_marker_exists(directory)?
+            && keys.load().map_err(|_| PeerError::KeyStore)?.is_none()
+        {
+            tracing::info!("creating the device identity of a reset profile");
+            return Self::open_system_profile(directory).map(|host| host.identity);
+        }
+        DeviceIdentity::load_existing(&keys).map_err(|_| PeerError::KeyStore)
+    }
+
     /// Reports whether an explicit first pairing is needed without reading keys
     /// or changing the reset marker. Invalid files and directories remain errors.
     pub fn system_profile_needs_pairing(directory: &Path) -> Result<bool, PeerError> {

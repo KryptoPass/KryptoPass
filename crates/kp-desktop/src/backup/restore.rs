@@ -2,20 +2,20 @@
 
 use std::fmt;
 use std::fs::{self, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
-use kryptopass_core::{EntryIconAsset, Folder, Secret, SecretLink};
 
 use crate::infrastructure::GnuPgOpenPgp;
-use crate::storage::SqliteStorage;
 
 use super::filesystem::{
     create_private_staging_directory, ensure_private_directory, prepare_destination,
     prepare_existing_file, protect_store_target, read_bounded_file, sync_directory,
 };
-use super::format::deserialize_backup_with_links;
-use super::{BackupPublishOutcome, MAX_BACKUP_CIPHERTEXT_BYTES, MAX_BACKUP_PLAINTEXT_BYTES};
+use super::{
+    BACKUP_MAGIC, BackupPublishOutcome, MAX_BACKUP_CIPHERTEXT_BYTES, MAX_BACKUP_PLAINTEXT_BYTES,
+};
 
 const RESTORE_DATABASE_NAME: &str = "restored.sqlite3";
 
@@ -64,20 +64,17 @@ pub fn restore_backup(
             MAX_BACKUP_PLAINTEXT_BYTES,
         )
         .context(RestoreFailure::Decryption)?;
-    let (folders, secrets, assets, links) = deserialize_backup_with_links(plaintext.as_slice())
+    let database = plaintext
+        .as_slice()
+        .strip_prefix(BACKUP_MAGIC)
+        .ok_or_else(|| anyhow::anyhow!("not a backup of this vault format"))
         .context(RestoreFailure::InvalidBackup)?;
 
-    publish_restore_snapshot(&destination, &folders, &secrets, &assets, &links)
+    publish_restore_snapshot(&destination, database)
 }
 
 /// Publishes a restored snapshot into an isolated, new private store.
-fn publish_restore_snapshot(
-    output: &Path,
-    folders: &[Folder],
-    secrets: &[Secret],
-    assets: &[EntryIconAsset],
-    links: &[SecretLink],
-) -> Result<BackupPublishOutcome> {
+fn publish_restore_snapshot(output: &Path, database: &[u8]) -> Result<BackupPublishOutcome> {
     let database_path = crate::storage::paths::database_path(crate::app_info::APP.desktop_file_id)?;
     let destination = prepare_destination(output, false)?;
     protect_store_target(&database_path, &destination)?;
@@ -89,9 +86,22 @@ fn publish_restore_snapshot(
     let stage = create_private_staging_directory(parent)?;
     let mut stage_guard = StagingDirectory(stage.clone());
     let staged_database = stage.join(RESTORE_DATABASE_NAME);
-    let mut storage = SqliteStorage::open(&staged_database)?;
-    storage.import_backup_snapshot_with_links(folders, secrets, assets, links)?;
-    storage.finish_for_backup_publish()?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&staged_database)
+        .context("could not stage the restored vault")?;
+    file.write_all(database)
+        .context("could not stage the restored vault")?;
+    drop(file);
+    {
+        // Opening validates the file and its schema; closing folds its journal back.
+        let _store = kryptopass_store::SqliteStore::open_existing(
+            &staged_database,
+            crate::vault_access::identity()?,
+        )
+        .context(RestoreFailure::InvalidBackup)?;
+    }
     File::open(&staged_database)
         .and_then(|file| file.sync_all())
         .context("could not sync the restored vault")?;

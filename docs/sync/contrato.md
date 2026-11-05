@@ -1,9 +1,12 @@
 # Sync: contrato
 
-Estado: diseño acordado el 2026-10-29, sin implementar. Sustituye al ledger,
-al espejo de Desktop (`vault_sync/mirror.rs`) y a `kp-vault`. No hay datos en
-producción: el formato anterior se reemplaza sin migración ni código para leerlo,
-y los dos lados empiezan con `dev-reset`.
+Estado: diseño acordado el 2026-10-29. Implementado en Desktop (pasos 1 a 5 de
+§9), sin validar con un dispositivo real; falta Android (paso 6), así que hasta
+entonces Desktop y el teléfono no sincronizan entre sí. Sustituye al ledger, al
+espejo de Desktop y a `kp-vault`, ya eliminados. No hay datos en producción: el
+formato anterior se reemplaza sin migración ni código para leerlo, y los dos
+lados empiezan de nuevo. La bóveda vieja de Desktop (`kryptopass.sqlite3`) no se
+abre ni se modifica; la nueva es `vault.sqlite`.
 
 Contrato común de Desktop (Rust) y Android (Kotlin). Cualquier cambio de formato
 se registra aquí antes de implementarlo en un lado.
@@ -254,5 +257,6 @@ crate `kp-vault`.
 3. `kp-core`: estado y contenido por separado, `Signer`, marcas de borrado y
    versiones opacas.
 4. `kp-store::vault` implementa `SyncStore`.
-5. Servicio de Sync en `kp-app`; se borran `kp-vault` y el espejo.
+5. Servicio de Sync en `kp-app` (`SyncSelection`, K por dispositivo en
+   `sync-keys-v1.json` del perfil, e indexado); se borran `kp-vault` y el espejo.
 6. Android con el mismo contrato.

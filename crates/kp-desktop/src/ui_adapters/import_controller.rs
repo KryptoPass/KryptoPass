@@ -2,7 +2,6 @@ use crate::import::{PreparedImport, catalog, presentation, receive_import, revie
 use crate::{backup::parse_selected_recipients, storage::paths as app_paths};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
-use kryptopass_core::{ImportFolderPolicy, ImportOptions};
 use std::{path::PathBuf, pin::Pin};
 
 #[cxx_qt::bridge]
@@ -189,21 +188,12 @@ impl qobject::ImportController {
         ));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || {
-                receive_import(
-                    plan.batch,
-                    ImportOptions {
-                        recipients,
-                        folders: ImportFolderPolicy::PreserveHierarchy { parent: None },
-                    },
-                    &destination,
-                )
-            },
+            move || receive_import(plan.batch, recipients),
             |mut controller, result| {
                 controller.as_mut().set_busy(false);
                 match result {
                     Ok(receipt) => {
-                        controller.as_mut().set_status(crate::i18n::plural("Importación completada: %n elemento añadido a la bóveda actual.", receipt.items_added));
+                        controller.as_mut().set_status(crate::i18n::plural("Importación completada: %n elemento añadido a la bóveda actual.", receipt.items.len()));
                         controller.import_completed();
                     }
                     Err(_) => controller.fail("No se pudo añadir el lote. Los datos anteriores se conservaron. Comprueba las claves, los permisos y el espacio disponible; vuelve a revisar el archivo para reintentar."),

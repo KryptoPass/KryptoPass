@@ -234,6 +234,34 @@ Controls.Pane {
                         text: qsTr("Descifrando el contenido del elemento…")
                     }
 
+                    Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!root.selected && root.selected.conflicted === true
+                        type: Kirigami.MessageType.Warning
+                        text: qsTr("Este elemento se editó en dos dispositivos a la vez. Hasta que elijas qué conservar se muestra la versión de este equipo.")
+                        actions: [
+                            Kirigami.Action {
+                                text: qsTr("Revisar diferencias…")
+                                icon.name: "vcs-merge"
+                                enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
+                                onTriggered: root.storeAdapter.controller.openConflict(root.selected.id)
+                            }
+                        ]
+                    }
+
+                    Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!root.selected && root.selected.readable === false
+                        type: Kirigami.MessageType.Information
+                        text: qsTr("Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.")
+                    }
+
+                    ConflictDialog {
+                        storeAdapter: root.storeAdapter
+                    }
+
                     SecretDetail {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing

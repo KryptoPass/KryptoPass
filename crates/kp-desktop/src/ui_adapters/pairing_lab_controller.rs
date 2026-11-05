@@ -1,9 +1,8 @@
 //! Explicit emulator pairing UI. Private identities remain in the worker/OS store.
 
-use super::synthetic_sync::{SyntheticSyncAction, SyntheticSyncError, SyntheticSyncSnapshot};
-use crate::vault_sync::mirror::{self, MirrorError};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QStringList};
+use kryptopass_app::SyncSelection;
 use kryptopass_core::KeyFingerprint;
 use kryptopass_devices::{
     ConnectionState, DeviceDirectory, DeviceDirectorySnapshot, KeyTransferPurpose,
@@ -20,7 +19,7 @@ use kryptopass_peers::{
     spawn_resume_process_owner,
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     net::IpAddr,
     path::PathBuf,
     pin::Pin,
@@ -224,15 +223,6 @@ pub mod qobject {
         #[cxx_name = "resetPairingProfile"]
         fn reset_pairing_profile(self: Pin<&mut Self>);
         #[qinvokable]
-        #[cxx_name = "activateSyntheticSync"]
-        fn activate_synthetic_sync(self: Pin<&mut Self>);
-        #[qinvokable]
-        #[cxx_name = "refreshSyntheticSync"]
-        fn refresh_synthetic_sync(self: Pin<&mut Self>);
-        #[qinvokable]
-        #[cxx_name = "createSyntheticCredential"]
-        fn create_synthetic_credential(self: Pin<&mut Self>);
-        #[qinvokable]
         #[cxx_name = "startSyntheticKeyTransfer"]
         fn start_synthetic_key_transfer(
             self: Pin<&mut Self>,
@@ -357,7 +347,6 @@ pub struct PairingLabControllerRust {
     active_network_guard: Option<NetworkPolicyGuard>,
     resume_owner_generation: u64,
     resume_owner_cancel: Option<watch::Sender<bool>>,
-    sync_generation: u64,
 }
 
 impl Default for PairingLabControllerRust {
@@ -431,7 +420,6 @@ impl Default for PairingLabControllerRust {
             active_network_guard: None,
             resume_owner_generation: 0,
             resume_owner_cancel: None,
-            sync_generation: 0,
         }
     }
 }
@@ -532,10 +520,11 @@ impl qobject::PairingLabController {
             Ok(directory) => directory,
             Err(()) => return,
         };
-        let owner = match spawn_resume_process_owner(directory.clone()) {
-            Ok(owner) => owner,
-            Err(_) => return,
-        };
+        let owner =
+            match spawn_resume_process_owner(directory.clone(), sync_binder(directory.clone())) {
+                Ok(owner) => owner,
+                Err(_) => return,
+            };
         let (cancel, mut cancelled) = watch::channel(false);
         self.as_mut().rust_mut().resume_owner_generation =
             self.rust().resume_owner_generation.wrapping_add(1);
@@ -1077,21 +1066,6 @@ impl qobject::PairingLabController {
         }
     }
 
-    pub fn activate_synthetic_sync(mut self: Pin<&mut Self>) {
-        self.as_mut()
-            .run_synthetic_sync(SyntheticSyncAction::Activate);
-    }
-
-    pub fn refresh_synthetic_sync(mut self: Pin<&mut Self>) {
-        self.as_mut()
-            .run_synthetic_sync(SyntheticSyncAction::Refresh);
-    }
-
-    pub fn create_synthetic_credential(mut self: Pin<&mut Self>) {
-        self.as_mut()
-            .run_synthetic_sync(SyntheticSyncAction::CreateCredential);
-    }
-
     /// Local confirmation callback for the explicitly synthetic fixture.
     /// GnuPG preparation starts only after this invocation and stays on a worker.
     pub fn start_synthetic_key_transfer(
@@ -1339,25 +1313,29 @@ impl qobject::PairingLabController {
         let Ok(directory) = lab_directory() else {
             self.as_mut().set_vault_sync_failed(true);
             self.as_mut()
-                .set_vault_sync_message(QString::from(MirrorError::Profile.message()));
+                .set_vault_sync_message(QString::from(SYNC_PROFILE_MESSAGE));
             return;
         };
         self.as_mut().set_vault_sync_failed(false);
         self.as_mut().set_vault_sync_message(QString::default());
-        let declared = self.declared_vault_keys(peer);
         let thread = self.qt_thread();
         std::thread::spawn(move || {
-            let result = if enabled {
-                mirror::enable(
-                    &directory,
-                    peer,
-                    keys.as_deref().unwrap_or_default(),
-                    declared.as_deref(),
-                )
-            } else {
-                mirror::disable(&directory, peer)
-            };
-            tracing::info!(enabled, error = ?result.err(), "Vault sync selection changed");
+            let keys = keys
+                .unwrap_or_default()
+                .iter()
+                .map(|key| key.as_str().to_owned())
+                .collect();
+            let result = SyncSelection::in_profile(&directory)
+                .set(&peer.to_string(), keys)
+                .map_err(|error| {
+                    tracing::warn!(error = %format!("{error:#}"), "Vault sync selection not saved");
+                    SYNC_PROFILE_MESSAGE
+                });
+            tracing::info!(
+                enabled,
+                failed = result.is_err(),
+                "Vault sync selection changed"
+            );
             let failed = result.is_err();
             let _ = thread.queue(move |mut object| {
                 object.as_mut().set_vault_sync_failed(failed);
@@ -1366,7 +1344,7 @@ impl qobject::PairingLabController {
                         "Sincronización activada. Si el teléfono aún no la tiene activada, actívala allí: Dispositivos → este Desktop → Sincronizar mi bóveda.",
                     ),
                     Ok(()) => QString::from("Sincronización desactivada. La bóveda no cambió."),
-                    Err(error) => QString::from(error.message()),
+                    Err(message) => QString::from(message),
                 });
                 object.as_mut().refresh_vault_sync_peers();
                 // A live session only reads its Sync binding when it starts.
@@ -1379,80 +1357,40 @@ impl qobject::PairingLabController {
         });
     }
 
-    /// Exchanges vault changes with the ledger the phone syncs. QML calls it
-    /// periodically; overlapping calls are ignored.
+    /// Makes what Sync sessions received listable. The exchange itself runs in
+    /// each session; QML calls this periodically and overlapping calls are ignored.
     pub fn run_vault_mirror(mut self: Pin<&mut Self>) {
         if self.rust().vault_mirror_running || self.rust().vault_sync_peers.is_empty() {
             return;
         }
-        let Ok(directory) = lab_directory() else {
-            return;
-        };
         self.as_mut().rust_mut().vault_mirror_running = true;
         self.as_mut().set_vault_mirror_active(true);
-        let declared: HashMap<DeviceId, Vec<String>> = self
-            .rust()
-            .known_peers
-            .iter()
-            .filter_map(|peer| Some((peer.device_id, self.declared_vault_keys(peer.device_id)?)))
-            .collect();
         let thread = self.qt_thread();
         std::thread::spawn(move || {
-            let result = mirror::run(&directory, &declared);
-            match &result {
-                Ok(outcome) if outcome.pulled + outcome.pushed + outcome.skipped > 0 => {
-                    tracing::info!(
-                        pulled = outcome.pulled,
-                        pushed = outcome.pushed,
-                        skipped = outcome.skipped,
-                        "Vault mirror run"
-                    )
-                }
-                Ok(_) => {}
-                Err(error) => {
-                    // A persistent failure (a locked key, say) is logged when it appears.
-                    if mirror::note_failure(Some(*error)) {
-                        tracing::warn!(error = ?error, locked_key = ?mirror::locked_key(), "Vault mirror run failed");
-                    }
-                }
-            }
-            if result.is_ok() && mirror::note_failure(None) {
-                tracing::info!("Vault mirror recovered");
-            }
-            let locked_key = QString::from(mirror::locked_key().unwrap_or_default());
+            let result = crate::vault_access::open_background()
+                .and_then(|mut vault| Ok(kryptopass_app::index_received(&mut vault)?));
             let _ = thread.queue(move |mut object| {
                 object.as_mut().rust_mut().vault_mirror_running = false;
                 object.as_mut().set_vault_mirror_active(false);
-                object.as_mut().set_vault_sync_locked_key(locked_key);
                 match result {
-                    Ok(outcome) => {
-                        let prior_failure = object.rust().vault_sync_failed;
+                    Ok(indexed) => {
                         object.as_mut().set_vault_sync_failed(false);
-                        if outcome.pulled > 0 {
+                        if indexed > 0 {
+                            tracing::info!(indexed, "Vault sync: received versions indexed");
                             object.as_mut().vault_mirror_pulled();
-                        }
-                        if outcome.pulled > 0 || outcome.pushed > 0 {
-                            // Tells the status indicator that data really moved.
                             let activity = object.rust().vault_sync_activity.wrapping_add(1);
                             object.as_mut().set_vault_sync_activity(activity);
-                            object
-                                .as_mut()
-                                .set_vault_sync_message(QString::from(format!(
-                                    "Bóveda sincronizada: {} recibidos, {} enviados.",
-                                    outcome.pulled, outcome.pushed
-                                )));
-                        } else if prior_failure
-                            || object.rust().vault_sync_message.to_string()
-                                == MirrorError::Locked.message()
-                        {
-                            object.as_mut().set_vault_sync_message(QString::default());
+                            object.as_mut().set_vault_sync_message(QString::from(format!(
+                                "Bóveda sincronizada: {indexed} recibidos."
+                            )));
                         }
                     }
                     Err(error) => {
+                        tracing::warn!(error = %format!("{error:#}"), "Vault sync: indexing failed");
                         object.as_mut().set_vault_sync_failed(true);
                         object
                             .as_mut()
-                            .set_vault_sync_message(QString::from(error.message()));
+                            .set_vault_sync_message(QString::from(SYNC_PROFILE_MESSAGE));
                     }
                 }
             });
@@ -1475,8 +1413,8 @@ impl qobject::PairingLabController {
         };
         let thread = self.qt_thread();
         std::thread::spawn(move || {
-            let result = mirror::add_selected_key(&directory, peer, &key);
-            tracing::info!(added = ?result.as_ref().ok(), error = ?result.err(), "Vault sync: key added after sending it to the phone");
+            let result = SyncSelection::in_profile(&directory).add(&peer.to_string(), key.as_str());
+            tracing::info!(added = ?result.as_ref().ok(), failed = result.is_err(), "Vault sync: key added after sending it to the phone");
             if let Ok(true) = result {
                 let _ = thread.queue(move |mut object| {
                     object.as_mut().set_vault_sync_failed(false);
@@ -1539,18 +1477,6 @@ impl qobject::PairingLabController {
 
     /// Keys (upper-case hex) that `peer` declared holding in this connection;
     /// `None` while it is offline or runs a version that does not declare them.
-    fn declared_vault_keys(&self, peer: DeviceId) -> Option<Vec<String>> {
-        self.rust()
-            .devices
-            .as_ref()?
-            .peer_vault_keys(&peer)
-            .map(|keys| {
-                keys.iter()
-                    .map(|bytes| bytes.iter().map(|byte| format!("{byte:02X}")).collect())
-                    .collect()
-            })
-    }
-
     fn refresh_vault_sync_peers(self: Pin<&mut Self>) {
         let Ok(directory) = lab_directory() else {
             return;
@@ -1565,7 +1491,12 @@ impl qobject::PairingLabController {
         std::thread::spawn(move || {
             let selections: Vec<(DeviceId, Vec<String>)> = peers
                 .into_iter()
-                .map(|peer| (peer, mirror::selected_keys(&directory, peer)))
+                .map(|peer| {
+                    let keys = SyncSelection::in_profile(&directory)
+                        .keys(&peer.to_string())
+                        .unwrap_or_default();
+                    (peer, keys)
+                })
                 .filter(|(_, keys)| !keys.is_empty())
                 .collect();
             let keys_by_device: serde_json::Map<String, serde_json::Value> = selections
@@ -1633,78 +1564,6 @@ impl qobject::PairingLabController {
                 spawn_synthetic_transfer_cancel(owner.clone(), peer, generation, transfer_id);
             }
         }
-    }
-
-    fn run_synthetic_sync(mut self: Pin<&mut Self>, action: SyntheticSyncAction) {
-        if !cfg!(debug_assertions) {
-            self.as_mut().set_sync_error(QString::from(
-                "La prueba sintética solo está disponible en Desktop debug.",
-            ));
-            return;
-        }
-        if self.rust().sync_busy || self.rust().busy || self.rust().maintenance_busy {
-            return;
-        }
-        let Some(peer) = self.rust().selected_peer() else {
-            self.as_mut()
-                .set_sync_error(QString::from(SyntheticSyncError::NoPeerSelected.message()));
-            return;
-        };
-        let Ok(directory) = lab_directory() else {
-            self.as_mut().set_sync_error(QString::from(
-                SyntheticSyncError::ProfileUnavailable.message(),
-            ));
-            return;
-        };
-
-        self.as_mut().set_sync_error(QString::default());
-        self.as_mut()
-            .set_sync_peer_id(QString::from(peer.device_id.to_string()));
-        self.as_mut().set_sync_busy(true);
-        self.as_mut().rust_mut().sync_generation = self.rust().sync_generation.wrapping_add(1);
-        let generation = self.rust().sync_generation;
-        let operation_peer_id = QString::from(peer.device_id.to_string());
-        let thread = self.qt_thread();
-        std::thread::spawn(move || {
-            let result = super::synthetic_sync::run(&directory, peer.device_id, action);
-            let _ = thread.queue(move |mut object| {
-                if object.rust().sync_generation != generation {
-                    return;
-                }
-                object.as_mut().set_sync_busy(false);
-                if object.rust().sync_peer_id != operation_peer_id {
-                    return;
-                }
-                match result {
-                    Ok(snapshot) => {
-                        object.as_mut().apply_synthetic_sync_snapshot(snapshot);
-                        object.as_mut().set_sync_configured(true);
-                        object.as_mut().set_sync_error(QString::default());
-                    }
-                    Err(error) => {
-                        object
-                            .as_mut()
-                            .set_sync_error(QString::from(error.message()));
-                        if matches!(error, SyntheticSyncError::NotConfigured) {
-                            object.as_mut().set_sync_configured(false);
-                            object.as_mut().set_sync_entries(QStringList::default());
-                            object.as_mut().set_sync_local_revision_count(0);
-                            object.as_mut().set_sync_status(QString::default());
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    fn apply_synthetic_sync_snapshot(mut self: Pin<&mut Self>, snapshot: SyntheticSyncSnapshot) {
-        let entries = snapshot.rows.into_iter().map(QString::from).collect();
-        self.as_mut().set_sync_entries(entries);
-        self.as_mut().set_sync_local_revision_count(
-            i32::try_from(snapshot.local_revision_count).unwrap_or(i32::MAX),
-        );
-        self.as_mut()
-            .set_sync_status(QString::from(snapshot.status));
     }
 
     fn replace_trusted_devices(
@@ -2114,6 +1973,7 @@ impl qobject::PairingLabController {
                         outcome.session,
                         peer,
                         options,
+                        sync_binding(&directory, peer.device_id),
                     )
                     .map_err(|_| kryptopass_peers::PeerError::Session)?;
                     let session_generation = handle.generation();
@@ -2490,10 +2350,16 @@ impl qobject::PairingLabController {
                 }
                 let Some(peer) = forget else {
                     PeerHost::reset_system_profile(&directory)?;
+                    // The reset may have replaced the identity this process cached.
+                    crate::vault_access::forget_identity();
                     return Ok(None);
                 };
                 let host = PeerHost::open_existing_system_profile(&directory)?;
                 host.forget_peer(peer)?;
+                if let Err(error) = SyncSelection::in_profile(&directory).forget(&peer.to_string())
+                {
+                    tracing::warn!(error = %format!("{error:#}"), "Sync selection of a forgotten device kept");
+                }
                 let peers = host.trusted_peers()?;
                 let aliases = host
                     .device_aliases()
@@ -2688,7 +2554,6 @@ fn error_status(error: &kryptopass_peers::PeerError) -> &'static str {
             "No se pudo acceder al llavero del sistema para abrir la identidad de este equipo."
         }
         PeerError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
-        PeerError::SyncHistoryUntrusted => MirrorError::UntrustedHistory.message(),
         PeerError::Session => {
             "La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar."
         }
@@ -2744,7 +2609,6 @@ fn error_code(error: &kryptopass_peers::PeerError) -> &'static str {
         PeerError::Expired => "expired",
         PeerError::Rejected => "rejected",
         PeerError::Profile => "profile_error",
-        PeerError::SyncHistoryUntrusted => "sync_history_error",
         PeerError::KeyStore => "keystore_error",
         PeerError::Authentication => "authentication_error",
         PeerError::Link | PeerError::Session => "transport_error",
@@ -2954,9 +2818,70 @@ notifying_property!(
 );
 
 fn lab_directory() -> Result<PathBuf, ()> {
-    crate::storage::paths::browser_state_directory(crate::app_info::APP.desktop_file_id)
-        .map(|parent| parent.join("emulator-pairing-lab-v1"))
-        .map_err(|_| ())
+    crate::vault_access::profile_directory().map_err(|_| ())
+}
+
+const SYNC_PROFILE_MESSAGE: &str = "No se pudo acceder a la configuración de Sync de este equipo.";
+
+/// The Sync binding of `peer`: the vault's store and the keys chosen for it.
+/// `None` runs the session without Sync, as it does for a peer without keys.
+fn sync_binding(
+    directory: &std::path::Path,
+    peer: DeviceId,
+) -> Option<kryptopass_devices::SyncSessionBinding> {
+    let keys = match SyncSelection::in_profile(directory).keys(&peer.to_string()) {
+        Ok(keys) => keys,
+        Err(error) => {
+            tracing::warn!(error = %format!("{error:#}"), "Sync selection unreadable; session runs without Sync");
+            return None;
+        }
+    };
+    if keys.is_empty() {
+        return None;
+    }
+    let keys: Vec<kryptopass_sync::Fingerprint> = keys
+        .iter()
+        .filter_map(|key| {
+            KeyFingerprint::parse(key)
+                .ok()
+                .and_then(|key| hex_bytes(key.as_str()))
+                .and_then(|bytes| kryptopass_sync::Fingerprint::new(bytes).ok())
+        })
+        .collect();
+    let binding = (|| -> anyhow::Result<_> {
+        let identity = crate::vault_access::identity()?;
+        let trust = kryptopass_peers::ProfileTrust::new(
+            identity.public_identity(),
+            directory.to_path_buf(),
+        );
+        Ok(kryptopass_devices::SyncSessionBinding::new(
+            Box::new(crate::vault_access::open_sync_store()?),
+            Box::new(trust),
+            keys,
+        )
+        .with_automatic_rounds())
+    })();
+    match binding {
+        Ok(binding) => Some(binding),
+        Err(error) => {
+            tracing::warn!(error = %format!("{error:#}"), "Sync store unavailable; session runs without Sync");
+            None
+        }
+    }
+}
+
+fn sync_binder(directory: PathBuf) -> kryptopass_peers::SyncBinder {
+    Arc::new(move |peer| sync_binding(&directory, peer))
+}
+
+fn hex_bytes(text: &str) -> Option<Vec<u8>> {
+    if text.len() % 2 != 0 {
+        return None;
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|index| u8::from_str_radix(text.get(index..index + 2)?, 16).ok())
+        .collect()
 }
 
 notifying_property!(
@@ -2965,7 +2890,6 @@ notifying_property!(
     maintenance_busy_changed,
     bool
 );
-notifying_property!(set_sync_busy, sync_busy, sync_busy_changed, bool);
 notifying_property!(
     set_sync_peer_id,
     sync_peer_id,

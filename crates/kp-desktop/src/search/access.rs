@@ -1,25 +1,14 @@
 //! Search follows the Rust vault boundary, including when no QML observer runs.
 
-use super::VaultSearchSource;
-use kryptopass_core::KeyFingerprint;
+use kryptopass_app::VaultSearchSource;
 use kryptopass_search::{Limits, SearchSession};
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex, Weak},
-};
+use std::sync::{Arc, Mutex, Weak};
 
 pub(crate) type VaultSearchSession = SearchSession<VaultSearchSource>;
-
-#[derive(Clone)]
-struct Grant {
-    path: PathBuf,
-    primary: KeyFingerprint,
-}
 
 #[derive(Default)]
 struct Access {
     unlocked: bool,
-    grant: Option<Grant>,
     consumers: Vec<Weak<VaultSearchSession>>,
 }
 
@@ -27,7 +16,6 @@ struct Access {
 // weak registrations do not keep a closed view or its private bytes alive.
 static ACCESS: Mutex<Access> = Mutex::new(Access {
     unlocked: false,
-    grant: None,
     consumers: Vec::new(),
 });
 
@@ -37,11 +25,10 @@ pub(crate) fn attach() -> Option<Arc<VaultSearchSession>> {
     access
         .consumers
         .retain(|consumer| consumer.strong_count() > 0);
-    if let Some(grant) = &access.grant {
-        let _ = service.unlock(VaultSearchSource::new(
-            grant.path.clone(),
-            grant.primary.clone(),
-        ));
+    if access.unlocked {
+        if let Some(source) = search_source() {
+            let _ = service.unlock(source);
+        }
     }
     access.consumers.push(Arc::downgrade(&service));
     Some(service)
@@ -54,33 +41,30 @@ pub(crate) fn is_unlocked() -> bool {
         .unlocked
 }
 
-pub(crate) fn set_locked(locked: bool, primary: Option<&KeyFingerprint>) {
+pub(crate) fn set_locked(locked: bool) {
     let mut access = ACCESS.lock().unwrap_or_else(|poison| poison.into_inner());
     access.unlocked = !locked;
-    access.grant = if locked {
-        None
-    } else {
-        primary.and_then(|primary| {
-            crate::storage::paths::database_path(crate::app_info::APP.desktop_file_id)
-                .ok()
-                .map(|path| Grant {
-                    path,
-                    primary: primary.clone(),
-                })
-        })
-    };
-    let grant = access.grant.clone();
     access.consumers.retain(|consumer| {
         let Some(service) = consumer.upgrade() else {
             return false;
         };
         service.lock();
-        if let Some(grant) = &grant {
-            let _ = service.unlock(VaultSearchSource::new(
-                grant.path.clone(),
-                grant.primary.clone(),
-            ));
+        if !locked {
+            if let Some(source) = search_source() {
+                let _ = service.unlock(source);
+            }
         }
         true
     });
+}
+
+/// Private values of the active vault, read only with cached passphrases.
+fn search_source() -> Option<VaultSearchSource> {
+    match crate::vault_access::open_session() {
+        Ok(session) => Some(VaultSearchSource::new(&session)),
+        Err(error) => {
+            tracing::warn!(error = %format!("{error:#}"), "private search is unavailable");
+            None
+        }
+    }
 }

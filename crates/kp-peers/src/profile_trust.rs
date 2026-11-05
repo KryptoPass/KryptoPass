@@ -25,6 +25,13 @@ pub struct ProfileTrust {
     pub(crate) directory: PathBuf,
 }
 
+impl ProfileTrust {
+    /// Trust for `local`, the identity of the profile in `directory`.
+    pub fn new(local: PublicIdentity, directory: PathBuf) -> Self {
+        Self { local, directory }
+    }
+}
+
 impl TrustSource for ProfileTrust {
     fn lookup(&self, device_id: DeviceId) -> Result<Option<PublicIdentity>, SyncError> {
         if device_id == self.local.device_id {

@@ -6,7 +6,7 @@
 //! ancestor of any two versions is always at hand as a merge base.
 //!
 //! Only ciphertext, ids and the metadata the list shows are stored; the
-//! store never sees plaintext or keys. It is not wired to the app yet.
+//! store never sees plaintext or keys.
 
 pub mod aliases;
 mod convert;
@@ -40,6 +40,17 @@ pub struct SqliteStore {
 }
 
 impl SqliteStore {
+    /// Writes a consistent, compacted copy of the store to a new file.
+    pub fn export_copy(&self, destination: &std::path::Path) -> anyhow::Result<()> {
+        let destination = destination
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("the copy path is not valid text"))?;
+        self.connection
+            .execute("VACUUM INTO ?1", [destination])
+            .map_err(|_| anyhow::anyhow!("could not copy the store"))?;
+        Ok(())
+    }
+
     /// Runs a read in one transaction, so it sees a single consistent state.
     fn read<T>(&self, query: impl FnOnce(&Connection) -> StoreResult<T>) -> StoreResult<T> {
         let transaction = self.connection.unchecked_transaction().sql()?;

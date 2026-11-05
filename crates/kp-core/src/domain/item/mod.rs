@@ -33,4 +33,5 @@ pub use diff::{DiffKind, DiffTarget, Difference, Side, compare};
 pub use format::{FormatCheck, FormatRules};
 pub use issue::{IssueCode, IssueTarget, ItemIssue, ItemIssues};
 pub use migrate::MigrationError;
+pub use ssh::{SshKeyInfo, inspect_ssh_key};
 pub use value::FieldValue;

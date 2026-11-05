@@ -20,6 +20,7 @@ mod generator;
 mod import;
 mod search;
 mod session;
+mod sync;
 
 pub use actions::{qr_payload, totp_code};
 pub use browser::{Candidate, Credentials, candidates, credentials};
@@ -30,3 +31,4 @@ pub use generator::{generate_for, settings_for};
 pub use import::{Adaptations, PreparedImport, importers, prepare_import, read_export};
 pub use search::{VaultSearchSource, catalog_records};
 pub use session::{AppVault, VaultSession};
+pub use sync::{SyncSelection, index_received};

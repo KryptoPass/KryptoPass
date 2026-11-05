@@ -4,8 +4,8 @@ use anyhow::{Result, bail};
 use gpgme::{
     Context, Data, EncryptFlags, ExportMode, Key, PassphraseRequest, PinentryMode, Protocol,
 };
-use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, OpenPgp, RecipientSet};
-use kryptopass_secure_memory::{ProtectedBytes, SensitiveBytes};
+use kryptopass_core::{KeyFingerprint, MAX_CONTENT_BYTES, RecipientSet};
+use kryptopass_secure_memory::SensitiveBytes;
 #[cfg(debug_assertions)]
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -28,64 +28,7 @@ mod tests;
 pub struct GnuPgOpenPgp;
 
 impl GnuPgOpenPgp {
-    /// Background indexing cannot prompt or retain output in an unlocked region.
-    pub(crate) fn decrypt_for_search(
-        &self,
-        ciphertext: &[u8],
-        plaintext: &mut ProtectedBytes,
-    ) -> Result<()> {
-        plaintext.clear();
-        let mut context = open_context()?;
-        context
-            .set_pinentry_mode(PinentryMode::Error)
-            .map_err(|_| anyhow::anyhow!("could not configure background decryption"))?;
-        let mut output = SearchOutput {
-            bytes: plaintext,
-            written: 0,
-        };
-        decrypt_into(
-            &mut context,
-            ciphertext,
-            MAX_CIPHERTEXT_BYTES,
-            &mut output,
-            None,
-        )
-    }
-}
-
-struct SearchOutput<'a> {
-    bytes: &'a mut ProtectedBytes,
-    written: usize,
-}
-
-impl Write for SearchOutput<'_> {
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        let length = self
-            .written
-            .checked_add(bytes.len())
-            .filter(|length| *length <= MAX_CONTENT_BYTES)
-            .ok_or_else(|| io::Error::other("background plaintext limit exceeded"))?;
-        if length > self.bytes.capacity() {
-            let capacity = length
-                .max(self.bytes.capacity().saturating_mul(2))
-                .min(MAX_CONTENT_BYTES);
-            let mut replacement = ProtectedBytes::try_with_capacity(capacity)?;
-            replacement.try_extend_from_slice(self.bytes.as_slice())?;
-            // Both reservations are independently protected during replacement.
-            *self.bytes = replacement;
-        }
-        self.bytes.try_extend_from_slice(bytes)?;
-        self.written = length;
-        Ok(bytes.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl OpenPgp for GnuPgOpenPgp {
-    fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
+    pub(crate) fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
         if recipients.as_slice().is_empty() {
             bail!("at least one OpenPGP recipient is required");
         }
@@ -98,7 +41,7 @@ impl OpenPgp for GnuPgOpenPgp {
         Ok(())
     }
 
-    fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
+    pub(crate) fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
         encrypt_bounded_in_context(
             &mut open_context()?,
             plaintext,
@@ -109,39 +52,9 @@ impl OpenPgp for GnuPgOpenPgp {
         )
     }
 
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
+    pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
         decrypt_bounded_in_context(
             &mut open_context()?,
-            ciphertext,
-            MAX_CIPHERTEXT_BYTES,
-            MAX_CONTENT_BYTES,
-            None,
-        )
-    }
-}
-
-/// GnuPG adapter for background work. It never opens pinentry, so decryption
-/// succeeds only while gpg-agent still caches the passphrase, as it does while
-/// the user keeps the vault unlocked.
-#[derive(Debug, Default, Clone, Copy)]
-pub(crate) struct NonInteractiveGnuPgOpenPgp;
-
-impl OpenPgp for NonInteractiveGnuPgOpenPgp {
-    fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
-        GnuPgOpenPgp.validate_recipients(recipients)
-    }
-
-    fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
-        GnuPgOpenPgp.encrypt(plaintext, recipients)
-    }
-
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
-        let mut context = open_context()?;
-        context
-            .set_pinentry_mode(PinentryMode::Error)
-            .map_err(|_| anyhow::anyhow!("could not configure background decryption"))?;
-        decrypt_bounded_in_context(
-            &mut context,
             ciphertext,
             MAX_CIPHERTEXT_BYTES,
             MAX_CONTENT_BYTES,
@@ -388,16 +301,6 @@ pub(crate) struct IsolatedGnuPgOpenPgp {
 
 #[cfg(debug_assertions)]
 impl IsolatedGnuPgOpenPgp {
-    pub(crate) fn open_synthetic_fixture(
-        engine_home: PathBuf,
-        fixture: SyntheticFixture,
-    ) -> Result<Self> {
-        let (crypto, protected_secret_key) =
-            Self::open_synthetic_fixture_for_transfer(engine_home, fixture)?;
-        drop(protected_secret_key);
-        Ok(crypto)
-    }
-
     fn open_synthetic_fixture_for_transfer(
         engine_home: PathBuf,
         mut fixture: SyntheticFixture,
@@ -450,19 +353,8 @@ impl IsolatedGnuPgOpenPgp {
 }
 
 #[cfg(debug_assertions)]
-impl OpenPgp for IsolatedGnuPgOpenPgp {
-    fn validate_recipients(&self, recipients: &RecipientSet) -> Result<()> {
-        if recipients.as_slice().is_empty() {
-            bail!("at least one OpenPGP recipient is required");
-        }
-        let mut context = self.open_context()?;
-        for fingerprint in recipients.as_slice() {
-            load_encryption_key(&mut context, fingerprint)?;
-        }
-        Ok(())
-    }
-
-    fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
+impl IsolatedGnuPgOpenPgp {
+    pub(crate) fn encrypt(&self, plaintext: &[u8], recipients: &RecipientSet) -> Result<Vec<u8>> {
         encrypt_bounded_in_context(
             &mut self.open_context()?,
             plaintext,
@@ -472,16 +364,6 @@ impl OpenPgp for IsolatedGnuPgOpenPgp {
             // This isolated home contains only the exact public fixture pinned above.
             // Its imported certificate has no ownertrust; normal keyrings keep their policy.
             EncryptFlags::NO_ENCRYPT_TO | EncryptFlags::ALWAYS_TRUST,
-        )
-    }
-
-    fn decrypt(&self, ciphertext: &[u8]) -> Result<SensitiveBytes> {
-        decrypt_bounded_in_context(
-            &mut self.open_context()?,
-            ciphertext,
-            MAX_CIPHERTEXT_BYTES,
-            MAX_CONTENT_BYTES,
-            Some(&self.passphrase),
         )
     }
 }
