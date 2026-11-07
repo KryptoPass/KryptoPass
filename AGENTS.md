@@ -56,19 +56,19 @@ registra ahí antes de implementarlo en un lado. Lo pendiente está en
 - No hay datos en producción. Un cambio de formato o de ruta se resuelve
   volviendo a vincular y empezando la bóveda de nuevo, sin migraciones; avísalo
   en el commit como `BREAKING CHANGE`.
-- Actualizar las apps nunca borra datos por su cuenta. `just dev-reset` aparta
-  los datos, conserva el llavero del sistema y deja el marcador de reset.
+- Se puede desinstalar, reinstalar o limpiar los datos de la app (Desktop y
+  Android) siempre que haga falta para probar. `just dev-reset` aparta los
+  datos, conserva el llavero del sistema y deja el marcador de reset.
 
 ## Identidad, confianza y claves
 
 - Ninguna identidad se vuelve confiable por parsing, descubrimiento, una bandera
   de UI o una confirmación remota sin aprobación humana local (Noise XX + SAS).
 - La identidad del dispositivo se crea al abrir la bóveda en un equipo sin perfil
-  (`src/vault_access.rs`). Nunca se regenera una identidad existente o corrupta
-  ni se repara trust faltante. La única excepción es el marcador de
-  `just dev-reset`, que permite crear trust vacío con la misma identidad y solo
-  lo consume «Vincular dispositivo»; abrir Dispositivos en ese estado muestra la
-  lista vacía, sin error y sin crear claves ni trust.
+  (`src/vault_access.rs`). Nunca se regenera una identidad existente o corrupta.
+  Si falta el trust de una identidad existente, puede recrearse vacío (no
+  autoriza a nadie) registrándolo en el log. El marcador de `just dev-reset`
+  permite crear trust vacío con la misma identidad desde «Vincular dispositivo».
 - Borrar una vinculación no borra la bóveda ni las claves OpenPGP.
 - La transferencia de claves privadas es una función de la app, no de debug.
   Exige confirmación local, la contraseña de GnuPG al exportar, aceptación en el
