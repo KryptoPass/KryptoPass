@@ -1,10 +1,12 @@
+use kryptopass_identity::TrustStore as _;
+use kryptopass_store::trust::SqliteTrustStore;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
-use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
+use kryptopass_identity::DeviceIdentity;
 use kryptopass_pairing::{
     LocalApproval, LocalDecision, PairingConfig, PairingEngine, PairingInvitation, PairingMode,
     PairingRole, SasDisplay,
@@ -100,13 +102,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let alice_engine = PairingEngine::new(
         alice_transport,
         &alice_identity,
-        alice_store,
+        Box::new(alice_store),
         PairingConfig::pairing(session_id, PairingRole::Initiator, now_ms()?),
     )?;
     let bob_engine = PairingEngine::new(
         bob_transport,
         &bob_identity,
-        bob_store,
+        Box::new(bob_store),
         PairingConfig::pairing(session_id, PairingRole::Responder, now_ms()?),
     )?;
     let (alice_pairing, bob_pairing) = tokio::join!(
@@ -138,7 +140,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let alice_engine = PairingEngine::new(
         alice_transport,
         &alice_identity,
-        alice_store,
+        Box::new(alice_store),
         PairingConfig::reconnect(
             reconnect_session_id,
             PairingRole::Initiator,
@@ -149,7 +151,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let bob_engine = PairingEngine::new(
         bob_transport,
         &bob_identity,
-        bob_store,
+        Box::new(bob_store),
         PairingConfig::reconnect(
             reconnect_session_id,
             PairingRole::Responder,

@@ -24,6 +24,7 @@ tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
 tracing = "0.1"
 
 [dev-dependencies]
+kryptopass_store = { package = "kp-store", path = "../kp-store" }
 async-trait = "0.1"
 tokio = { version = "1", features = ["test-util"] }
 

@@ -4,12 +4,14 @@
 )]
 
 use async_trait::async_trait;
-use kryptopass_identity::{DeviceIdentity, PublicIdentity, SqliteTrustStore};
+use kryptopass_identity::TrustStore as _;
+use kryptopass_identity::{DeviceIdentity, PublicIdentity};
 use kryptopass_pairing::{
     LocalApproval, LocalDecision, PairingConfig, PairingEngine, PairingInvitation, PairingMode,
     PairingRole, PairingState, SasDisplay,
 };
 use kryptopass_protocol::decode_pairing_invite;
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_transport::{MemoryTransport, MemoryTransportConfig};
 use std::{
     fs,
@@ -159,14 +161,14 @@ async fn two_nodes_compare_the_same_sas_and_commit_trust_before_returning() {
     let initiator = PairingEngine::new(
         initiator_transport,
         &initiator_identity,
-        initiator_store,
+        Box::new(initiator_store),
         short_config(session_id, PairingRole::Initiator, 10_000),
     )
     .expect("construct initiator");
     let responder = PairingEngine::new(
         responder_transport,
         &responder_identity,
-        responder_store,
+        Box::new(responder_store),
         short_config(session_id, PairingRole::Responder, 10_000),
     )
     .expect("construct responder");
@@ -236,7 +238,7 @@ async fn reconnect_uses_fresh_noise_and_keeps_trust_without_showing_sas() {
         PairingEngine::new(
             transport_i,
             &initiator_identity,
-            open_new(&initiator_profile, &initiator_identity),
+            Box::new(open_new(&initiator_profile, &initiator_identity)),
             short_config(first_session, PairingRole::Initiator, 20_000),
         )
         .expect("construct initial initiator")
@@ -244,7 +246,7 @@ async fn reconnect_uses_fresh_noise_and_keeps_trust_without_showing_sas() {
         PairingEngine::new(
             transport_r,
             &responder_identity,
-            responder_store,
+            Box::new(responder_store),
             short_config(first_session, PairingRole::Responder, 20_000),
         )
         .expect("construct initial responder")
@@ -280,7 +282,7 @@ async fn reconnect_uses_fresh_noise_and_keeps_trust_without_showing_sas() {
         PairingEngine::new(
             transport_i,
             &initiator_identity,
-            open_existing(&initiator_profile, &initiator_identity),
+            Box::new(open_existing(&initiator_profile, &initiator_identity)),
             reconnect_i,
         )
         .expect("construct trusted initiator reconnect")
@@ -288,7 +290,7 @@ async fn reconnect_uses_fresh_noise_and_keeps_trust_without_showing_sas() {
         PairingEngine::new(
             transport_r,
             &responder_identity,
-            open_existing(&responder_profile, &responder_identity),
+            Box::new(open_existing(&responder_profile, &responder_identity)),
             reconnect_r,
         )
         .expect("construct trusted responder reconnect")

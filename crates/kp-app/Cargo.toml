@@ -26,5 +26,9 @@ thiserror = "2.0"
 tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 
+[dev-dependencies]
+tempfile = "3"
+kryptopass-sync = { package = "kp-sync", path = "../kp-sync" }
+
 [lints]
 workspace = true

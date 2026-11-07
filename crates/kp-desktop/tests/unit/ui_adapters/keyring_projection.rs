@@ -20,6 +20,7 @@ fn at(seconds: u64) -> Option<SystemTime> {
 fn key(fingerprint: &str) -> KeyInfo {
     KeyInfo {
         fingerprint: self::fingerprint(fingerprint),
+        owner_trust: kryptopass_keyring::Validity::Unknown,
         user_ids: Vec::new(),
         subkeys: Vec::new(),
         has_secret: false,
@@ -173,7 +174,7 @@ fn records_keep_identity_validity_and_certification_contract() -> Result<(), ser
             "id": fingerprint,
             "title": "Preferred Name",
             "email": "preferred@example.test",
-            "hasSecret": true,
+            "hasSecret": true, "ownerTrust": "unknown", "needsOwnTrust": true,
             "canEncrypt": true,
             "canCertify": false,
             "capabilities": ["Cifrar", "Firmar", "Autenticar"],
@@ -280,31 +281,31 @@ fn records_keep_status_precedence_capability_order_and_optional_fields()
         record_values(&[revoked, expired, disabled, invalid, valid])?,
         json!([
             {
-                "id": "A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1", "title": "Sin nombre", "email": "", "hasSecret": true,
+                "id": "A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1", "title": "Sin nombre", "email": "", "hasSecret": true, "ownerTrust": "unknown", "needsOwnTrust": true,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Revocada", "statusCode": "revoked",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2A2", "title": "Sin nombre", "email": "", "hasSecret": false, "ownerTrust": "unknown", "needsOwnTrust": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Caducada", "statusCode": "expired",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3A3", "title": "Sin nombre", "email": "", "hasSecret": false, "ownerTrust": "unknown", "needsOwnTrust": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Deshabilitada", "statusCode": "disabled",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4A4", "title": "Sin nombre", "email": "", "hasSecret": false, "ownerTrust": "unknown", "needsOwnTrust": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Inválida", "statusCode": "invalid",
                 "identities": [], "subkeys": [], "signatures": [],
             },
             {
-                "id": "A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5", "title": "Sin nombre", "email": "", "hasSecret": false,
+                "id": "A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5A5", "title": "Sin nombre", "email": "", "hasSecret": false, "ownerTrust": "unknown", "needsOwnTrust": false,
                 "canEncrypt": false, "canCertify": false, "capabilities": [],
                 "validity": "Sin verificar", "validityCode": "unknown", "status": "Vigente", "statusCode": "valid",
                 "identities": [],

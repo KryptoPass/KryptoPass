@@ -5,9 +5,11 @@
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
+    use kryptopass_identity::DeviceIdentity;
+    use kryptopass_identity::TrustStore as _;
     use kryptopass_lan::RelayRoute;
     use kryptopass_peers::{PeerError, PeerHost};
+    use kryptopass_store::trust::SqliteTrustStore;
     use std::{
         fs::{self, DirBuilder},
         os::unix::fs::DirBuilderExt,

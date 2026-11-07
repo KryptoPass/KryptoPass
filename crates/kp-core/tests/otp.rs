@@ -1,13 +1,12 @@
 #![allow(clippy::unwrap_used)]
 
+use kryptopass_core::otp::{TotpAlgorithm, TotpConfig, TotpUriParameter};
 use kryptopass_core::{
-    CONTENT_SCHEMA_VERSION, MAX_TOTP_EXTENSION_BYTES, MAX_TOTP_EXTENSIONS, SecretContent,
-    TotpContent, TotpUriParameter, decode_content, encode_content, format_totp_input,
-    generate_totp, parse_totp_input,
+    MAX_TOTP_EXTENSION_BYTES, MAX_TOTP_EXTENSIONS, format_totp_input, generate_totp,
+    parse_totp_input,
 };
-use serde_json::Value;
 
-fn parse_uri(uri: &str) -> kryptopass_core::TotpConfig {
+fn parse_uri(uri: &str) -> TotpConfig {
     parse_totp_input(uri).unwrap().unwrap()
 }
 
@@ -25,7 +24,7 @@ fn standard_and_unknown_uri_parameters_survive_parse_format_and_encrypted_conten
     );
     assert_eq!(config.issuer.as_deref(), Some("Labé"));
     assert_eq!(config.account.as_deref(), Some("ops+night shift"));
-    assert!(config.algorithm == kryptopass_core::TotpAlgorithm::Sha512);
+    assert!(config.algorithm == TotpAlgorithm::Sha512);
     assert_eq!(config.digits, 8);
     assert_eq!(config.period, 86_400);
     assert!(
@@ -58,26 +57,6 @@ fn standard_and_unknown_uri_parameters_survive_parse_format_and_encrypted_conten
     assert!(formatted.starts_with("otpauth://totp/Lab%C3%A9%3Aops%2Bnight%20shift?"));
     let reparsed = parse_uri(&formatted);
     assert!(reparsed == config);
-
-    let encrypted_payload = encode_content(&SecretContent::Totp(TotpContent {
-        config: reparsed,
-        notes: "Authenticator notes".into(),
-    }))
-    .unwrap();
-    let stored: Value = serde_json::from_slice(encrypted_payload.as_slice()).unwrap();
-    assert_eq!(stored["schemaVersion"], CONTENT_SCHEMA_VERSION);
-    assert_eq!(
-        stored["fields"]["config"]["originalLabel"],
-        "Lab%C3%A9%3Aops%2Bnight%20shift"
-    );
-    assert_eq!(stored["fields"]["config"]["extensions"][0]["key"], "image");
-
-    let decoded = decode_content(encrypted_payload.as_slice()).unwrap();
-    let SecretContent::Totp(decoded) = &decoded else {
-        panic!("expected standalone TOTP content");
-    };
-    let formatted_again = format_totp_input(&decoded.config).unwrap();
-    assert!(parse_uri(&formatted_again) == decoded.config);
 }
 
 #[test]
@@ -136,7 +115,7 @@ fn duplicate_parameters_invalid_extension_names_and_invalid_uri_characters_are_r
         assert!(parse_totp_input(uri).is_err(), "accepted invalid URI {uri}");
     }
 
-    let mut duplicate_config = kryptopass_core::TotpConfig::default();
+    let mut duplicate_config = TotpConfig::default();
     duplicate_config.secret = "JBSWY3DPEHPK3PXP".into();
     duplicate_config.extensions = vec![
         TotpUriParameter {

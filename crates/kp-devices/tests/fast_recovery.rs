@@ -8,12 +8,13 @@ use kryptopass_devices::{
     ConnectionState, DeviceDirectory, SessionCloseReason, SessionEvent, SessionFailure,
     SessionHandle, TrustState, start_session,
 };
-use kryptopass_identity::{DeviceId, DeviceIdentity, SqliteTrustStore};
+use kryptopass_identity::{DeviceId, DeviceIdentity};
 use kryptopass_pairing::{
     EstablishedSession, LocalApproval, LocalDecision, PairingConfig, PairingEngine,
     PairingInvitation, PairingRole, SasDisplay,
 };
 use kryptopass_protocol::Channel;
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_transport::{
     ConnectionInfo, MemoryTransport, MemoryTransportConfig, PeerTransport, TransportError,
     TransportFrame,
@@ -266,15 +267,22 @@ async fn pair_two_ephemeral_devices() -> PairedMemorySessions {
         PairingEngine::new(
             owner_transport,
             &owner_identity,
-            SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
-                .expect("open temporary owner trust database"),
+            Box::new(
+                SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
+                    .expect("open temporary owner trust database")
+            ),
             owner_config,
         )
         .expect("construct ephemeral owner pairing")
         .run(Some(&invitation), &mut owner_approval),
-        PairingEngine::new(peer_transport, &peer_identity, peer_store, peer_config,)
-            .expect("construct ephemeral peer pairing")
-            .run(Some(&invitation), &mut peer_approval),
+        PairingEngine::new(
+            peer_transport,
+            &peer_identity,
+            Box::new(peer_store),
+            peer_config,
+        )
+        .expect("construct ephemeral peer pairing")
+        .run(Some(&invitation), &mut peer_approval),
     );
 
     let owner_pairing = owner_pairing.expect("owner Noise pairing authenticates in memory");

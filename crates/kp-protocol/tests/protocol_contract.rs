@@ -182,18 +182,19 @@ fn valid_messages() -> Vec<(proto::MessageType, Vec<u8>, Channel)> {
     };
     let abort = proto::PairingAbort { code: 1 };
     let sync_hello = proto::SyncHello {
-        vault_id: bytes(16, 11),
         device_id: bytes(32, 12),
-        known_revision_count: 1,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 1,
+        keys: vec![bytes(20, 3)],
     };
     let manifest = proto::SyncManifest {
+        page_index: 0,
+        last_page: true,
         snapshot_id: bytes(16, 13),
         heads: vec![],
     };
     let request = proto::SyncRequest {
         snapshot_id: bytes(16, 14),
-        revisions: vec![],
+        wanted: vec![],
     };
     let sync_chunk = proto::SyncChunk {
         transfer_id: bytes(16, 15),
@@ -210,10 +211,6 @@ fn valid_messages() -> Vec<(proto::MessageType, Vec<u8>, Channel)> {
     let ack = proto::SyncAck {
         transfer_id: bytes(16, 20),
         status: 1,
-    };
-    let conflict = proto::SyncConflict {
-        record_id: bytes(16, 21),
-        revision_ids: vec![bytes(16, 22), bytes(16, 23)],
     };
     let offer = proto::KeyTransferOffer {
         transfer_id: bytes(16, 24),
@@ -275,11 +272,6 @@ fn valid_messages() -> Vec<(proto::MessageType, Vec<u8>, Channel)> {
         (Type::SyncCommit, commit.encode_to_vec(), Channel::Control),
         (Type::SyncAck, ack.encode_to_vec(), Channel::Control),
         (
-            Type::SyncConflict,
-            conflict.encode_to_vec(),
-            Channel::Control,
-        ),
-        (
             Type::KeyTransferOffer,
             offer.encode_to_vec(),
             Channel::Control,
@@ -339,7 +331,7 @@ fn padded_to(mut value: Vec<u8>, target: usize, field_number: u64) -> Vec<u8> {
 #[test]
 fn every_v1_message_family_decodes_to_its_declared_channel() {
     let cases = valid_messages();
-    assert_eq!(cases.len(), 17);
+    assert_eq!(cases.len(), 16);
 
     for (message_type, payload, expected_channel) in cases {
         let wire = frame(&SESSION, 1, message_type as i32, &payload, PROTOCOL_VERSION);
@@ -404,10 +396,9 @@ fn pairing_invites_use_the_bounded_out_of_band_codec_only() {
 #[test]
 fn codec_assigns_consecutive_ids_and_round_trips_typed_messages() {
     let message = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     };
     let mut sender = SessionCodec::new(SESSION);
     let first = sender
@@ -538,10 +529,9 @@ fn frame_limit_is_checked_before_malformed_contents_are_parsed() {
     ));
 
     let hello = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     };
     let valid_payload = hello.encode_to_vec();
     let valid_at_limit = frame(
@@ -566,10 +556,9 @@ fn frame_limit_is_checked_before_malformed_contents_are_parsed() {
 #[test]
 fn payload_limit_accepts_the_boundary_and_rejects_one_byte_over() {
     let hello = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     };
     let payload_at_limit = padded_to(hello.encode_to_vec(), MAX_PAYLOAD_SIZE, 100);
     let exact = frame(
@@ -598,10 +587,9 @@ fn payload_limit_accepts_the_boundary_and_rejects_one_byte_over() {
 #[test]
 fn version_session_and_message_id_failures_do_not_consume_the_next_id() {
     let hello = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     }
     .encode_to_vec();
     let valid = frame(
@@ -654,10 +642,9 @@ fn version_session_and_message_id_failures_do_not_consume_the_next_id() {
 #[test]
 fn rejects_zero_or_malformed_session_ids_unknown_types_and_wrong_channels() {
     let hello = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     }
     .encode_to_vec();
     let valid = frame(
@@ -718,10 +705,9 @@ fn rejects_zero_or_malformed_session_ids_unknown_types_and_wrong_channels() {
 #[test]
 fn out_of_order_and_malformed_payloads_do_not_advance_the_sequence() {
     let valid_payload = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 0,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 0,
+        keys: vec![bytes(20, 3)],
     }
     .encode_to_vec();
     let one = frame(
@@ -763,43 +749,31 @@ fn synchronization_and_key_transfer_field_limits_are_enforced() {
     use proto::MessageType as Type;
 
     let mut sync_hello = proto::SyncHello {
-        vault_id: bytes(16, 1),
         device_id: bytes(32, 2),
-        known_revision_count: 1_000_000,
-        openpgp_fingerprint: bytes(20, 3),
+        known_object_count: 1_000_000,
+        keys: vec![bytes(20, 3)],
     };
     assert!(decode_as(Type::SyncHello, &sync_hello).is_ok());
-    sync_hello.known_revision_count = 1_000_001;
+    sync_hello.known_object_count = 1_000_001;
     assert!(matches!(
         decode_as(Type::SyncHello, &sync_hello),
         Err(ProtocolError::InvalidField {
-            field: "known_revision_count"
+            field: "known_object_count"
         })
     ));
 
-    let requested = |index: u16| proto::RequestedRevision {
+    let requested = |index: u16| proto::SyncWanted {
         record_id: unique_id(16, index),
-        revision_id: unique_id(16, index + 1_000),
+        version_id: unique_id(16, index + 1_000),
     };
     let mut request = proto::SyncRequest {
         snapshot_id: bytes(16, 1),
-        revisions: (1..=256).map(requested).collect(),
+        wanted: (1..=256).map(requested).collect(),
     };
     assert!(decode_as(Type::SyncRequest, &request).is_ok());
-    request.revisions.push(requested(257));
+    request.wanted.push(requested(257));
     assert!(matches!(
         decode_as(Type::SyncRequest, &request),
-        Err(ProtocolError::FragmentLimitExceeded)
-    ));
-
-    let mut conflict = proto::SyncConflict {
-        record_id: bytes(16, 1),
-        revision_ids: (1..=16).map(|i| bytes(16, i)).collect(),
-    };
-    assert!(decode_as(Type::SyncConflict, &conflict).is_ok());
-    conflict.revision_ids.push(bytes(16, 17));
-    assert!(matches!(
-        decode_as(Type::SyncConflict, &conflict),
         Err(ProtocolError::FragmentLimitExceeded)
     ));
 
@@ -1223,6 +1197,7 @@ fn synthetic_transfer_field_limits_reject_malformed_ids_chunks_and_challenges() 
 fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
 -> Result<(), Box<dyn std::error::Error>> {
     let hello = proto::SessionHello {
+        vault_keys_version: 0,
         session_version: 1,
         device_id: bytes(32, 1),
         reconnect_port: 0,
@@ -1244,6 +1219,7 @@ fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
 fn sync_rounds_session_capability_roundtrips_and_rejects_duplicate_or_overflow() {
     for version in [0, 1] {
         let hello = proto::SessionHello {
+            vault_keys_version: 0,
             session_version: 1,
             device_id: bytes(32, 1),
             reconnect_port: 0,
@@ -1261,6 +1237,7 @@ fn sync_rounds_session_capability_roundtrips_and_rejects_duplicate_or_overflow()
     }
 
     let base = proto::SessionHello {
+        vault_keys_version: 0,
         session_version: 1,
         device_id: bytes(32, 1),
         reconnect_port: 0,
@@ -1442,26 +1419,29 @@ fn required_fields_and_enum_ranges_are_validated_for_each_message_family() {
     }
 
     let mut manifest = proto::SyncManifest {
+        page_index: 0,
+        last_page: true,
         snapshot_id: bytes(16, 1),
-        heads: vec![proto::RevisionHead {
+        heads: vec![proto::SyncHead {
+            record_kind: 1,
             record_id: bytes(16, 2),
-            revision_id: bytes(16, 3),
-            revision_hash: bytes(32, 4),
+            version_id: bytes(16, 3),
+            object_hash: bytes(32, 4),
         }],
     };
-    manifest.heads[0].revision_hash.pop();
+    manifest.heads[0].object_hash.pop();
     assert!(matches!(
         decode_as(Type::SyncManifest, &manifest),
         Err(ProtocolError::InvalidField {
-            field: "revision_hash"
+            field: "object_hash"
         })
     ));
-    manifest.heads[0].revision_hash = bytes(32, 4);
+    manifest.heads[0].object_hash = bytes(32, 4);
     manifest.heads.push(manifest.heads[0].clone());
     assert!(matches!(
         decode_as(Type::SyncManifest, &manifest),
         Err(ProtocolError::InvalidField {
-            field: "duplicate_manifest_revision"
+            field: "duplicate_manifest_head"
         })
     ));
 
@@ -1491,16 +1471,16 @@ fn required_fields_and_enum_ranges_are_validated_for_each_message_family() {
 
     let mut request = proto::SyncRequest {
         snapshot_id: bytes(16, 1),
-        revisions: vec![proto::RequestedRevision {
+        wanted: vec![proto::SyncWanted {
             record_id: bytes(16, 2),
-            revision_id: bytes(16, 3),
+            version_id: bytes(16, 3),
         }],
     };
-    request.revisions.push(request.revisions[0].clone());
+    request.wanted.push(request.wanted[0].clone());
     assert!(matches!(
         decode_as(Type::SyncRequest, &request),
         Err(ProtocolError::InvalidField {
-            field: "duplicate_requested_revision"
+            field: "duplicate_wanted"
         })
     ));
 
@@ -1534,6 +1514,8 @@ fn required_fields_and_enum_ranges_are_validated_for_each_message_family() {
 #[test]
 fn protobuf_preflight_caps_repeated_items_before_typed_decode() {
     let manifest_payload = proto::SyncManifest {
+        page_index: 0,
+        last_page: true,
         snapshot_id: bytes(16, 1),
         heads: vec![],
     }
@@ -1555,13 +1537,15 @@ fn protobuf_preflight_caps_repeated_items_before_typed_decode() {
     ));
 
     let mut max_count_manifest = proto::SyncManifest {
+        page_index: 0,
+        last_page: true,
         snapshot_id: bytes(16, 4),
         heads: vec![],
     }
     .encode_to_vec();
-    for _ in 0..1024 {
+    for _ in 0..256 {
         // The maximum count passes the preflight cap; typed validation then
-        // rejects the empty nested records for their missing IDs.
+        // rejects the empty nested records for their missing kind.
         max_count_manifest.extend_from_slice(&[0x12, 0x00]);
     }
     assert!(matches!(
@@ -1572,26 +1556,9 @@ fn protobuf_preflight_caps_repeated_items_before_typed_decode() {
             &max_count_manifest,
             PROTOCOL_VERSION,
         )),
-        Err(ProtocolError::InvalidField { field: "record_id" })
-    ));
-
-    let mut too_many_conflicts = proto::SyncConflict {
-        record_id: bytes(16, 1),
-        revision_ids: vec![],
-    }
-    .encode_to_vec();
-    for _ in 0..17 {
-        append_unknown_bytes_field(&mut too_many_conflicts, 2, &bytes(16, 2));
-    }
-    assert!(matches!(
-        SessionCodec::new(SESSION).decode(&frame(
-            &SESSION,
-            1,
-            proto::MessageType::SyncConflict as i32,
-            &too_many_conflicts,
-            PROTOCOL_VERSION,
-        )),
-        Err(ProtocolError::FragmentLimitExceeded)
+        Err(ProtocolError::InvalidField {
+            field: "record_kind"
+        })
     ));
 }
 

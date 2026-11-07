@@ -16,10 +16,9 @@ fn assert_failed_decode_preserves_receive_id(frame: &[u8]) {
             .encode(
                 proto::MessageType::SyncHello,
                 &proto::SyncHello {
-                    vault_id: vec![0x42; 16],
                     device_id: vec![0x53; 32],
-                    known_revision_count: 7,
-                    openpgp_fingerprint: vec![0x64; 20],
+                    known_object_count: 7,
+                    keys: vec![vec![0x64; 20]],
                 },
             )
             .expect("encode a valid successor frame with message ID one");

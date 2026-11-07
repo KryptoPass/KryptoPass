@@ -5,8 +5,10 @@
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use kryptopass_identity::{DeviceIdentity, SqliteTrustStore, SystemSecretKeyStore};
+    use kryptopass_identity::TrustStore as _;
+    use kryptopass_identity::{DeviceIdentity, SystemSecretKeyStore};
     use kryptopass_peers::{PeerError, PeerHost};
+    use kryptopass_store::trust::SqliteTrustStore;
     use std::{
         env,
         fs::{self, OpenOptions},
@@ -19,10 +21,10 @@ mod linux {
         time::{Duration, Instant},
     };
 
-    const PAIRING_PROFILE_DIRECTORY: &str = "emulator-pairing-lab-v1";
+    const PAIRING_PROFILE_DIRECTORY: &str = "peers-v1";
     const PROFILE_RESET_MARKER: &str = ".pairing-profile-reset-v1";
     const PROFILE_RESET_MARKER_CONTENT: &[u8] = b"KryptoPass pairing profile reset v1\n";
-    const SYSTEM_PROFILE_KEYRING_ID: &str = "emulator-pairing-lab-v1";
+    const SYSTEM_PROFILE_KEYRING_ID: &str = "peers-v1";
     const CHILD_ENV: &str = "KP_PROFILE_RESET_ISOLATED_CHILD";
     const CHILD_ROOT_ENV: &str = "KP_PROFILE_RESET_ISOLATED_ROOT";
     const CHILD_JUST_ENV: &str = "KP_PROFILE_RESET_ISOLATED_JUST";

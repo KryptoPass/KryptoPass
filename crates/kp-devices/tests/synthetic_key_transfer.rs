@@ -1,5 +1,6 @@
 #![allow(clippy::expect_used)] // Assertions name the synthetic protocol boundary under test.
 
+use kryptopass_store::trust::SqliteTrustStore;
 use std::{
     fs,
     path::PathBuf,
@@ -13,7 +14,7 @@ use kryptopass_devices::{
     SyntheticTransferError, SyntheticTransferOutbound, SyntheticTransferPhase,
     SyntheticTransferSender, start_session, start_session_with_extensions,
 };
-use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
+use kryptopass_identity::DeviceIdentity;
 use kryptopass_pairing::{
     EstablishedSession, LocalApproval, LocalDecision, PairingConfig, PairingEngine,
     PairingInvitation, PairingRole, SasDisplay,
@@ -162,15 +163,22 @@ async fn pair_ephemeral_sessions() -> PairedSessions {
         PairingEngine::new(
             owner_transport,
             &owner_identity,
-            SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
-                .expect("create temporary owner trust database"),
+            Box::new(
+                SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
+                    .expect("create temporary owner trust database")
+            ),
             owner_config,
         )
         .expect("construct owner Noise pairing")
         .run(Some(&invitation), &mut owner_approval),
-        PairingEngine::new(peer_transport, &peer_identity, peer_store, peer_config)
-            .expect("construct peer Noise pairing")
-            .run(Some(&invitation), &mut peer_approval),
+        PairingEngine::new(
+            peer_transport,
+            &peer_identity,
+            Box::new(peer_store),
+            peer_config
+        )
+        .expect("construct peer Noise pairing")
+        .run(Some(&invitation), &mut peer_approval),
     );
 
     PairedSessions {
@@ -352,12 +360,13 @@ async fn owner_roundtrips_transfer_only_after_acceptance_and_valid_receipt() {
         .expect("receive the owner's authenticated session hello");
     assert!(matches!(
         owner_hello.payload,
-        MessagePayload::SessionHello(ref hello) if hello.synthetic_key_transfer_version == 2
+        MessagePayload::SessionHello(ref hello) if hello.synthetic_key_transfer_version == 3
     ));
     peer_session
         .send_message(
             proto::MessageType::SessionHello,
             &proto::SessionHello {
+                vault_keys_version: 0,
                 session_version: 1,
                 device_id: peer_id.as_bytes().to_vec(),
                 reconnect_port: 0,
@@ -585,6 +594,7 @@ async fn queued_start_then_cancel_is_processed_before_any_key_chunk() {
             .send_message(
                 proto::MessageType::SessionHello,
                 &proto::SessionHello {
+                    vault_keys_version: 0,
                     session_version: 1,
                     device_id: peer_id.as_bytes().to_vec(),
                     reconnect_port: 0,
@@ -839,6 +849,11 @@ fn send_until_complete(
                 chunks.extend_from_slice(&chunk.data);
             }
             Some(SyntheticTransferOutbound::Complete(complete)) => return (chunks, complete),
+            Some(
+                SyntheticTransferOutbound::Decision(_) | SyntheticTransferOutbound::Receipt(_),
+            ) => {
+                panic!("the sender only emits offers, chunks, completion and aborts")
+            }
             Some(SyntheticTransferOutbound::Offer(_)) => panic!("offer is emitted only by start"),
             Some(SyntheticTransferOutbound::Abort(_)) => panic!("unexpected abort before timeout"),
             None => panic!("accepted transfer should produce chunks and completion"),

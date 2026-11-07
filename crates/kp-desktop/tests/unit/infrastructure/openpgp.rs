@@ -4,7 +4,7 @@ use super::GnuPgOpenPgp;
 #[cfg(debug_assertions)]
 use super::{IsolatedGnuPgOpenPgp, SyntheticFixture};
 use anyhow::{Context, Result, bail, ensure};
-use kryptopass_core::{KeyFingerprint, OpenPgp, RecipientSet};
+use kryptopass_core::{KeyFingerprint, RecipientSet};
 use kryptopass_secure_memory::SensitiveText;
 #[cfg(debug_assertions)]
 use sha2::{Digest, Sha256};
@@ -133,105 +133,6 @@ fn protected_process_roundtrips_with_isolated_gpg_agent() -> Result<()> {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    Ok(())
-}
-
-#[test]
-#[cfg(debug_assertions)]
-fn synthetic_fixture_roundtrips_without_preconfigured_ownertrust() -> Result<()> {
-    for tool in ["gpg", "gpgconf"] {
-        if !tool_available(tool)? {
-            eprintln!("skipping synthetic OpenPGP fixture test: {tool} is not installed");
-            return Ok(());
-        }
-    }
-
-    let (synthetic_fingerprint, _fixture_sha256) = synthetic_fixture_metadata()?;
-    let keyring = TemporaryFixtureHome::new()?;
-    let fixture = SyntheticFixture::load()?;
-    let adapter = IsolatedGnuPgOpenPgp::open_synthetic_fixture(keyring.home.clone(), fixture)?;
-    let recipients = RecipientSet::new(vec![KeyFingerprint::parse(&synthetic_fingerprint)?])?;
-    let plaintext = b"synthetic ownertrust-independent payload";
-
-    adapter.validate_recipients(&recipients)?;
-    let ciphertext = adapter.encrypt(plaintext, &recipients)?;
-    ensure!(
-        !ciphertext.is_empty(),
-        "synthetic fixture encryption returned no data"
-    );
-    let decrypted = adapter.decrypt(&ciphertext)?;
-    ensure!(
-        decrypted.as_slice() == plaintext,
-        "synthetic fixture OpenPGP roundtrip mismatch"
-    );
-
-    keyring.cleanup()?;
-    Ok(())
-}
-
-#[test]
-#[cfg(debug_assertions)]
-fn synthetic_transfer_preparation_uses_manifest_key_and_fresh_decryptable_challenges() -> Result<()>
-{
-    for tool in ["gpg", "gpgconf"] {
-        if !tool_available(tool)? {
-            eprintln!("skipping synthetic transfer preparation test: {tool} is not installed");
-            return Ok(());
-        }
-    }
-
-    let (fingerprint, fixture_sha256) = synthetic_fixture_metadata()?;
-    let expected_fingerprint = super::decode_fingerprint(&fingerprint)?;
-    let first = super::prepare_synthetic_transfer(&fingerprint)?;
-    let second = super::prepare_synthetic_transfer(&fingerprint)?;
-    ensure!(
-        first.fingerprint.as_slice() == expected_fingerprint.as_slice()
-            && second.fingerprint.as_slice() == expected_fingerprint.as_slice(),
-        "prepared transfer fingerprint does not match the local fixture manifest"
-    );
-    ensure!(
-        format!(
-            "{:x}",
-            Sha256::digest(first.protected_secret_key.as_slice())
-        ) == fixture_sha256
-            && format!(
-                "{:x}",
-                Sha256::digest(second.protected_secret_key.as_slice())
-            ) == fixture_sha256,
-        "prepared protected key does not match the local fixture manifest"
-    );
-    ensure!(
-        first.challenge_sha256 != second.challenge_sha256,
-        "separate transfer preparations must use fresh challenge plaintexts"
-    );
-
-    let keyring = TemporaryFixtureHome::new()?;
-    let crypto = IsolatedGnuPgOpenPgp::open_synthetic_fixture(
-        keyring.home.clone(),
-        SyntheticFixture::load()?,
-    )?;
-    let first_plaintext = crypto.decrypt(&first.encrypted_challenge)?;
-    let second_plaintext = crypto.decrypt(&second.encrypted_challenge)?;
-    ensure!(
-        first_plaintext.len() == 32 && second_plaintext.len() == 32,
-        "prepared challenges must decrypt to exactly 32 bytes"
-    );
-    ensure!(
-        first_plaintext.as_slice() != second_plaintext.as_slice(),
-        "separate transfer preparations must decrypt to different challenges"
-    );
-    let first_challenge_digest: [u8; 32] = Sha256::digest(first_plaintext.as_slice()).into();
-    let second_challenge_digest: [u8; 32] = Sha256::digest(second_plaintext.as_slice()).into();
-    ensure!(
-        first_challenge_digest == first.challenge_sha256
-            && second_challenge_digest == second.challenge_sha256,
-        "prepared challenge digest must match the decrypted plaintext"
-    );
-
-    drop(first_plaintext);
-    drop(second_plaintext);
-    drop(crypto);
-    keyring.cleanup()?;
     Ok(())
 }
 

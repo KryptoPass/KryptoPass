@@ -27,5 +27,9 @@ zeroize = "1"
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "=3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
 
+[dev-dependencies]
+rusqlite = { version = "0.40.2", default-features = false }
+kryptopass_store = { package = "kp-store", path = "../kp-store" }
+
 [lints]
 workspace = true

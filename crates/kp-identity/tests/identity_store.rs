@@ -2,12 +2,14 @@
     clippy::expect_used,
     reason = "Integration tests use expect only for fixture setup and assertions with local context."
 )]
+use kryptopass_identity::TrustStore as _;
 
 use kryptopass_identity::{
     DeviceIdentity, IdentityError, InvitationTokenHash, PublicIdentity, SecureKeyStore,
-    SecureStoreError, SensitiveBytes, SignatureError, SqliteTrustStore, StoreIfAbsent,
-    TrustStoreError, verify_signature,
+    SecureStoreError, SensitiveBytes, SignatureError, StoreIfAbsent, TrustStoreError,
+    verify_signature,
 };
+use kryptopass_store::trust::SqliteTrustStore;
 use rusqlite::Connection;
 use sha2::Digest;
 use std::{
@@ -732,7 +734,7 @@ fn sqlite_transaction_failures_roll_back_peer_and_invitation_writes() {
         .expect("install transaction fault trigger");
     assert!(matches!(
         store.authorize_peer(&remote_public, 25),
-        Err(TrustStoreError::Database(_))
+        Err(TrustStoreError::Storage)
     ));
     assert!(matches!(
         store.lookup_trusted_peer(&remote_public.device_id),
@@ -753,7 +755,7 @@ fn sqlite_transaction_failures_roll_back_peer_and_invitation_writes() {
         .expect("install invitation insert fault trigger");
     assert!(matches!(
         store.register_invitation(invite_id, &token, 4_000, 1_000),
-        Err(TrustStoreError::Database(_))
+        Err(TrustStoreError::Storage)
     ));
     raw_connection
         .execute_batch("DROP TRIGGER reject_invitation_insert;")
@@ -770,7 +772,7 @@ fn sqlite_transaction_failures_roll_back_peer_and_invitation_writes() {
         .expect("install invitation consume fault trigger");
     assert!(matches!(
         store.consume_invitation(&invite_id, &token_hash, 1_100),
-        Err(TrustStoreError::Database(_))
+        Err(TrustStoreError::Storage)
     ));
     raw_connection
         .execute_batch("DROP TRIGGER reject_invitation_consume;")

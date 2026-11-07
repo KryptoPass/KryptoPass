@@ -19,10 +19,9 @@ fn sync_hello(codec: &mut SessionCodec, salt: u8) -> Vec<u8> {
         .encode(
             proto::MessageType::SyncHello,
             &proto::SyncHello {
-                vault_id: bytes(16, salt),
                 device_id: bytes(32, salt.wrapping_add(1)),
-                known_revision_count: u64::from(salt),
-                openpgp_fingerprint: vec![0x64; 20],
+                known_object_count: u64::from(salt),
+                keys: vec![vec![0x64; 20]],
             },
         )
         .expect("valid SyncHello")

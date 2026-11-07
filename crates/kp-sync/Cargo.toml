@@ -19,6 +19,7 @@ sha2 = "0.10"
 tracing = "0.1"
 
 [dev-dependencies]
+kryptopass_store = { package = "kp-store", path = "../kp-store" }
 kryptopass_identity = { package = "kp-identity", path = "../kp-identity", features = ["test-support"] }
 kryptopass_transport = { package = "kp-transport", path = "../kp-transport" }
 proptest = { version = "1", default-features = false, features = ["std"] }

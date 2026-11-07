@@ -4,15 +4,15 @@
 )]
 
 use async_trait::async_trait;
-use kryptopass_identity::{
-    DeviceIdentity, InvitationTokenHash, PublicIdentity, SqliteTrustStore, TrustStoreError,
-};
+use kryptopass_identity::TrustStore as _;
+use kryptopass_identity::{DeviceIdentity, InvitationTokenHash, PublicIdentity, TrustStoreError};
 use kryptopass_pairing::{
     CanonicalContext, LocalApproval, LocalDecision, PairingConfig, PairingEngine, PairingError,
     PairingInvitation, PairingMode, PairingRole, SasDisplay, build_prologue,
     identity_proof_message,
 };
 use kryptopass_protocol::{Channel, SessionCodec, proto};
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_transport::{
     MemoryTransport, MemoryTransportConfig, PeerTransport, TransportError, TransportFrame,
 };
@@ -572,7 +572,7 @@ async fn remote_confirmation_never_substitutes_for_local_sas_approval() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config([0x71; 16], PairingRole::Initiator, 50_000, 1_000),
         )
         .expect("construct initiator")
@@ -580,7 +580,7 @@ async fn remote_confirmation_never_substitutes_for_local_sas_approval() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config([0x71; 16], PairingRole::Responder, 50_000, 180),
         )
         .expect("construct responder")
@@ -627,14 +627,14 @@ async fn dropping_both_attempts_while_sas_is_pending_leaves_no_trust_after_reope
     let initiator = PairingEngine::new(
         transport_i,
         &identity_i,
-        open_new(&profile_i, &identity_i),
+        Box::new(open_new(&profile_i, &identity_i)),
         config(session_id, PairingRole::Initiator, 55_000, 5_000),
     )
     .expect("construct initiator");
     let responder = PairingEngine::new(
         transport_r,
         &identity_r,
-        store_r,
+        Box::new(store_r),
         config(session_id, PairingRole::Responder, 55_000, 5_000),
     )
     .expect("construct responder");
@@ -691,7 +691,7 @@ async fn local_rejection_or_cancellation_never_creates_trust() {
             PairingEngine::new(
                 transport_i,
                 &identity_i,
-                open_new(&profile_i, &identity_i),
+                Box::new(open_new(&profile_i, &identity_i)),
                 config(session, PairingRole::Initiator, 60_000, 1_000),
             )
             .expect("construct initiator")
@@ -699,7 +699,7 @@ async fn local_rejection_or_cancellation_never_creates_trust() {
             PairingEngine::new(
                 transport_r,
                 &identity_r,
-                store_r,
+                Box::new(store_r),
                 config(session, PairingRole::Responder, 60_000, 1_000),
             )
             .expect("construct responder")
@@ -746,7 +746,7 @@ async fn expired_invitation_is_rejected_before_any_trust_write() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config([0x73; 16], PairingRole::Initiator, now, 1_000),
         )
         .expect("construct initiator")
@@ -754,7 +754,7 @@ async fn expired_invitation_is_rejected_before_any_trust_write() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config([0x73; 16], PairingRole::Responder, now, 1_000),
         )
         .expect("construct responder")
@@ -786,11 +786,11 @@ async fn invitation_expiring_after_engine_construction_is_not_consumed() {
     let initiator = PairingEngine::new(
         transport_i,
         &identity_i,
-        open_new(&profile_i, &identity_i),
+        Box::new(open_new(&profile_i, &identity_i)),
         config_i,
     )
     .expect("construct initiator before expiry");
-    let responder = PairingEngine::new(transport_r, &identity_r, store_r, config_r)
+    let responder = PairingEngine::new(transport_r, &identity_r, Box::new(store_r), config_r)
         .expect("construct responder before expiry");
     let mut approval_i = Decision(LocalDecision::Approve);
     let mut approval_r = Decision(LocalDecision::Approve);
@@ -828,7 +828,7 @@ fn reconnect_rejects_a_same_signer_with_a_replaced_static_key_and_keeps_trust() 
         MemoryTransport::pair(MemoryTransportConfig::default()).expect("create reconnect link");
     let config = PairingConfig::reconnect([0x7f; 16], PairingRole::Initiator, 200_000, substituted);
 
-    let result = PairingEngine::new(transport, &local_identity, store, config);
+    let result = PairingEngine::new(transport, &local_identity, Box::new(store), config);
     assert!(matches!(
         result.as_ref(),
         Err(PairingError::InvalidPeerIdentity)
@@ -879,10 +879,10 @@ async fn reconnect_rejects_a_different_peer_received_over_noise_without_replacin
     config_r.timeout = Duration::from_secs(2);
 
     let (result_i, result_r) = tokio::join!(
-        PairingEngine::new(transport_i, &identity_i, store_i, config_i)
+        PairingEngine::new(transport_i, &identity_i, Box::new(store_i), config_i)
             .expect("construct initiator with original expected peer")
             .run(None, &mut approval_i),
-        PairingEngine::new(transport_r, &substituted_r, store_r, config_r)
+        PairingEngine::new(transport_r, &substituted_r, Box::new(store_r), config_r)
             .expect("construct responder expecting the unchanged initiator")
             .run(None, &mut approval_r),
     );
@@ -957,10 +957,10 @@ async fn reconnect_rechecks_revocation_before_return_and_never_repairs_trust() {
     config_r.timeout = Duration::from_secs(2);
 
     let (result_i, result_r) = tokio::join!(
-        PairingEngine::new(transport_i, &identity_i, store_i, config_i)
+        PairingEngine::new(transport_i, &identity_i, Box::new(store_i), config_i)
             .expect("construct initiator before revocation")
             .run(None, &mut approval_i),
-        PairingEngine::new(transport_r, &identity_r, store_r, config_r)
+        PairingEngine::new(transport_r, &identity_r, Box::new(store_r), config_r)
             .expect("construct responder")
             .run(None, &mut approval_r),
     );
@@ -1013,7 +1013,7 @@ async fn failed_attempt_consumes_invitation_and_cannot_be_replayed() {
     let engine = PairingEngine::new(
         responder_transport,
         &identity,
-        store,
+        Box::new(store),
         config(session_id, PairingRole::Responder, 80_000, 1_000),
     )
     .expect("construct responder");
@@ -1030,7 +1030,7 @@ async fn failed_attempt_consumes_invitation_and_cannot_be_replayed() {
     let replay = PairingEngine::new(
         responder_transport,
         &identity,
-        open_existing(&profile, &identity),
+        Box::new(open_existing(&profile, &identity)),
         config([0x75; 16], PairingRole::Responder, 80_001, 1_000),
     )
     .expect("construct responder for replay");
@@ -1072,7 +1072,7 @@ async fn invitation_token_substitution_breaks_noise_authentication() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config(session_id, PairingRole::Initiator, 90_000, 250),
         )
         .expect("construct initiator")
@@ -1080,7 +1080,7 @@ async fn invitation_token_substitution_breaks_noise_authentication() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config(session_id, PairingRole::Responder, 90_000, 250),
         )
         .expect("construct responder")
@@ -1118,7 +1118,7 @@ async fn corrupting_authenticated_noise_identity_frame_fails_before_commit() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config(session_id, PairingRole::Initiator, 100_000, 350),
         )
         .expect("construct initiator")
@@ -1126,7 +1126,7 @@ async fn corrupting_authenticated_noise_identity_frame_fails_before_commit() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config(session_id, PairingRole::Responder, 100_000, 350),
         )
         .expect("construct responder")
@@ -1164,7 +1164,7 @@ async fn mutating_noise_message_three_fails_before_identity_or_trust() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config(session_id, PairingRole::Initiator, 101_000, 1_000),
         )
         .expect("construct initiator")
@@ -1172,7 +1172,7 @@ async fn mutating_noise_message_three_fails_before_identity_or_trust() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config(session_id, PairingRole::Responder, 101_000, 1_000),
         )
         .expect("construct responder")
@@ -1205,7 +1205,7 @@ async fn noise_static_key_cannot_substitute_for_a_different_ed25519_signer() {
     let responder = PairingEngine::new(
         responder_transport,
         &responder_identity,
-        responder_store,
+        Box::new(responder_store),
         config(session_id, PairingRole::Responder, 125_000, 1_000),
     )
     .expect("construct responder");
@@ -1255,7 +1255,7 @@ async fn identity_claim_with_a_changed_transcript_hash_is_rejected() {
     let responder = PairingEngine::new(
         responder_transport,
         &responder_identity,
-        responder_store,
+        Box::new(responder_store),
         config(session_id, PairingRole::Responder, 126_000, 1_000),
     )
     .expect("construct responder");
@@ -1306,7 +1306,7 @@ async fn network_send_failure_before_readiness_never_commits_trust() {
         PairingEngine::new(
             transport_i,
             &identity_i,
-            open_new(&profile_i, &identity_i),
+            Box::new(open_new(&profile_i, &identity_i)),
             config(session_id, PairingRole::Initiator, 110_000, 350),
         )
         .expect("construct initiator")
@@ -1314,7 +1314,7 @@ async fn network_send_failure_before_readiness_never_commits_trust() {
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config(session_id, PairingRole::Responder, 110_000, 350),
         )
         .expect("construct responder")
@@ -1353,7 +1353,7 @@ async fn failed_local_sqlite_commit_rolls_back_trust_after_both_readiness_messag
         PairingEngine::new(
             transport_i,
             &identity_i,
-            store_i,
+            Box::new(store_i),
             config(session_id, PairingRole::Initiator, 120_000, 1_000),
         )
         .expect("construct initiator")
@@ -1361,7 +1361,7 @@ async fn failed_local_sqlite_commit_rolls_back_trust_after_both_readiness_messag
         PairingEngine::new(
             transport_r,
             &identity_r,
-            store_r,
+            Box::new(store_r),
             config(session_id, PairingRole::Responder, 120_000, 1_000),
         )
         .expect("construct responder")
@@ -1432,7 +1432,7 @@ async fn old_encrypted_confirmation_cannot_be_replayed_in_a_fresh_noise_session(
         PairingEngine::new(
             transport_i,
             &first_identity_i,
-            open_new(&first_profile_i, &first_identity_i),
+            Box::new(open_new(&first_profile_i, &first_identity_i)),
             config(first_session_id, PairingRole::Initiator, 140_000, 1_000),
         )
         .expect("construct first initiator")
@@ -1440,7 +1440,7 @@ async fn old_encrypted_confirmation_cannot_be_replayed_in_a_fresh_noise_session(
         PairingEngine::new(
             transport_r,
             &first_identity_r,
-            first_store_r,
+            Box::new(first_store_r),
             config(first_session_id, PairingRole::Responder, 140_000, 1_000),
         )
         .expect("construct first responder")
@@ -1491,7 +1491,7 @@ async fn old_encrypted_confirmation_cannot_be_replayed_in_a_fresh_noise_session(
         PairingEngine::new(
             transport_i,
             &first_identity_i,
-            open_new(&second_profile_i, &first_identity_i),
+            Box::new(open_new(&second_profile_i, &first_identity_i)),
             config(second_session_id, PairingRole::Initiator, 150_000, 1_000),
         )
         .expect("construct second initiator")
@@ -1499,7 +1499,7 @@ async fn old_encrypted_confirmation_cannot_be_replayed_in_a_fresh_noise_session(
         PairingEngine::new(
             transport_r,
             &first_identity_r,
-            second_store_r,
+            Box::new(second_store_r),
             config(second_session_id, PairingRole::Responder, 150_000, 1_000),
         )
         .expect("construct second responder")

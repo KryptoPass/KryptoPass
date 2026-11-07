@@ -2,6 +2,7 @@
     clippy::expect_used,
     reason = "The in-memory pairing fixture uses expect for setup and assertions."
 )]
+use kryptopass_identity::TrustStore as _;
 
 use super::{AcceptPolicy, OwnedSession, OwnerCommand, OwnerRuntime, ResumeOwnerReady};
 use async_trait::async_trait;
@@ -9,11 +10,12 @@ use kryptopass_devices::{
     ConnectionState, DeviceDirectory, SessionCloseReason, SessionEvent, SessionHandle,
     start_session,
 };
-use kryptopass_identity::{DeviceIdentity, SqliteTrustStore};
+use kryptopass_identity::DeviceIdentity;
 use kryptopass_pairing::{
     EstablishedSession, LocalApproval, LocalDecision, PairingConfig, PairingEngine,
     PairingInvitation, PairingMode, PairingRole, SasDisplay,
 };
+use kryptopass_store::trust::SqliteTrustStore;
 use kryptopass_transport::{MemoryTransport, MemoryTransportConfig};
 use std::{
     collections::{HashMap, HashSet},
@@ -117,15 +119,22 @@ async fn pair_two_ephemeral_devices() -> PairedMemorySessions {
         PairingEngine::new(
             owner_transport,
             &owner_identity,
-            SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
-                .expect("open temporary owner trust database"),
+            Box::new(
+                SqliteTrustStore::open_new(owner_profile.path(), owner_identity.device_id())
+                    .expect("open temporary owner trust database")
+            ),
             owner_config,
         )
         .expect("construct ephemeral owner pairing")
         .run(Some(&invitation), &mut owner_approval),
-        PairingEngine::new(peer_transport, &peer_identity, peer_store, peer_config,)
-            .expect("construct ephemeral peer pairing")
-            .run(Some(&invitation), &mut peer_approval),
+        PairingEngine::new(
+            peer_transport,
+            &peer_identity,
+            Box::new(peer_store),
+            peer_config,
+        )
+        .expect("construct ephemeral peer pairing")
+        .run(Some(&invitation), &mut peer_approval),
     );
     let owner_pairing = owner_pairing.expect("owner pairing authenticates in memory");
     let peer_pairing = peer_pairing.expect("peer pairing authenticates in memory");
@@ -185,6 +194,7 @@ fn start_owner_watcher(
     let (command_sender, command_receiver) = mpsc::channel(16);
     let runtime = OwnerRuntime {
         directory_path: profile.path().to_path_buf(),
+        sync: std::sync::Arc::new(|_| None),
         host: None,
         devices: Some(directory.clone()),
         ready: Some(ready),
@@ -480,7 +490,7 @@ async fn stale_session_end_from_previous_generation_does_not_remove_authenticate
         PairingEngine::new(
             owner_transport,
             &paired.owner_identity,
-            owner_store,
+            Box::new(owner_store),
             owner_config,
         )
         .expect("construct the pinned owner reconnect")
@@ -488,7 +498,7 @@ async fn stale_session_end_from_previous_generation_does_not_remove_authenticate
         PairingEngine::new(
             peer_transport,
             &paired.peer_identity,
-            peer_store,
+            Box::new(peer_store),
             peer_config,
         )
         .expect("construct the pinned peer reconnect")
