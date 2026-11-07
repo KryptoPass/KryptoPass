@@ -21,11 +21,11 @@ Controls.ScrollView {
     readonly property bool transferEnded: ["complete", "rejected", "cancelled", "expired", "failed", "uncertain"].includes(syntheticTransferPhase)
     readonly property bool canRecoverTransfer: !transferPending && !host.controller.busy && !host.controller.syncBusy && !host.controller.maintenanceBusy && host.controller.statusCode !== "closing" && ((connection === "connected" && transferEnded) || connection === "disconnected" || connection === "failed")
     property bool technicalOpen: false
-    property bool labExpanded: false
+    property bool peersExpanded: false
     readonly property int index: host.devices.findIndex(device => String(device.deviceId) === deviceId)
     onDeviceIdChanged: {
         technicalOpen = false;
-        labExpanded = false;
+        peersExpanded = false;
     }
     contentWidth: availableWidth
     clip: true
@@ -129,7 +129,7 @@ Controls.ScrollView {
                     }
                     Controls.Switch {
                         checked: deviceRow.vaultSyncOn
-                        enabled: deviceRow.host.available && !deviceRow.host.controller.busy && !deviceRow.host.controller.maintenanceBusy
+                        enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.maintenanceBusy
                         Accessible.name: qsTr("Sincronizar la bóveda con este dispositivo")
                         onToggled: {
                             deviceRow.host.setVaultSync(deviceRow.deviceId, checked);
@@ -339,23 +339,22 @@ Controls.ScrollView {
 
         Controls.ToolButton {
             Layout.leftMargin: Kirigami.Units.largeSpacing
-            visible: deviceRow.host.available
             text: qsTr("Desarrollo")
-            icon.name: deviceRow.labExpanded ? "arrow-down" : "arrow-right"
+            icon.name: deviceRow.peersExpanded ? "arrow-down" : "arrow-right"
             checkable: true
-            checked: deviceRow.labExpanded
-            onClicked: deviceRow.labExpanded = checked
+            checked: deviceRow.peersExpanded
+            onClicked: deviceRow.peersExpanded = checked
         }
         ColumnLayout {
-            id: lab
+            id: diagnostics
             Layout.fillWidth: true
-            visible: deviceRow.labExpanded
+            visible: deviceRow.peersExpanded
             spacing: Kirigami.Units.largeSpacing
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
-                visible: deviceRow.host.available && deviceRow.host.controller.syntheticTransferFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
+                visible: deviceRow.host.controller.syntheticTransferFingerprint.length > 0 && deviceRow.modelData.trust === "trusted"
                 spacing: Kirigami.Units.smallSpacing
 
                 Controls.Label {

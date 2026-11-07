@@ -17,7 +17,7 @@ use crate::{PeerTransport, TransportError, TransportFrame};
 const LOOPBACK_HEADER_SIZE: usize = 5;
 const MAX_BUFFERED_FRAME_SIZE: usize = LOOPBACK_HEADER_SIZE + MAX_FRAME_SIZE;
 
-/// A bounded FIFO stream used only by the explicitly enabled pairing laboratory.
+/// A bounded FIFO stream used only by the explicitly enabled pairing tests.
 /// Frames are lane (0=control, 1=data), u32 big-endian length, then opaque bytes.
 pub struct LoopbackTransport {
     stream: TcpStream,

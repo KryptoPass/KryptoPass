@@ -11,8 +11,8 @@ use kryptopass_lan::NetworkPrivacyPolicy;
 
 use super::PeerError;
 
-/// Persisted file name; it keeps its original value so saved choices remain.
-const FILE: &str = "pairing-lab-network-privacy-v1.json";
+/// Persisted file name; renaming it drops the choices saved under the old one.
+const FILE: &str = "network-privacy-v1.json";
 const MAX_BYTES: u64 = 16 * 1024;
 
 /// Durable, local-only network settings. LAN selection is an explicit IP
@@ -80,10 +80,7 @@ pub fn save_network_privacy_settings(
     }
     let mut nonce = [0_u8; 8];
     getrandom::fill(&mut nonce).map_err(|_| PeerError::Profile)?;
-    let temporary = directory.join(format!(
-        ".pairing-lab-network-privacy-{}.tmp",
-        super::hex(&nonce)
-    ));
+    let temporary = directory.join(format!(".network-privacy-{}.tmp", super::hex(&nonce)));
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]

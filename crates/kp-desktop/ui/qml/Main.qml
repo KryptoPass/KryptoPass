@@ -25,7 +25,7 @@ Controls.ApplicationWindow {
                 backupWindow.openForRestoreFile(backup);
         }
     }
-    Backend.PairingLabController {
+    Backend.PeersController {
         id: deviceController
     }
     Component.onDestruction: deviceController.shutdownResumeOwner()
@@ -100,7 +100,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         vaultLocked: store.controller.locked
         Component.onCompleted: {
-            if (available && Qt.application.arguments.indexOf("--pairing-lab") !== -1)
+            if (Qt.application.arguments.indexOf("--devices") !== -1)
                 open();
         }
         onCopyRequested: function (code) {
@@ -786,7 +786,7 @@ Controls.ApplicationWindow {
         id: showDevicesAction
         controller: shell
         actionId: "showDevices"
-        enabled: devicesWindow.available && !store.controller.locked
+        enabled: !store.controller.locked
         onTriggered: devicesWindow.open()
     }
     readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
@@ -1033,7 +1033,6 @@ Controls.ApplicationWindow {
             }
             Controls.MenuItem {
                 action: showDevicesAction
-                visible: devicesWindow.available
             }
         }
         Controls.Menu {

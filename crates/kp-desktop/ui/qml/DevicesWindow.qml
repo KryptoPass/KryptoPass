@@ -12,7 +12,6 @@ Controls.ApplicationWindow {
     // Desktop only exchanges changes with phones while its vault is unlocked.
     property bool vaultLocked: false
     readonly property bool opened: visible
-    readonly property bool available: controller.available
 
     signal copyRequested(string code)
 
@@ -53,7 +52,7 @@ Controls.ApplicationWindow {
     readonly property bool comparing: controller.awaiting || controller.statusCode === "confirming"
     readonly property string statusHint: hintForStatus(controller.statusCode)
     readonly property bool statusIsProblem: ["expired", "rejected", "profile_error", "keystore_error", "authentication_error", "transport_error", "network_policy_blocked", "network_policy_changed", "sync_history_error"].includes(controller.statusCode)
-    readonly property bool canPair: controller.available && !controller.busy && !controller.sessionActive && !controller.awaiting
+    readonly property bool canPair: !controller.busy && !controller.sessionActive && !controller.awaiting
 
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint | Qt.WindowMaximizeButtonHint
     modality: Qt.WindowModal
@@ -495,7 +494,7 @@ Controls.ApplicationWindow {
                     Controls.MenuItem {
                         text: qsTr("Borrar todas las vinculaciones…")
                         icon.name: "edit-clear-all"
-                        enabled: dialog.controller.available && !dialog.controller.busy && !dialog.controller.aliasBusy
+                        enabled: !dialog.controller.busy && !dialog.controller.aliasBusy
                         onTriggered: {
                             dialog.resetRequested = true;
                             deleteDialog.open();

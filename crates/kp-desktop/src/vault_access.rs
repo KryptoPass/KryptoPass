@@ -17,7 +17,7 @@ use kryptopass_store::SqliteStore;
 
 use crate::storage::paths;
 
-const PROFILE_DIRECTORY: &str = "emulator-pairing-lab-v1";
+const PROFILE_DIRECTORY: &str = "peers-v1";
 
 static IDENTITY: Mutex<Option<Arc<DeviceIdentity>>> = Mutex::new(None);
 static TEMPLATES: OnceLock<Arc<TemplateRegistry>> = OnceLock::new();

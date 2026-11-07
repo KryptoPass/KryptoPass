@@ -138,17 +138,17 @@ test-sync-stress:
 p2p-demo:
     cargo run -p kp-pairing --example pairing_demo
 
-pairing-lab: build
-    {{ quote(desktop_binary) }} --pairing-lab --new-instance
+devices: build
+    {{ quote(desktop_binary) }} --devices --new-instance
 
 # Reabre el mismo perfil aislado; no crea carpetas ni cambia su llavero GnuPG.
-pairing-lab-profile profile: build
+devices-profile profile: build
     #!/usr/bin/env bash
     set -euo pipefail
     for directory in {{ quote(profile / "data") }} {{ quote(profile / "config") }} {{ quote(profile / "cache") }} {{ quote(profile / "gnupg") }}; do
         test -d "$directory"
     done
-    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --pairing-lab --new-instance
+    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --devices --new-instance
 
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 test-items: check
@@ -271,7 +271,7 @@ dev-reset:
     fi
     # The keyring identity remains at the original path. Authorize a new empty
     # trust DB only for this explicit reset, without replacing that identity.
-    pairing_profile="$data/{{ app_id }}/emulator-pairing-lab-v1"
+    pairing_profile="$data/{{ app_id }}/peers-v1"
     install -d -m 700 "$data/{{ app_id }}" "$pairing_profile"
     (umask 077; printf 'KryptoPass pairing profile reset v1\n' > "$pairing_profile/.pairing-profile-reset-v1")
     sync -f "$pairing_profile"

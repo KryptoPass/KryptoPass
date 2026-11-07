@@ -50,9 +50,9 @@ use tokio::{
 };
 
 const RECONNECT_PAIRING_TIMEOUT: Duration = Duration::from_secs(60);
-/// Persisted name of the device identity in the OS keyring; renaming it would
-/// lose the identity, so it keeps its original value.
-const SYSTEM_PROFILE_KEYRING_ID: &str = "emulator-pairing-lab-v1";
+/// Persisted name of the device identity in the OS keyring. Renaming it
+/// leaves behind the identity stored under the previous name.
+const SYSTEM_PROFILE_KEYRING_ID: &str = "peers-v1";
 const PROFILE_RESET_MARKER: &str = ".pairing-profile-reset-v1";
 const PROFILE_RESET_MARKER_CONTENT: &[u8] = b"KryptoPass pairing profile reset v1\n";
 

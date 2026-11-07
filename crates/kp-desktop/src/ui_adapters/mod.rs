@@ -9,7 +9,7 @@ pub mod keyring_controller;
 mod keyring_projection;
 pub mod markdown_document;
 pub(crate) mod native_ffi;
-pub mod pairing_lab_controller;
+pub mod peers_controller;
 pub mod search_controller;
 mod secret_qr;
 pub mod secrets_controller;

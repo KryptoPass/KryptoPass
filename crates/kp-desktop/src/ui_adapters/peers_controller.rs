@@ -44,7 +44,6 @@ pub mod qobject {
         /// Debug-only entry point for comparing an emulator with Desktop.
         #[qobject]
         #[qml_element]
-        #[qproperty(bool, available, READ, NOTIFY)]
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, awaiting, READ, NOTIFY)]
         #[qproperty(bool, can_reconnect, cxx_name = "canReconnect", READ, NOTIFY)]
@@ -163,7 +162,7 @@ pub mod qobject {
             READ,
             NOTIFY
         )]
-        type PairingLabController = super::PairingLabControllerRust;
+        type PeersController = super::PeersControllerRust;
 
         #[qinvokable]
         #[cxx_name = "loadDevices"]
@@ -273,11 +272,10 @@ pub mod qobject {
         #[cxx_name = "vaultMirrorPulled"]
         fn vault_mirror_pulled(self: Pin<&mut Self>);
     }
-    impl cxx_qt::Threading for PairingLabController {}
+    impl cxx_qt::Threading for PeersController {}
 }
 
-pub struct PairingLabControllerRust {
-    available: bool,
+pub struct PeersControllerRust {
     busy: bool,
     awaiting: bool,
     can_reconnect: bool,
@@ -349,10 +347,9 @@ pub struct PairingLabControllerRust {
     resume_owner_cancel: Option<watch::Sender<bool>>,
 }
 
-impl Default for PairingLabControllerRust {
+impl Default for PeersControllerRust {
     fn default() -> Self {
         Self {
-            available: cfg!(debug_assertions),
             busy: false,
             awaiting: false,
             can_reconnect: false,
@@ -509,14 +506,14 @@ impl Drop for PendingOperation {
     }
 }
 
-impl qobject::PairingLabController {
+impl qobject::PeersController {
     /// Starts the process-owned durable listener independently of the dialog.
     /// Opening a missing profile is intentionally left to explicit pairing.
     pub fn start_resume_owner(mut self: Pin<&mut Self>) {
-        if !cfg!(debug_assertions) || self.rust().resume_owner.is_some() {
+        if self.rust().resume_owner.is_some() {
             return;
         }
-        let directory = match lab_directory() {
+        let directory = match peers_directory() {
             Ok(directory) => directory,
             Err(()) => return,
         };
@@ -664,10 +661,10 @@ impl qobject::PairingLabController {
     }
 
     pub fn load_network_addresses(mut self: Pin<&mut Self>) {
-        if !cfg!(debug_assertions) || *self.busy() {
+        if *self.busy() {
             return;
         }
-        let settings = match lab_directory()
+        let settings = match peers_directory()
             .map_err(|_| ())
             .and_then(|directory| load_network_privacy_settings(&directory).map_err(|_| ()))
         {
@@ -829,12 +826,12 @@ impl qobject::PairingLabController {
         relay_only: bool,
     ) {
         self.as_mut().cancel_synthetic_key_transfer_operation();
-        if !cfg!(debug_assertions) || self.rust().maintenance_busy {
+        if self.rust().maintenance_busy {
             return;
         }
         // Changing privacy settings must not pin an automatically displayed
         // route address. Only the explicit LAN selection saves such a preference.
-        let bind_ip = lab_directory()
+        let bind_ip = peers_directory()
             .ok()
             .and_then(|directory| load_network_privacy_settings(&directory).ok())
             .and_then(|settings| settings.lan_bind_ip);
@@ -850,7 +847,7 @@ impl qobject::PairingLabController {
             allow_lan_exception,
             relay_only,
         };
-        let directory = match lab_directory() {
+        let directory = match peers_directory() {
             Ok(directory) => directory,
             Err(()) => {
                 self.as_mut()
@@ -909,7 +906,7 @@ impl qobject::PairingLabController {
         {
             return;
         }
-        if !cfg!(debug_assertions) || *self.busy() || self.rust().alias_busy {
+        if *self.busy() || self.rust().alias_busy {
             return;
         }
         self.as_mut().start_resume_owner();
@@ -924,7 +921,7 @@ impl qobject::PairingLabController {
         self.as_mut().rust_mut().devices = None;
         self.as_mut()
             .set_devices_snapshot(QString::from("{\"revision\":0,\"devices\":[]}"));
-        let directory = match lab_directory() {
+        let directory = match peers_directory() {
             Ok(path) => path,
             Err(()) => {
                 self.as_mut().set_status(QString::from(
@@ -1105,7 +1102,7 @@ impl qobject::PairingLabController {
         connection_generation: &QString,
         approved_fingerprint: QString,
     ) {
-        if !cfg!(debug_assertions) {
+        if !cfg!(debug_assertions) && matches!(purpose, KeyTransferPurpose::SyntheticFixture) {
             self.as_mut().set_synthetic_transfer_error(QString::from(
                 "La transferencia sintética solo está disponible en Desktop debug.",
             ));
@@ -1310,7 +1307,7 @@ impl qobject::PairingLabController {
         let Some(peer) = parse_device_id(&device_id.to_string()) else {
             return;
         };
-        let Ok(directory) = lab_directory() else {
+        let Ok(directory) = peers_directory() else {
             self.as_mut().set_vault_sync_failed(true);
             self.as_mut()
                 .set_vault_sync_message(QString::from(SYNC_PROFILE_MESSAGE));
@@ -1407,7 +1404,7 @@ impl qobject::PairingLabController {
             return;
         }
         self.as_mut().rust_mut().vault_key_send = None;
-        let (Ok(key), Ok(directory)) = (KeyFingerprint::parse(&fingerprint), lab_directory())
+        let (Ok(key), Ok(directory)) = (KeyFingerprint::parse(&fingerprint), peers_directory())
         else {
             return;
         };
@@ -1478,7 +1475,7 @@ impl qobject::PairingLabController {
     /// Keys (upper-case hex) that `peer` declared holding in this connection;
     /// `None` while it is offline or runs a version that does not declare them.
     fn refresh_vault_sync_peers(self: Pin<&mut Self>) {
-        let Ok(directory) = lab_directory() else {
+        let Ok(directory) = peers_directory() else {
             return;
         };
         let peers: Vec<DeviceId> = self
@@ -1625,7 +1622,6 @@ impl qobject::PairingLabController {
             .draining_worker
             .as_ref()
             .is_some_and(|done| !done.load(Ordering::Acquire))
-            || !cfg!(debug_assertions)
             || *self.busy()
             || self.rust().active.is_some()
             || *self.session_active()
@@ -1732,10 +1728,10 @@ impl qobject::PairingLabController {
         {
             return;
         }
-        if !cfg!(debug_assertions) || *self.busy() || self.rust().active.is_some() {
+        if *self.busy() || self.rust().active.is_some() {
             return;
         }
-        let profile_directory = match lab_directory() {
+        let profile_directory = match peers_directory() {
             Ok(directory) => directory,
             Err(()) => {
                 self.as_mut()
@@ -2196,7 +2192,7 @@ impl qobject::PairingLabController {
     }
 
     pub fn save_device_alias(mut self: Pin<&mut Self>, device_id: QString, alias: QString) {
-        if !cfg!(debug_assertions) || self.rust().alias_busy {
+        if self.rust().alias_busy {
             return;
         }
         self.as_mut().set_alias_error(QString::default());
@@ -2221,7 +2217,7 @@ impl qobject::PairingLabController {
                 .set_alias_error(QString::from("El dispositivo ya no está autorizado."));
             return;
         }
-        let Ok(directory) = lab_directory() else {
+        let Ok(directory) = peers_directory() else {
             self.as_mut().set_alias_error(QString::from(
                 "No se pudo localizar el perfil de dispositivos.",
             ));
@@ -2289,7 +2285,7 @@ impl qobject::PairingLabController {
             busy = self.rust().busy,
             "Pairing profile maintenance requested"
         );
-        if !cfg!(debug_assertions) || self.rust().maintenance_busy || self.rust().alias_busy {
+        if self.rust().maintenance_busy || self.rust().alias_busy {
             return;
         }
         if self.rust().sync_busy {
@@ -2304,7 +2300,7 @@ impl qobject::PairingLabController {
             ));
             return;
         }
-        let Ok(directory) = lab_directory() else {
+        let Ok(directory) = peers_directory() else {
             return;
         };
         let completed = self
@@ -2513,12 +2509,12 @@ impl qobject::PairingLabController {
         tracing::info!(
             connected_devices = active_routes.len(),
             active_routes = ?active_routes,
-            "Pairing lab: device session state updated"
+            "Device session state updated"
         );
     }
 }
 
-impl PairingLabControllerRust {
+impl PeersControllerRust {
     fn selected_peer(&self) -> Option<PublicIdentity> {
         usize::try_from(self.selected_index)
             .ok()
@@ -2528,7 +2524,7 @@ impl PairingLabControllerRust {
 }
 
 fn persist_network_settings(lan_bind_ip: Option<IpAddr>) -> Result<(), ()> {
-    let directory = lab_directory()?;
+    let directory = peers_directory()?;
     // Selecting a local address does not authorize changing the saved privacy
     // policy. An unreadable file must not be replaced with stale UI defaults.
     let policy = load_network_privacy_settings(&directory)
@@ -2725,7 +2721,7 @@ fn synthetic_transfer_fallback_message(
 
 macro_rules! notifying_property {
     ($setter:ident, $field:ident, $changed:ident, $ty:ty) => {
-        impl qobject::PairingLabController {
+        impl qobject::PeersController {
             fn $setter(mut self: Pin<&mut Self>, value: $ty) {
                 if self.rust().$field != value {
                     self.as_mut().rust_mut().$field = value;
@@ -2817,7 +2813,7 @@ notifying_property!(
     QString
 );
 
-fn lab_directory() -> Result<PathBuf, ()> {
+fn peers_directory() -> Result<PathBuf, ()> {
     crate::vault_access::profile_directory().map_err(|_| ())
 }
 
@@ -3019,7 +3015,7 @@ fn grouped_fingerprint(hex: &str) -> String {
         .join(" ")
 }
 
-impl qobject::PairingLabController {
+impl qobject::PeersController {
     /// Accepts the inbound vault identity after reviewing sender and fingerprint.
     pub fn accept_inbound_key_transfer(self: Pin<&mut Self>) {
         self.decide_inbound_key_transfer(true);

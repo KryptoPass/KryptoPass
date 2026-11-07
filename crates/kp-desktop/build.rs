@@ -180,7 +180,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "src/ui_adapters/import_controller.rs",
             "src/ui_adapters/sensitive_clipboard.rs",
             "src/ui_adapters/contacts_controller.rs",
-            "src/ui_adapters/pairing_lab_controller.rs",
+            "src/ui_adapters/peers_controller.rs",
             "src/ui_adapters/native_ffi.rs",
             "src/ui_adapters/application.rs",
         ])
