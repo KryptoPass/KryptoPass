@@ -134,14 +134,6 @@ verify-sync-session:
 test-sync-stress:
     cargo test -p kp-sync --test ledger_limits -- --ignored
 
-# Demostración aislada: edición simultánea, merge explícito y borrado persistente.
-sync-demo:
-    cargo run -p kp-sync --example offline_sync
-
-# Puente stdin/stdout con identidad sintética fija; no escucha red ni abre bóvedas.
-sync-interop-host:
-    cargo build -p kp-sync --example sync_interop
-
 # Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
 p2p-demo:
     cargo run -p kp-pairing --example pairing_demo
