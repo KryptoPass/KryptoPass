@@ -909,10 +909,16 @@ impl SyncSession {
         if current > SESSION_MAX_KNOWN_OBJECTS {
             return Err(SyncSessionError::Capacity);
         }
+        // Permanent deletions purge versions, so the count can drop: a received deletion (a
+        // removed folder, say) or one made here. Any difference is a change to cover with one
+        // more round, whose baseline is the new count; it is never a storage fault.
         if current < covered {
-            return Err(SyncSessionError::Storage);
+            debug!(
+                current,
+                covered, "Sync object count dropped after a deletion"
+            );
         }
-        Ok(current > covered)
+        Ok(current != covered)
     }
     fn on_manifest(&mut self, manifest: proto::SyncManifest) -> Result<(), SyncSessionError> {
         if !self.remote_hello_received
