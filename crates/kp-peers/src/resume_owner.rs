@@ -98,6 +98,7 @@ enum OwnerCommand {
     RefreshNetworkPolicy,
     Suppress(DeviceId),
     Renegotiate(DeviceId),
+    Resync(DeviceId),
     Allow(DeviceId),
     SessionStable(DeviceId, u64),
     SessionEnded(DeviceId, u64),
@@ -324,6 +325,12 @@ impl ResumeProcessOwner {
             .inner
             .commands
             .try_send(OwnerCommand::Renegotiate(peer));
+    }
+
+    /// Asks the live session with `peer` for one more Sync round. Never reconnects: with no
+    /// live session there is nothing to resync, and recovery owns getting one back.
+    pub fn resync_peer(&self, peer: DeviceId) {
+        let _ = self.inner.commands.try_send(OwnerCommand::Resync(peer));
     }
 
     /// Clears explicit-disconnect suppression after the user chooses Reconnect.
@@ -1242,6 +1249,15 @@ impl OwnerRuntime {
                     let _ = session.handle.disconnect(SessionCloseReason::Superseded);
                 }
             }
+            OwnerCommand::Resync(peer) => match self.sessions.get(&peer) {
+                Some(session) => {
+                    tracing::info!("Sync: asking the live session for a round");
+                    session.handle.request_sync_round();
+                }
+                None => {
+                    tracing::info!("Sync: resync requested without a live session; nothing to do")
+                }
+            },
             OwnerCommand::Allow(peer) => {
                 if let Ok(mut current) = policy.lock() {
                     current.suppressed.remove(&peer);

@@ -31,4 +31,4 @@ pub use generator::{generate_for, settings_for};
 pub use import::{Adaptations, PreparedImport, importers, prepare_import, read_export};
 pub use search::{VaultSearchSource, catalog_records};
 pub use session::{AppVault, VaultSession};
-pub use sync::{SyncSelection, index_received};
+pub use sync::{SyncSelection, index_received, index_received_report};

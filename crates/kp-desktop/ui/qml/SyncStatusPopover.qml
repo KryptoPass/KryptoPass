@@ -10,6 +10,8 @@ import org.kde.kirigami as Kirigami
 Controls.Popup {
     id: popup
     required property SyncStatusModel model
+    // Asks the owner to open the devices window, on one device when its id is given.
+    signal openDevices(string deviceId)
 
     modal: false
     focus: true
@@ -25,10 +27,16 @@ Controls.Popup {
         Controls.Label {
             Layout.fillWidth: true
             visible: popup.model.devices.length === 0
-            text: qsTr("Ningún dispositivo sincroniza esta bóveda.")
+            text: qsTr("Ningún dispositivo vinculado. La bóveda solo está en este equipo.")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
             color: Kirigami.Theme.disabledTextColor
+        }
+        Controls.Button {
+            visible: popup.model.devices.length === 0
+            icon.name: "list-add"
+            text: qsTr("Vincular un dispositivo")
+            onClicked: popup.openDevices("")
         }
         Repeater {
             model: popup.model.devices
@@ -56,7 +64,13 @@ Controls.Popup {
                         elide: Text.ElideRight
                     }
                 }
+                Controls.Button {
+                    visible: !row.modelData.syncs
+                    text: qsTr("Elegir claves")
+                    onClicked: popup.openDevices(row.modelData.id)
+                }
                 Controls.ToolButton {
+                    visible: row.modelData.syncs
                     icon.name: "view-refresh"
                     display: Controls.AbstractButton.IconOnly
                     enabled: row.modelData.connected

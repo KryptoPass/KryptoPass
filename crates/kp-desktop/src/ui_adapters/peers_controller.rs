@@ -1365,13 +1365,35 @@ impl qobject::PeersController {
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let result = crate::vault_access::open_background()
-                .and_then(|mut vault| Ok(kryptopass_app::index_received(&mut vault)?));
+                .and_then(|mut vault| Ok(kryptopass_app::index_received_report(&mut vault)?));
             let _ = thread.queue(move |mut object| {
                 object.as_mut().rust_mut().vault_mirror_running = false;
                 object.as_mut().set_vault_mirror_active(false);
                 match result {
-                    Ok(indexed) => {
+                    Ok(report) => {
+                        let indexed = report.indexed;
                         object.as_mut().set_vault_sync_failed(false);
+                        // A locked key does not stop Sync; it leaves what arrived for it unlisted.
+                        // Say which key once when that starts, and once when it ends.
+                        let waiting = report
+                            .waiting_for
+                            .as_ref()
+                            .map(|key| key.as_str().to_uppercase())
+                            .unwrap_or_default();
+                        if waiting != object.rust().vault_sync_locked_key.to_string() {
+                            if waiting.is_empty() {
+                                tracing::info!("Vault sync: received items no longer wait for a passphrase");
+                            } else {
+                                tracing::warn!(
+                                    key = %&waiting[waiting.len().saturating_sub(16)..],
+                                    indexed,
+                                    "Vault sync: received items wait for a key passphrase; Sync continues"
+                                );
+                            }
+                            object
+                                .as_mut()
+                                .set_vault_sync_locked_key(QString::from(waiting));
+                        }
                         if indexed > 0 {
                             tracing::info!(indexed, "Vault sync: received versions indexed");
                             object.as_mut().vault_mirror_pulled();
@@ -1424,15 +1446,15 @@ impl qobject::PeersController {
         });
     }
 
-    /// Renegotiates the live session with `device_id` so it reads the current Sync binding
-    /// and the keys the phone declares, without touching the Sync switch.
+    /// Asks the live session with `device_id` for one more Sync round. Resyncing is not
+    /// reconnecting: the session stays up. A changed key binding renegotiates on its own.
     pub fn retry_vault_sync(self: Pin<&mut Self>, device_id: QString) {
         let Some(peer) = parse_device_id(&device_id.to_string()) else {
             return;
         };
-        tracing::info!("Vault sync: renegotiating the session on request");
+        tracing::info!("Vault sync: round requested by the user");
         if let Some(owner) = self.rust().resume_owner.as_ref() {
-            owner.renegotiate_peer(peer);
+            owner.resync_peer(peer);
         }
     }
 

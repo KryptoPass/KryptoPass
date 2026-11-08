@@ -32,6 +32,7 @@ pub use conflict::Conflict;
 pub use error::VaultError;
 pub use folders::{FolderEdit, NewFolder};
 pub use import::{ImportBatch, ImportFolder, ImportItem, ImportReceipt};
+pub use index::Reindex;
 pub use item::{IconChoice, Item, ItemEdit, NewItem, Recipients};
 pub use record::{Author, ItemMeta, ItemRecord, ItemState, ItemVersion, VersionId, VersionInfo};
 pub use registry::TemplateRegistry;

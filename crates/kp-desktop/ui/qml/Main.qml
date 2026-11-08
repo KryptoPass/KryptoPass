@@ -107,14 +107,13 @@ Controls.ApplicationWindow {
             secureClipboard.copySensitive(code);
         }
     }
-    // What the vault Sync status is, shared by the footer indicator and its popover.
+    // What the vault Sync status is, shared by the footer indicator and its popover. It reports
+    // Sync only: an error of the vault or of an action (a refused save, say) belongs where that
+    // action happened, never in the Sync cloud.
     SyncStatusModel {
         id: syncStatus
         controller: deviceController
         host: devicesWindow
-        storeStatus: root.keysMode ? keys.controller.status : store.controller.status
-        busy: !root.keysMode && (store.controller.busy || root.storeOperationBusy || backupWindow.busy || importWindow.busy)
-        failed: !root.keysMode && !store.controller.locked && store.controller.errorMessage.length > 0
     }
     // Views that must stay closed while the vault is locked (one guard each). The first-run
     // setup counts as locked too, but it must still be able to restore a backup.
@@ -1389,11 +1388,20 @@ Controls.ApplicationWindow {
                 // The vault's message and the Sync with phones, in one KDE-style indicator.
                 SyncStatusBadge {
                     model: syncStatus
+                    detailsOpen: syncPopover.opened
                     onActivated: syncPopover.opened ? syncPopover.close() : syncPopover.open()
                     // Opens above the indicator: a compact status, not the devices window.
                     SyncStatusPopover {
                         id: syncPopover
                         model: syncStatus
+                        onOpenDevices: function (deviceId) {
+                            syncPopover.close();
+                            devicesWindow.open();
+                            if (deviceId.length > 0)
+                                devicesWindow.openDevice({
+                                    "deviceId": deviceId
+                                });
+                        }
                     }
                 }
             }

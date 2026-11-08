@@ -672,6 +672,9 @@ pub struct SessionHandle {
     synthetic_progress: watch::Receiver<SyntheticTransferProgress>,
     inbound_material: InboundMaterialSlot,
     closed: watch::Receiver<bool>,
+    /// Wakes the live session to ask its Sync for one more round; see
+    /// [`SessionHandle::request_sync_round`].
+    sync_round: Arc<tokio::sync::Notify>,
     generation: u64,
 }
 
@@ -863,6 +866,13 @@ impl SessionHandle {
         self.generation
     }
 
+    /// Asks this live session's Sync for one more round now. Resyncing is not reconnecting:
+    /// the session and its transport stay as they are. A round already running finishes
+    /// first and the next one starts after it; repeated requests coalesce.
+    pub fn request_sync_round(&self) {
+        self.sync_round.notify_one();
+    }
+
     /// Queues a disconnect command without allowing an unbounded backlog.
     pub fn disconnect(&self, reason: SessionCloseReason) -> Result<(), SessionCommandError> {
         match self.commands.try_send(SessionCommand::Disconnect(reason)) {
@@ -966,6 +976,8 @@ impl Drop for SessionHandle {
 
 enum SyncWorkerInput {
     Message(proto::MessageType, MessagePayload),
+    /// One more round on the live session, asked by the person.
+    RequestRound,
     Cancel,
 }
 
@@ -985,6 +997,8 @@ struct SyncWorker {
 
 struct SyncRuntime {
     worker: Option<SyncWorker>,
+    /// Notified by [`SessionHandle::request_sync_round`].
+    round_requests: Arc<tokio::sync::Notify>,
     progress: watch::Sender<Option<SyncProgress>>,
     synthetic: SyntheticRuntime,
     /// The peer advertised `VaultKeys` support, so it may send that message.
@@ -1264,6 +1278,16 @@ fn spawn_sync_worker(
                     }
                     engine.handle_message(message_type, payload, std::time::Instant::now())
                 }
+                SyncWorkerInput::RequestRound => {
+                    if engine.request_round() {
+                        tracing::info!("Sync: round requested on the live session");
+                    } else {
+                        tracing::info!(
+                            "Sync: a round was requested but this session runs a single round"
+                        );
+                    }
+                    Ok(())
+                }
                 SyncWorkerInput::Cancel => {
                     engine.cancel();
                     return;
@@ -1440,6 +1464,8 @@ fn start_session_internal<T: PeerTransport + 'static>(
 
     let peer_id = expected_peer.device_id;
     let (command_tx, mut command_rx) = mpsc::channel(SESSION_COMMAND_CAPACITY);
+    let sync_round = Arc::new(tokio::sync::Notify::new());
+    let task_sync_round = Arc::clone(&sync_round);
     let (event_tx, _event_rx) = broadcast::channel(SESSION_EVENT_CAPACITY);
     let (lifecycle_tx, lifecycle_rx) = watch::channel(None);
     let (sync_progress_tx, sync_progress_rx) = watch::channel(None);
@@ -1568,6 +1594,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                         generation,
                         SyncRuntime {
                             worker: sync_worker,
+                            round_requests: task_sync_round,
                             progress: sync_progress_tx.clone(),
                             accepts_vault_keys: remote_vault_keys_version == VAULT_KEYS_VERSION,
                             synthetic: SyntheticRuntime {
@@ -1623,6 +1650,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
         synthetic_progress: synthetic_progress_rx,
         inbound_material,
         closed: closed_rx,
+        sync_round,
         generation,
     })
 }
@@ -1757,6 +1785,7 @@ async fn run_connected_session<T: PeerTransport>(
 ) -> SessionExit {
     let SyncRuntime {
         worker: mut sync_worker,
+        round_requests,
         progress: sync_progress,
         mut synthetic,
         accepts_vault_keys,
@@ -1876,6 +1905,7 @@ async fn run_connected_session<T: PeerTransport>(
             .unwrap_or(next_ping_at);
         let selected = tokio::select! {
             () = sleep_until(next_observation) => SelectedSessionEvent::ObservePath,
+            () = round_requests.notified() => SelectedSessionEvent::SyncRoundRequested,
             command = commands.recv() => SelectedSessionEvent::Command(command),
             command = synthetic.commands.recv() => SelectedSessionEvent::SyntheticCommand(command),
             _ = synthetic.cancel.changed() => SelectedSessionEvent::SyntheticTick,
@@ -1918,6 +1948,22 @@ async fn run_connected_session<T: PeerTransport>(
                 );
                 next_observation = Instant::now() + Duration::from_secs(2);
             }
+            SelectedSessionEvent::SyncRoundRequested => match sync_worker.as_ref() {
+                Some(worker) => {
+                    if worker
+                        .input
+                        .try_send(SyncWorkerInput::RequestRound)
+                        .is_err()
+                    {
+                        tracing::warn!(
+                            "Sync: round request dropped, the worker queue is full or closed"
+                        );
+                    }
+                }
+                None => {
+                    tracing::info!("Sync: round requested but this session has no Sync running")
+                }
+            },
             SelectedSessionEvent::Command(Some(SessionCommand::Disconnect(reason))) => {
                 return SessionExit::Disconnected(reason, true);
             }
@@ -2256,6 +2302,7 @@ async fn run_connected_session<T: PeerTransport>(
 }
 
 enum SelectedSessionEvent {
+    SyncRoundRequested,
     SyntheticCommand(Option<SyntheticCommand>),
     SyntheticTick,
     RetrySyncInput,

@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
+use kryptopass_core::vault::Reindex;
+
 use crate::error::AppError;
 use crate::session::AppVault;
 
@@ -117,4 +119,10 @@ impl SyncSelection {
 /// passphrases gpg-agent caches. Returns how many became listable.
 pub fn index_received(vault: &mut AppVault) -> Result<usize, AppError> {
     Ok(vault.reindex()?)
+}
+
+/// Like [`index_received`], and also says which key's passphrase the pass was waiting for.
+/// A locked key never stops Sync: it only leaves what arrived for that key unlisted.
+pub fn index_received_report(vault: &mut AppVault) -> Result<Reindex, AppError> {
+    Ok(vault.reindex_report()?)
 }
