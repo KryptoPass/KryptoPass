@@ -7,10 +7,6 @@
       <translation> El archivo ya fue publicado, pero no se pudo sincronizar su carpeta; podría no persistir ante un corte de energía.</translation>
     </message>
     <message>
-      <source>%1 alias se guardarán como notas.</source>
-      <translation>%1 alias se guardarán como notas.</translation>
-    </message>
-    <message>
       <source>%1 claves SSH no compatibles no se importarán.</source>
       <translation>%1 claves SSH no compatibles no se importarán.</translation>
     </message>
@@ -79,28 +75,12 @@
       <translation>Aceptada. Esperando la clave del teléfono…</translation>
     </message>
     <message>
-      <source>Actividad en KryptoPass
-Eventos conservados, del más reciente al más antiguo.
-No incluye contraseñas ni valores de credenciales.
-
-</source>
-      <translation>Actividad en KryptoPass
-Eventos conservados, del más reciente al más antiguo.
-No incluye contraseñas ni valores de credenciales.
-
-</translation>
-    </message>
-    <message>
       <source>Actualiza KDE Contacts. No hay contactos vinculados a las claves válidas disponibles.</source>
       <translation>Actualiza KDE Contacts. No hay contactos vinculados a las claves válidas disponibles.</translation>
     </message>
     <message>
       <source>Actualizando elemento…</source>
       <translation>Actualizando elemento…</translation>
-    </message>
-    <message>
-      <source>Alias (se guardan como notas)</source>
-      <translation>Alias (se guardan como notas)</translation>
     </message>
     <message>
       <source>Archivo guardado correctamente.</source>
@@ -129,10 +109,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia.</source>
       <translation>Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia.</translation>
-    </message>
-    <message>
-      <source>Bóveda sincronizada: {} recibidos, {} enviados.</source>
-      <translation>Bóveda sincronizada: {} recibidos, {} enviados.</translation>
     </message>
     <message>
       <source>Cambio guardado; no se pudo actualizar la lista.</source>
@@ -183,34 +159,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave recibida y verificada (SHA-256). Importando en GnuPG…</translation>
     </message>
     <message>
-      <source>Contraseña actualizada</source>
-      <translation>Contraseña actualizada</translation>
-    </message>
-    <message>
-      <source>Contraseña copiada</source>
-      <translation>Contraseña copiada</translation>
-    </message>
-    <message>
-      <source>Creado el %1</source>
-      <translation>Creado el %1</translation>
-    </message>
-    <message>
-      <source>Credencial creada</source>
-      <translation>Credencial creada</translation>
-    </message>
-    <message>
-      <source>Credencial utilizada en KryptoPass</source>
-      <translation>Credencial utilizada en KryptoPass</translation>
-    </message>
-    <message>
-      <source>Código de verificación copiado</source>
-      <translation>Código de verificación copiado</translation>
-    </message>
-    <message>
-      <source>Datos editados</source>
-      <translation>Datos editados</translation>
-    </message>
-    <message>
       <source>Desbloquea la bóveda antes de generar una contraseña.</source>
       <translation>Desbloquea la bóveda antes de generar una contraseña.</translation>
     </message>
@@ -221,10 +169,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Desbloquea la bóveda antes de modificarla.</source>
       <translation>Desbloquea la bóveda antes de modificarla.</translation>
-    </message>
-    <message>
-      <source>Desbloquea la bóveda en Desktop para sincronizar los cambios.</source>
-      <translation>Desbloquea la bóveda en Desktop para sincronizar los cambios.</translation>
     </message>
     <message>
       <source>Descifrando y comprobando la copia…</source>
@@ -335,10 +279,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Esperando al agente GPG…</translation>
     </message>
     <message>
-      <source>Este teléfono ya sincroniza otra bóveda. Desactívala antes de cambiarla.</source>
-      <translation>Este teléfono ya sincroniza otra bóveda. Desactívala antes de cambiarla.</translation>
-    </message>
-    <message>
       <source>Failed to initialize QApplication</source>
       <translation>Failed to initialize QApplication</translation>
     </message>
@@ -403,12 +343,92 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Guardando elemento…</translation>
     </message>
     <message>
-      <source>Icon asset failed strict validation while hashing</source>
-      <translation>Icon asset failed strict validation while hashing</translation>
+      <source>%1 alias se guardarán como inicios de sesión con su correo.</source>
+      <translation>%1 alias se guardarán como inicios de sesión con su correo.</translation>
     </message>
     <message>
-      <source>Icon asset skipped while hashing</source>
-      <translation>Icon asset skipped while hashing</translation>
+      <source>%1 elementos no encajan en ninguna plantilla y no se importarán.</source>
+      <translation>%1 elementos no encajan en ninguna plantilla y no se importarán.</translation>
+    </message>
+    <message>
+      <source>%1 elementos no encajan en su plantilla y se guardarán como personalizados.</source>
+      <translation>%1 elementos no encajan en su plantilla y se guardarán como personalizados.</translation>
+    </message>
+    <message>
+      <source>%1 valores no encajan en su campo y se guardarán como campos añadidos.</source>
+      <translation>%1 valores no encajan en su campo y se guardarán como campos añadidos.</translation>
+    </message>
+    <message>
+      <source>Abriendo las dos versiones…</source>
+      <translation>Abriendo las dos versiones…</translation>
+    </message>
+    <message>
+      <source>Actividad en KryptoPass
+Versiones anteriores, de la más reciente a la más antigua.
+No incluye contraseñas ni valores de credenciales.
+
+</source>
+      <translation>Actividad en KryptoPass
+Versiones anteriores, de la más reciente a la más antigua.
+No incluye contraseñas ni valores de credenciales.
+
+</translation>
+    </message>
+    <message>
+      <source>Alias (se guardan como inicios de sesión)</source>
+      <translation>Alias (se guardan como inicios de sesión)</translation>
+    </message>
+    <message>
+      <source>Bóveda sincronizada: {indexed} recibidos.</source>
+      <translation>Bóveda sincronizada: {indexed} recibidos.</translation>
+    </message>
+    <message>
+      <source>C</source>
+      <translation>C</translation>
+    </message>
+    <message>
+      <source>Carpeta</source>
+      <translation>Carpeta</translation>
+    </message>
+    <message>
+      <source>Device session state updated</source>
+      <translation>Device session state updated</translation>
+    </message>
+    <message>
+      <source>En la papelera</source>
+      <translation>En la papelera</translation>
+    </message>
+    <message>
+      <source>Este elemento cambió mientras lo editabas. Ábrelo de nuevo para no perder esos cambios.</source>
+      <translation>Este elemento cambió mientras lo editabas. Ábrelo de nuevo para no perder esos cambios.</translation>
+    </message>
+    <message>
+      <source>Este elemento está cifrado para una clave que no está en este dispositivo.</source>
+      <translation>Este elemento está cifrado para una clave que no está en este dispositivo.</translation>
+    </message>
+    <message>
+      <source>Este elemento ya no tiene conflictos.</source>
+      <translation>Este elemento ya no tiene conflictos.</translation>
+    </message>
+    <message>
+      <source>Falta {subject}.</source>
+      <translation>Falta {subject}.</translation>
+    </message>
+    <message>
+      <source>Favorito</source>
+      <translation>Favorito</translation>
+    </message>
+    <message>
+      <source>Guardando la combinación…</source>
+      <translation>Guardando la combinación…</translation>
+    </message>
+    <message>
+      <source>Icono</source>
+      <translation>Icono</translation>
+    </message>
+    <message>
+      <source>Icono elegido</source>
+      <translation>Icono elegido</translation>
     </message>
     <message>
       <source>Identidad inválida</source>
@@ -566,6 +586,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Key transfer: session changed before the offer was activated</translation>
     </message>
     <message>
+      <source>LANG</source>
+      <translation>LANG</translation>
+    </message>
+    <message>
       <source>La bóveda activa cambió. Vuelve a revisar el archivo antes de importar.</source>
       <translation>La bóveda activa cambió. Vuelve a revisar el archivo antes de importar.</translation>
     </message>
@@ -646,6 +670,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La ruta local está vacía o supera el tamaño permitido.</translation>
     </message>
     <message>
+      <source>La selección de la combinación no es válida.</source>
+      <translation>La selección de la combinación no es válida.</translation>
+    </message>
+    <message>
       <source>La solicitud OpenPGP supera el tamaño permitido.</source>
       <translation>La solicitud OpenPGP supera el tamaño permitido.</translation>
     </message>
@@ -690,6 +718,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No hay un borrador abierto para guardar.</translation>
     </message>
     <message>
+      <source>No legible en este dispositivo</source>
+      <translation>No legible en este dispositivo</translation>
+    </message>
+    <message>
+      <source>No se pudieron abrir las versiones en conflicto.</source>
+      <translation>No se pudieron abrir las versiones en conflicto.</translation>
+    </message>
+    <message>
+      <source>No se pudieron mostrar las versiones en conflicto.</source>
+      <translation>No se pudieron mostrar las versiones en conflicto.</translation>
+    </message>
+    <message>
       <source>No se pudo abrir KDE Contacts. Comprueba que KAddressBook está instalado.</source>
       <translation>No se pudo abrir KDE Contacts. Comprueba que KAddressBook está instalado.</translation>
     </message>
@@ -710,12 +750,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo abrir el navegador predeterminado de KDE.</translation>
     </message>
     <message>
+      <source>No se pudo abrir esa versión del elemento.</source>
+      <translation>No se pudo abrir esa versión del elemento.</translation>
+    </message>
+    <message>
       <source>No se pudo abrir la bóveda restaurada. La bóveda activa no cambió.</source>
       <translation>No se pudo abrir la bóveda restaurada. La bóveda activa no cambió.</translation>
     </message>
     <message>
       <source>No se pudo acceder a la bóveda actual.</source>
       <translation>No se pudo acceder a la bóveda actual.</translation>
+    </message>
+    <message>
+      <source>No se pudo acceder a la configuración de Sync de este equipo.</source>
+      <translation>No se pudo acceder a la configuración de Sync de este equipo.</translation>
     </message>
     <message>
       <source>No se pudo actualizar el elemento.</source>
@@ -772,6 +820,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo guardar la carpeta.</source>
       <translation>No se pudo guardar la carpeta.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la combinación. El conflicto sigue abierto.</source>
+      <translation>No se pudo guardar la combinación. El conflicto sigue abierto.</translation>
     </message>
     <message>
       <source>No se pudo guardar la configuración inicial.</source>
@@ -878,12 +930,90 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Ordenando carpeta…</translation>
     </message>
     <message>
+      <source>POSIX</source>
+      <translation>POSIX</translation>
+    </message>
+    <message>
+      <source>Pendiente de abrir</source>
+      <translation>Pendiente de abrir</translation>
+    </message>
+    <message>
       <source>Prueba del agente GPG falló: {error}</source>
       <translation>Prueba del agente GPG falló: {error}</translation>
     </message>
     <message>
-      <source>Próximo código de verificación copiado</source>
-      <translation>Próximo código de verificación copiado</translation>
+      <source>Una de las versiones usa una clave que no está en este dispositivo. Resuélvelo desde un dispositivo que la tenga.</source>
+      <translation>Una de las versiones usa una clave que no está en este dispositivo. Resuélvelo desde un dispositivo que la tenga.</translation>
+    </message>
+    <message>
+      <source>Unix {at}</source>
+      <translation>Unix {at}</translation>
+    </message>
+    <message>
+      <source>Vault sync: round requested by the user</source>
+      <translation>Vault sync: round requested by the user</translation>
+    </message>
+    <message>
+      <source>could not open the vault</source>
+      <translation>could not open the vault</translation>
+    </message>
+    <message>
+      <source>could not open the vault store</source>
+      <translation>could not open the vault store</translation>
+    </message>
+    <message>
+      <source>could not read the vault copy</source>
+      <translation>could not read the vault copy</translation>
+    </message>
+    <message>
+      <source>could not stage the restored vault</source>
+      <translation>could not stage the restored vault</translation>
+    </message>
+    <message>
+      <source>device identity unavailable</source>
+      <translation>device identity unavailable</translation>
+    </message>
+    <message>
+      <source>draft refused before saving</source>
+      <translation>draft refused before saving</translation>
+    </message>
+    <message>
+      <source>icon not found</source>
+      <translation>icon not found</translation>
+    </message>
+    <message>
+      <source>no valid one-time code</source>
+      <translation>no valid one-time code</translation>
+    </message>
+    <message>
+      <source>not a backup of this vault format</source>
+      <translation>not a backup of this vault format</translation>
+    </message>
+    <message>
+      <source>not a valid vault</source>
+      <translation>not a valid vault</translation>
+    </message>
+    <message>
+      <source>not an OpenSSH private key</source>
+      <translation>not an OpenSSH private key</translation>
+    </message>
+    <message>
+      <source>the active vault no longer exists</source>
+      <translation>the active vault no longer exists</translation>
+    </message>
+    <message>
+      <source>the backup staging directory was not removed</source>
+      <translation>the backup staging directory was not removed</translation>
+    </message>
+    <message>
+      <source>versions were not indexed after unlocking</source>
+      <translation>versions were not indexed after unlocking</translation>
+    </message>
+    <message>
+      <source>{date}  Datos editados
+</source>
+      <translation>{date}  Datos editados
+</translation>
     </message>
     <message>
       <source>Puedes configurar hasta 32 servicios o servidores.</source>
@@ -896,6 +1026,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Revisa el resultado y elige las claves para los elementos que se añadirán.</source>
       <translation>Revisa el resultado y elige las claves para los elementos que se añadirán.</translation>
+    </message>
+    <message>
+      <source>Revisa las diferencias</source>
+      <translation>Revisa las diferencias</translation>
     </message>
     <message>
       <source>Revocación registrada</source>
@@ -962,24 +1096,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation> %1 clave(s) no tenían identidad de usuario.</translation>
     </message>
     <message>
-      <source> (copia del teléfono)</source>
-      <translation> (copia del teléfono)</translation>
-    </message>
-    <message>
       <source> Se omitieron %1 clave(s) de formato v3.</source>
       <translation> Se omitieron %1 clave(s) de formato v3.</translation>
     </message>
     <message>
       <source>%1 Además, no se pudo actualizar la lista de claves: %2</source>
       <translation>%1 Además, no se pudo actualizar la lista de claves: %2</translation>
-    </message>
-    <message>
-      <source>%1 elementos guardarán sus fechas originales en las notas.</source>
-      <translation>%1 elementos guardarán sus fechas originales en las notas.</translation>
-    </message>
-    <message>
-      <source>%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.</source>
-      <translation>%1 elementos tendrán un secreto personalizado vinculado con sus campos adicionales.</translation>
     </message>
     <message>
       <source>%1 está dentro de la carpeta de GnuPG.</source>
@@ -1021,10 +1143,6 @@ No incluye contraseñas ni valores de credenciales.
       </translation>
     </message>
     <message>
-      <source>Abierta</source>
-      <translation>Abierta</translation>
-    </message>
-    <message>
       <source>Adjuntos</source>
       <translation>Adjuntos</translation>
     </message>
@@ -1035,10 +1153,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Alias</source>
       <translation>Alias</translation>
-    </message>
-    <message>
-      <source>Apellidos</source>
-      <translation>Apellidos</translation>
     </message>
     <message>
       <source>Archivos cifrados</source>
@@ -1085,14 +1199,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Clave OpenPGP creada con subclave de cifrado: %1.</translation>
     </message>
     <message>
-      <source>Clave de licencia</source>
-      <translation>Clave de licencia</translation>
-    </message>
-    <message>
-      <source>Clave pública</source>
-      <translation>Clave pública</translation>
-    </message>
-    <message>
       <source>Clave pública exportada a %1.%2</source>
       <translation>Clave pública exportada a %1.%2</translation>
     </message>
@@ -1103,14 +1209,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Clave pública y material privado eliminados para %1.</source>
       <translation>Clave pública y material privado eliminados para %1.</translation>
-    </message>
-    <message>
-      <source>Contraseña</source>
-      <translation>Contraseña</translation>
-    </message>
-    <message>
-      <source>Correo</source>
-      <translation>Correo</translation>
     </message>
     <message>
       <source>Could not disable process core dumps</source>
@@ -1125,16 +1223,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Could not start browser integration</translation>
     </message>
     <message>
-      <source>Código de seguridad</source>
-      <translation>Código de seguridad</translation>
-    </message>
-    <message>
       <source>Deshabilitada</source>
       <translation>Deshabilitada</translation>
-    </message>
-    <message>
-      <source>Dirección</source>
-      <translation>Dirección</translation>
     </message>
     <message>
       <source>El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.</source>
@@ -1151,14 +1241,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo.</source>
       <translation>El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo.</translation>
-    </message>
-    <message>
-      <source>FULL</source>
-      <translation>FULL</translation>
-    </message>
-    <message>
-      <source>Fecha de compra</source>
-      <translation>Fecha de compra</translation>
     </message>
     <message>
       <source>Firmar</source>
@@ -1179,14 +1261,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>HOME</source>
       <translation>HOME</translation>
-    </message>
-    <message>
-      <source>Host</source>
-      <translation>Host</translation>
-    </message>
-    <message>
-      <source>Huella</source>
-      <translation>Huella</translation>
     </message>
     <message>
       <source>Identidad añadida a %1.</source>
@@ -1277,16 +1351,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Nombre</translation>
     </message>
     <message>
-      <source>Nombre de red</source>
-      <translation>Nombre de red</translation>
-    </message>
-    <message>
       <source>Número de documento</source>
       <translation>Número de documento</translation>
-    </message>
-    <message>
-      <source>Número de tarjeta</source>
-      <translation>Número de tarjeta</translation>
     </message>
     <message>
       <source>Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión.</source>
@@ -1295,10 +1361,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Organize credentials and secure notes with OpenPGP encryption</source>
       <translation>Organiza credenciales y notas seguras con cifrado OpenPGP</translation>
-    </message>
-    <message>
-      <source>PIN</source>
-      <translation>PIN</translation>
     </message>
     <message>
       <source>Parte pública eliminada para %1.</source>
@@ -1317,10 +1379,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Process dump restrictions are not implemented on this platform</translation>
     </message>
     <message>
-      <source>Producto</source>
-      <translation>Producto</translation>
-    </message>
-    <message>
       <source>QR content exceeds capacity</source>
       <translation>QR content exceeds capacity</translation>
     </message>
@@ -1335,10 +1393,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>QR unavailable for this item</source>
       <translation>QR unavailable for this item</translation>
-    </message>
-    <message>
-      <source>Red oculta</source>
-      <translation>Red oculta</translation>
     </message>
     <message>
       <source>Revisa los datos del elemento y quién tiene acceso.</source>
@@ -1365,10 +1419,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Se canceló la operación en pinentry.</translation>
     </message>
     <message>
-      <source>Seguridad</source>
-      <translation>Seguridad</translation>
-    </message>
-    <message>
       <source>Selecciona un archivo local de clave privada SSH.</source>
       <translation>Selecciona un archivo local de clave privada SSH.</translation>
     </message>
@@ -1389,6 +1439,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Subclave de %1 creada para %2.</translation>
     </message>
     <message>
+      <source>Sync selection of a forgotten device kept</source>
+      <translation>Sync selection of a forgotten device kept</translation>
+    </message>
+    <message>
+      <source>Sync selection unreadable; session runs without Sync</source>
+      <translation>Sync selection unreadable; session runs without Sync</translation>
+    </message>
+    <message>
+      <source>Sync store unavailable; session runs without Sync</source>
+      <translation>Sync store unavailable; session runs without Sync</translation>
+    </message>
+    <message>
       <source>Sí</source>
       <translation>Sí</translation>
     </message>
@@ -1397,20 +1459,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Tarjetas de pago</translation>
     </message>
     <message>
-      <source>Teléfono</source>
-      <translation>Teléfono</translation>
-    </message>
-    <message>
       <source>Texto</source>
       <translation>Texto</translation>
     </message>
     <message>
       <source>Tipo de documento</source>
       <translation>Tipo de documento</translation>
-    </message>
-    <message>
-      <source>Titular</source>
-      <translation>Titular</translation>
     </message>
     <message>
       <source>Campos adicionales</source>
@@ -1439,10 +1493,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source> Se detectaron %1 registro(s) con errores.</source>
       <translation> Se detectaron %1 registro(s) con errores.</translation>
-    </message>
-    <message>
-      <source> · conflicto, varias ramas</source>
-      <translation> · conflicto, varias ramas</translation>
     </message>
     <message>
       <source>&lt;a href="{url}" style="color:{color};text-decoration:none"&gt;&lt;span style="white-space:pre"&gt;{MASK}&lt;/span&gt;&lt;/a&gt;</source>
@@ -1521,10 +1571,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Copia privada guardada con permisos 0600 en %1.%2</translation>
     </message>
     <message>
-      <source>Correo electrónico</source>
-      <translation>Correo electrónico</translation>
-    </message>
-    <message>
       <source>Could not initialize importer catalog</source>
       <translation>Could not initialize importer catalog</translation>
     </message>
@@ -1533,28 +1579,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Could not register the single-instance D-Bus service</translation>
     </message>
     <message>
-      <source>Credencial de prueba</source>
-      <translation>Credencial de prueba</translation>
-    </message>
-    <message>
-      <source>Credencial de prueba guardada. Pulsa Sincronizar en Android.</source>
-      <translation>Credencial de prueba guardada. Pulsa Sincronizar en Android.</translation>
-    </message>
-    <message>
-      <source>Dato sintético. No contiene una contraseña real.</source>
-      <translation>Dato sintético. No contiene una contraseña real.</translation>
-    </message>
-    <message>
       <source>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</source>
       <translation>Desbloquea la sesión del escritorio antes de acceder a la bóveda.</translation>
     </message>
     <message>
       <source>Descripciones de carpetas</source>
       <translation>Descripciones de carpetas</translation>
-    </message>
-    <message>
-      <source>Descripción: {name}</source>
-      <translation>Descripción: {name}</translation>
     </message>
     <message>
       <source>Device link setup failed</source>
@@ -1601,16 +1631,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El dispositivo ya no está autorizado.</translation>
     </message>
     <message>
-      <source>El historial de Sync contiene cambios de un dispositivo que ya no está autorizado. El historial se conserva, pero Sync necesita recuperarlo antes de continuar.</source>
-      <translation>El historial de Sync contiene cambios de un dispositivo que ya no está autorizado. El historial se conserva, pero Sync necesita recuperarlo antes de continuar.</translation>
+      <source>El elemento no es válido.</source>
+      <translation>El elemento no es válido.</translation>
+    </message>
+    <message>
+      <source>El elemento no es válido. Revisa sus campos.</source>
+      <translation>El elemento no es válido. Revisa sus campos.</translation>
     </message>
     <message>
       <source>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</source>
       <translation>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</translation>
-    </message>
-    <message>
-      <source>El teléfono no tiene alguna de las claves elegidas. Elige solo las que tiene.</source>
-      <translation>El teléfono no tiene alguna de las claves elegidas. Elige solo las que tiene.</translation>
     </message>
     <message>
       <source>El teléfono o la sesión no admite la transferencia sintética.</source>
@@ -1623,10 +1653,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Elementos personalizados</source>
       <translation>Elementos personalizados</translation>
-    </message>
-    <message>
-      <source>Elige al menos una clave con clave privada en este equipo para sincronizar.</source>
-      <translation>Elige al menos una clave con clave privada en este equipo para sincronizar.</translation>
     </message>
     <message>
       <source>Emparejamiento rechazado. No se concedió confianza.</source>
@@ -1677,14 +1703,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Este dispositivo ya no está autorizado en este equipo.</translation>
     </message>
     <message>
-      <source>Este teléfono ya no está autorizado en el perfil de pruebas.</source>
-      <translation>Este teléfono ya no está autorizado en el perfil de pruebas.</translation>
-    </message>
-    <message>
-      <source>Este teléfono ya tiene otra bóveda de Sync seleccionada. No se reemplazó.</source>
-      <translation>Este teléfono ya tiene otra bóveda de Sync seleccionada. No se reemplazó.</translation>
-    </message>
-    <message>
       <source>Ethernet</source>
       <translation>Ethernet</translation>
     </message>
@@ -1695,10 +1713,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Fechas originales</source>
       <translation>Fechas originales</translation>
-    </message>
-    <message>
-      <source>Fechas originales: %1</source>
-      <translation>Fechas originales: %1</translation>
     </message>
     <message>
       <source>Frase de paso actualizada para %1.</source>
@@ -1765,16 +1779,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Keyring: user asked to mark a key as own (ultimate ownertrust)</translation>
     </message>
     <message>
-      <source>KryptoPass synthetic test password</source>
-      <translation>KryptoPass synthetic test password</translation>
-    </message>
-    <message>
       <source>LAN</source>
       <translation>LAN</translation>
-    </message>
-    <message>
-      <source>La bóveda cambió durante la operación. Actualiza la prueba e inténtalo otra vez.</source>
-      <translation>La bóveda cambió durante la operación. Actualiza la prueba e inténtalo otra vez.</translation>
     </message>
     <message>
       <source>La clave %1 está caducada.</source>
@@ -1815,14 +1821,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La invitación o conexión caducó. Genera otro código.</source>
       <translation>La invitación o conexión caducó. Genera otro código.</translation>
-    </message>
-    <message>
-      <source>La operación superó un límite seguro de Sync.</source>
-      <translation>La operación superó un límite seguro de Sync.</translation>
-    </message>
-    <message>
-      <source>La prueba sintética solo está disponible en Desktop debug.</source>
-      <translation>La prueba sintética solo está disponible en Desktop debug.</translation>
     </message>
     <message>
       <source>La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas.</source>
@@ -1909,10 +1907,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Material privado eliminado; la parte pública se conserva para %1.</translation>
     </message>
     <message>
-      <source>Modificado el %1</source>
-      <translation>Modificado el %1</translation>
-    </message>
-    <message>
       <source>NEVER USE</source>
       <translation>NEVER USE</translation>
     </message>
@@ -1927,10 +1921,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No hay ninguna clave privada OpenPGP disponible.</source>
       <translation>No hay ninguna clave privada OpenPGP disponible.</translation>
-    </message>
-    <message>
-      <source>No hay una bóveda abierta en Desktop.</source>
-      <translation>No hay una bóveda abierta en Desktop.</translation>
     </message>
     <message>
       <source>No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador.</source>
@@ -1957,20 +1947,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudieron localizar los datos de vinculación.</translation>
     </message>
     <message>
-      <source>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</source>
-      <translation>No se pudo abrir el perfil autorizado. La bóveda normal no se modificó.</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir el perfil de vinculación de este teléfono.</source>
-      <translation>No se pudo abrir el perfil de vinculación de este teléfono.</translation>
-    </message>
-    <message>
       <source>No se pudo abrir el perfil existente. No se creó una identidad nueva.</source>
       <translation>No se pudo abrir el perfil existente. No se creó una identidad nueva.</translation>
-    </message>
-    <message>
-      <source>No se pudo abrir la clave sintética en el llavero aislado. No se usó el llavero normal.</source>
-      <translation>No se pudo abrir la clave sintética en el llavero aislado. No se usó el llavero normal.</translation>
     </message>
     <message>
       <source>No se pudo acceder al dueño de la sesión activa.</source>
@@ -1995,10 +1973,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</source>
       <translation>No se pudo descifrar la exportación. Revisa las credenciales en el servicio de descifrado y vuelve a intentarlo.</translation>
-    </message>
-    <message>
-      <source>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</source>
-      <translation>No se pudo descifrar una credencial sintética con la clave y el formato esperados.</translation>
     </message>
     <message>
       <source>No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.</source>
@@ -2045,20 +2019,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo iniciar el listener de recuperación local.</translation>
     </message>
     <message>
-      <source>No se pudo leer la bóveda sintética ni guardar la revisión local.</source>
-      <translation>No se pudo leer la bóveda sintética ni guardar la revisión local.</translation>
-    </message>
-    <message>
       <source>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</source>
       <translation>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</translation>
     </message>
     <message>
       <source>No se pudo leer la política de privacidad de red. No se inició una conexión.</source>
       <translation>No se pudo leer la política de privacidad de red. No se inició una conexión.</translation>
-    </message>
-    <message>
-      <source>No se pudo leer o guardar la bóveda. Se reintentará.</source>
-      <translation>No se pudo leer o guardar la bóveda. Se reintentará.</translation>
     </message>
     <message>
       <source>No se pudo localizar el archivo de política de red. No se aplicaron cambios.</source>
@@ -2129,10 +2095,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Pairing carrier selected</translation>
     </message>
     <message>
-      <source>Pairing lab: device session state updated</source>
-      <translation>Pairing lab: device session state updated</translation>
-    </message>
-    <message>
       <source>Pairing profile maintenance failed</source>
       <translation>Pairing profile maintenance failed</translation>
     </message>
@@ -2157,18 +2119,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Preparando la reconexión LAN con este dispositivo…</translation>
     </message>
     <message>
-      <source>Prueba Desktop</source>
-      <translation>Prueba Desktop</translation>
-    </message>
-    <message>
-      <source>Prueba activada y credencial guardada. Pulsa Sincronizar en Android.</source>
-      <translation>Prueba activada y credencial guardada. Pulsa Sincronizar en Android.</translation>
-    </message>
-    <message>
-      <source>Prueba activada. Pulsa Sincronizar en Android.</source>
-      <translation>Prueba activada. Pulsa Sincronizar en Android.</translation>
-    </message>
-    <message>
       <source>Rechazando…</source>
       <translation>Rechazando…</translation>
     </message>
@@ -2189,10 +2139,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Redes Wi-Fi</translation>
     </message>
     <message>
-      <source>Registro eliminado · {short_id}{marker}</source>
-      <translation>Registro eliminado · {short_id}{marker}</translation>
-    </message>
-    <message>
       <source>Reglas de autocompletado</source>
       <translation>Reglas de autocompletado</translation>
     </message>
@@ -2203,10 +2149,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Revisando la clave ofrecida…</source>
       <translation>Revisando la clave ofrecida…</translation>
-    </message>
-    <message>
-      <source>Revisión sintética no proyectable</source>
-      <translation>Revisión sintética no proyectable</translation>
     </message>
     <message>
       <source>STUN binding request from</source>
@@ -2229,10 +2171,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Selecciona un dispositivo emparejado.</translation>
     </message>
     <message>
-      <source>Selecciona un teléfono autorizado antes de usar la prueba sintética de Sync.</source>
-      <translation>Selecciona un teléfono autorizado antes de usar la prueba sintética de Sync.</translation>
-    </message>
-    <message>
       <source>Selecciona un teléfono autorizado y conectado.</source>
       <translation>Selecciona un teléfono autorizado y conectado.</translation>
     </message>
@@ -2247,14 +2185,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Sincronización desactivada. La bóveda no cambió.</source>
       <translation>Sincronización desactivada. La bóveda no cambió.</translation>
-    </message>
-    <message>
-      <source>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</source>
-      <translation>Sync no está configurado para este teléfono. Pulsa Activar prueba de Sync primero.</translation>
-    </message>
-    <message>
-      <source>Synthetic Sync action failed; existing vaults were preserved.</source>
-      <translation>Synthetic Sync action failed; existing vaults were preserved.</translation>
     </message>
     <message>
       <source>TURN</source>
@@ -2273,20 +2203,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Transferencia rechazada. No se recibió nada.</translation>
     </message>
     <message>
-      <source>Unix {}</source>
-      <translation>Unix {}</translation>
-    </message>
-    <message>
       <source>Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.</source>
       <translation>Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.</translation>
-    </message>
-    <message>
-      <source>Usuario</source>
-      <translation>Usuario</translation>
-    </message>
-    <message>
-      <source>Usuario copiado</source>
-      <translation>Usuario copiado</translation>
     </message>
     <message>
       <source>VPN / virtual</source>
@@ -2309,100 +2227,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Validez plena según GnuPG</translation>
     </message>
     <message>
-      <source>Vault mirror could not apply a ledger record</source>
-      <translation>Vault mirror could not apply a ledger record</translation>
-    </message>
-    <message>
-      <source>Vault mirror could not decrypt a ledger record; the key may be missing here or locked</source>
-      <translation>Vault mirror could not decrypt a ledger record; the key may be missing here or locked</translation>
-    </message>
-    <message>
-      <source>Vault mirror could not encrypt a record received from the phone</source>
-      <translation>Vault mirror could not encrypt a record received from the phone</translation>
-    </message>
-    <message>
-      <source>Vault mirror could not hash the icon images</source>
-      <translation>Vault mirror could not hash the icon images</translation>
-    </message>
-    <message>
-      <source>Vault mirror could not open the selected ledger</source>
-      <translation>Vault mirror could not open the selected ledger</translation>
-    </message>
-    <message>
-      <source>Vault mirror could not read an icon asset</source>
-      <translation>Vault mirror could not read an icon asset</translation>
-    </message>
-    <message>
-      <source>Vault mirror idle: no trusted phone syncs vault keys</source>
-      <translation>Vault mirror idle: no trusted phone syncs vault keys</translation>
-    </message>
-    <message>
-      <source>Vault mirror idle: the phone holds none of the selected keys</source>
-      <translation>Vault mirror idle: the phone holds none of the selected keys</translation>
-    </message>
-    <message>
-      <source>Vault mirror kept the Desktop icon</source>
-      <translation>Vault mirror kept the Desktop icon</translation>
-    </message>
-    <message>
-      <source>Vault mirror ledger write failed</source>
-      <translation>Vault mirror ledger write failed</translation>
-    </message>
-    <message>
-      <source>Vault mirror pass</source>
-      <translation>Vault mirror pass</translation>
-    </message>
-    <message>
-      <source>Vault mirror published an icon asset</source>
-      <translation>Vault mirror published an icon asset</translation>
-    </message>
-    <message>
-      <source>Vault mirror recovered</source>
-      <translation>Vault mirror recovered</translation>
-    </message>
-    <message>
-      <source>Vault mirror rejected an icon asset</source>
-      <translation>Vault mirror rejected an icon asset</translation>
-    </message>
-    <message>
-      <source>Vault mirror retries a record whose icon asset arrived</source>
-      <translation>Vault mirror retries a record whose icon asset arrived</translation>
-    </message>
-    <message>
-      <source>Vault mirror run</source>
-      <translation>Vault mirror run</translation>
-    </message>
-    <message>
-      <source>Vault mirror run failed</source>
-      <translation>Vault mirror run failed</translation>
-    </message>
-    <message>
-      <source>Vault mirror sends a record without its image icon</source>
-      <translation>Vault mirror sends a record without its image icon</translation>
-    </message>
-    <message>
-      <source>Vault mirror sends a record without its theme icon</source>
-      <translation>Vault mirror sends a record without its theme icon</translation>
-    </message>
-    <message>
-      <source>Vault mirror sends the record without its image icon</source>
-      <translation>Vault mirror sends the record without its image icon</translation>
-    </message>
-    <message>
-      <source>Vault mirror skipped a record</source>
-      <translation>Vault mirror skipped a record</translation>
-    </message>
-    <message>
-      <source>Vault mirror stopped: gpg-agent has no cached passphrase</source>
-      <translation>Vault mirror stopped: gpg-agent has no cached passphrase</translation>
-    </message>
-    <message>
-      <source>Vault mirror waits for an icon asset</source>
-      <translation>Vault mirror waits for an icon asset</translation>
-    </message>
-    <message>
       <source>Vault sync selection changed</source>
       <translation>Vault sync selection changed</translation>
+    </message>
+    <message>
+      <source>Vault sync selection not saved</source>
+      <translation>Vault sync selection not saved</translation>
     </message>
     <message>
       <source>Vault sync: asking for a key passphrase</source>
@@ -2413,6 +2243,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vault sync: could not unlock the key</translation>
     </message>
     <message>
+      <source>Vault sync: indexing failed</source>
+      <translation>Vault sync: indexing failed</translation>
+    </message>
+    <message>
       <source>Vault sync: key added after sending it to the phone</source>
       <translation>Vault sync: key added after sending it to the phone</translation>
     </message>
@@ -2421,32 +2255,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vault sync: key passphrase cached</translation>
     </message>
     <message>
-      <source>Vault sync: renegotiating the session on request</source>
-      <translation>Vault sync: renegotiating the session on request</translation>
+      <source>Vault sync: received items no longer wait for a passphrase</source>
+      <translation>Vault sync: received items no longer wait for a passphrase</translation>
+    </message>
+    <message>
+      <source>Vault sync: received items wait for a key passphrase; Sync continues</source>
+      <translation>Vault sync: received items wait for a key passphrase; Sync continues</translation>
+    </message>
+    <message>
+      <source>Vault sync: received versions indexed</source>
+      <translation>Vault sync: received versions indexed</translation>
     </message>
     <message>
       <source>Vencimiento</source>
       <translation>Vencimiento</translation>
     </message>
     <message>
-      <source>Versión</source>
-      <translation>Versión</translation>
-    </message>
-    <message>
       <source>Vigente</source>
       <translation>Vigente</translation>
-    </message>
-    <message>
-      <source>Vista local actualizada. Para intercambiar cambios, pulsa Sincronizar en Android.</source>
-      <translation>Vista local actualizada. Para intercambiar cambios, pulsa Sincronizar en Android.</translation>
-    </message>
-    <message>
-      <source>WAL</source>
-      <translation>WAL</translation>
-    </message>
-    <message>
-      <source>WEP</source>
-      <translation>WEP</translation>
     </message>
     <message>
       <source>Ya se inició una transferencia en esta sesión.</source>
@@ -2457,28 +2283,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>[Imagen omitida]</translation>
     </message>
     <message>
-      <source>a bounded base64 ciphertext string</source>
-      <translation>a bounded base64 ciphertext string</translation>
-    </message>
-    <message>
-      <source>a bounded base64 icon string</source>
-      <translation>a bounded base64 icon string</translation>
-    </message>
-    <message>
-      <source>a folder cannot be its own parent</source>
-      <translation>a folder cannot be its own parent</translation>
-    </message>
-    <message>
-      <source>a new secret must start at revision zero</source>
-      <translation>a new secret must start at revision zero</translation>
-    </message>
-    <message>
       <source>a secret cannot link to itself</source>
       <translation>a secret cannot link to itself</translation>
-    </message>
-    <message>
-      <source>a secret has more than one companion</source>
-      <translation>a secret has more than one companion</translation>
     </message>
     <message>
       <source>a secret part is not protected by a passphrase</source>
@@ -2513,8 +2319,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>actualizar la caducidad</translation>
     </message>
     <message>
-      <source>an array with at most {LIMIT} items</source>
-      <translation>an array with at most {LIMIT} items</translation>
+      <source>an item for a key on this device is not indexed yet</source>
+      <translation>an item for a key on this device is not indexed yet</translation>
     </message>
     <message>
       <source>another local key could decrypt the challenge</source>
@@ -2557,10 +2363,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>at least one explicit recipient is required</translation>
     </message>
     <message>
-      <source>at least one recipient is required</source>
-      <translation>at least one recipient is required</translation>
-    </message>
-    <message>
       <source>autenticación</source>
       <translation>autenticación</translation>
     </message>
@@ -2571,26 +2373,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>añadir la identidad</source>
       <translation>añadir la identidad</translation>
-    </message>
-    <message>
-      <source>background plaintext limit exceeded</source>
-      <translation>background plaintext limit exceeded</translation>
-    </message>
-    <message>
-      <source>backup ciphertext encoding is invalid</source>
-      <translation>backup ciphertext encoding is invalid</translation>
-    </message>
-    <message>
-      <source>backup ciphertext size is invalid</source>
-      <translation>backup ciphertext size is invalid</translation>
-    </message>
-    <message>
-      <source>backup contains too many recipients</source>
-      <translation>backup contains too many recipients</translation>
-    </message>
-    <message>
-      <source>backup contains too many records</source>
-      <translation>backup contains too many records</translation>
     </message>
     <message>
       <source>backup destination already exists or is not a regular file</source>
@@ -2613,26 +2395,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup directory is unavailable</translation>
     </message>
     <message>
-      <source>backup document is invalid</source>
-      <translation>backup document is invalid</translation>
-    </message>
-    <message>
-      <source>backup exceeds maximum size</source>
-      <translation>backup exceeds maximum size</translation>
-    </message>
-    <message>
-      <source>backup exceeds the maximum data size</source>
-      <translation>backup exceeds the maximum data size</translation>
-    </message>
-    <message>
-      <source>backup exceeds the maximum payload size</source>
-      <translation>backup exceeds the maximum payload size</translation>
-    </message>
-    <message>
-      <source>backup exceeds the maximum size</source>
-      <translation>backup exceeds the maximum size</translation>
-    </message>
-    <message>
       <source>backup file changed while opening</source>
       <translation>backup file changed while opening</translation>
     </message>
@@ -2647,58 +2409,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>backup file is unavailable</source>
       <translation>backup file is unavailable</translation>
-    </message>
-    <message>
-      <source>backup folder appearance is invalid</source>
-      <translation>backup folder appearance is invalid</translation>
-    </message>
-    <message>
-      <source>backup folder has too many recipients</source>
-      <translation>backup folder has too many recipients</translation>
-    </message>
-    <message>
-      <source>backup folder hierarchy contains a cycle</source>
-      <translation>backup folder hierarchy contains a cycle</translation>
-    </message>
-    <message>
-      <source>backup folder id is invalid</source>
-      <translation>backup folder id is invalid</translation>
-    </message>
-    <message>
-      <source>backup folder id is not canonical</source>
-      <translation>backup folder id is not canonical</translation>
-    </message>
-    <message>
-      <source>backup folder name exceeds the maximum size</source>
-      <translation>backup folder name exceeds the maximum size</translation>
-    </message>
-    <message>
-      <source>backup folder name is invalid</source>
-      <translation>backup folder name is invalid</translation>
-    </message>
-    <message>
-      <source>backup folder order is invalid</source>
-      <translation>backup folder order is invalid</translation>
-    </message>
-    <message>
-      <source>backup folder parent is missing</source>
-      <translation>backup folder parent is missing</translation>
-    </message>
-    <message>
-      <source>backup folder recipients are invalid</source>
-      <translation>backup folder recipients are invalid</translation>
-    </message>
-    <message>
-      <source>backup format or version is unsupported</source>
-      <translation>backup format or version is unsupported</translation>
-    </message>
-    <message>
-      <source>backup has duplicate folder ids</source>
-      <translation>backup has duplicate folder ids</translation>
-    </message>
-    <message>
-      <source>backup has duplicate secret ids</source>
-      <translation>backup has duplicate secret ids</translation>
     </message>
     <message>
       <source>backup input is not a regular file</source>
@@ -2741,28 +2451,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup recipient is not canonical</translation>
     </message>
     <message>
-      <source>backup recipient list must be null when empty</source>
-      <translation>backup recipient list must be null when empty</translation>
-    </message>
-    <message>
-      <source>backup recipient metadata is invalid</source>
-      <translation>backup recipient metadata is invalid</translation>
-    </message>
-    <message>
       <source>backup recipient selection is invalid</source>
       <translation>backup recipient selection is invalid</translation>
     </message>
     <message>
       <source>backup recipient selection is too large</source>
       <translation>backup recipient selection is too large</translation>
-    </message>
-    <message>
-      <source>backup recipients are duplicated or unsorted</source>
-      <translation>backup recipients are duplicated or unsorted</translation>
-    </message>
-    <message>
-      <source>backup recipients are missing</source>
-      <translation>backup recipients are missing</translation>
     </message>
     <message>
       <source>backup recipients must be a JSON array of fingerprints</source>
@@ -2773,56 +2467,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>backup recipients must be unique</translation>
     </message>
     <message>
-      <source>backup secret ciphertext is invalid</source>
-      <translation>backup secret ciphertext is invalid</translation>
-    </message>
-    <message>
-      <source>backup secret folder is missing</source>
-      <translation>backup secret folder is missing</translation>
-    </message>
-    <message>
-      <source>backup secret id is invalid</source>
-      <translation>backup secret id is invalid</translation>
-    </message>
-    <message>
-      <source>backup secret id is not canonical</source>
-      <translation>backup secret id is not canonical</translation>
-    </message>
-    <message>
-      <source>backup secret kind is unsupported</source>
-      <translation>backup secret kind is unsupported</translation>
-    </message>
-    <message>
-      <source>backup secret recipients are invalid</source>
-      <translation>backup secret recipients are invalid</translation>
-    </message>
-    <message>
-      <source>backup secret recipients are missing</source>
-      <translation>backup secret recipients are missing</translation>
-    </message>
-    <message>
-      <source>backup secret revision is invalid</source>
-      <translation>backup secret revision is invalid</translation>
-    </message>
-    <message>
-      <source>backup secret title exceeds the maximum size</source>
-      <translation>backup secret title exceeds the maximum size</translation>
-    </message>
-    <message>
-      <source>backup secret title is invalid</source>
-      <translation>backup secret title is invalid</translation>
-    </message>
-    <message>
-      <source>backup size overflow</source>
-      <translation>backup size overflow</translation>
-    </message>
-    <message>
-      <source>browser entry changed</source>
-      <translation>browser entry changed</translation>
-    </message>
-    <message>
       <source>browser request cancelled</source>
       <translation>browser request cancelled</translation>
+    </message>
+    <message>
+      <source>built-in templates are invalid</source>
+      <translation>built-in templates are invalid</translation>
     </message>
     <message>
       <source>cambiar la frase de paso</source>
@@ -2841,8 +2491,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>challenge uses legacy encryption without integrity</translation>
     </message>
     <message>
+      <source>check the fields</source>
+      <translation>check the fields</translation>
+    </message>
+    <message>
       <source>completar la operación</source>
       <translation>completar la operación</translation>
+    </message>
+    <message>
+      <source>conflict did not open</source>
+      <translation>conflict did not open</translation>
+    </message>
+    <message>
+      <source>conflict projection failed</source>
+      <translation>conflict projection failed</translation>
     </message>
     <message>
       <source>consultar el llavero</source>
@@ -2857,36 +2519,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not allocate an active store setting file</translation>
     </message>
     <message>
-      <source>could not begin backup restore</source>
-      <translation>could not begin backup restore</translation>
-    </message>
-    <message>
-      <source>could not begin secret update</source>
-      <translation>could not begin secret update</translation>
-    </message>
-    <message>
-      <source>could not collect unused icons</source>
-      <translation>could not collect unused icons</translation>
-    </message>
-    <message>
       <source>could not configure OpenPGP pinentry</source>
       <translation>could not configure OpenPGP pinentry</translation>
     </message>
     <message>
-      <source>could not configure background decryption</source>
-      <translation>could not configure background decryption</translation>
-    </message>
-    <message>
-      <source>could not configure durable store journaling</source>
-      <translation>could not configure durable store journaling</translation>
-    </message>
-    <message>
       <source>could not configure isolated OpenPGP</source>
       <translation>could not configure isolated OpenPGP</translation>
-    </message>
-    <message>
-      <source>could not configure the encrypted store</source>
-      <translation>could not configure the encrypted store</translation>
     </message>
     <message>
       <source>could not create a private backup file</source>
@@ -2913,20 +2551,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not create the application data directory</translation>
     </message>
     <message>
-      <source>could not create the store directory</source>
-      <translation>could not create the store directory</translation>
-    </message>
-    <message>
       <source>could not create the transfer challenge</source>
       <translation>could not create the transfer challenge</translation>
-    </message>
-    <message>
-      <source>could not enable durable store journaling</source>
-      <translation>could not enable durable store journaling</translation>
-    </message>
-    <message>
-      <source>could not encode backup data</source>
-      <translation>could not encode backup data</translation>
     </message>
     <message>
       <source>could not encode the active store setting</source>
@@ -2935,14 +2561,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not encode the setup state</source>
       <translation>could not encode the setup state</translation>
-    </message>
-    <message>
-      <source>could not finish reading store metadata</source>
-      <translation>could not finish reading store metadata</translation>
-    </message>
-    <message>
-      <source>could not finish reading the encrypted backup</source>
-      <translation>could not finish reading the encrypted backup</translation>
     </message>
     <message>
       <source>could not flush the active store setting</source>
@@ -2959,10 +2577,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not initialize isolated OpenPGP</source>
       <translation>could not initialize isolated OpenPGP</translation>
-    </message>
-    <message>
-      <source>could not initialize the encrypted store</source>
-      <translation>could not initialize the encrypted store</translation>
     </message>
     <message>
       <source>could not inspect an application setting</source>
@@ -2985,10 +2599,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not inspect restore destination</translation>
     </message>
     <message>
-      <source>could not inspect store directory</source>
-      <translation>could not inspect store directory</translation>
-    </message>
-    <message>
       <source>could not inspect the application config directory</source>
       <translation>could not inspect the application config directory</translation>
     </message>
@@ -3005,20 +2615,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not inspect the application data root</translation>
     </message>
     <message>
-      <source>could not inspect the existing store parent</source>
-      <translation>could not inspect the existing store parent</translation>
-    </message>
-    <message>
       <source>could not inspect the opened directory</source>
       <translation>could not inspect the opened directory</translation>
-    </message>
-    <message>
-      <source>could not inspect the store directory</source>
-      <translation>could not inspect the store directory</translation>
-    </message>
-    <message>
-      <source>could not inspect the store file</source>
-      <translation>could not inspect the store file</translation>
     </message>
     <message>
       <source>could not isolate OpenPGP keyring</source>
@@ -3035,10 +2633,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not make gpg-agent forget the primary key</source>
       <translation>could not make gpg-agent forget the primary key</translation>
-    </message>
-    <message>
-      <source>could not measure backup size</source>
-      <translation>could not measure backup size</translation>
     </message>
     <message>
       <source>could not open GnuPG</source>
@@ -3061,22 +2655,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not open directory without following links</translation>
     </message>
     <message>
-      <source>could not open import source</source>
-      <translation>could not open import source</translation>
-    </message>
-    <message>
-      <source>could not open store directory</source>
-      <translation>could not open store directory</translation>
-    </message>
-    <message>
-      <source>could not open store directory without following links</source>
-      <translation>could not open store directory without following links</translation>
-    </message>
-    <message>
-      <source>could not open the encrypted store</source>
-      <translation>could not open the encrypted store</translation>
-    </message>
-    <message>
       <source>could not prepare bounded OpenPGP output</source>
       <translation>could not prepare bounded OpenPGP output</translation>
     </message>
@@ -3095,6 +2673,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not prepare the application data root</source>
       <translation>could not prepare the application data root</translation>
+    </message>
+    <message>
+      <source>could not prepare the data directory</source>
+      <translation>could not prepare the data directory</translation>
     </message>
     <message>
       <source>could not prepare the key export</source>
@@ -3125,44 +2707,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not read backup file</translation>
     </message>
     <message>
-      <source>could not read folder</source>
-      <translation>could not read folder</translation>
-    </message>
-    <message>
-      <source>could not read import source</source>
-      <translation>could not read import source</translation>
-    </message>
-    <message>
       <source>could not read synthetic OpenPGP fixture file</source>
       <translation>could not read synthetic OpenPGP fixture file</translation>
     </message>
     <message>
-      <source>could not read the encrypted store</source>
-      <translation>could not read the encrypted store</translation>
-    </message>
-    <message>
-      <source>could not read the encrypted store for backup</source>
-      <translation>could not read the encrypted store for backup</translation>
-    </message>
-    <message>
-      <source>could not read the vault primary key</source>
-      <translation>could not read the vault primary key</translation>
-    </message>
-    <message>
       <source>could not reserve a private restore staging directory</source>
       <translation>could not reserve a private restore staging directory</translation>
-    </message>
-    <message>
-      <source>could not save entry icon</source>
-      <translation>could not save entry icon</translation>
-    </message>
-    <message>
-      <source>could not save icon resource</source>
-      <translation>could not save icon resource</translation>
-    </message>
-    <message>
-      <source>could not save the vault primary key</source>
-      <translation>could not save the vault primary key</translation>
     </message>
     <message>
       <source>could not secure backup file permissions</source>
@@ -3173,32 +2723,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not secure the application data directory</translation>
     </message>
     <message>
-      <source>could not secure the store directory</source>
-      <translation>could not secure the store directory</translation>
-    </message>
-    <message>
-      <source>could not secure the store file</source>
-      <translation>could not secure the store file</translation>
-    </message>
-    <message>
       <source>could not sync backup directory</source>
       <translation>could not sync backup directory</translation>
     </message>
     <message>
       <source>could not sync the restored vault</source>
       <translation>could not sync the restored vault</translation>
-    </message>
-    <message>
-      <source>could not update folder recipients</source>
-      <translation>could not update folder recipients</translation>
-    </message>
-    <message>
-      <source>could not update secret recipients</source>
-      <translation>could not update secret recipients</translation>
-    </message>
-    <message>
-      <source>could not validate folder hierarchy</source>
-      <translation>could not validate folder hierarchy</translation>
     </message>
     <message>
       <source>could not write encrypted backup</source>
@@ -3217,20 +2747,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>crear la subclave</translation>
     </message>
     <message>
-      <source>database file belongs to another application</source>
-      <translation>database file belongs to another application</translation>
-    </message>
-    <message>
-      <source>destination folder does not exist</source>
-      <translation>destination folder does not exist</translation>
-    </message>
-    <message>
       <source>discard success message</source>
       <translation>discard success message</translation>
     </message>
     <message>
-      <source>duplicate icon resource</source>
-      <translation>duplicate icon resource</translation>
+      <source>el campo añadido n.º {}</source>
+      <translation>el campo añadido n.º {}</translation>
+    </message>
+    <message>
+      <source>el elemento</source>
+      <translation>el elemento</translation>
+    </message>
+    <message>
+      <source>el valor n.º {}</source>
+      <translation>el valor n.º {}</translation>
     </message>
     <message>
       <source>empty ciphertext</source>
@@ -3245,40 +2775,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>encrypted payload</translation>
     </message>
     <message>
-      <source>encrypted payload cannot be empty</source>
-      <translation>encrypted payload cannot be empty</translation>
-    </message>
-    <message>
-      <source>encrypted payload exceeds the maximum size</source>
-      <translation>encrypted payload exceeds the maximum size</translation>
-    </message>
-    <message>
-      <source>entry contains conflicting icon sources</source>
-      <translation>entry contains conflicting icon sources</translation>
-    </message>
-    <message>
-      <source>existing store parent must be a real private directory</source>
-      <translation>existing store parent must be a real private directory</translation>
-    </message>
-    <message>
       <source>folder identifier is invalid</source>
       <translation>folder identifier is invalid</translation>
     </message>
     <message>
-      <source>folder move would create a cycle</source>
-      <translation>folder move would create a cycle</translation>
-    </message>
-    <message>
-      <source>folder name cannot be empty</source>
-      <translation>folder name cannot be empty</translation>
-    </message>
-    <message>
       <source>folder not found</source>
       <translation>folder not found</translation>
-    </message>
-    <message>
-      <source>folder order is invalid</source>
-      <translation>folder order is invalid</translation>
     </message>
     <message>
       <source>gpg respondió de forma inesperada.</source>
@@ -3299,22 +2801,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>icon belongs to another vault</source>
       <translation>icon belongs to another vault</translation>
-    </message>
-    <message>
-      <source>icon exceeds maximum size</source>
-      <translation>icon exceeds maximum size</translation>
-    </message>
-    <message>
-      <source>icon missing or too large</source>
-      <translation>icon missing or too large</translation>
-    </message>
-    <message>
-      <source>icon resource does not match secret</source>
-      <translation>icon resource does not match secret</translation>
-    </message>
-    <message>
-      <source>icon resources exceed backup budget</source>
-      <translation>icon resources exceed backup budget</translation>
     </message>
     <message>
       <source>icon source is not a file</source>
@@ -3361,28 +2847,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>indeterminate packet length is not allowed</translation>
     </message>
     <message>
-      <source>invalid device</source>
-      <translation>invalid device</translation>
-    </message>
-    <message>
-      <source>invalid fixture action</source>
-      <translation>invalid fixture action</translation>
-    </message>
-    <message>
       <source>invalid folder</source>
       <translation>invalid folder</translation>
     </message>
     <message>
       <source>invalid folder direction</source>
       <translation>invalid folder direction</translation>
-    </message>
-    <message>
-      <source>invalid icon image</source>
-      <translation>invalid icon image</translation>
-    </message>
-    <message>
-      <source>invalid icon resource size</source>
-      <translation>invalid icon resource size</translation>
     </message>
     <message>
       <source>invalid icon source</source>
@@ -3409,6 +2879,22 @@ No incluye contraseñas ni valores de credenciales.
       <translation>isolated OpenPGP path is not valid UTF-8</translation>
     </message>
     <message>
+      <source>item detail projection failed</source>
+      <translation>item detail projection failed</translation>
+    </message>
+    <message>
+      <source>item did not open</source>
+      <translation>item did not open</translation>
+    </message>
+    <message>
+      <source>item version did not open</source>
+      <translation>item version did not open</translation>
+    </message>
+    <message>
+      <source>la sección «{title}»</source>
+      <translation>la sección «{title}»</translation>
+    </message>
+    <message>
       <source>legacy OpenPGP ciphertext without integrity protection is not accepted</source>
       <translation>legacy OpenPGP ciphertext without integrity protection is not accepted</translation>
     </message>
@@ -3423,22 +2909,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>mDNS answers without AResource</source>
       <translation>mDNS answers without AResource</translation>
-    </message>
-    <message>
-      <source>missing action</source>
-      <translation>missing action</translation>
-    </message>
-    <message>
-      <source>missing device</source>
-      <translation>missing device</translation>
-    </message>
-    <message>
-      <source>missing icon resource</source>
-      <translation>missing icon resource</translation>
-    </message>
-    <message>
-      <source>missing linked secret</source>
-      <translation>missing linked secret</translation>
     </message>
     <message>
       <source>more than one secret primary key in the block</source>
@@ -3457,6 +2927,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no icon store</translation>
     </message>
     <message>
+      <source>no item is open</source>
+      <translation>no item is open</translation>
+    </message>
+    <message>
       <source>no local secret key protects this vault</source>
       <translation>no local secret key protects this vault</translation>
     </message>
@@ -3469,8 +2943,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no such remote</translation>
     </message>
     <message>
-      <source>not a login</source>
-      <translation>not a login</translation>
+      <source>not indexed</source>
+      <translation>not indexed</translation>
     </message>
     <message>
       <source>offered key is not a key of the active vault</source>
@@ -3503,6 +2977,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>primary fingerprint differs from the offer</source>
       <translation>primary fingerprint differs from the offer</translation>
+    </message>
+    <message>
+      <source>private search is unavailable</source>
+      <translation>private search is unavailable</translation>
     </message>
     <message>
       <source>public key part too large</source>
@@ -3553,10 +3031,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>revocar la subclave</translation>
     </message>
     <message>
-      <source>secret changed while opening</source>
-      <translation>secret changed while opening</translation>
-    </message>
-    <message>
       <source>secret content</source>
       <translation>secret content</translation>
     </message>
@@ -3577,16 +3051,12 @@ No incluye contraseñas ni valores de credenciales.
       <translation>secret key part missing</translation>
     </message>
     <message>
+      <source>secret keys unavailable for the list</source>
+      <translation>secret keys unavailable for the list</translation>
+    </message>
+    <message>
       <source>secret part is a GnuPG stub without key material</source>
       <translation>secret part is a GnuPG stub without key material</translation>
-    </message>
-    <message>
-      <source>secret revision is exhausted</source>
-      <translation>secret revision is exhausted</translation>
-    </message>
-    <message>
-      <source>secret title cannot be empty</source>
-      <translation>secret title cannot be empty</translation>
     </message>
     <message>
       <source>seleccionar la clave firmante</source>
@@ -3639,54 +3109,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>signature before the primary key</source>
       <translation>signature before the primary key</translation>
-    </message>
-    <message>
-      <source>store contains too many recipient records for a backup</source>
-      <translation>store contains too many recipient records for a backup</translation>
-    </message>
-    <message>
-      <source>store contains too many records for a backup</source>
-      <translation>store contains too many records for a backup</translation>
-    </message>
-    <message>
-      <source>store directory must be a real directory</source>
-      <translation>store directory must be a real directory</translation>
-    </message>
-    <message>
-      <source>store directory must have private 0700 permissions</source>
-      <translation>store directory must have private 0700 permissions</translation>
-    </message>
-    <message>
-      <source>store exceeds the maximum backup payload size</source>
-      <translation>store exceeds the maximum backup payload size</translation>
-    </message>
-    <message>
-      <source>store file must not have hard links</source>
-      <translation>store file must not have hard links</translation>
-    </message>
-    <message>
-      <source>store path is not owned by the current user</source>
-      <translation>store path is not owned by the current user</translation>
-    </message>
-    <message>
-      <source>store path must be a regular file</source>
-      <translation>store path must be a regular file</translation>
-    </message>
-    <message>
-      <source>stored folder recipient metadata is invalid</source>
-      <translation>stored folder recipient metadata is invalid</translation>
-    </message>
-    <message>
-      <source>stored recipient fingerprint is invalid</source>
-      <translation>stored recipient fingerprint is invalid</translation>
-    </message>
-    <message>
-      <source>stored recipient metadata is invalid</source>
-      <translation>stored recipient metadata is invalid</translation>
-    </message>
-    <message>
-      <source>stored secret recipient metadata is invalid</source>
-      <translation>stored secret recipient metadata is invalid</translation>
     </message>
     <message>
       <source>subkey before the primary key</source>
@@ -3757,12 +3179,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>synthetic OpenPGP recipient is invalid</translation>
     </message>
     <message>
-      <source>synthetic fixture operation failed</source>
-      <translation>synthetic fixture operation failed</translation>
-    </message>
-    <message>
       <source>the challenge was not decrypted by the offered key</source>
       <translation>the challenge was not decrypted by the offered key</translation>
+    </message>
+    <message>
+      <source>the device identity is unavailable</source>
+      <translation>the device identity is unavailable</translation>
+    </message>
+    <message>
+      <source>the device profile has no parent directory</source>
+      <translation>the device profile has no parent directory</translation>
+    </message>
+    <message>
+      <source>the item was refused for its fields</source>
+      <translation>the item was refused for its fields</translation>
     </message>
     <message>
       <source>the primary key has no keygrip to forget</source>
@@ -3793,20 +3223,28 @@ No incluye contraseñas ni valores de credenciales.
       <translation>the selected identity is not a valid recipient</translation>
     </message>
     <message>
+      <source>the vault did not load</source>
+      <translation>the vault did not load</translation>
+    </message>
+    <message>
+      <source>the vault exceeds the maximum backup size</source>
+      <translation>the vault exceeds the maximum backup size</translation>
+    </message>
+    <message>
+      <source>the vault has no parent directory</source>
+      <translation>the vault has no parent directory</translation>
+    </message>
+    <message>
+      <source>this template does not allow added fields</source>
+      <translation>this template does not allow added fields</translation>
+    </message>
+    <message>
       <source>timed out</source>
       <translation>timed out</translation>
     </message>
     <message>
       <source>too many backup recipients were selected</source>
       <translation>too many backup recipients were selected</translation>
-    </message>
-    <message>
-      <source>too many icon resources</source>
-      <translation>too many icon resources</translation>
-    </message>
-    <message>
-      <source>too many linked pairs</source>
-      <translation>too many linked pairs</translation>
     </message>
     <message>
       <source>truncated key material</source>
@@ -3829,6 +3267,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>truncated protection header</translation>
     </message>
     <message>
+      <source>un campo</source>
+      <translation>un campo</translation>
+    </message>
+    <message>
+      <source>una sección</source>
+      <translation>una sección</translation>
+    </message>
+    <message>
       <source>unexpected packet: not exactly one transferable secret key</source>
       <translation>unexpected packet: not exactly one transferable secret key</translation>
     </message>
@@ -3841,14 +3287,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>unlock challenge mismatch</translation>
     </message>
     <message>
-      <source>unreferenced icon resource</source>
-      <translation>unreferenced icon resource</translation>
-    </message>
-    <message>
-      <source>unsupported field projection</source>
-      <translation>unsupported field projection</translation>
-    </message>
-    <message>
       <source>unsupported public-key algorithm</source>
       <translation>unsupported public-key algorithm</translation>
     </message>
@@ -3857,18 +3295,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>user ID before the primary key</translation>
     </message>
     <message>
+      <source>vault change failed</source>
+      <translation>vault change failed</translation>
+    </message>
+    <message>
+      <source>vault did not open</source>
+      <translation>vault did not open</translation>
+    </message>
+    <message>
       <source>vault directory is unavailable</source>
       <translation>vault directory is unavailable</translation>
-    </message>
-    <message>
-      <source>vault primary key is invalid</source>
-      <translation>vault primary key is invalid</translation>
-    </message>
-    <message>
-      <source>{date}  {label}
-</source>
-      <translation>{date}  {label}
-</translation>
     </message>
     <message>
       <source>{label} exceeds the maximum size</source>
@@ -3879,12 +3315,76 @@ No incluye contraseñas ni valores de credenciales.
       <translation>{label} · {} — {}</translation>
     </message>
     <message>
+      <source>{subject} admite como máximo {limit} valores.</source>
+      <translation>{subject} admite como máximo {limit} valores.</translation>
+    </message>
+    <message>
+      <source>{subject} aparece más de una vez.</source>
+      <translation>{subject} aparece más de una vez.</translation>
+    </message>
+    <message>
+      <source>{subject} contiene caracteres no permitidos.</source>
+      <translation>{subject} contiene caracteres no permitidos.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene un correo válido.</source>
+      <translation>{subject} no contiene un correo válido.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene un número de tarjeta válido.</source>
+      <translation>{subject} no contiene un número de tarjeta válido.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene un número válido.</source>
+      <translation>{subject} no contiene un número válido.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene un teléfono válido.</source>
+      <translation>{subject} no contiene un teléfono válido.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene una clave SSH válida.</source>
+      <translation>{subject} no contiene una clave SSH válida.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene una contraseña Wi-Fi válida.</source>
+      <translation>{subject} no contiene una contraseña Wi-Fi válida.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene una dirección web válida.</source>
+      <translation>{subject} no contiene una dirección web válida.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene una fecha válida; usa AAAA-MM-DD.</source>
+      <translation>{subject} no contiene una fecha válida; usa AAAA-MM-DD.</translation>
+    </message>
+    <message>
+      <source>{subject} no contiene una semilla TOTP válida (Base32 u otpauth://).</source>
+      <translation>{subject} no contiene una semilla TOTP válida (Base32 u otpauth://).</translation>
+    </message>
+    <message>
+      <source>{subject} no tiene un valor válido.</source>
+      <translation>{subject} no tiene un valor válido.</translation>
+    </message>
+    <message>
+      <source>{subject} supera el máximo de {limit} bytes.</source>
+      <translation>{subject} supera el máximo de {limit} bytes.</translation>
+    </message>
+    <message>
+      <source>{subject} no tiene la cantidad de dígitos esperada.</source>
+      <translation>{subject} no tiene la cantidad de dígitos esperada.</translation>
+    </message>
+    <message>
+      <source>{subject} tiene una opción que no existe.</source>
+      <translation>{subject} tiene una opción que no existe.</translation>
+    </message>
+    <message>
       <source>{} ({patterns})</source>
       <translation>{} ({patterns})</translation>
     </message>
     <message>
-      <source>{} · {}{marker}</source>
-      <translation>{} · {}{marker}</translation>
+      <source>«{label}»</source>
+      <translation>«{label}»</translation>
     </message>
   </context>
   <context>
@@ -4168,6 +3668,41 @@ La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de rellen
     </message>
   </context>
   <context>
+    <name>ConflictDialog</name>
+    <message>
+      <source>Elegir qué conservar</source>
+      <translation>Elegir qué conservar</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
+    </message>
+    <message>
+      <source>Guardar combinación</source>
+      <translation>Guardar combinación</translation>
+    </message>
+    <message>
+      <source>Ocultar</source>
+      <translation>Ocultar</translation>
+    </message>
+    <message>
+      <source>Mostrar</source>
+      <translation>Mostrar</translation>
+    </message>
+    <message>
+      <source>Este equipo</source>
+      <translation>Este equipo</translation>
+    </message>
+    <message>
+      <source>Otro dispositivo</source>
+      <translation>Otro dispositivo</translation>
+    </message>
+    <message>
+      <source>(vacío)</source>
+      <translation>(vacío)</translation>
+    </message>
+  </context>
+  <context>
     <name>Contacts</name>
     <message>
       <source>No se pudo guardar el contacto en KDE Contacts.</source>
@@ -4425,6 +3960,14 @@ Huella(s) detectadas:
       <translation>Comparte los elementos de esta bóveda. El teléfono necesita su clave OpenPGP y tener Sync activado.</translation>
     </message>
     <message>
+      <source>La bóveda de Desktop está bloqueada. Los cambios siguen llegando cifrados y se podrán ver al desbloquearla.</source>
+      <translation>La bóveda de Desktop está bloqueada. Los cambios siguen llegando cifrados y se podrán ver al desbloquearla.</translation>
+    </message>
+    <message>
+      <source>La sincronización sigue, pero Desktop no puede abrir lo que llega cifrado para la clave de %1 hasta que la desbloquees.</source>
+      <translation>La sincronización sigue, pero Desktop no puede abrir lo que llega cifrado para la clave de %1 hasta que la desbloquees.</translation>
+    </message>
+    <message>
       <source>Clave OpenPGP</source>
       <translation>Clave OpenPGP</translation>
     </message>
@@ -4443,14 +3986,6 @@ Huella(s) detectadas:
     <message>
       <source>Sincronizar la clave de %1</source>
       <translation>Sincronizar la clave de %1</translation>
-    </message>
-    <message>
-      <source>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</source>
-      <translation>La sincronización está en pausa: la bóveda de Desktop está bloqueada. Desbloquéala para que los cambios se intercambien con el teléfono.</translation>
-    </message>
-    <message>
-      <source>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</source>
-      <translation>La sincronización está detenida: falta la contraseña de la clave de %1 y Desktop no puede leer sus elementos.</translation>
     </message>
     <message>
       <source>Desbloquear clave…</source>
@@ -4531,26 +4066,6 @@ Huella(s) detectadas:
     <message>
       <source>Cancelar transferencia</source>
       <translation>Cancelar transferencia</translation>
-    </message>
-    <message>
-      <source>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</source>
-      <translation>Bóveda aislada con una clave de prueba conocida. Solo datos sintéticos.</translation>
-    </message>
-    <message>
-      <source>Activar prueba de Sync</source>
-      <translation>Activar prueba de Sync</translation>
-    </message>
-    <message>
-      <source>Actualizar prueba</source>
-      <translation>Actualizar prueba</translation>
-    </message>
-    <message>
-      <source>Crear credencial de prueba</source>
-      <translation>Crear credencial de prueba</translation>
-    </message>
-    <message>
-      <source>Revisiones guardadas en este equipo: %1</source>
-      <translation>Revisiones guardadas en este equipo: %1</translation>
     </message>
   </context>
   <context>
@@ -5258,6 +4773,22 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>%1 · %2</source>
       <translation>%1 · %2</translation>
+    </message>
+    <message>
+      <source>Este elemento se editó en dos dispositivos a la vez. Hasta que elijas qué conservar se muestra la versión de este equipo.</source>
+      <translation>Este elemento se editó en dos dispositivos a la vez. Hasta que elijas qué conservar se muestra la versión de este equipo.</translation>
+    </message>
+    <message>
+      <source>Revisar diferencias…</source>
+      <translation>Revisar diferencias…</translation>
+    </message>
+    <message>
+      <source>Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.</source>
+      <translation>Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.</translation>
+    </message>
+    <message>
+      <source>Este elemento está cifrado para una clave de este dispositivo, pero todavía no se pudo abrir. Se reintenta solo al desbloquear la clave; si sigue así, es un fallo y queda en el registro.</source>
+      <translation>Este elemento está cifrado para una clave de este dispositivo, pero todavía no se pudo abrir. Se reintenta solo al desbloquear la clave; si sigue así, es un fallo y queda en el registro.</translation>
     </message>
     <message>
       <source>Elemento vinculado %1, en la papelera</source>
@@ -8692,12 +8223,12 @@ https://cuenta.ejemplo.test</translation>
       <translation>Sincronizando…</translation>
     </message>
     <message>
-      <source>Sincronizada</source>
-      <translation>Sincronizada</translation>
+      <source>Sin claves que sincronizar</source>
+      <translation>Sin claves que sincronizar</translation>
     </message>
     <message>
-      <source>La sincronización está detenida: una clave necesita su contraseña.</source>
-      <translation>La sincronización está detenida: una clave necesita su contraseña.</translation>
+      <source>Sincronizada</source>
+      <translation>Sincronizada</translation>
     </message>
     <message>
       <source>ahora</source>
@@ -8720,19 +8251,71 @@ https://cuenta.ejemplo.test</translation>
       <translation>Última sincronización %1</translation>
     </message>
     <message>
+      <source>Conectado · ninguna clave se sincroniza</source>
+      <translation>Conectado · ninguna clave se sincroniza</translation>
+    </message>
+    <message>
       <source>Conectado</source>
       <translation>Conectado</translation>
+    </message>
+    <message>
+      <source>Reconectando…</source>
+      <translation>Reconectando…</translation>
+    </message>
+    <message>
+      <source>Conectando…</source>
+      <translation>Conectando…</translation>
+    </message>
+    <message>
+      <source>Falló la conexión</source>
+      <translation>Falló la conexión</translation>
     </message>
     <message>
       <source>Sin conexión</source>
       <translation>Sin conexión</translation>
     </message>
+    <message>
+      <source>La sincronización sigue. Lo que llega cifrado para una clave sin contraseña se verá al desbloquearla.</source>
+      <translation>La sincronización sigue. Lo que llega cifrado para una clave sin contraseña se verá al desbloquearla.</translation>
+    </message>
+    <message>
+      <source>tus dispositivos</source>
+      <translation>tus dispositivos</translation>
+    </message>
+    <message>
+      <source>Sin conexión con %1. La bóveda se sincroniza al volver a conectarse.</source>
+      <translation>Sin conexión con %1. La bóveda se sincroniza al volver a conectarse.</translation>
+    </message>
+    <message>
+      <source>Conectando con %1…</source>
+      <translation>Conectando con %1…</translation>
+    </message>
+    <message>
+      <source>%1 está conectado, pero ninguna clave se sincroniza con él.</source>
+      <translation>%1 está conectado, pero ninguna clave se sincroniza con él.</translation>
+    </message>
+    <message>
+      <source>Ninguna clave se sincroniza con %1.</source>
+      <translation>Ninguna clave se sincroniza con %1.</translation>
+    </message>
+    <message>
+      <source>Elige las claves en Dispositivos.</source>
+      <translation>Elige las claves en Dispositivos.</translation>
+    </message>
+    <message>
+      <source>Ningún dispositivo vinculado. La bóveda solo está en este equipo.</source>
+      <translation>Ningún dispositivo vinculado. La bóveda solo está en este equipo.</translation>
+    </message>
   </context>
   <context>
     <name>SyncStatusPopover</name>
     <message>
-      <source>Ningún dispositivo sincroniza esta bóveda.</source>
-      <translation>Ningún dispositivo sincroniza esta bóveda.</translation>
+      <source>Ningún dispositivo vinculado. La bóveda solo está en este equipo.</source>
+      <translation>Ningún dispositivo vinculado. La bóveda solo está en este equipo.</translation>
+    </message>
+    <message>
+      <source>Vincular un dispositivo</source>
+      <translation>Vincular un dispositivo</translation>
     </message>
     <message numerus="yes">
       <source>%n clave</source>
@@ -8740,6 +8323,10 @@ https://cuenta.ejemplo.test</translation>
         <numerusform>%n clave</numerusform>
         <numerusform>%n claves</numerusform>
       </translation>
+    </message>
+    <message>
+      <source>Elegir claves</source>
+      <translation>Elegir claves</translation>
     </message>
     <message>
       <source>Actualizar</source>
