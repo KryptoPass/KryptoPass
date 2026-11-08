@@ -23,7 +23,7 @@ use crate::convert::{
     text, version_id,
 };
 use crate::{graph, read};
-use kryptopass_core::util::{is_clean_line, unix_millis};
+use kryptopass_core::util::{has_control_characters, is_clean_line, unix_millis};
 
 /// Sanity bound on a stored title; the vault applies the real, smaller limit.
 const MAX_TITLE_BYTES: usize = 1024;
@@ -349,10 +349,14 @@ pub(super) fn index(connection: &Connection, versions: Vec<IndexedVersion>) -> S
             )
             .optional()
             .sql()?;
-        if owner.as_deref() != Some(text(item.0).as_str())
-            || is_indexed(connection, &key)?
-            || !is_clean_line(&state.title, MAX_TITLE_BYTES)
-        {
+        // Versions are identified by their ids; the title only names the item for a person
+        // and never decides whether a version is indexed.
+        if is_indexed(connection, &key)? {
+            continue;
+        }
+        if owner.as_deref() != Some(text(item.0).as_str()) {
+            // Never silent: a readable version left out shows as unreadable in the list.
+            tracing::warn!(version = %key, "received version not indexed: it does not belong to the item it names");
             continue;
         }
         insert_index(connection, id, &received_columns(connection, state)?)?;
@@ -528,12 +532,40 @@ fn received_columns(connection: &Connection, state: OpenedState) -> StoreResult<
     Ok(IndexColumns {
         wanted_folder: state.folder.map(|folder| text(folder.0)),
         folder,
-        title: state.title,
+        title: display_title(&state.title),
         template: state.template.as_str().to_owned(),
         favorite: state.favorite,
         trashed: state.trashed,
         icon,
     })
+}
+
+/// What the list shows for a title another device wrote. It is kept readable rather than
+/// refused: control characters become spaces, the ends are trimmed, the length is bounded,
+/// and a dash stands in when nothing printable is left (the index needs a non-empty title).
+fn display_title(title: &str) -> String {
+    let printable: String = title
+        .chars()
+        .map(|character| {
+            let mut buffer = [0_u8; 4];
+            if has_control_characters(character.encode_utf8(&mut buffer), false) {
+                ' '
+            } else {
+                character
+            }
+        })
+        .collect();
+    let trimmed = printable.trim();
+    let mut end = trimmed.len().min(MAX_TITLE_BYTES);
+    while !trimmed.is_char_boundary(end) {
+        end -= 1;
+    }
+    let bounded = trimmed[..end].trim_end();
+    if bounded.is_empty() {
+        "—".to_owned()
+    } else {
+        bounded.to_owned()
+    }
 }
 
 fn insert_index(

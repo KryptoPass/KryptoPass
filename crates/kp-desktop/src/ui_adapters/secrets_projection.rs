@@ -131,6 +131,7 @@ pub(super) fn store_snapshot(
     items: Vec<ItemMeta>,
     links: Vec<SecretLink>,
     opaque: Vec<OpaqueItem>,
+    secret_keys: Option<&std::collections::HashSet<KeyFingerprint>>,
 ) -> StoreSnapshot {
     let mut companions = std::collections::HashMap::new();
     for link in links {
@@ -189,12 +190,27 @@ pub(super) fn store_snapshot(
         })
         .collect();
     // Without a readable version there is no title: the list says so instead
-    // of hiding what this device stores but cannot open.
+    // of hiding what this device stores but cannot open. Why it cannot is decided by the
+    // recipients, never by "not indexed": an item for a key that is here is not foreign.
     entries.extend(opaque.into_iter().map(|item| {
+        let ours = secret_keys.is_none_or(|keys| item.recipients.includes_any(keys.iter()));
+        if ours {
+            tracing::warn!(
+                item = %item.id.0,
+                keys_known = secret_keys.is_some(),
+                "an item for a key on this device is not indexed yet"
+            );
+        }
         json!({
             "id": item.id.0.to_string(),
             "folder": "",
-            "title": crate::i18n::text("No legible en este dispositivo"),
+            "title": crate::i18n::text(if ours {
+                "Pendiente de abrir"
+            } else {
+                "No legible en este dispositivo"
+            }),
+            // "foreign": no recipient key is here. "pending": one is, but it is not open yet.
+            "unreadableReason": if ours { "pending" } else { "foreign" },
             "relatedEntryId": "",
             "kind": "custom",
             "format": "Texto",

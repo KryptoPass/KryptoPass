@@ -250,12 +250,14 @@ Controls.Pane {
                         ]
                     }
 
+                    // Why an item cannot be opened comes from its recipients: "foreign" only
+                    // when none of its keys is on this device.
                     Kirigami.InlineMessage {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !!root.selected && root.selected.readable === false
-                        type: Kirigami.MessageType.Information
-                        text: qsTr("Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.")
+                        type: root.selected?.unreadableReason === "foreign" ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
+                        text: root.selected?.unreadableReason === "foreign" ? qsTr("Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.") : qsTr("Este elemento está cifrado para una clave de este dispositivo, pero todavía no se pudo abrir. Se reintenta solo al desbloquear la clave; si sigue así, es un fallo y queda en el registro.")
                     }
 
                     ConflictDialog {

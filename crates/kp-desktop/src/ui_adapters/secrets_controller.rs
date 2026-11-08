@@ -867,11 +867,17 @@ fn item_meta(session: &VaultSession, id: SecretId) -> anyhow::Result<ItemMeta> {
 
 fn snapshot_of(session: &VaultSession) -> anyhow::Result<StoreSnapshot> {
     let vault = session.vault();
+    // Unknown keys never make an item look foreign: it then shows as pending.
+    let secret_keys = vault
+        .secret_keys()
+        .inspect_err(|error| tracing::warn!(error = %error, "secret keys unavailable for the list"))
+        .ok();
     Ok(store_snapshot(
         vault.list_folders()?,
         vault.list_items()?,
         vault.list_links()?,
         vault.opaque_items()?,
+        secret_keys.as_ref(),
     ))
 }
 
