@@ -28,7 +28,9 @@ desafío. Va después de validar Sync. Detalle en
 ## 4. Bloqueo de claves y Sync
 
 `docs/plan-bloqueo-claves-sync-2026-10-25.md` es una propuesta sin implementar:
-clave principal cambiable, acceso por clave y pausa de Sync al bloquear.
+clave principal cambiable y acceso por clave. La pausa de Sync al bloquear se
+descartó el 2026-11-07: Sync sigue bloqueado y solo espera el listado de lo
+recibido, con aviso de la clave pendiente.
 
 ## 5. Tests y revisión de seguridad
 

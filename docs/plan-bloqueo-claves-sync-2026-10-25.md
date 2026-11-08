@@ -1,5 +1,15 @@
 # Plan: clave principal, acceso por clave y bloqueo de Sync
 
+> **Decisión del 2026-11-07: Sync no se pausa al bloquear.** El intercambio
+> mueve versiones cifradas y firmadas y nunca descifra, así que bloquear la
+> bóveda o una clave no lo detiene ni exige pausa negociada con el teléfono.
+> Lo único que espera a la contraseña es listar lo recibido (`reindex`), que
+> avisa de la clave que falta en la página del dispositivo y en el indicador.
+> Quedan **descartados** el §6 «Sync al bloquear», la pausa por vínculo del §5,
+> las filas de pausa de §9 a §11 y la pregunta del §1. Lo demás (clave
+> principal, acceso por clave, caché de GnuPG, búsqueda) sigue siendo una
+> propuesta sin implementar.
+
 Fecha: 2026-10-25. Alcance: Desktop y el contrato mínimo con Android que
 requiera pausar/reanudar Sync. Estado: propuesta de comportamiento y secuencia
 de implementación; este documento no declara implementados los cambios.
@@ -22,11 +32,9 @@ elementos existentes, no cambia el conjunto compartido por dispositivo ni el
 `vault_id`. Cambiar destinatarios o volver a cifrar elementos queda fuera de
 esta acción.
 
-**Propuesta para el bloqueo global:** pausar todo Sync de la bóveda, incluido
-el intercambio de ciphertext ya preparado, conservando el vínculo del
-dispositivo. Es la opción recomendada de la pregunta presentada al usuario;
-si elige permitir intercambio cifrado, se modificará expresamente este
-contrato antes de implementar esa parte.
+**Bloqueo global (decidido):** Sync sigue, también con la bóveda bloqueada. Se
+intercambia ciphertext; lo recibido se lista al desbloquear la clave que le
+falta. Esto reemplaza la propuesta anterior de pausar todo Sync.
 
 ## 2. Clave principal cambiable
 
