@@ -48,7 +48,7 @@ KActionCollection *actions()
             KStandardShortcut::shortcut(KStandardShortcut::DeleteFile));
         add("newFolder", QT_TRANSLATE_NOOP("Shortcuts", "Nueva carpeta…"), "folder-new", {QKeySequence(QStringLiteral("Ctrl+Shift+N"))});
         add("refreshKeys", QT_TRANSLATE_NOOP("Shortcuts", "Recargar llavero"), "view-refresh", KStandardShortcut::shortcut(KStandardShortcut::Reload));
-        add("createKey", QT_TRANSLATE_NOOP("Shortcuts", "Crear clave OpenPGP…"), "document-new", {QKeySequence(QStringLiteral("Ctrl+Shift+K"))});
+        add("createKey", QT_TRANSLATE_NOOP("Shortcuts", "Añadir identidad…"), "document-new", {QKeySequence(QStringLiteral("Ctrl+Shift+K"))});
         add("importKey", QT_TRANSLATE_NOOP("Shortcuts", "Importar clave OpenPGP…"), "document-import", {QKeySequence(QStringLiteral("Ctrl+Shift+I"))});
         add("importVault", QT_TRANSLATE_NOOP("Shortcuts", "Importar desde otro gestor…"), "document-import", {});
         add("exportBackup", QT_TRANSLATE_NOOP("Shortcuts", "Crear copia de seguridad…"), "document-save", {});

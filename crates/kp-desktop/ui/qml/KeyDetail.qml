@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 ColumnLayout {
@@ -9,20 +9,18 @@ ColumnLayout {
     required property var selectedKey
     required property KeyStore keyStore
     required property KeyOperationDialog operationDialog
-    property bool expanded: false
-    property string displayedId: ""
-    readonly property var identities: (selectedKey?.identities || []).slice().sort((a, b) => Number(a.revoked || a.invalid) - Number(b.revoked || b.invalid) || a.id.localeCompare(b.id))
-    readonly property var signatures: (selectedKey?.signatures || []).slice().sort((a, b) => a.signer.localeCompare(b.signer) || a.keyId.localeCompare(b.keyId) || a.identity.localeCompare(b.identity))
-    readonly property bool hasCertifier: keyStore.entries.some(key => key.hasSecret && key.canCertify && key.id.toUpperCase() !== (selectedKey?.id || "").toUpperCase())
-    readonly property bool operationAvailable: !keyStore.controller.busy && !keyStore.controller.operationBusy
     signal notificationRequested(string message)
-    spacing: 0
+    property string displayedId: ""
+    readonly property bool available: !keyStore.controller.busy
+    spacing: Kirigami.Units.smallSpacing
+    readonly property IdentityWording wording: keyStore.wording
+    readonly property bool own: !!selectedKey?.own
+    readonly property bool compact: width < Kirigami.Units.gridUnit * 34
+    readonly property var sections: [qsTr("General y accesos"), qsTr("Seguridad y recuperación"), qsTr("Servidores y firmas"), qsTr("Contactos KDE")]
     onSelectedKeyChanged: {
-        const id = selectedKey?.id || "";
-        if (id !== displayedId) {
+        if (displayedId !== (selectedKey?.id || "")) {
             tabs.currentIndex = 0;
-            expanded = false;
-            displayedId = id;
+            displayedId = selectedKey?.id || "";
         }
     }
     function copyFingerprint() {
@@ -33,12 +31,6 @@ ColumnLayout {
         clipboardSource.deselect();
         notificationRequested(qsTr("Copiado al portapapeles"));
     }
-    function groupedFingerprint(value) {
-        return (value || "").replace(/(.{4})(?=.)/g, "$1 ");
-    }
-    function expiration(value) {
-        return value ? new Date(value * 1000).toLocaleDateString(Qt.locale(), Locale.ShortFormat) : qsTr("Sin caducidad");
-    }
     TextEdit {
         id: clipboardSource
         visible: false
@@ -46,523 +38,229 @@ ColumnLayout {
         textFormat: TextEdit.PlainText
         text: root.selectedKey?.id || ""
     }
-    OnlineServicesDialog {
-        id: onlineDialog
+    IdentityEditor {
+        id: identityEditor
         keyStore: root.keyStore
     }
-    Controls.Menu {
-        id: onlineMenu
-        Instantiator {
-            model: root.keyStore.onlineSettings.services
-            delegate: Controls.MenuItem {
-                required property string modelData
-                required property int index
-                text: index === 0 ? qsTr("%1 (predeterminado)").arg(modelData.split("/")[2] || modelData) : modelData.split("/")[2] || modelData
-                Controls.ToolTip.visible: hovered || visualFocus
-                Controls.ToolTip.text: modelData
-                enabled: root.keyStore.onlineSettings.enabled
-                onTriggered: root.keyStore.controller.openOnlineService(index, root.selectedKey.id)
-            }
-            onObjectAdded: (index, object) => onlineMenu.insertItem(index, object)
-            onObjectRemoved: (index, object) => onlineMenu.removeItem(object)
-        }
-        Controls.MenuSeparator {}
-        Controls.MenuItem {
-            text: qsTr("Configurar servicios online…")
-            icon.name: "configure"
-            onTriggered: onlineDialog.edit()
-        }
-    }
-    Flow {
+    RowLayout {
         Layout.fillWidth: true
         Layout.margins: Kirigami.Units.largeSpacing
-        spacing: Kirigami.Units.smallSpacing
-        Controls.Button {
-            text: qsTr("Exportar clave pública…")
-            icon.name: "document-save-as"
-            enabled: root.operationAvailable
-            onClicked: root.operationDialog.openFor("exportPublic", root.selectedKey.id)
+        Layout.bottomMargin: 0
+        spacing: Kirigami.Units.largeSpacing
+        KeyAvatar {
+            source: root.selectedKey?.photoSource || ""
+            Layout.preferredWidth: Kirigami.Units.iconSizes.huge
+            Layout.preferredHeight: Kirigami.Units.iconSizes.huge
+            Layout.alignment: Qt.AlignTop
+            size: Kirigami.Units.iconSizes.huge
         }
-        Controls.Button {
-            text: qsTr("Copiar clave pública")
-            icon.name: "edit-copy"
-            enabled: root.operationAvailable
-            onClicked: root.operationDialog.openFor("copyPublic", root.selectedKey.id)
-        }
-        Controls.Button {
-            text: qsTr("Actualizar desde servidor…")
-            icon.name: "view-refresh"
-            enabled: root.operationAvailable
-            onClicked: root.operationDialog.openFor("refreshExternal", root.selectedKey.id)
-        }
-        Controls.ToolButton {
-            id: onlineButton
-            text: qsTr("Servicios online")
-            icon.name: "internet-services"
-            onClicked: onlineMenu.popup(onlineButton, 0, onlineButton.height)
-        }
-        Controls.ToolButton {
-            id: administrationButton
-            text: qsTr("Administrar")
-            icon.name: "configure"
-            enabled: root.operationAvailable
-            onClicked: administrationMenu.popup(administrationButton, 0, administrationButton.height)
-            Controls.ToolTip.visible: hovered || visualFocus
-            Controls.ToolTip.text: text
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-        }
-    }
-    Kirigami.InlineMessage {
-        Layout.fillWidth: true
-        Layout.leftMargin: Kirigami.Units.largeSpacing
-        Layout.rightMargin: Kirigami.Units.largeSpacing
-        visible: !!root.selectedKey?.needsOwnTrust
-        type: Kirigami.MessageType.Warning
-        text: qsTr("GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.")
-        actions: [
-            Kirigami.Action {
-                text: qsTr("Marcar como mía…")
-                icon.name: "security-high"
-                enabled: root.operationAvailable
-                onTriggered: root.operationDialog.openFor("markAsOwn", root.selectedKey.id)
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            spacing: 0
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                Kirigami.Heading {
+                    Layout.maximumWidth: parent.width - editButton.width - Kirigami.Units.smallSpacing
+                    level: 2
+                    text: root.selectedKey?.title || ""
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                }
+                Controls.ToolButton {
+                    id: editButton
+                    icon.name: "document-edit"
+                    display: Controls.AbstractButton.IconOnly
+                    text: qsTr("Editar alias en KryptoPass")
+                    enabled: root.available
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    Controls.ToolTip.text: text
+                    onClicked: identityEditor.edit(root.selectedKey)
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
             }
-        ]
+            Controls.Label {
+                Layout.fillWidth: true
+                text: (root.selectedKey?.pgpTitle || "") + (root.selectedKey?.email ? " <" + root.selectedKey.email + ">" : "")
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                Kirigami.Icon {
+                    visible: root.wording.needsAttention(root.selectedKey)
+                    source: "emblem-warning"
+                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                    Accessible.ignored: true
+                }
+                Controls.Label {
+                    text: (root.selectedKey?.status || "") + " · " + root.wording.expiry(root.selectedKey?.subkeys[0]?.expiresAt)
+                    textFormat: Text.PlainText
+                    opacity: 0.75
+                }
+                Kirigami.LinkButton {
+                    visible: !!root.selectedKey?.hasSecret
+                    text: qsTr("Cambiar")
+                    enabled: root.available
+                    onClicked: root.operationDialog.openFor("expiry", root.selectedKey.id)
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                Controls.Label {
+                    Layout.maximumWidth: parent.width - copyFingerprintButton.width
+                    text: root.wording.groupedFingerprint(root.selectedKey?.id)
+                    textFormat: Text.PlainText
+                    elide: Text.ElideMiddle
+                    font.family: Kirigami.Theme.fixedWidthFont.family
+                    opacity: 0.75
+                    Accessible.name: qsTr("Huella de la clave")
+                }
+                Controls.ToolButton {
+                    id: copyFingerprintButton
+                    icon.name: "edit-copy"
+                    display: Controls.AbstractButton.IconOnly
+                    text: qsTr("Copiar huella")
+                    implicitWidth: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
+                    implicitHeight: implicitWidth
+                    Controls.ToolTip.visible: hovered || visualFocus
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    Controls.ToolTip.text: text + ". " + root.wording.tips.fingerprint
+                    onClicked: root.copyFingerprint()
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
+        }
+        RowLayout {
+            Layout.alignment: Qt.AlignTop
+            spacing: Kirigami.Units.smallSpacing
+            Controls.Button {
+                text: qsTr("Copiar clave pública")
+                icon.name: "edit-copy"
+                display: root.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                enabled: root.available
+                Controls.ToolTip.visible: root.compact && (hovered || visualFocus)
+                Controls.ToolTip.text: text
+                onClicked: root.operationDialog.openFor("copyPublic", root.selectedKey.id)
+            }
+            Controls.Button {
+                id: exportButton
+                text: qsTr("Exportar…")
+                icon.name: "document-save-as"
+                display: root.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
+                enabled: root.available
+                Controls.ToolTip.visible: root.compact && (hovered || visualFocus)
+                Controls.ToolTip.text: text
+                onClicked: exportMenu.popup(exportButton, 0, exportButton.height)
+                Controls.Menu {
+                    id: exportMenu
+                    Controls.MenuItem {
+                        text: qsTr("Exportar clave pública (.asc)…")
+                        icon.name: "document-save-as"
+                        onTriggered: root.operationDialog.openFor("exportPublic", root.selectedKey.id)
+                    }
+                    Controls.MenuItem {
+                        text: qsTr("Respaldar clave privada (.asc)…")
+                        icon.name: "document-encrypted"
+                        enabled: !!root.selectedKey?.hasSecret
+                        onTriggered: root.operationDialog.openFor("backupPrivate", root.selectedKey.id)
+                    }
+                }
+            }
+        }
+    }
+    Controls.ComboBox {
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.largeSpacing
+        Layout.rightMargin: Kirigami.Units.largeSpacing
+        visible: !!root.keyStore.selectedRow?.isPerson && root.keyStore.selectedRow.identities.length > 1
+        model: root.keyStore.selectedRow?.isPerson ? root.keyStore.selectedRow.identities : []
+        textRole: "title"
+        Accessible.name: qsTr("Claves de esta persona")
+        currentIndex: root.keyStore.selectedRow?.isPerson ? root.keyStore.selectedRow.identities.findIndex(key => key.id === root.selectedKey?.id) : -1
+        onActivated: index => root.keyStore.selectedIdentityId = root.keyStore.selectedRow.identities[index].id
     }
     Kirigami.InlineMessage {
         Layout.fillWidth: true
         Layout.leftMargin: Kirigami.Units.largeSpacing
         Layout.rightMargin: Kirigami.Units.largeSpacing
-        visible: !!root.keyStore.controller.operationError && !root.operationDialog.opened && !onlineDialog.opened
+        visible: !!root.keyStore.controller.catalogError || !!root.keyStore.controller.operationError
         type: Kirigami.MessageType.Error
-        text: root.keyStore.controller.operationError
+        text: root.keyStore.controller.catalogError || root.keyStore.controller.operationError
     }
-    Controls.Menu {
-        id: administrationMenu
-        Controls.MenuItem {
-            visible: !!root.selectedKey?.needsOwnTrust
-            text: qsTr("Marcar como mía…")
-            icon.name: "security-high"
-            onTriggered: root.operationDialog.openFor("markAsOwn", root.selectedKey.id)
-        }
-        Controls.MenuItem {
-            visible: !!root.selectedKey?.hasSecret
-            text: qsTr("Guardar respaldo privado…")
-            icon.name: "document-save-as"
-            onTriggered: root.operationDialog.openFor("backupPrivate", root.selectedKey.id)
-        }
-        Controls.MenuItem {
-            visible: !!root.selectedKey?.hasSecret
-            text: qsTr("Cambiar passphrase…")
-            icon.name: "password-show-on"
-            onTriggered: root.operationDialog.openFor("passphrase", root.selectedKey.id)
-        }
-        Controls.MenuSeparator {
-            visible: !!root.selectedKey?.hasSecret
-        }
-        Controls.MenuItem {
-            visible: !!root.selectedKey?.hasSecret
-            text: qsTr("Revocar clave…")
-            icon.name: "dialog-warning"
-            onTriggered: root.operationDialog.openFor("revokeKey", root.selectedKey.id)
-        }
-        Controls.MenuItem {
-            text: qsTr("Eliminar material local…")
-            icon.name: "edit-delete"
-            onTriggered: root.operationDialog.openFor("delete", root.selectedKey.id)
-        }
+    Controls.ComboBox {
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.largeSpacing
+        Layout.rightMargin: Kirigami.Units.largeSpacing
+        visible: root.width < Kirigami.Units.gridUnit * 30
+        model: root.sections
+        currentIndex: tabs.currentIndex
+        Accessible.name: qsTr("Sección de la clave")
+        onActivated: index => tabs.currentIndex = index
     }
     Controls.TabBar {
         id: tabs
+        visible: root.width >= Kirigami.Units.gridUnit * 30
         Layout.fillWidth: true
-        visible: !!root.selectedKey
-        Controls.TabButton {
-            text: qsTr("Identidad")
-        }
-        Controls.TabButton {
-            text: qsTr("Firmas")
-        }
-        Controls.TabButton {
-            text: qsTr("Contactos")
-        }
-        Controls.TabButton {
-            text: qsTr("Recuperación")
+        Repeater {
+            model: root.sections
+            delegate: Controls.TabButton {
+                required property string modelData
+                text: modelData
+            }
         }
     }
+    IdentityKeys {
+        visible: tabs.currentIndex === 0
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        selectedKey: root.selectedKey
+        keyStore: root.keyStore
+        operationDialog: root.operationDialog
+        onOrganizeRequested: identityEditor.edit(root.selectedKey)
+        onNotificationRequested: message => root.notificationRequested(message)
+    }
+    IdentitySecurity {
+        visible: tabs.currentIndex === 1
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        selectedKey: root.selectedKey
+        keyStore: root.keyStore
+        operationDialog: root.operationDialog
+    }
+    IdentityServers {
+        visible: tabs.currentIndex === 2
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        selectedKey: root.selectedKey
+        keyStore: root.keyStore
+        operationDialog: root.operationDialog
+    }
     Controls.ScrollView {
-        id: detailScroll
+        id: contactsScroll
+        visible: tabs.currentIndex === 3
         Layout.fillWidth: true
         Layout.fillHeight: true
         contentWidth: availableWidth
         clip: true
-        ColumnLayout {
-            width: detailScroll.availableWidth
-            spacing: Kirigami.Units.largeSpacing
-            visible: !!root.selectedKey
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                Layout.bottomMargin: 0
-                spacing: Kirigami.Units.largeSpacing
-                KeyAvatar {
-                    Layout.preferredWidth: size
-                    Layout.preferredHeight: size
-                    Layout.alignment: Qt.AlignTop
-                    size: Kirigami.Units.iconSizes.huge
-                    source: root.selectedKey?.photoSource || ""
-                    fallbackIcon: "user-identity"
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 0
-                    spacing: Kirigami.Units.smallSpacing
-                    Kirigami.Heading {
-                        Layout.fillWidth: true
-                        level: 2
-                        text: root.selectedKey?.title || ""
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: root.selectedKey?.email || qsTr("Sin correo electrónico")
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        visible: !!root.selectedKey?.contactName
-                        text: root.selectedKey ? qsTr("Contacto: %1").arg(root.selectedKey.contactName) : ""
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                    }
-                }
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                visible: tabs.currentIndex === 0
-                spacing: Kirigami.Units.largeSpacing
-                Kirigami.FormLayout {
-                    Layout.fillWidth: true
-                    Controls.Label {
-                        Kirigami.FormData.label: qsTr("Tipo:")
-                        Layout.fillWidth: true
-                        text: root.selectedKey?.hasSecret ? qsTr("Clave propia (parte privada disponible)") : qsTr("Clave de contacto (solo parte pública)")
-                        wrapMode: Text.Wrap
-                    }
-                    KeyStatus {
-                        Kirigami.FormData.label: qsTr("Estado:")
-                        Layout.fillWidth: true
-                        code: root.selectedKey?.statusCode || ""
-                        text: root.selectedKey?.status || ""
-                    }
-                    Controls.Label {
-                        Kirigami.FormData.label: qsTr("Caducidad:")
-                        text: root.expiration(root.selectedKey?.subkeys[0]?.expiresAt)
-                    }
-                    Controls.Button {
-                        Kirigami.FormData.label: qsTr("Caducidad:")
-                        text: qsTr("Cambiar caducidad…")
-                        enabled: !!root.selectedKey?.hasSecret
-                        onClicked: root.operationDialog.openFor("expiry", root.selectedKey.id)
-                    }
-                }
-                Kirigami.Heading {
-                    level: 3
-                    text: qsTr("Identidades (%1)").arg(root.identities.length)
-                }
-                Controls.Button {
-                    visible: !!root.selectedKey?.hasSecret
-                    text: qsTr("Añadir identidad…")
-                    icon.name: "list-add"
-                    onClicked: root.operationDialog.openFor("addIdentity", root.selectedKey.id)
-                }
-                Repeater {
-                    model: root.identities
-                    delegate: ColumnLayout {
-                        id: identityDelegate
-                        required property var modelData
-                        Layout.fillWidth: true
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: identityDelegate.modelData.id
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        IdentityValidity {
-                            Layout.fillWidth: true
-                            code: identityDelegate.modelData.validityCode || "unknown"
-                            text: identityDelegate.modelData.validity || ""
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: !!identityDelegate.modelData.primary
-                            text: qsTr("Identidad principal")
-                            textFormat: Text.PlainText
-                            color: Kirigami.Theme.highlightColor
-                        }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Button {
-                                visible: root.selectedKey?.hasSecret && !identityDelegate.modelData.primary
-                                enabled: !identityDelegate.modelData.revoked && !identityDelegate.modelData.invalid
-                                text: qsTr("Usar como principal")
-                                icon.name: "favorite"
-                                onClicked: root.operationDialog.openFor("primaryIdentity", root.selectedKey.id, identityDelegate.modelData.id)
-                            }
-                            Controls.Button {
-                                visible: root.selectedKey?.hasSecret && !identityDelegate.modelData.revoked
-                                text: qsTr("Revocar identidad…")
-                                icon.name: "dialog-warning"
-                                onClicked: root.operationDialog.openFor("revokeIdentity", root.selectedKey.id, identityDelegate.modelData.id)
-                            }
-                            Controls.Button {
-                                visible: !root.selectedKey?.hasSecret && root.hasCertifier && !identityDelegate.modelData.revoked && !identityDelegate.modelData.invalid
-                                text: qsTr("Certificar…")
-                                icon.name: "dialog-ok"
-                                onClicked: root.operationDialog.openFor("certify", root.selectedKey.id, identityDelegate.modelData.id, "", [identityDelegate.modelData.id])
-                            }
-                        }
-                    }
-                }
-                Controls.Label {
-                    text: qsTr("Huella de la clave")
-                }
-                Controls.TextArea {
-                    id: fingerprint
-                    Layout.fillWidth: true
-                    readOnly: true
-                    selectByMouse: true
-                    textFormat: TextEdit.PlainText
-                    wrapMode: TextEdit.Wrap
-                    font: Kirigami.Theme.fixedWidthFont
-                    text: root.groupedFingerprint(root.selectedKey?.id)
-                    Accessible.name: qsTr("Huella completa de la clave")
-                }
-                RowLayout {
-                    Controls.Button {
-                        text: qsTr("Copiar huella completa")
-                        icon.name: "edit-copy"
-                        onClicked: root.copyFingerprint()
-                    }
-                    // The primary key is only a default for new items; it re-encrypts nothing.
-                    Controls.Button {
-                        visible: !!root.selectedKey?.hasSecret && root.selectedKey?.statusCode === "valid" && root.selectedKey?.canEncrypt && !root.keyStore.isPrimary(root.selectedKey?.id)
-                        text: qsTr("Usar como clave principal")
-                        icon.name: "starred-symbolic"
-                        onClicked: root.keyStore.primaryKeyRequested(root.selectedKey.id)
-                    }
-                    Controls.Label {
-                        visible: root.keyStore.isPrimary(root.selectedKey?.id)
-                        text: qsTr("Clave principal de la bóveda")
-                        color: Kirigami.Theme.positiveTextColor
-                    }
-                }
-                RowLayout {
-                    visible: root.keyStore.isPrimary(root.selectedKey?.id)
-                    Controls.Switch {
-                        text: qsTr("Olvidar su frase al bloquear")
-                        checked: root.keyStore.forgetOnLock
-                        onToggled: root.keyStore.forgetOnLockRequested(checked)
-                    }
-                    HelpButton {
-                        help: qsTr("Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.")
-                    }
-                }
-                Kirigami.Separator {
-                    Layout.fillWidth: true
-                    weight: Kirigami.Separator.Weight.Light
-                }
-                Controls.ToolButton {
-                    text: qsTr("Detalles criptográficos")
-                    icon.name: root.expanded ? "arrow-down" : "arrow-right"
-                    checkable: true
-                    checked: root.expanded
-                    onClicked: root.expanded = !root.expanded
-                    Accessible.description: qsTr("Mostrar u ocultar la clave principal y sus subclaves")
-                }
-                Controls.Button {
-                    visible: !!root.selectedKey?.hasSecret
-                    text: qsTr("Añadir subclave…")
-                    icon.name: "list-add"
-                    onClicked: root.operationDialog.openFor("addSubkey", root.selectedKey.id)
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    visible: root.expanded
-                    spacing: Kirigami.Units.largeSpacing
-                    Repeater {
-                        model: root.selectedKey?.subkeys || []
-                        delegate: ColumnLayout {
-                            id: subkeyDelegate
-                            required property var modelData
-                            required property int index
-                            Layout.fillWidth: true
-                            Controls.Label {
-                                text: subkeyDelegate.modelData.isPrimary || subkeyDelegate.index === 0 ? qsTr("Clave principal") : qsTr("Subclave %1").arg(subkeyDelegate.index)
-                                font.bold: true
-                            }
-                            Kirigami.FormLayout {
-                                Layout.fillWidth: true
-                                Controls.Label {
-                                    Kirigami.FormData.label: qsTr("Algoritmo:")
-                                    text: subkeyDelegate.modelData.algorithm
-                                    textFormat: Text.PlainText
-                                }
-                                Controls.Label {
-                                    Kirigami.FormData.label: qsTr("Usos:")
-                                    Layout.fillWidth: true
-                                    text: subkeyDelegate.modelData.capabilities.join(", ") || qsTr("Sin usos disponibles")
-                                    textFormat: Text.PlainText
-                                    wrapMode: Text.Wrap
-                                }
-                                KeyStatus {
-                                    Kirigami.FormData.label: qsTr("Estado:")
-                                    Layout.fillWidth: true
-                                    code: subkeyDelegate.modelData.statusCode || ""
-                                    text: subkeyDelegate.modelData.status
-                                }
-                                Controls.Label {
-                                    Kirigami.FormData.label: qsTr("Caducidad:")
-                                    text: root.expiration(subkeyDelegate.modelData.expiresAt)
-                                }
-                            }
-                            Controls.Label {
-                                Layout.fillWidth: true
-                                text: root.groupedFingerprint(subkeyDelegate.modelData.fingerprint)
-                                font: Kirigami.Theme.fixedWidthFont
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
-                                Controls.Button {
-                                    visible: !!root.selectedKey?.hasSecret
-                                    text: qsTr("Cambiar caducidad…")
-                                    icon.name: "appointment-new"
-                                    onClicked: {
-                                        const targetsPrimary = subkeyDelegate.modelData.isPrimary || subkeyDelegate.index === 0;
-                                        root.operationDialog.openFor("expiry", root.selectedKey.id, "", targetsPrimary ? "" : subkeyDelegate.modelData.fingerprint);
-                                    }
-                                }
-                                Controls.Button {
-                                    visible: !!root.selectedKey?.hasSecret && !subkeyDelegate.modelData.isPrimary && subkeyDelegate.index !== 0
-                                    text: qsTr("Revocar subclave…")
-                                    icon.name: "dialog-warning"
-                                    onClicked: root.operationDialog.openFor("revokeSubkey", root.selectedKey.id, "", subkeyDelegate.modelData.fingerprint)
-                                }
-                            }
-                            Kirigami.Separator {
-                                Layout.fillWidth: true
-                                weight: Kirigami.Separator.Weight.Light
-                                visible: subkeyDelegate.index < (root.selectedKey?.subkeys.length || 0) - 1
-                            }
-                        }
-                    }
-                }
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                visible: tabs.currentIndex === 1
-                spacing: Kirigami.Units.largeSpacing
-                Kirigami.Heading {
-                    Layout.fillWidth: true
-                    level: 3
-                    text: qsTr("Certificaciones (%1)").arg(root.signatures.length)
-                }
-                Controls.Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Certificaciones de terceros registradas en el anillo local. Una firma no implica que hayas verificado la identidad de su propietario.")
-                    wrapMode: Text.Wrap
-                }
-                Controls.Label {
-                    Layout.fillWidth: true
-                    visible: !root.signatures.length
-                    text: qsTr("No hay firmas de terceros registradas para esta clave.")
-                    wrapMode: Text.Wrap
-                    color: Kirigami.Theme.disabledTextColor
-                }
-                Repeater {
-                    model: root.signatures
-                    delegate: ColumnLayout {
-                        id: signatureDelegate
-                        required property var modelData
-                        required property int index
-                        Layout.fillWidth: true
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: signatureDelegate.modelData.signer || qsTr("Firmante sin identidad disponible")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                            font.bold: true
-                        }
-                        Kirigami.FormLayout {
-                            Layout.fillWidth: true
-                            Controls.Label {
-                                Kirigami.FormData.label: qsTr("ID del firmante:")
-                                Layout.fillWidth: true
-                                text: signatureDelegate.modelData.keyId || qsTr("No disponible")
-                                textFormat: Text.PlainText
-                                font: Kirigami.Theme.fixedWidthFont
-                                wrapMode: Text.Wrap
-                            }
-                            Controls.Label {
-                                Kirigami.FormData.label: qsTr("Estado:")
-                                Layout.fillWidth: true
-                                text: signatureDelegate.modelData.status
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                            Controls.Label {
-                                Kirigami.FormData.label: qsTr("Identidad firmada:")
-                                Layout.fillWidth: true
-                                text: signatureDelegate.modelData.identity
-                                textFormat: Text.PlainText
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                        Kirigami.Separator {
-                            Layout.fillWidth: true
-                            weight: Kirigami.Separator.Weight.Light
-                            visible: signatureDelegate.index < root.signatures.length - 1
-                        }
-                    }
-                }
-            }
-            KeyContactPanel {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                visible: tabs.currentIndex === 2
-                selectedKey: root.selectedKey
-                keyStore: root.keyStore
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.margins: Kirigami.Units.largeSpacing
-                visible: tabs.currentIndex === 3
-                spacing: Kirigami.Units.largeSpacing
-                Kirigami.Heading {
-                    Layout.fillWidth: true
-                    level: 3
-                    text: qsTr("Recuperación de la clave")
-                }
-                Controls.Label {
-                    Layout.fillWidth: true
-                    text: root.selectedKey?.hasSecret ? qsTr("Un certificado de revocación permite revocar esta clave si pierdes el acceso a ella. Guárdalo fuera del equipo y protégelo como un secreto.") : qsTr("Solo una clave propia, con su parte privada en este llavero, puede crear un certificado de revocación.")
-                    wrapMode: Text.Wrap
-                }
-                Controls.Button {
-                    visible: !!root.selectedKey?.hasSecret
-                    enabled: root.operationAvailable
-                    text: qsTr("Crear certificado de revocación…")
-                    icon.name: "document-save-as"
-                    onClicked: root.operationDialog.openFor("prepareRevocation", root.selectedKey.id)
-                }
-            }
+        KeyContactPanel {
+            width: Math.min(contactsScroll.availableWidth - 48, 820)
+            x: 24
+            y: 20
+            selectedKey: root.selectedKey
+            keyStore: root.keyStore
         }
     }
 }

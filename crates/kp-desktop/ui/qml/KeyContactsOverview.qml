@@ -1,181 +1,181 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 ColumnLayout {
     id: root
-
     required property KeyStore keyStore
     required property KeyOperationDialog operationDialog
-    readonly property var contactsController: keyStore.contactsController
-    readonly property var contactEntries: {
-        const rows = [];
-        for (const contact of keyStore.contactRows) {
-            const fingerprints = keyStore.contactFingerprints(contact);
-            if (!fingerprints.length) {
-                continue;
+    property bool addressBookVisible: false
+    // Popups live in the overlay; this holder keeps them out of the layout.
+    Item {
+        visible: false
+        Controls.Dialog {
+            id: personEditor
+            property string personId: ""
+            property bool saving: false
+            parent: Controls.Overlay.overlay
+            anchors.centerIn: parent
+            width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 28)
+            modal: true
+            title: personId ? qsTr("Cambiar nombre de la persona") : qsTr("Añadir persona")
+            standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
+            footer: Controls.DialogButtonBox {
+                standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
+                onAccepted: personEditor.save()
+                onRejected: personEditor.close()
             }
-            for (const fingerprint of fingerprints) {
-                const key = keyStore.entries.find(entry => entry.id.toUpperCase() === fingerprint) || null;
-                rows.push({
-                    contact: contact,
-                    fingerprint: fingerprint,
-                    key: key
+            closePolicy: Controls.Popup.NoAutoClose
+            onOpened: standardButton(Controls.Dialog.Save).enabled = Qt.binding(() => !!name.text.trim() && !root.keyStore.controller.busy)
+            function save() {
+                saving = true;
+                root.keyStore.editCatalog({
+                    action: "person",
+                    id: personId || null,
+                    name: name.text
                 });
             }
+            contentItem: ColumnLayout {
+                Controls.TextField {
+                    id: name
+                    Layout.fillWidth: true
+                    maximumLength: 160
+                    placeholderText: qsTr("Nombre de la persona")
+                    Accessible.name: placeholderText
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: !!root.keyStore.controller.operationError
+                    text: root.keyStore.controller.operationError
+                    type: Kirigami.MessageType.Error
+                }
+            }
         }
-        return rows;
+        Controls.Dialog {
+            id: removePerson
+            property string personId: ""
+            parent: Controls.Overlay.overlay
+            anchors.centerIn: parent
+            width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 28)
+            title: qsTr("Quitar persona de KryptoPass")
+            modal: true
+            standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
+            contentItem: Controls.Label {
+                text: qsTr("Sus claves siguen en el llavero, sin persona asignada y sin tus verificaciones.")
+                wrapMode: Text.Wrap
+            }
+            onAccepted: root.keyStore.editCatalog({
+                action: "removePerson",
+                id: personId
+            })
+        }
     }
-
-    spacing: Kirigami.Units.largeSpacing
-
-    OnlineServicesDialog {
-        id: onlineDialog
-        keyStore: root.keyStore
+    Connections {
+        target: root.keyStore.controller
+        function onCatalogSaved() {
+            if (personEditor.saving) {
+                personEditor.saving = false;
+                personEditor.close();
+            }
+        }
+        function onOperationFailed() {
+            personEditor.saving = false;
+        }
     }
-
     Kirigami.Heading {
-        Layout.fillWidth: true
         level: 2
-        text: qsTr("Contactos con huella OpenPGP")
+        text: qsTr("Personas")
     }
-    Controls.Label {
-        Layout.fillWidth: true
-        text: qsTr("Vincula una clave a un contacto desde sus detalles. Puedes elegir cualquier persona de tu agenda KDE.")
-        wrapMode: Text.Wrap
-    }
-    Flow {
-        Layout.fillWidth: true
-        spacing: Kirigami.Units.smallSpacing
+    RowLayout {
         Controls.Button {
-            text: qsTr("Actualizar agenda")
-            icon.name: "view-refresh"
-            enabled: !root.contactsController.busy
-            onClicked: root.contactsController.refreshContacts()
+            text: qsTr("Añadir persona…")
+            icon.name: "list-add-user"
+            enabled: !root.keyStore.controller.busy
+            onClicked: {
+                personEditor.personId = "";
+                name.text = "";
+                personEditor.saving = false;
+                personEditor.open();
+            }
         }
         Controls.Button {
-            text: qsTr("Importar clave…")
-            icon.name: "document-import"
-            enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
+            text: qsTr("Importar clave pública…")
+            enabled: !root.keyStore.controller.busy
             onClicked: root.operationDialog.openFor("import")
         }
-        Controls.Button {
-            text: qsTr("Obtener del servidor…")
-            icon.name: "download"
-            enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
-            onClicked: root.operationDialog.openFor("refreshExternal")
-        }
-        Controls.Button {
-            text: qsTr("Configurar servicios online…")
-            icon.name: "configure"
-            onClicked: onlineDialog.edit()
-        }
-        Controls.Button {
-            text: qsTr("Abrir KDE Contacts")
-            icon.name: "view-pim-contacts"
-            enabled: !root.contactsController.busy
-            onClicked: root.contactsController.openContacts()
-        }
     }
-    Kirigami.InlineMessage {
+    Controls.Button {
+        text: root.addressBookVisible ? qsTr("Volver a personas") : qsTr("Vincular con la agenda de KDE…")
+        onClicked: root.addressBookVisible = !root.addressBookVisible
+    }
+    KeyAddressBook {
+        visible: root.addressBookVisible
         Layout.fillWidth: true
-        visible: !!root.contactsController.errorMessage
-        type: Kirigami.MessageType.Error
-        text: root.contactsController.errorMessage
+        Layout.fillHeight: true
+        keyStore: root.keyStore
+        operationDialog: root.operationDialog
     }
     Controls.ScrollView {
-        id: contactsScroll
+        id: peopleScroll
+        visible: !root.addressBookVisible
         Layout.fillWidth: true
         Layout.fillHeight: true
         contentWidth: availableWidth
         clip: true
-
         ColumnLayout {
-            width: contactsScroll.availableWidth
-            spacing: Kirigami.Units.smallSpacing
-
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: root.contactsController.busy
-                text: qsTr("Consultando KDE Contacts…")
-                color: Kirigami.Theme.disabledTextColor
-                wrapMode: Text.Wrap
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: root.contactEntries.length === 0 && !root.contactsController.busy
-                text: qsTr("No hay contactos con una huella OpenPGP vinculada. Añade la huella en la agenda KDE o vincula una clave desde sus detalles.")
-                color: Kirigami.Theme.disabledTextColor
-                wrapMode: Text.Wrap
-            }
+            width: peopleScroll.availableWidth
             Repeater {
-                model: root.contactEntries
+                model: root.keyStore.people
                 delegate: Controls.Frame {
-                    id: contactEntry
+                    id: personCard
                     required property var modelData
                     Layout.fillWidth: true
                     contentItem: ColumnLayout {
-                        spacing: Kirigami.Units.smallSpacing
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: contactEntry.modelData.contact.name || contactEntry.modelData.contact.email || contactEntry.modelData.contact.uid || qsTr("Contacto sin nombre")
-                            textFormat: Text.PlainText
-                            font.weight: Font.DemiBold
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: !!contactEntry.modelData.contact.email
-                            text: contactEntry.modelData.contact.email || ""
-                            textFormat: Text.PlainText
-                            color: Kirigami.Theme.disabledTextColor
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: contactEntry.modelData.fingerprint || qsTr("Sin huella OpenPGP completa vinculada")
-                            textFormat: Text.PlainText
-                            font: Kirigami.Theme.fixedWidthFont
-                            color: Kirigami.Theme.disabledTextColor
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: contactEntry.modelData.key ? qsTr("Clave disponible en el llavero local: %1").arg(contactEntry.modelData.key.title || contactEntry.modelData.key.id) : qsTr("Clave pendiente de importar")
+                            text: personCard.modelData.name
                             textFormat: Text.PlainText
                             wrapMode: Text.Wrap
                         }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
+                        Controls.Button {
+                            text: qsTr("Quitar persona…")
+                            enabled: !root.keyStore.controller.busy
+                            onClicked: {
+                                removePerson.personId = personCard.modelData.id;
+                                removePerson.open();
+                            }
+                        }
+                        RowLayout {
                             Controls.Button {
-                                visible: !!contactEntry.modelData.key
-                                text: qsTr("Abrir clave")
-                                icon.name: "view-certificate"
+                                text: qsTr("Ver claves")
                                 onClicked: {
-                                    root.keyStore.scope = "all";
+                                    root.keyStore.scope = "contacts";
                                     root.keyStore.query = "";
-                                    root.keyStore.selectedId = contactEntry.modelData.key.id;
+                                    root.keyStore.selectedId = "person:" + personCard.modelData.id;
+                                    root.keyStore.contactsOverviewVisible = false;
                                 }
                             }
                             Controls.Button {
-                                visible: !contactEntry.modelData.key
-                                enabled: !root.keyStore.controller.busy && !root.keyStore.controller.operationBusy
-                                text: qsTr("Obtener clave por huella…")
-                                icon.name: "download"
-                                onClicked: root.operationDialog.openFor("refreshExternal", contactEntry.modelData.fingerprint)
-                            }
-                            Controls.Button {
-                                enabled: !root.contactsController.busy
-                                text: qsTr("Editar contacto")
-                                icon.name: "document-edit"
-                                onClicked: root.contactsController.editContact(contactEntry.modelData.contact.uid)
+                                text: qsTr("Cambiar nombre…")
+                                enabled: !root.keyStore.controller.busy
+                                onClicked: {
+                                    personEditor.personId = personCard.modelData.id;
+                                    name.text = personCard.modelData.name;
+                                    personEditor.saving = false;
+                                    personEditor.open();
+                                }
                             }
                         }
                     }
                 }
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                visible: !root.keyStore.people.length
+                text: qsTr("Sin personas.")
+                wrapMode: Text.Wrap
             }
         }
     }

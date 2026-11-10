@@ -57,15 +57,15 @@ Controls.Dialog {
     ]
     readonly property var usageOptions: [
         {
-            label: qsTr("Cifrar"),
+            label: qsTr("Cifrado de datos"),
             value: "encrypt"
         },
         {
-            label: qsTr("Firmar"),
+            label: qsTr("Firma"),
             value: "sign"
         },
         {
-            label: qsTr("Autenticar"),
+            label: qsTr("Acceso SSH (autenticación)"),
             value: "authenticate"
         }
     ]
@@ -96,6 +96,10 @@ Controls.Dialog {
     readonly property bool canSubmit: !controllerBusy && !submitted && !completionMessage && fingerprintReady() && privateBackupReady && consequenceReady && operationInputsReady()
     property string completionMessage: ""
     property string completedFingerprint: ""
+    /// Use preselected the next time "addSubkey" opens; consumed by `openFor`.
+    property string presetUsage: ""
+    /// KryptoPass label typed for a new subkey; the caller stores it once the subkey exists.
+    property string subkeyLabel: ""
 
     parent: dialogParent
     anchors.centerIn: parent
@@ -154,19 +158,19 @@ Controls.Dialog {
             exportPublic: qsTr("Exportar clave pública"),
             copyPublic: qsTr("Copiar clave pública"),
             backupPrivate: qsTr("Respaldar clave privada"),
-            passphrase: qsTr("Cambiar passphrase"),
+            passphrase: qsTr("Cambiar contraseña (passphrase)"),
             expiry: qsTr("Cambiar caducidad"),
             addIdentity: qsTr("Añadir identidad"),
             primaryIdentity: qsTr("Elegir identidad principal"),
             revokeIdentity: qsTr("Revocar identidad"),
             addSubkey: qsTr("Añadir subclave"),
             revokeSubkey: qsTr("Revocar subclave"),
-            prepareRevocation: qsTr("Crear certificado de revocación"),
+            prepareRevocation: qsTr("Generar certificado de revocación"),
             revokeKey: qsTr("Revocar clave"),
             certify: qsTr("Certificar identidad"),
             refreshExternal: qsTr("Obtener o actualizar clave"),
             delete: qsTr("Eliminar clave del llavero"),
-            markAsOwn: qsTr("Marcar clave como mía")
+            markAsOwn: qsTr("Confirmar confianza en GnuPG")
         };
         return titles[action] || qsTr("Operación OpenPGP");
     }
@@ -248,12 +252,14 @@ Controls.Dialog {
         operationError = "";
         operationWarning = "";
         userIdField.text = "";
+        subkeyLabelField.text = "";
         fingerprintField.text = "";
         keyStore.controller.clearOperationError();
         Qt.callLater(function () {
             serverCombo.currentIndex = 0;
             expiryCombo.currentIndex = 3;
-            usageCombo.currentIndex = 0;
+            usageCombo.currentIndex = Math.max(0, usageOptions.findIndex(option => option.value === presetUsage));
+            presetUsage = "";
             certifierCombo.currentIndex = certifierOptions.length ? 0 : -1;
             materialCombo.currentIndex = 0;
             localCertificationCheck.checked = true;
@@ -494,12 +500,6 @@ Controls.Dialog {
                 text: qsTr("Se revocará esta identidad de forma permanente. La identidad dejará de ser válida para la clave.")
                 wrapMode: Text.Wrap
             }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: dialog.action === "addSubkey"
-                text: qsTr("Añade una subclave de uso específico. GnuPG puede abrir pinentry para autorizar el cambio.")
-                wrapMode: Text.Wrap
-            }
             Controls.ComboBox {
                 id: usageCombo
                 Layout.fillWidth: true
@@ -509,6 +509,16 @@ Controls.Dialog {
                 textRole: "label"
                 currentIndex: 0
                 Accessible.name: qsTr("Uso de la nueva subclave")
+            }
+            Controls.TextField {
+                id: subkeyLabelField
+                Layout.fillWidth: true
+                visible: dialog.action === "addSubkey"
+                enabled: !dialog.controllerBusy
+                maximumLength: 160
+                placeholderText: qsTr("Etiqueta opcional, por ejemplo: GitHub SSH")
+                Accessible.name: qsTr("Etiqueta de la subclave")
+                onTextChanged: dialog.subkeyLabel = text
             }
             Controls.Label {
                 Layout.fillWidth: true

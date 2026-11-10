@@ -954,6 +954,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Vault sync: round requested by the user</translation>
     </message>
     <message>
+      <source>could not make gpg-agent forget an identity</source>
+      <translation>could not make gpg-agent forget an identity</translation>
+    </message>
+    <message>
       <source>could not open the vault</source>
       <translation>could not open the vault</translation>
     </message>
@@ -1503,6 +1507,62 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Abriendo identidad protegida por el llavero del sistema…</translation>
     </message>
     <message>
+      <source>Activa los servicios online y selecciona un servidor configurado.</source>
+      <translation>Activa los servicios online y selecciona un servidor configurado.</translation>
+    </message>
+    <message>
+      <source>Approvals: a passphrase without a keygrip is never asked remotely</source>
+      <translation>Approvals: a passphrase without a keygrip is never asked remotely</translation>
+    </message>
+    <message>
+      <source>Approvals: a retry is always answered locally</source>
+      <translation>Approvals: a retry is always answered locally</translation>
+    </message>
+    <message>
+      <source>Approvals: answered locally first; withdrawing from the phone</source>
+      <translation>Approvals: answered locally first; withdrawing from the phone</translation>
+    </message>
+    <message>
+      <source>Approvals: approved on the phone</source>
+      <translation>Approvals: approved on the phone</translation>
+    </message>
+    <message>
+      <source>Approvals: could not listen; the pinentry will use its own dialog</source>
+      <translation>Approvals: could not listen; the pinentry will use its own dialog</translation>
+    </message>
+    <message>
+      <source>Approvals: denied on the phone</source>
+      <translation>Approvals: denied on the phone</translation>
+    </message>
+    <message>
+      <source>Approvals: listening for kryptopass-pinentry</source>
+      <translation>Approvals: listening for kryptopass-pinentry</translation>
+    </message>
+    <message>
+      <source>Approvals: no phone connected; the pinentry asks locally</source>
+      <translation>Approvals: no phone connected; the pinentry asks locally</translation>
+    </message>
+    <message>
+      <source>Approvals: passphrase from the phone</source>
+      <translation>Approvals: passphrase from the phone</translation>
+    </message>
+    <message>
+      <source>Approvals: request from the pinentry</source>
+      <translation>Approvals: request from the pinentry</translation>
+    </message>
+    <message>
+      <source>Approvals: the phone cannot answer</source>
+      <translation>Approvals: the phone cannot answer</translation>
+    </message>
+    <message>
+      <source>Approvals: the phone did not answer in time</source>
+      <translation>Approvals: the phone did not answer in time</translation>
+    </message>
+    <message>
+      <source>Approvals: waiting for the phone</source>
+      <translation>Approvals: waiting for the phone</translation>
+    </message>
+    <message>
       <source>CLEAR_PASSPHRASE --mode=normal {keygrip}</source>
       <translation>CLEAR_PASSPHRASE --mode=normal {keygrip}</translation>
     </message>
@@ -1623,6 +1683,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>El archivo o los datos adaptados superan los límites de importación. Exporta menos elementos y vuelve a intentarlo.</translation>
     </message>
     <message>
+      <source>El archivo se exportó, pero no se pudo guardar la fecha en KryptoPass.</source>
+      <translation>El archivo se exportó, pero no se pudo guardar la fecha en KryptoPass.</translation>
+    </message>
+    <message>
       <source>El certificado de revocación no tiene un formato válido.</source>
       <translation>El certificado de revocación no tiene un formato válido.</translation>
     </message>
@@ -1637,6 +1701,18 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>El elemento no es válido. Revisa sus campos.</source>
       <translation>El elemento no es válido. Revisa sus campos.</translation>
+    </message>
+    <message>
+      <source>El servidor no aceptó la publicación. Puedes volver a intentarlo.</source>
+      <translation>El servidor no aceptó la publicación. Puedes volver a intentarlo.</translation>
+    </message>
+    <message>
+      <source>El servidor no devolvió una clave pública válida.</source>
+      <translation>El servidor no devolvió una clave pública válida.</translation>
+    </message>
+    <message>
+      <source>El servidor no pudo completar la consulta.</source>
+      <translation>El servidor no pudo completar la consulta.</translation>
     </message>
     <message>
       <source>El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades.</source>
@@ -1675,6 +1751,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Escanea el QR desde Android o copia el código de conexión.</translation>
     </message>
     <message>
+      <source>Escribe un nombre de entre 1 y 160 caracteres, sin saltos de línea.</source>
+      <translation>Escribe un nombre de entre 1 y 160 caracteres, sin saltos de línea.</translation>
+    </message>
+    <message>
       <source>Espera a que termine la operación de conexión antes de cambiar el nombre.</source>
       <translation>Espera a que termine la operación de conexión antes de cambiar el nombre.</translation>
     </message>
@@ -1693,6 +1773,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente.</source>
       <translation>Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente.</translation>
+    </message>
+    <message>
+      <source>Esta identidad ya tiene 128 usos.</source>
+      <translation>Esta identidad ya tiene 128 usos.</translation>
     </message>
     <message>
       <source>Esta integración necesita un servicio de descifrado para leer el archivo elegido.</source>
@@ -1795,6 +1879,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La clave elegida no es válida. Vuelve a abrir la selección y revisa su huella.</translation>
     </message>
     <message>
+      <source>La clave no está disponible para ese uso.</source>
+      <translation>La clave no está disponible para ese uso.</translation>
+    </message>
+    <message>
+      <source>La clave pública supera el límite de publicación de 1 MiB.</source>
+      <translation>La clave pública supera el límite de publicación de 1 MiB.</translation>
+    </message>
+    <message>
       <source>La clave ya no pertenece a la bóveda activa. No se importó nada.</source>
       <translation>La clave ya no pertenece a la bóveda activa. No se importó nada.</translation>
     </message>
@@ -1819,8 +1911,24 @@ No incluye contraseñas ni valores de credenciales.
       <translation>La identidad no es válida.</translation>
     </message>
     <message>
+      <source>La identidad no está vigente.</source>
+      <translation>La identidad no está vigente.</translation>
+    </message>
+    <message>
+      <source>La identidad ya no está en el llavero. Actualiza la lista.</source>
+      <translation>La identidad ya no está en el llavero. Actualiza la lista.</translation>
+    </message>
+    <message>
       <source>La invitación o conexión caducó. Genera otro código.</source>
       <translation>La invitación o conexión caducó. Genera otro código.</translation>
+    </message>
+    <message>
+      <source>La operación online terminó, pero no se pudo guardar su estado local. Comprueba el servidor antes de repetirla.</source>
+      <translation>La operación online terminó, pero no se pudo guardar su estado local. Comprueba el servidor antes de repetirla.</translation>
+    </message>
+    <message>
+      <source>La persona ya no existe.</source>
+      <translation>La persona ya no existe.</translation>
     </message>
     <message>
       <source>La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas.</source>
@@ -1829,6 +1937,14 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La red local no está disponible con la privacidad elegida.</source>
       <translation>La red local no está disponible con la privacidad elegida.</translation>
+    </message>
+    <message>
+      <source>La respuesta del servidor supera el límite permitido.</source>
+      <translation>La respuesta del servidor supera el límite permitido.</translation>
+    </message>
+    <message>
+      <source>La respuesta no contiene la identidad solicitada.</source>
+      <translation>La respuesta no contiene la identidad solicitada.</translation>
     </message>
     <message>
       <source>La sesión cambió antes de activar la transferencia. No se enviará material privado.</source>
@@ -1857,6 +1973,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>La solicitud OpenPGP contiene un valor no válido.</source>
       <translation>La solicitud OpenPGP contiene un valor no válido.</translation>
+    </message>
+    <message>
+      <source>La solicitud supera el tamaño permitido.</source>
+      <translation>La solicitud supera el tamaño permitido.</translation>
     </message>
     <message>
       <source>La transferencia caducó (5 minutos desde la oferta). Se descartó lo recibido.</source>
@@ -1959,6 +2079,14 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo acceder al llavero del sistema para abrir la identidad de este equipo.</translation>
     </message>
     <message>
+      <source>No se pudo completar la operación con el servidor. Revisa la conexión y vuelve a intentarlo.</source>
+      <translation>No se pudo completar la operación con el servidor. Revisa la conexión y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+      <source>No se pudo comprobar dónde está disponible cada clave.</source>
+      <translation>No se pudo comprobar dónde está disponible cada clave.</translation>
+    </message>
+    <message>
       <source>No se pudo comunicar con gpg.</source>
       <translation>No se pudo comunicar con gpg.</translation>
     </message>
@@ -1979,6 +2107,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.</translation>
     </message>
     <message>
+      <source>No se pudo exportar la clave pública SSH seleccionada.</source>
+      <translation>No se pudo exportar la clave pública SSH seleccionada.</translation>
+    </message>
+    <message>
       <source>No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado.</source>
       <translation>No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado.</translation>
     </message>
@@ -1993,6 +2125,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</source>
       <translation>No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.</translation>
+    </message>
+    <message>
+      <source>No se pudo guardar la organización de tus identidades.</source>
+      <translation>No se pudo guardar la organización de tus identidades.</translation>
     </message>
     <message>
       <source>No se pudo guardar la política de red. No se aplicaron cambios.</source>
@@ -2017,6 +2153,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>No se pudo iniciar el listener de recuperación local.</source>
       <translation>No se pudo iniciar el listener de recuperación local.</translation>
+    </message>
+    <message>
+      <source>No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.</source>
+      <translation>No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.</translation>
     </message>
     <message>
       <source>No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.</source>
@@ -2107,6 +2247,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Papelera</translation>
     </message>
     <message>
+      <source>Para publicar o comprobar, usa un servidor HTTPS o HKPS sin ruta ni credenciales.</source>
+      <translation>Para publicar o comprobar, usa un servidor HTTPS o HKPS sin ruta ni credenciales.</translation>
+    </message>
+    <message>
       <source>Passkeys</source>
       <translation>Passkeys</translation>
     </message>
@@ -2175,8 +2319,16 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Selecciona un teléfono autorizado y conectado.</translation>
     </message>
     <message>
+      <source>Selecciona una clave de esta identidad.</source>
+      <translation>Selecciona una clave de esta identidad.</translation>
+    </message>
+    <message>
       <source>Selecciona una integración de importación.</source>
       <translation>Selecciona una integración de importación.</translation>
+    </message>
+    <message>
+      <source>Selecciona una persona existente.</source>
+      <translation>Selecciona una persona existente.</translation>
     </message>
     <message>
       <source>Sin carpeta</source>
@@ -2201,6 +2353,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Transferencia rechazada. No se recibió nada.</source>
       <translation>Transferencia rechazada. No se recibió nada.</translation>
+    </message>
+    <message>
+      <source>Una identidad propia no se asigna a otra persona.</source>
+      <translation>Una identidad propia no se asigna a otra persona.</translation>
     </message>
     <message>
       <source>Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.</source>
@@ -2483,6 +2639,18 @@ No incluye contraseñas ni valores de credenciales.
       <translation>cambiar la identidad principal</translation>
     </message>
     <message>
+      <source>catalog directory missing</source>
+      <translation>catalog directory missing</translation>
+    </message>
+    <message>
+      <source>catalog path missing</source>
+      <translation>catalog path missing</translation>
+    </message>
+    <message>
+      <source>catalog saved but directory durability could not be confirmed</source>
+      <translation>catalog saved but directory durability could not be confirmed</translation>
+    </message>
+    <message>
       <source>challenge plaintext has the wrong size</source>
       <translation>challenge plaintext has the wrong size</translation>
     </message>
@@ -2631,8 +2799,8 @@ No incluye contraseñas ni valores de credenciales.
       <translation>could not load synthetic OpenPGP fixture</translation>
     </message>
     <message>
-      <source>could not make gpg-agent forget the primary key</source>
-      <translation>could not make gpg-agent forget the primary key</translation>
+      <source>could not lock the identity catalog</source>
+      <translation>could not lock the identity catalog</translation>
     </message>
     <message>
       <source>could not open GnuPG</source>
@@ -2705,6 +2873,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>could not read backup file</source>
       <translation>could not read backup file</translation>
+    </message>
+    <message>
+      <source>could not read identity cache preferences</source>
+      <translation>could not read identity cache preferences</translation>
     </message>
     <message>
       <source>could not read synthetic OpenPGP fixture file</source>
@@ -2815,6 +2987,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>icon store unavailable</translation>
     </message>
     <message>
+      <source>identity catalog exceeds size limit</source>
+      <translation>identity catalog exceeds size limit</translation>
+    </message>
+    <message>
       <source>ignoring unreadable setup state</source>
       <translation>ignoring unreadable setup state</translation>
     </message>
@@ -2857,6 +3033,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>invalid icon source</source>
       <translation>invalid icon source</translation>
+    </message>
+    <message>
+      <source>invalid identity catalog</source>
+      <translation>invalid identity catalog</translation>
     </message>
     <message>
       <source>invalid packet header</source>
@@ -3287,6 +3467,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>unlock challenge mismatch</translation>
     </message>
     <message>
+      <source>unsupported identity catalog version</source>
+      <translation>unsupported identity catalog version</translation>
+    </message>
+    <message>
       <source>unsupported public-key algorithm</source>
       <translation>unsupported public-key algorithm</translation>
     </message>
@@ -3381,6 +3565,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>{} ({patterns})</source>
       <translation>{} ({patterns})</translation>
+    </message>
+    <message>
+      <source>{} ({pid})</source>
+      <translation>{} ({pid})</translation>
     </message>
     <message>
       <source>«{label}»</source>
@@ -4743,32 +4931,24 @@ Huella completa; compárala con el teléfono:</translation>
   <context>
     <name>EntryDetailPane</name>
     <message>
-      <source>Propiedades de la clave</source>
-      <translation>Propiedades de la clave</translation>
-    </message>
-    <message>
-      <source>Contactos de KDE Contacts</source>
-      <translation>Contactos de KDE Contacts</translation>
-    </message>
-    <message>
-      <source>Agenda de contactos</source>
-      <translation>Agenda de contactos</translation>
-    </message>
-    <message>
       <source>Detalle</source>
       <translation>Detalle</translation>
+    </message>
+    <message>
+      <source>Identidades</source>
+      <translation>Identidades</translation>
     </message>
     <message>
       <source>Volver a la clave</source>
       <translation>Volver a la clave</translation>
     </message>
     <message>
-      <source>Ver agenda</source>
-      <translation>Ver agenda</translation>
-    </message>
-    <message>
       <source>Volver a los detalles de la clave</source>
       <translation>Volver a los detalles de la clave</translation>
+    </message>
+    <message>
+      <source>Añadir identidad…</source>
+      <translation>Añadir identidad…</translation>
     </message>
     <message>
       <source>%1 · %2</source>
@@ -4829,6 +5009,18 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>La bóveda está bloqueada. Desbloquéala para abrir este elemento.</source>
       <translation>La bóveda está bloqueada. Desbloquéala para abrir este elemento.</translation>
+    </message>
+    <message>
+      <source>Identidad</source>
+      <translation>Identidad</translation>
+    </message>
+    <message>
+      <source>Personas</source>
+      <translation>Personas</translation>
+    </message>
+    <message>
+      <source>Administrar personas</source>
+      <translation>Administrar personas</translation>
     </message>
     <message>
       <source>Ver la agenda de contactos</source>
@@ -5335,6 +5527,80 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
+    <name>IdentityAddDialog</name>
+    <message>
+      <source>Añadir identidad</source>
+      <translation>Añadir identidad</translation>
+    </message>
+    <message>
+      <source>Configuración en KryptoPass</source>
+      <translation>Configuración en KryptoPass</translation>
+    </message>
+    <message>
+      <source>Crear clave OpenPGP…</source>
+      <translation>Crear clave OpenPGP…</translation>
+    </message>
+    <message>
+      <source>Importar clave OpenPGP…</source>
+      <translation>Importar clave OpenPGP…</translation>
+    </message>
+    <message>
+      <source>Identidad existente en el llavero</source>
+      <translation>Identidad existente en el llavero</translation>
+    </message>
+    <message>
+      <source>Usar clave existente</source>
+      <translation>Usar clave existente</translation>
+    </message>
+    <message>
+      <source>Alias en KryptoPass</source>
+      <translation>Alias en KryptoPass</translation>
+    </message>
+    <message>
+      <source>Olvidar contraseña al bloquear la bóveda (gpg-agent)</source>
+      <translation>Olvidar contraseña al bloquear la bóveda (gpg-agent)</translation>
+    </message>
+    <message>
+      <source>Usar como clave de bóveda</source>
+      <translation>Usar como clave de bóveda</translation>
+    </message>
+    <message>
+      <source>Guardar</source>
+      <translation>Guardar</translation>
+    </message>
+  </context>
+  <context>
+    <name>IdentityEditor</name>
+    <message>
+      <source>Nombre en KryptoPass</source>
+      <translation>Nombre en KryptoPass</translation>
+    </message>
+    <message>
+      <source>Alias y organización</source>
+      <translation>Alias y organización</translation>
+    </message>
+    <message>
+      <source>Alias en KryptoPass</source>
+      <translation>Alias en KryptoPass</translation>
+    </message>
+    <message>
+      <source>Por ejemplo: Personal, Trabajo</source>
+      <translation>Por ejemplo: Personal, Trabajo</translation>
+    </message>
+    <message>
+      <source>Es una de mis identidades</source>
+      <translation>Es una de mis identidades</translation>
+    </message>
+    <message>
+      <source>Sin persona asignada</source>
+      <translation>Sin persona asignada</translation>
+    </message>
+    <message>
+      <source>Persona a la que pertenece</source>
+      <translation>Persona a la que pertenece</translation>
+    </message>
+  </context>
+  <context>
     <name>IdentityFields</name>
     <message>
       <source>Nombre</source>
@@ -5422,7 +5688,366 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
-    <name>IdentityValidity</name>
+    <name>IdentityKeys</name>
+    <message>
+      <source>Copiado al portapapeles</source>
+      <translation>Copiado al portapapeles</translation>
+    </message>
+    <message>
+      <source>Etiqueta de la clave</source>
+      <translation>Etiqueta de la clave</translation>
+    </message>
+    <message>
+      <source>Por ejemplo: GitHub SSH</source>
+      <translation>Por ejemplo: GitHub SSH</translation>
+    </message>
+    <message>
+      <source>Verificar huella</source>
+      <translation>Verificar huella</translation>
+    </message>
+    <message>
+      <source>Acepta solo si coincide completa con la que te da su propietario.</source>
+      <translation>Acepta solo si coincide completa con la que te da su propietario.</translation>
+    </message>
+    <message>
+      <source>Configuración en KryptoPass</source>
+      <translation>Configuración en KryptoPass</translation>
+    </message>
+    <message>
+      <source>Clave principal de la bóveda</source>
+      <translation>Clave principal de la bóveda</translation>
+    </message>
+    <message>
+      <source>Activa como clave de bóveda</source>
+      <translation>Activa como clave de bóveda</translation>
+    </message>
+    <message>
+      <source>Usar como clave de bóveda</source>
+      <translation>Usar como clave de bóveda</translation>
+    </message>
+    <message>
+      <source>Olvidar contraseña al bloquear la bóveda (gpg-agent)</source>
+      <translation>Olvidar contraseña al bloquear la bóveda (gpg-agent)</translation>
+    </message>
+    <message>
+      <source>Olvidar contraseña al bloquear la bóveda</source>
+      <translation>Olvidar contraseña al bloquear la bóveda</translation>
+    </message>
+    <message>
+      <source>Persona</source>
+      <translation>Persona</translation>
+    </message>
+    <message>
+      <source>Sin asignar</source>
+      <translation>Sin asignar</translation>
+    </message>
+    <message>
+      <source>Organizar…</source>
+      <translation>Organizar…</translation>
+    </message>
+    <message>
+      <source>Verificación de huella</source>
+      <translation>Verificación de huella</translation>
+    </message>
+    <message>
+      <source>Verificar…</source>
+      <translation>Verificar…</translation>
+    </message>
+    <message>
+      <source>Quitar verificación</source>
+      <translation>Quitar verificación</translation>
+    </message>
+    <message>
+      <source>Claves y subclaves</source>
+      <translation>Claves y subclaves</translation>
+    </message>
+    <message>
+      <source>Añadir subclave…</source>
+      <translation>Añadir subclave…</translation>
+    </message>
+    <message>
+      <source>Clave primaria</source>
+      <translation>Clave primaria</translation>
+    </message>
+    <message>
+      <source>Subclave #%1</source>
+      <translation>Subclave #%1</translation>
+    </message>
+    <message>
+      <source>Acciones de la clave</source>
+      <translation>Acciones de la clave</translation>
+    </message>
+    <message>
+      <source>Copiar huella</source>
+      <translation>Copiar huella</translation>
+    </message>
+    <message>
+      <source>Copiar huella de subclave</source>
+      <translation>Copiar huella de subclave</translation>
+    </message>
+    <message>
+      <source>Cambiar etiqueta…</source>
+      <translation>Cambiar etiqueta…</translation>
+    </message>
+    <message>
+      <source>Validez y confianza: Total (clave propia)</source>
+      <translation>Validez y confianza: Total (clave propia)</translation>
+    </message>
+    <message>
+      <source>Acciones de la identidad</source>
+      <translation>Acciones de la identidad</translation>
+    </message>
+    <message>
+      <source>Usar como identidad principal</source>
+      <translation>Usar como identidad principal</translation>
+    </message>
+    <message>
+      <source>Revocar identidad…</source>
+      <translation>Revocar identidad…</translation>
+    </message>
+    <message>
+      <source>Copiar clave pública SSH</source>
+      <translation>Copiar clave pública SSH</translation>
+    </message>
+    <message>
+      <source>Cambiar caducidad…</source>
+      <translation>Cambiar caducidad…</translation>
+    </message>
+    <message>
+      <source>Revocar subclave…</source>
+      <translation>Revocar subclave…</translation>
+    </message>
+    <message>
+      <source>Identidades (UID)</source>
+      <translation>Identidades (UID)</translation>
+    </message>
+    <message>
+      <source>Añadir identidad…</source>
+      <translation>Añadir identidad…</translation>
+    </message>
+    <message>
+      <source>Principal</source>
+      <translation>Principal</translation>
+    </message>
+    <message>
+      <source>Validez GnuPG: %1</source>
+      <translation>Validez GnuPG: %1</translation>
+    </message>
+    <message>
+      <source>Certificar…</source>
+      <translation>Certificar…</translation>
+    </message>
+  </context>
+  <context>
+    <name>IdentitySecurity</name>
+    <message>
+      <source>Confianza en GnuPG</source>
+      <translation>Confianza en GnuPG</translation>
+    </message>
+    <message>
+      <source>Sin confianza absoluta</source>
+      <translation>Sin confianza absoluta</translation>
+    </message>
+    <message>
+      <source>Confirmar confianza…</source>
+      <translation>Confirmar confianza…</translation>
+    </message>
+    <message>
+      <source>Respaldo de clave privada</source>
+      <translation>Respaldo de clave privada</translation>
+    </message>
+    <message>
+      <source>Exportar copia privada…</source>
+      <translation>Exportar copia privada…</translation>
+    </message>
+    <message>
+      <source>Contraseña de la clave (passphrase)</source>
+      <translation>Contraseña de la clave (passphrase)</translation>
+    </message>
+    <message>
+      <source>Cambiar contraseña…</source>
+      <translation>Cambiar contraseña…</translation>
+    </message>
+    <message>
+      <source>Certificado de revocación (plan de emergencia)</source>
+      <translation>Certificado de revocación (plan de emergencia)</translation>
+    </message>
+    <message>
+      <source>Generar…</source>
+      <translation>Generar…</translation>
+    </message>
+    <message>
+      <source>Aplicar existente…</source>
+      <translation>Aplicar existente…</translation>
+    </message>
+    <message>
+      <source>Zona de peligro</source>
+      <translation>Zona de peligro</translation>
+    </message>
+    <message>
+      <source>Revocar esta clave permanentemente</source>
+      <translation>Revocar esta clave permanentemente</translation>
+    </message>
+    <message>
+      <source>Revocar clave…</source>
+      <translation>Revocar clave…</translation>
+    </message>
+    <message>
+      <source>Eliminar clave de este equipo</source>
+      <translation>Eliminar clave de este equipo</translation>
+    </message>
+    <message>
+      <source>Eliminar del llavero…</source>
+      <translation>Eliminar del llavero…</translation>
+    </message>
+  </context>
+  <context>
+    <name>IdentityServers</name>
+    <message>
+      <source>Publicar clave pública</source>
+      <translation>Publicar clave pública</translation>
+    </message>
+    <message>
+      <source>Se enviará la clave pública, con sus UID y certificaciones, a %1. Lo publicado no siempre se puede retirar.</source>
+      <translation>Se enviará la clave pública, con sus UID y certificaciones, a %1. Lo publicado no siempre se puede retirar.</translation>
+    </message>
+    <message>
+      <source>Servidores de claves</source>
+      <translation>Servidores de claves</translation>
+    </message>
+    <message>
+      <source>Servicios online desactivados</source>
+      <translation>Servicios online desactivados</translation>
+    </message>
+    <message>
+      <source>Ver en la web</source>
+      <translation>Ver en la web</translation>
+    </message>
+    <message>
+      <source>Actualizar desde servidor…</source>
+      <translation>Actualizar desde servidor…</translation>
+    </message>
+    <message>
+      <source>Configurar servidores…</source>
+      <translation>Configurar servidores…</translation>
+    </message>
+    <message>
+      <source>Comprobar</source>
+      <translation>Comprobar</translation>
+    </message>
+    <message>
+      <source>Actualizar…</source>
+      <translation>Actualizar…</translation>
+    </message>
+    <message>
+      <source>Publicar…</source>
+      <translation>Publicar…</translation>
+    </message>
+    <message>
+      <source>No hay servidores configurados.</source>
+      <translation>No hay servidores configurados.</translation>
+    </message>
+    <message>
+      <source>Certificaciones de terceros (%1)</source>
+      <translation>Certificaciones de terceros (%1)</translation>
+    </message>
+    <message>
+      <source>Firmante desconocido</source>
+      <translation>Firmante desconocido</translation>
+    </message>
+    <message>
+      <source>UID firmado: %1</source>
+      <translation>UID firmado: %1</translation>
+    </message>
+    <message>
+      <source>Sin certificaciones de terceros.</source>
+      <translation>Sin certificaciones de terceros.</translation>
+    </message>
+  </context>
+  <context>
+    <name>IdentityWording</name>
+    <message>
+      <source>Caduca el %1</source>
+      <translation>Caduca el %1</translation>
+    </message>
+    <message>
+      <source>Sin caducidad</source>
+      <translation>Sin caducidad</translation>
+    </message>
+    <message>
+      <source>Revocada</source>
+      <translation>Revocada</translation>
+    </message>
+    <message>
+      <source>Caducada</source>
+      <translation>Caducada</translation>
+    </message>
+    <message>
+      <source>Deshabilitada</source>
+      <translation>Deshabilitada</translation>
+    </message>
+    <message>
+      <source>Inválida</source>
+      <translation>Inválida</translation>
+    </message>
+    <message numerus="yes">
+      <source>Caduca en %n día</source>
+      <translation>
+        <numerusform>Caduca en %n día</numerusform>
+        <numerusform>Caduca en %n días</numerusform>
+      </translation>
+    </message>
+    <message>
+      <source>Caduca hoy</source>
+      <translation>Caduca hoy</translation>
+    </message>
+    <message numerus="yes">
+      <source>Una subclave caduca en %n día</source>
+      <translation>
+        <numerusform>Una subclave caduca en %n día</numerusform>
+        <numerusform>Una subclave caduca en %n días</numerusform>
+      </translation>
+    </message>
+    <message>
+      <source>Una subclave caduca hoy</source>
+      <translation>Una subclave caduca hoy</translation>
+    </message>
+    <message>
+      <source>Sin subclave de cifrado vigente</source>
+      <translation>Sin subclave de cifrado vigente</translation>
+    </message>
+    <message>
+      <source>Clave privada fuera de este equipo</source>
+      <translation>Clave privada fuera de este equipo</translation>
+    </message>
+    <message>
+      <source>Sin confianza absoluta en GnuPG</source>
+      <translation>Sin confianza absoluta en GnuPG</translation>
+    </message>
+    <message>
+      <source>Respaldo guardado el %1</source>
+      <translation>Respaldo guardado el %1</translation>
+    </message>
+    <message>
+      <source>Pendiente de exportar</source>
+      <translation>Pendiente de exportar</translation>
+    </message>
+    <message>
+      <source>Generado el %1</source>
+      <translation>Generado el %1</translation>
+    </message>
+    <message>
+      <source>Pendiente de generar</source>
+      <translation>Pendiente de generar</translation>
+    </message>
+    <message>
+      <source>Verificada el %1</source>
+      <translation>Verificada el %1</translation>
+    </message>
+    <message>
+      <source>Sus UID cambiaron desde la verificación</source>
+      <translation>Sus UID cambiaron desde la verificación</translation>
+    </message>
     <message>
       <source>Total</source>
       <translation>Total</translation>
@@ -5440,32 +6065,108 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>No válida</translation>
     </message>
     <message>
-      <source>Revocada</source>
-      <translation>Revocada</translation>
+      <source>La huella es el código de verificación de la clave: compárala completa con su propietario por un canal de confianza.</source>
+      <translation>La huella es el código de verificación de la clave: compárala completa con su propietario por un canal de confianza.</translation>
     </message>
     <message>
-      <source>Inválida</source>
-      <translation>Inválida</translation>
+      <source>Al bloquear la bóveda, gpg-agent olvida la contraseña de esta clave y la pedirá al desbloquear. También la pedirán otras aplicaciones que la usen.</source>
+      <translation>Al bloquear la bóveda, gpg-agent olvida la contraseña de esta clave y la pedirá al desbloquear. También la pedirán otras aplicaciones que la usen.</translation>
+    </message>
+    <message>
+      <source>Los elementos nuevos de la bóveda se cifran con esta clave. Los existentes no se vuelven a cifrar.</source>
+      <translation>Los elementos nuevos de la bóveda se cifran con esta clave. Los existentes no se vuelven a cifrar.</translation>
+    </message>
+    <message>
+      <source>Archivo que revoca la clave si pierdes el acceso o te la roban. Generarlo no la revoca; guárdalo fuera de este equipo.</source>
+      <translation>Archivo que revoca la clave si pierdes el acceso o te la roban. Generarlo no la revoca; guárdalo fuera de este equipo.</translation>
+    </message>
+    <message>
+      <source>La fecha indica cuándo se exportó desde KryptoPass; no comprueba que el archivo siga existiendo.</source>
+      <translation>La fecha indica cuándo se exportó desde KryptoPass; no comprueba que el archivo siga existiendo.</translation>
+    </message>
+    <message>
+      <source>GnuPG no cifra para una clave propia hasta que confirmas su confianza absoluta.</source>
+      <translation>GnuPG no cifra para una clave propia hasta que confirmas su confianza absoluta.</translation>
+    </message>
+    <message>
+      <source>Verificación local de KryptoPass: no firma una certificación OpenPGP ni cambia la confianza de GnuPG.</source>
+      <translation>Verificación local de KryptoPass: no firma una certificación OpenPGP ni cambia la confianza de GnuPG.</translation>
+    </message>
+    <message>
+      <source>Etiqueta local de KryptoPass. No modifica la clave ni configura ningún servicio.</source>
+      <translation>Etiqueta local de KryptoPass. No modifica la clave ni configura ningún servicio.</translation>
+    </message>
+    <message>
+      <source>Un servidor puede filtrar datos o exigir verificar el correo en su web. Lo publicado no siempre se puede retirar.</source>
+      <translation>Un servidor puede filtrar datos o exigir verificar el correo en su web. Lo publicado no siempre se puede retirar.</translation>
+    </message>
+    <message>
+      <source>Validez del UID calculada por GnuPG. No indica el estado de la clave ni la confianza en su propietario como certificador.</source>
+      <translation>Validez del UID calculada por GnuPG. No indica el estado de la clave ni la confianza en su propietario como certificador.</translation>
+    </message>
+    <message>
+      <source>Firmas de terceros en el anillo local. Una firma no implica que hayas verificado a su propietario.</source>
+      <translation>Firmas de terceros en el anillo local. Una firma no implica que hayas verificado a su propietario.</translation>
+    </message>
+    <message>
+      <source>Certificar</source>
+      <translation>Certificar</translation>
+    </message>
+    <message>
+      <source>Cifrar</source>
+      <translation>Cifrar</translation>
+    </message>
+    <message>
+      <source>SSH / Autenticar</source>
+      <translation>SSH / Autenticar</translation>
+    </message>
+    <message>
+      <source>En tarjeta</source>
+      <translation>En tarjeta</translation>
+    </message>
+    <message>
+      <source>Solo pública</source>
+      <translation>Solo pública</translation>
+    </message>
+    <message>
+      <source>Desactualizada</source>
+      <translation>Desactualizada</translation>
+    </message>
+    <message>
+      <source>Publicada</source>
+      <translation>Publicada</translation>
+    </message>
+    <message>
+      <source>No encontrada</source>
+      <translation>No encontrada</translation>
+    </message>
+    <message>
+      <source>Error de consulta</source>
+      <translation>Error de consulta</translation>
+    </message>
+    <message>
+      <source>Enviada, sin confirmar</source>
+      <translation>Enviada, sin confirmar</translation>
+    </message>
+    <message>
+      <source>No comprobado</source>
+      <translation>No comprobado</translation>
+    </message>
+    <message>
+      <source>Último envío: %1</source>
+      <translation>Último envío: %1</translation>
+    </message>
+    <message>
+      <source>Última comprobación: %1</source>
+      <translation>Última comprobación: %1</translation>
     </message>
     <message>
       <source>Sin verificar</source>
       <translation>Sin verificar</translation>
     </message>
     <message>
-      <source>Validez total según GnuPG</source>
-      <translation>Validez total según GnuPG</translation>
-    </message>
-    <message>
-      <source>Validez: %1</source>
-      <translation>Validez: %1</translation>
-    </message>
-    <message>
-      <source>Validez de la identidad calculada por GnuPG: %1. No indica la confianza en su propietario como certificador ni el estado de la clave.</source>
-      <translation>Validez de la identidad calculada por GnuPG: %1. No indica la confianza en su propietario como certificador ni el estado de la clave.</translation>
-    </message>
-    <message>
-      <source>Validez de la identidad: %1</source>
-      <translation>Validez de la identidad: %1</translation>
+      <source>Firmar</source>
+      <translation>Firmar</translation>
     </message>
   </context>
   <context>
@@ -5595,54 +6296,7 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
-    <name>KeyContactPanel</name>
-    <message>
-      <source>Elige un contacto de tu agenda KDE para asociarlo a esta clave. Comprueba la huella con su propietario antes de usarla.</source>
-      <translation>Elige un contacto de tu agenda KDE para asociarlo a esta clave. Comprueba la huella con su propietario antes de usarla.</translation>
-    </message>
-    <message>
-      <source>Contacto vinculado</source>
-      <translation>Contacto vinculado</translation>
-    </message>
-    <message>
-      <source>No hay un contacto de la agenda vinculado a esta clave.</source>
-      <translation>No hay un contacto de la agenda vinculado a esta clave.</translation>
-    </message>
-    <message>
-      <source>Editar</source>
-      <translation>Editar</translation>
-    </message>
-    <message>
-      <source>Editar contacto %1</source>
-      <translation>Editar contacto %1</translation>
-    </message>
-    <message>
-      <source>Vincular a contacto de KDE…</source>
-      <translation>Vincular a contacto de KDE…</translation>
-    </message>
-    <message>
-      <source>Agenda KDE</source>
-      <translation>Agenda KDE</translation>
-    </message>
-    <message>
-      <source>Actualizar agenda</source>
-      <translation>Actualizar agenda</translation>
-    </message>
-    <message>
-      <source>Nuevo contacto</source>
-      <translation>Nuevo contacto</translation>
-    </message>
-    <message>
-      <source>Abrir KDE Contacts</source>
-      <translation>Abrir KDE Contacts</translation>
-    </message>
-    <message>
-      <source>Consultando o actualizando KDE Contacts…</source>
-      <translation>Consultando o actualizando KDE Contacts…</translation>
-    </message>
-  </context>
-  <context>
-    <name>KeyContactsOverview</name>
+    <name>KeyAddressBook</name>
     <message>
       <source>Contactos con huella OpenPGP</source>
       <translation>Contactos con huella OpenPGP</translation>
@@ -5709,265 +6363,183 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
+    <name>KeyContactPanel</name>
+    <message>
+      <source>Contacto vinculado</source>
+      <translation>Contacto vinculado</translation>
+    </message>
+    <message>
+      <source>Sin contacto vinculado.</source>
+      <translation>Sin contacto vinculado.</translation>
+    </message>
+    <message>
+      <source>Editar</source>
+      <translation>Editar</translation>
+    </message>
+    <message>
+      <source>Editar contacto %1</source>
+      <translation>Editar contacto %1</translation>
+    </message>
+    <message>
+      <source>Vincular a contacto de KDE…</source>
+      <translation>Vincular a contacto de KDE…</translation>
+    </message>
+    <message>
+      <source>Agenda KDE</source>
+      <translation>Agenda KDE</translation>
+    </message>
+    <message>
+      <source>Actualizar agenda</source>
+      <translation>Actualizar agenda</translation>
+    </message>
+    <message>
+      <source>Nuevo contacto</source>
+      <translation>Nuevo contacto</translation>
+    </message>
+    <message>
+      <source>Abrir KDE Contacts</source>
+      <translation>Abrir KDE Contacts</translation>
+    </message>
+    <message>
+      <source>Consultando o actualizando KDE Contacts…</source>
+      <translation>Consultando o actualizando KDE Contacts…</translation>
+    </message>
+  </context>
+  <context>
+    <name>KeyContactsOverview</name>
+    <message>
+      <source>Cambiar nombre de la persona</source>
+      <translation>Cambiar nombre de la persona</translation>
+    </message>
+    <message>
+      <source>Añadir persona</source>
+      <translation>Añadir persona</translation>
+    </message>
+    <message>
+      <source>Nombre de la persona</source>
+      <translation>Nombre de la persona</translation>
+    </message>
+    <message>
+      <source>Quitar persona de KryptoPass</source>
+      <translation>Quitar persona de KryptoPass</translation>
+    </message>
+    <message>
+      <source>Sus claves siguen en el llavero, sin persona asignada y sin tus verificaciones.</source>
+      <translation>Sus claves siguen en el llavero, sin persona asignada y sin tus verificaciones.</translation>
+    </message>
+    <message>
+      <source>Personas</source>
+      <translation>Personas</translation>
+    </message>
+    <message>
+      <source>Importar clave pública…</source>
+      <translation>Importar clave pública…</translation>
+    </message>
+    <message>
+      <source>Ver claves</source>
+      <translation>Ver claves</translation>
+    </message>
+    <message>
+      <source>Sin personas.</source>
+      <translation>Sin personas.</translation>
+    </message>
+    <message>
+      <source>Añadir persona…</source>
+      <translation>Añadir persona…</translation>
+    </message>
+    <message>
+      <source>Volver a personas</source>
+      <translation>Volver a personas</translation>
+    </message>
+    <message>
+      <source>Vincular con la agenda de KDE…</source>
+      <translation>Vincular con la agenda de KDE…</translation>
+    </message>
+    <message>
+      <source>Quitar persona…</source>
+      <translation>Quitar persona…</translation>
+    </message>
+    <message>
+      <source>Cambiar nombre…</source>
+      <translation>Cambiar nombre…</translation>
+    </message>
+  </context>
+  <context>
     <name>KeyDetail</name>
+    <message>
+      <source>General y accesos</source>
+      <translation>General y accesos</translation>
+    </message>
+    <message>
+      <source>Seguridad y recuperación</source>
+      <translation>Seguridad y recuperación</translation>
+    </message>
+    <message>
+      <source>Servidores y firmas</source>
+      <translation>Servidores y firmas</translation>
+    </message>
+    <message>
+      <source>Contactos KDE</source>
+      <translation>Contactos KDE</translation>
+    </message>
     <message>
       <source>Copiado al portapapeles</source>
       <translation>Copiado al portapapeles</translation>
     </message>
     <message>
-      <source>Sin caducidad</source>
-      <translation>Sin caducidad</translation>
+      <source>Editar alias en KryptoPass</source>
+      <translation>Editar alias en KryptoPass</translation>
     </message>
     <message>
-      <source>%1 (predeterminado)</source>
-      <translation>%1 (predeterminado)</translation>
-    </message>
-    <message>
-      <source>Configurar servicios online…</source>
-      <translation>Configurar servicios online…</translation>
-    </message>
-    <message>
-      <source>Exportar clave pública…</source>
-      <translation>Exportar clave pública…</translation>
-    </message>
-    <message>
-      <source>Copiar clave pública</source>
-      <translation>Copiar clave pública</translation>
-    </message>
-    <message>
-      <source>Actualizar desde servidor…</source>
-      <translation>Actualizar desde servidor…</translation>
-    </message>
-    <message>
-      <source>Servicios online</source>
-      <translation>Servicios online</translation>
-    </message>
-    <message>
-      <source>Administrar</source>
-      <translation>Administrar</translation>
-    </message>
-    <message>
-      <source>GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.</source>
-      <translation>GnuPG no sabe que esta clave es tuya, así que no puede cifrar elementos con ella. Si es tu clave, márcala como tuya.</translation>
-    </message>
-    <message>
-      <source>Marcar como mía…</source>
-      <translation>Marcar como mía…</translation>
-    </message>
-    <message>
-      <source>Guardar respaldo privado…</source>
-      <translation>Guardar respaldo privado…</translation>
-    </message>
-    <message>
-      <source>Cambiar passphrase…</source>
-      <translation>Cambiar passphrase…</translation>
-    </message>
-    <message>
-      <source>Revocar clave…</source>
-      <translation>Revocar clave…</translation>
-    </message>
-    <message>
-      <source>Eliminar material local…</source>
-      <translation>Eliminar material local…</translation>
-    </message>
-    <message>
-      <source>Identidad</source>
-      <translation>Identidad</translation>
-    </message>
-    <message>
-      <source>Firmas</source>
-      <translation>Firmas</translation>
-    </message>
-    <message>
-      <source>Contactos</source>
-      <translation>Contactos</translation>
-    </message>
-    <message>
-      <source>Recuperación</source>
-      <translation>Recuperación</translation>
-    </message>
-    <message>
-      <source>Sin correo electrónico</source>
-      <translation>Sin correo electrónico</translation>
-    </message>
-    <message>
-      <source>Contacto: %1</source>
-      <translation>Contacto: %1</translation>
-    </message>
-    <message>
-      <source>Tipo:</source>
-      <translation>Tipo:</translation>
-    </message>
-    <message>
-      <source>Clave propia (parte privada disponible)</source>
-      <translation>Clave propia (parte privada disponible)</translation>
-    </message>
-    <message>
-      <source>Clave de contacto (solo parte pública)</source>
-      <translation>Clave de contacto (solo parte pública)</translation>
-    </message>
-    <message>
-      <source>Estado:</source>
-      <translation>Estado:</translation>
-    </message>
-    <message>
-      <source>Caducidad:</source>
-      <translation>Caducidad:</translation>
-    </message>
-    <message>
-      <source>Cambiar caducidad…</source>
-      <translation>Cambiar caducidad…</translation>
-    </message>
-    <message>
-      <source>Identidades (%1)</source>
-      <translation>Identidades (%1)</translation>
-    </message>
-    <message>
-      <source>Añadir identidad…</source>
-      <translation>Añadir identidad…</translation>
-    </message>
-    <message>
-      <source>Identidad principal</source>
-      <translation>Identidad principal</translation>
-    </message>
-    <message>
-      <source>Usar como principal</source>
-      <translation>Usar como principal</translation>
-    </message>
-    <message>
-      <source>Revocar identidad…</source>
-      <translation>Revocar identidad…</translation>
-    </message>
-    <message>
-      <source>Certificar…</source>
-      <translation>Certificar…</translation>
+      <source>Cambiar</source>
+      <translation>Cambiar</translation>
     </message>
     <message>
       <source>Huella de la clave</source>
       <translation>Huella de la clave</translation>
     </message>
     <message>
-      <source>Huella completa de la clave</source>
-      <translation>Huella completa de la clave</translation>
+      <source>Copiar huella</source>
+      <translation>Copiar huella</translation>
     </message>
     <message>
-      <source>Copiar huella completa</source>
-      <translation>Copiar huella completa</translation>
+      <source>Copiar clave pública</source>
+      <translation>Copiar clave pública</translation>
     </message>
     <message>
-      <source>Usar como clave principal</source>
-      <translation>Usar como clave principal</translation>
+      <source>Exportar…</source>
+      <translation>Exportar…</translation>
     </message>
     <message>
-      <source>Clave principal de la bóveda</source>
-      <translation>Clave principal de la bóveda</translation>
+      <source>Exportar clave pública (.asc)…</source>
+      <translation>Exportar clave pública (.asc)…</translation>
     </message>
     <message>
-      <source>Olvidar su frase al bloquear</source>
-      <translation>Olvidar su frase al bloquear</translation>
+      <source>Respaldar clave privada (.asc)…</source>
+      <translation>Respaldar clave privada (.asc)…</translation>
     </message>
     <message>
-      <source>Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.</source>
-      <translation>Al bloquear la bóveda, GnuPG olvida la frase de esta clave y la pedirá al desbloquear. Si también usas esta clave en otras aplicaciones, allí también tendrás que volver a escribirla.</translation>
+      <source>Claves de esta persona</source>
+      <translation>Claves de esta persona</translation>
     </message>
     <message>
-      <source>Detalles criptográficos</source>
-      <translation>Detalles criptográficos</translation>
-    </message>
-    <message>
-      <source>Mostrar u ocultar la clave principal y sus subclaves</source>
-      <translation>Mostrar u ocultar la clave principal y sus subclaves</translation>
-    </message>
-    <message>
-      <source>Añadir subclave…</source>
-      <translation>Añadir subclave…</translation>
-    </message>
-    <message>
-      <source>Clave principal</source>
-      <translation>Clave principal</translation>
-    </message>
-    <message>
-      <source>Subclave %1</source>
-      <translation>Subclave %1</translation>
-    </message>
-    <message>
-      <source>Algoritmo:</source>
-      <translation>Algoritmo:</translation>
-    </message>
-    <message>
-      <source>Usos:</source>
-      <translation>Usos:</translation>
-    </message>
-    <message>
-      <source>Sin usos disponibles</source>
-      <translation>Sin usos disponibles</translation>
-    </message>
-    <message>
-      <source>Revocar subclave…</source>
-      <translation>Revocar subclave…</translation>
-    </message>
-    <message>
-      <source>Certificaciones (%1)</source>
-      <translation>Certificaciones (%1)</translation>
-    </message>
-    <message>
-      <source>Certificaciones de terceros registradas en el anillo local. Una firma no implica que hayas verificado la identidad de su propietario.</source>
-      <translation>Certificaciones de terceros registradas en el anillo local. Una firma no implica que hayas verificado la identidad de su propietario.</translation>
-    </message>
-    <message>
-      <source>No hay firmas de terceros registradas para esta clave.</source>
-      <translation>No hay firmas de terceros registradas para esta clave.</translation>
-    </message>
-    <message>
-      <source>Firmante sin identidad disponible</source>
-      <translation>Firmante sin identidad disponible</translation>
-    </message>
-    <message>
-      <source>ID del firmante:</source>
-      <translation>ID del firmante:</translation>
-    </message>
-    <message>
-      <source>No disponible</source>
-      <translation>No disponible</translation>
-    </message>
-    <message>
-      <source>Identidad firmada:</source>
-      <translation>Identidad firmada:</translation>
-    </message>
-    <message>
-      <source>Recuperación de la clave</source>
-      <translation>Recuperación de la clave</translation>
-    </message>
-    <message>
-      <source>Un certificado de revocación permite revocar esta clave si pierdes el acceso a ella. Guárdalo fuera del equipo y protégelo como un secreto.</source>
-      <translation>Un certificado de revocación permite revocar esta clave si pierdes el acceso a ella. Guárdalo fuera del equipo y protégelo como un secreto.</translation>
-    </message>
-    <message>
-      <source>Solo una clave propia, con su parte privada en este llavero, puede crear un certificado de revocación.</source>
-      <translation>Solo una clave propia, con su parte privada en este llavero, puede crear un certificado de revocación.</translation>
-    </message>
-    <message>
-      <source>Crear certificado de revocación…</source>
-      <translation>Crear certificado de revocación…</translation>
+      <source>Sección de la clave</source>
+      <translation>Sección de la clave</translation>
     </message>
   </context>
   <context>
     <name>KeyListDelegate</name>
     <message>
-      <source>%1. %2. %3. Huella: %4</source>
-      <translation>%1. %2. %3. Huella: %4</translation>
-    </message>
-    <message>
       <source>Sin correo electrónico</source>
       <translation>Sin correo electrónico</translation>
     </message>
     <message>
-      <source>Identidad sin verificar</source>
-      <translation>Identidad sin verificar</translation>
+      <source>%1. %2. Huella: %3</source>
+      <translation>%1. %2. Huella: %3</translation>
     </message>
     <message>
-      <source>Principal</source>
-      <translation>Principal</translation>
+      <source>Bóveda</source>
+      <translation>Bóveda</translation>
     </message>
   </context>
   <context>
@@ -5999,18 +6571,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Sin caducidad</source>
       <translation>Sin caducidad</translation>
-    </message>
-    <message>
-      <source>Cifrar</source>
-      <translation>Cifrar</translation>
-    </message>
-    <message>
-      <source>Firmar</source>
-      <translation>Firmar</translation>
-    </message>
-    <message>
-      <source>Autenticar</source>
-      <translation>Autenticar</translation>
     </message>
     <message>
       <source>Pública y privada</source>
@@ -6045,14 +6605,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Copiar clave pública</translation>
     </message>
     <message>
-      <source>Respaldar clave privada</source>
-      <translation>Respaldar clave privada</translation>
-    </message>
-    <message>
-      <source>Cambiar passphrase</source>
-      <translation>Cambiar passphrase</translation>
-    </message>
-    <message>
       <source>Cambiar caducidad</source>
       <translation>Cambiar caducidad</translation>
     </message>
@@ -6069,16 +6621,8 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Revocar identidad</translation>
     </message>
     <message>
-      <source>Añadir subclave</source>
-      <translation>Añadir subclave</translation>
-    </message>
-    <message>
       <source>Revocar subclave</source>
       <translation>Revocar subclave</translation>
-    </message>
-    <message>
-      <source>Crear certificado de revocación</source>
-      <translation>Crear certificado de revocación</translation>
     </message>
     <message>
       <source>Revocar clave</source>
@@ -6097,8 +6641,36 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Eliminar clave del llavero</translation>
     </message>
     <message>
-      <source>Marcar clave como mía</source>
-      <translation>Marcar clave como mía</translation>
+      <source>Cifrado de datos</source>
+      <translation>Cifrado de datos</translation>
+    </message>
+    <message>
+      <source>Firma</source>
+      <translation>Firma</translation>
+    </message>
+    <message>
+      <source>Acceso SSH (autenticación)</source>
+      <translation>Acceso SSH (autenticación)</translation>
+    </message>
+    <message>
+      <source>Respaldar clave privada</source>
+      <translation>Respaldar clave privada</translation>
+    </message>
+    <message>
+      <source>Cambiar contraseña (passphrase)</source>
+      <translation>Cambiar contraseña (passphrase)</translation>
+    </message>
+    <message>
+      <source>Añadir subclave</source>
+      <translation>Añadir subclave</translation>
+    </message>
+    <message>
+      <source>Generar certificado de revocación</source>
+      <translation>Generar certificado de revocación</translation>
+    </message>
+    <message>
+      <source>Confirmar confianza en GnuPG</source>
+      <translation>Confirmar confianza en GnuPG</translation>
     </message>
     <message>
       <source>Operación OpenPGP</source>
@@ -6241,12 +6813,16 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Se revocará esta identidad de forma permanente. La identidad dejará de ser válida para la clave.</translation>
     </message>
     <message>
-      <source>Añade una subclave de uso específico. GnuPG puede abrir pinentry para autorizar el cambio.</source>
-      <translation>Añade una subclave de uso específico. GnuPG puede abrir pinentry para autorizar el cambio.</translation>
-    </message>
-    <message>
       <source>Uso de la nueva subclave</source>
       <translation>Uso de la nueva subclave</translation>
+    </message>
+    <message>
+      <source>Etiqueta opcional, por ejemplo: GitHub SSH</source>
+      <translation>Etiqueta opcional, por ejemplo: GitHub SSH</translation>
+    </message>
+    <message>
+      <source>Etiqueta de la subclave</source>
+      <translation>Etiqueta de la subclave</translation>
     </message>
     <message>
       <source>Se revocará solo la subclave mostrada. La clave primaria no se revocará.</source>
@@ -6379,6 +6955,20 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Todos los archivos (*)</source>
       <translation>Todos los archivos (*)</translation>
+    </message>
+  </context>
+  <context>
+    <name>KeyStore</name>
+    <message>
+      <source>Sin registro</source>
+      <translation>Sin registro</translation>
+    </message>
+    <message numerus="yes">
+      <source>%n identidad</source>
+      <translation>
+        <numerusform>%n identidad</numerusform>
+        <numerusform>%n identidades</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -6595,14 +7185,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Espera a que termine la operación actual antes de salir.</translation>
     </message>
     <message>
-      <source>Claves propias</source>
-      <translation>Claves propias</translation>
-    </message>
-    <message>
-      <source>Todas las claves</source>
-      <translation>Todas las claves</translation>
-    </message>
-    <message>
       <source>Todos los elementos</source>
       <translation>Todos los elementos</translation>
     </message>
@@ -6615,8 +7197,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>Papelera</translation>
     </message>
     <message>
-      <source>Contactos</source>
-      <translation>Contactos</translation>
+      <source>Todas las claves</source>
+      <translation>Todas las claves</translation>
     </message>
     <message>
       <source>Guarda o descarta los cambios de carpeta antes de salir.</source>
@@ -6661,6 +7243,14 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Autolimpieza del portapapeles</source>
       <translation>Autolimpieza del portapapeles</translation>
+    </message>
+    <message>
+      <source>Mis identidades</source>
+      <translation>Mis identidades</translation>
+    </message>
+    <message>
+      <source>Personas</source>
+      <translation>Personas</translation>
     </message>
     <message>
       <source>Desactivada</source>
@@ -7839,8 +8429,8 @@ https://cuenta.ejemplo.test</translation>
       <translation>Recargar llavero</translation>
     </message>
     <message>
-      <source>Crear clave OpenPGP…</source>
-      <translation>Crear clave OpenPGP…</translation>
+      <source>Añadir identidad…</source>
+      <translation>Añadir identidad…</translation>
     </message>
     <message>
       <source>Importar clave OpenPGP…</source>

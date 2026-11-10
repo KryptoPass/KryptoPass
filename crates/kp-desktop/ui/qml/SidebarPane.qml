@@ -103,19 +103,19 @@ Controls.Pane {
         Repeater {
             model: root.keysMode ? [
                 {
-                    id: "all",
-                    name: qsTranslate("Main", "Todas las claves"),
-                    icon: "view-certificate"
-                },
-                {
                     id: "own",
-                    name: qsTranslate("Main", "Claves propias"),
+                    name: qsTranslate("Main", "Mis identidades"),
                     icon: "user-identity"
                 },
                 {
                     id: "contacts",
-                    name: qsTranslate("Main", "Contactos"),
+                    name: qsTranslate("Main", "Personas"),
                     icon: "view-pim-contacts"
+                },
+                {
+                    id: "all",
+                    name: qsTranslate("Main", "Todas las claves"),
+                    icon: "view-certificate"
                 }
             ] : [
                 {

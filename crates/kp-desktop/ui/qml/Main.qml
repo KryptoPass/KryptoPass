@@ -352,7 +352,7 @@ Controls.ApplicationWindow {
     readonly property bool selectedEntryActionsEnabled: !root.keysMode && !store.controller.locked && !editor.opened && !editor.waitingForEditor && !root.mutationsBlocked && !store.controller.detailBusy && !!store.selected
     readonly property var selectedDetailForActions: store.selected && store.detail && store.detail.id === store.selected.id && !store.controller.detailBusy ? store.detail : null
     readonly property bool selectedDetailCopyActionsEnabled: root.selectedEntryActionsEnabled && !store.controller.detailBusy && !!root.selectedDetailForActions && !store.selected.trashed
-    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Claves propias") : keys.scope === "contacts" ? qsTr("Contactos") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
+    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Mis identidades") : keys.scope === "contacts" ? qsTr("Personas") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
     Component.onCompleted: {
         deviceController.startResumeOwner();
         store.controller.loadStore();
@@ -587,7 +587,7 @@ Controls.ApplicationWindow {
         controller: shell
         actionId: "createKey"
         enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        onTriggered: mainKeyOperationDialog.openFor("create")
+        onTriggered: addIdentity.start()
     }
     DesktopAction {
         id: importKey
@@ -1522,6 +1522,12 @@ Controls.ApplicationWindow {
             });
         }
     }
+    IdentityAddDialog {
+        id: addIdentity
+        keyStore: keys
+        operationDialog: mainKeyOperationDialog
+    }
+
     KeyOperationDialog {
         id: mainKeyOperationDialog
         keyStore: keys

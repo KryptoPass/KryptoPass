@@ -74,11 +74,11 @@ Controls.Pane {
                     level: 3
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible) ? qsTr("Propiedades de la clave") : root.keyStore.scope === "contacts" ? qsTr("Agenda de contactos") : qsTr("Contactos de KDE Contacts")) : qsTr("Detalle")
+                    text: root.keysMode ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible) ? qsTr("Identidad") : root.keyStore.scope === "contacts" ? qsTr("Personas") : qsTr("Identidades")) : qsTr("Detalle")
                 }
                 Controls.ToolButton {
                     visible: root.keysMode && root.keyStore.scope === "contacts"
-                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a la clave") : qsTr("Ver agenda")
+                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a la clave") : qsTr("Administrar personas")
                     icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? "view-certificate" : "view-pim-contacts"
                     Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de contactos")
                     onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected ? !root.keyStore.contactsOverviewVisible : true
@@ -118,7 +118,7 @@ Controls.Pane {
                 }
                 Controls.ToolButton {
                     action: root.copyFingerprintAction
-                    visible: root.keysMode
+                    visible: false
                     display: root.width < Kirigami.Units.gridUnit * 26 ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
@@ -147,11 +147,31 @@ Controls.Pane {
             }
         }
 
+        ColumnLayout {
+            visible: root.keysMode && !root.editing && !root.keyStore.selected && root.keyStore.scope !== "contacts"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Controls.Button {
+                Layout.margins: Kirigami.Units.largeSpacing
+                text: qsTr("Añadir identidad…")
+                enabled: !root.keyStore.controller.busy
+                onClicked: emptyIdentityDialog.start()
+            }
+            Item {
+                Layout.fillHeight: true
+            }
+        }
+        IdentityAddDialog {
+            id: emptyIdentityDialog
+            keyStore: root.keyStore
+            operationDialog: root.keyOperationDialog
+        }
+
         KeyContactsOverview {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: Kirigami.Units.largeSpacing
-            visible: root.keysMode && !root.editing && (!root.keyStore.selected || (root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible))
+            visible: root.keysMode && !root.editing && root.keyStore.scope === "contacts" && (!root.keyStore.selected || root.keyStore.contactsOverviewVisible)
             keyStore: root.keyStore
             operationDialog: root.keyOperationDialog
         }

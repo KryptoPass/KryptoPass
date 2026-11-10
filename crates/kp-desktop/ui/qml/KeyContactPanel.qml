@@ -13,13 +13,7 @@ ColumnLayout {
     readonly property Backend.ContactsController contactsController: keyStore.contactsController
     readonly property var linkedContacts: keyStore.contactRows.filter(contact => keyStore.contactFingerprints(contact).includes((selectedKey?.id || "").toUpperCase()))
 
-    spacing: Kirigami.Units.largeSpacing
-
-    Controls.Label {
-        Layout.fillWidth: true
-        text: qsTr("Elige un contacto de tu agenda KDE para asociarlo a esta clave. Comprueba la huella con su propietario antes de usarla.")
-        wrapMode: Text.Wrap
-    }
+    spacing: 12
 
     Kirigami.InlineMessage {
         Layout.fillWidth: true
@@ -28,67 +22,70 @@ ColumnLayout {
         text: root.contactsController.errorMessage
     }
 
-    Controls.Frame {
+    ColumnLayout {
         Layout.fillWidth: true
-        contentItem: ColumnLayout {
-            spacing: Kirigami.Units.smallSpacing
-            Kirigami.Heading {
+        spacing: Kirigami.Units.smallSpacing
+        Kirigami.Heading {
+            Layout.fillWidth: true
+            level: 4
+            text: qsTr("Contacto vinculado")
+        }
+        Controls.Label {
+            Layout.fillWidth: true
+            visible: root.linkedContacts.length === 0
+            text: qsTr("Sin contacto vinculado.")
+            color: Kirigami.Theme.disabledTextColor
+            wrapMode: Text.Wrap
+        }
+        Controls.Label {
+            Layout.fillWidth: true
+            visible: root.linkedContacts.length > 0
+            text: root.selectedKey?.id || ""
+            font: Kirigami.Theme.fixedWidthFont
+            textFormat: Text.PlainText
+            wrapMode: Text.WrapAnywhere
+        }
+        Repeater {
+            model: root.linkedContacts
+            delegate: RowLayout {
+                id: linkedContactRow
+                required property var modelData
                 Layout.fillWidth: true
-                level: 3
-                text: qsTr("Contacto vinculado")
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: root.linkedContacts.length === 0
-                text: qsTr("No hay un contacto de la agenda vinculado a esta clave.")
-                color: Kirigami.Theme.disabledTextColor
-                wrapMode: Text.Wrap
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                visible: root.linkedContacts.length > 0
-                text: root.selectedKey?.id || ""
-                font: Kirigami.Theme.fixedWidthFont
-                textFormat: Text.PlainText
-                wrapMode: Text.WrapAnywhere
-            }
-            Repeater {
-                model: root.linkedContacts
-                delegate: RowLayout {
-                    id: linkedContactRow
-                    required property var modelData
+                Controls.Label {
                     Layout.fillWidth: true
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid
-                        textFormat: Text.PlainText
-                        font.weight: Font.DemiBold
-                        wrapMode: Text.Wrap
-                    }
-                    Controls.Button {
-                        enabled: !root.contactsController.busy
-                        text: qsTr("Editar")
-                        icon.name: "document-edit"
-                        Accessible.name: qsTr("Editar contacto %1").arg(linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid)
-                        onClicked: root.contactsController.editContact(linkedContactRow.modelData.uid)
-                    }
+                    text: linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid
+                    textFormat: Text.PlainText
+                    font.weight: Font.DemiBold
+                    wrapMode: Text.Wrap
                 }
-            }
-            Flow {
-                Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
                 Controls.Button {
                     enabled: !root.contactsController.busy
-                    text: qsTr("Vincular a contacto de KDE…")
-                    icon.name: "link"
-                    onClicked: root.contactsController.chooseContactForKey(root.selectedKey.id)
+                    text: qsTr("Editar")
+                    icon.name: "document-edit"
+                    Accessible.name: qsTr("Editar contacto %1").arg(linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid)
+                    onClicked: root.contactsController.editContact(linkedContactRow.modelData.uid)
                 }
             }
         }
+        Flow {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+            Controls.Button {
+                enabled: !root.contactsController.busy
+                text: qsTr("Vincular a contacto de KDE…")
+                icon.name: "link"
+                onClicked: root.contactsController.chooseContactForKey(root.selectedKey.id)
+            }
+        }
+    }
+    Kirigami.Separator {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        Layout.bottomMargin: 8
     }
 
     Kirigami.Heading {
-        level: 3
+        level: 4
         text: qsTr("Agenda KDE")
     }
     Flow {

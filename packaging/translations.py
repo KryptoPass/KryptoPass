@@ -11,6 +11,9 @@ from metadata import ROOT, load_metadata, qt_tool
 
 CATALOG = ROOT / "po/es.ts"
 SPANISH_PLURALS = {
+    "%n identidad": "%n identidades",
+    "Caduca en %n día": "Caduca en %n días",
+    "Una subclave caduca en %n día": "Una subclave caduca en %n días",
     "%n clave": "%n claves",
     "%n elemento": "%n elementos",
     "%n clave GPG cargada": "%n claves GPG cargadas",
