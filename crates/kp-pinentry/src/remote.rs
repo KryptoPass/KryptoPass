@@ -49,6 +49,21 @@ pub fn start(prompt: &Prompt, number: u64, events: Sender<Event>) -> Option<Remo
         log::write("remote: skipped (retry or new passphrase)");
         return None;
     }
+    if kind == Kind::Passphrase {
+        // Only the passphrase of a real key may come from the phone. Prompts
+        // without a keygrip (GET_PASSPHRASE, symmetric encryption, card PINs)
+        // hand what is typed back to whoever asked gpg-agent.
+        if !prompt.key.as_deref().is_some_and(is_keygrip) {
+            log::write("remote: skipped (the prompt is not for a key)");
+            return None;
+        }
+        // Like pinentry's own external cache: one remote passphrase per
+        // connection, so a wrong stored one cannot be offered in a loop.
+        if prompt.remote_passphrase_used.get() {
+            log::write("remote: skipped (a phone passphrase was already used)");
+            return None;
+        }
+    }
     let request = Request {
         kind,
         key: prompt.key.clone(),
@@ -109,6 +124,7 @@ pub fn reply(
             }
             write_data(agent_out, &secret)?;
             agent_out.write_all(b"OK\n")?;
+            prompt.remote_passphrase_used.set(true);
         }
         (Kind::Passphrase, Decision::Denied) => {
             log::write("remote: passphrase refused on the phone");
@@ -125,6 +141,13 @@ pub fn reply(
     }
     agent_out.flush()?;
     Ok(true)
+}
+
+/// `n/<keygrip>` (OpenPGP, X.509) or `s/<keygrip>` (SSH): 40 hex digits.
+fn is_keygrip(key: &str) -> bool {
+    key.strip_prefix("n/")
+        .or_else(|| key.strip_prefix("s/"))
+        .is_some_and(|grip| grip.len() == 40 && grip.bytes().all(|byte| byte.is_ascii_hexdigit()))
 }
 
 /// Sends a secret as `D` lines with `%`, CR and LF escaped, never splitting an escape.

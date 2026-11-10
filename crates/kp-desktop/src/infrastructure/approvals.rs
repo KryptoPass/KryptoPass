@@ -44,6 +44,11 @@ fn handle(request: Request, waiting: &dyn Fn() -> bool) -> Decision {
         tracing::info!("Approvals: a retry is always answered locally");
         return Decision::Unavailable;
     }
+    // The pinentry already refuses these; whoever else connects gets the same.
+    if request.kind == Kind::Passphrase && !request.key.as_deref().is_some_and(is_keygrip) {
+        tracing::info!("Approvals: a passphrase without a keygrip is never asked remotely");
+        return Decision::Unavailable;
+    }
     let ask = ApprovalAsk {
         kind: match request.kind {
             Kind::Confirm => ApprovalKind::Confirm,
@@ -97,6 +102,13 @@ fn handle(request: Request, waiting: &dyn Fn() -> bool) -> Decision {
             return Decision::Unavailable;
         }
     }
+}
+
+/// `n/<keygrip>` or `s/<keygrip>` (SSH): 40 hex digits.
+fn is_keygrip(key: &str) -> bool {
+    key.strip_prefix("n/")
+        .or_else(|| key.strip_prefix("s/"))
+        .is_some_and(|grip| grip.len() == 40 && grip.bytes().all(|byte| byte.is_ascii_hexdigit()))
 }
 
 /// `owner=<pid>/<uid> <host>` → the process name and pid, when it is local.

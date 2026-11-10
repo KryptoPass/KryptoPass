@@ -27,7 +27,11 @@ const CANDIDATES: &[&str] = &[
     "pinentry",
 ];
 
-/// Overrides the search, for example to test with `pinentry-tty`.
+/// Where a fallback may live. Never `PATH`: it can put a user-writable
+/// directory first, and whatever runs as the fallback sees the passphrase.
+const SYSTEM_DIRECTORIES: &[&str] = &["/usr/bin", "/usr/local/bin", "/bin"];
+
+/// Debug builds only: forces a fallback, for example a test script.
 const OVERRIDE: &str = "KRYPTOPASS_PINENTRY_FALLBACK";
 
 /// Everything the proxy waits on.
@@ -220,8 +224,16 @@ pub fn find() -> Option<PathBuf> {
         let real = std::fs::canonicalize(path).ok();
         real.is_some() && real == me
     };
-    if let Some(chosen) = std::env::var_os(OVERRIDE).map(PathBuf::from) {
+    // An environment variable must not choose who sees the passphrase in a
+    // release build; gpg-agent's environment is not a trust boundary we own.
+    if cfg!(debug_assertions)
+        && let Some(chosen) = std::env::var_os(OVERRIDE).map(PathBuf::from)
+    {
         if chosen.is_absolute() && is_executable(&chosen) && !is_me(&chosen) {
+            log::write(format_args!(
+                "debug build: fallback forced to {}",
+                chosen.display()
+            ));
             return Some(chosen);
         }
         log::write(format_args!(
@@ -229,12 +241,11 @@ pub fn find() -> Option<PathBuf> {
             chosen.display()
         ));
     }
-    let path = std::env::var_os("PATH").unwrap_or_else(|| "/usr/local/bin:/usr/bin".into());
     CANDIDATES.iter().find_map(|name| {
-        std::env::split_paths(&path)
-            .filter(|directory| directory.is_absolute())
-            .map(|directory| directory.join(name))
-            .find(|candidate| is_executable(candidate) && !is_me(candidate))
+        SYSTEM_DIRECTORIES
+            .iter()
+            .map(|directory| Path::new(directory).join(name))
+            .find(|candidate| is_system_program(candidate) && !is_me(candidate))
     })
 }
 
@@ -258,6 +269,16 @@ fn spawn(program: &Path, arguments: &[OsString]) -> io::Result<Child> {
         });
     }
     command.spawn()
+}
+
+/// Executable, owned by root and writable by nobody else: what a packaged
+/// pinentry looks like, and what another user's or this user's file does not.
+fn is_system_program(path: &Path) -> bool {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    std::fs::metadata(path).is_ok_and(|metadata| {
+        let mode = metadata.permissions().mode();
+        metadata.is_file() && mode & 0o111 != 0 && mode & 0o022 == 0 && metadata.uid() == 0
+    })
 }
 
 fn is_executable(path: &Path) -> bool {

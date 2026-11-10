@@ -12,7 +12,22 @@ mod remote;
 use std::io::BufWriter;
 use std::process::ExitCode;
 
+/// Passphrases pass through this process: no core file and no attaching by
+/// another process of the user (same effect as in the app).
+fn harden() {
+    let none = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    // SAFETY: `none` is a valid rlimit that outlives the call; prctl takes scalars.
+    unsafe {
+        libc::setrlimit(libc::RLIMIT_CORE, &none);
+        libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0);
+    }
+}
+
 fn main() -> ExitCode {
+    harden();
     log::open();
     let arguments: Vec<_> = std::env::args_os().skip(1).collect();
     log::write(format_args!("started with arguments {arguments:?}"));

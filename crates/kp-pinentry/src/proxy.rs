@@ -35,6 +35,8 @@ pub struct Prompt {
     /// gpg-agent wants the passphrase twice: a new one is being chosen.
     pub repeat: bool,
     pub external_cache: bool,
+    /// A passphrase from the phone already answered a prompt on this connection.
+    pub remote_passphrase_used: std::cell::Cell<bool>,
     pub last_command: String,
     last_argument: String,
 }
