@@ -3,13 +3,12 @@
 Estado al 2026-11-07, común a Desktop y Android. Se actualiza al cerrar o abrir
 trabajo; las reglas de trabajo están en `AGENTS.md` de cada repo.
 
-## 1. Validar Sync Desktop ↔ Android
+## 1. Pruebas profundas de Sync Desktop ↔ Android
 
-El contrato (`docs/sync/contrato.md`) está implementado en los dos lados
-(Desktop pasos 1–5, Android paso 6), pero sin probar con un dispositivo real.
-Vincular de nuevo (`peers-v1`) y comprobar en ambos sentidos: edición, conflicto
-y borrado definitivo. Después, actualizar el estado del contrato y
-`../kryptopass-android/docs/android-security-progress.md`.
+Sync funciona entre Desktop y un teléfono real en el uso básico (confirmado por el
+usuario el 2026-11-09). Faltan pruebas más profundas: conflicto editado en los dos
+lados, borrado definitivo con un lado apagado, versiones opacas, carpetas y Sync
+con la bóveda bloqueada. Se esperan bugs; no bloquean el trabajo en features.
 
 ## 2. Cabos sueltos
 
@@ -22,7 +21,7 @@ y borrado definitivo. Después, actualizar el estado del contrato y
 ## 3. Transferencia de la identidad OpenPGP teléfono → Desktop
 
 Falta importación create-only en GnuPG, aceptación local en Desktop y recibo con
-desafío. Va después de validar Sync. Detalle en
+desafío. Ya no espera a Sync. Detalle en
 `../kryptopass-android/docs/key-provisioning-flow.md`.
 
 ## 4. Bloqueo de claves y Sync

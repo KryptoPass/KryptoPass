@@ -1,8 +1,10 @@
 # Sync: contrato
 
 Estado: diseño acordado el 2026-10-29. Implementado en Desktop (pasos 1 a 5 de
-§9), sin validar con un dispositivo real; falta Android (paso 6), así que hasta
-entonces Desktop y el teléfono no sincronizan entre sí. Sustituye al ledger, al
+§9) y en Android (paso 6). El 2026-11-09 el usuario confirmó que Sync funciona
+entre Desktop y un teléfono real en el uso básico; faltan pruebas más profundas
+(conflictos, borrado definitivo con un lado apagado, versiones opacas).
+Sustituye al ledger, al
 espejo de Desktop y a `kp-vault`, ya eliminados. No hay datos en producción: el
 formato anterior se reemplaza sin migración ni código para leerlo, y los dos
 lados empiezan de nuevo. La bóveda vieja de Desktop (`kryptopass.sqlite3`) no se
