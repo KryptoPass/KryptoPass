@@ -336,6 +336,10 @@ browser-fork extension_dir:
 browser-install-dev *args: browser-build
     python3 tools/browser_integration.py install --proxy {{ quote(target_dir / "debug/kryptopass-browser-proxy") }} {{ args }}
 
+# Construye el pinentry de aprobaciones (docs/aprobacion-desde-telefono.md).
+pinentry-build:
+    cargo build -p kp-pinentry --bin kryptopass-pinentry
+
 # Servidor QML con la ubicación del build que informa Cargo.
 qmlls: check
     {{ quote(qml_tools / "qmlls") }} --no-cmake-calls --build-dir {{ quote(qml_local) }}

@@ -1,0 +1,19 @@
+[package]
+name = "kp-pinentry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Pinentry for gpg-agent that can ask a paired phone"
+
+[[bin]]
+name = "kryptopass-pinentry"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+zeroize = "1"
+
+[lints]
+workspace = true

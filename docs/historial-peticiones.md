@@ -174,3 +174,11 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   (`kryptopass.sqlite3`) y los `.kpb` del formato anterior no se abren. Los eventos
   de uso (copias) ya no se registran. Las pruebas que usaban el modelo anterior no
   compilan: están pendientes del agente de tests.
+
+- 2026-11-09: aprobar desde el teléfono operaciones de GnuPG en el PC sin
+  sustituir a gpg-agent: nivel 1 (confirmar) y nivel 2 (el teléfono entrega la
+  contraseña) son la prioridad; el diseño deja preparado el nivel 3 (el teléfono
+  como llave) sin implementarlo. Punto de entrada: un pinentry propio en Rust,
+  aislado y simple; la interfaz gráfica propia va después. Plan en
+  `docs/aprobacion-desde-telefono.md`. También pedidos para después: plugin de
+  KRunner con atajo global y gestión de claves SSH en gpg-agent.
