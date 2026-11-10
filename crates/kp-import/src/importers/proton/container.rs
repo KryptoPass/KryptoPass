@@ -29,7 +29,13 @@ pub(super) fn detect(input: &[u8], limits: &ImportLimits) -> Detection {
             return Detection::Unsupported;
         };
         let detection = match archive.by_index(index) {
-            Ok(entry) if entry.name().starts_with("Proton Pass/") => Detection::Match,
+            Ok(entry)
+                if entry
+                    .name()
+                    .is_ok_and(|name| name.starts_with("Proton Pass/")) =>
+            {
+                Detection::Match
+            }
             Ok(_) => Detection::Possible,
             Err(_) => Detection::Unsupported,
         };
@@ -96,7 +102,11 @@ fn select_payload(archive: &mut zip::ZipArchive<Cursor<&[u8]>>) -> Result<usize,
         let entry = archive
             .by_index(index)
             .map_err(|_| ImportError::InvalidExport)?;
-        if PAYLOAD_NAMES.contains(&entry.name()) && selected.replace(index).is_some() {
+        // An entry whose name cannot be read is never the payload.
+        let is_payload = entry
+            .name()
+            .is_ok_and(|name| PAYLOAD_NAMES.iter().any(|payload| *payload == &*name));
+        if is_payload && selected.replace(index).is_some() {
             return Err(ImportError::InvalidExport);
         }
     }

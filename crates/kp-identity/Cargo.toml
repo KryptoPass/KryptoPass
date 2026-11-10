@@ -28,7 +28,7 @@ zeroize = "1"
 keyring = { version = "=3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
 
 [dev-dependencies]
-rusqlite = { version = "0.40.2", default-features = false }
+rusqlite = { version = "0.41", default-features = false }
 kryptopass_store = { package = "kp-store", path = "../kp-store" }
 
 [lints]
