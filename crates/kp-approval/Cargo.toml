@@ -1,0 +1,18 @@
+[package]
+name = "kp-approval"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Approval requests between kryptopass-pinentry and KryptoPass"
+
+[lib]
+name = "kryptopass_approval"
+
+[dependencies]
+libc = "0.2"
+zeroize = "1"
+
+[lints]
+workspace = true

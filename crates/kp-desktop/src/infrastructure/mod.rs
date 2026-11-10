@@ -1,5 +1,6 @@
 //! Adapters for operating-system cryptography, browser integration, and UI resources.
 
+pub(crate) mod approvals;
 pub(crate) mod entry_icons;
 pub mod openpgp;
 

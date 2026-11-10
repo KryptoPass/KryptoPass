@@ -37,7 +37,10 @@ Controls.ApplicationWindow {
         interval: 250
         repeat: true
         running: true
-        onTriggered: store.controller.refreshBrowserPairing()
+        onTriggered: {
+            store.controller.refreshBrowserPairing();
+            store.controller.refreshApproval();
+        }
     }
     // Exchanges vault changes with paired phones while the vault is unlocked.
     property bool vaultReloadPending: false
@@ -91,6 +94,19 @@ Controls.ApplicationWindow {
         vaultLocked: store.controller.locked
         onDecisionRequested: function (token, approve) {
             store.controller.decideBrowserPairing(token, approve);
+        }
+    }
+    // Not under a LockGuard: confirming a key use never opens the vault.
+    ApprovalDialog {
+        id: approvalDialog
+        requestJson: store.controller.approvalRequest
+        onDecisionRequested: function (id, approve) {
+            store.controller.decideApproval(id, approve);
+        }
+        onAttentionRequested: {
+            root.show();
+            root.raise();
+            root.requestActivate();
         }
     }
     DevicesWindow {
@@ -1443,7 +1459,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         headerHeight: root.panelHeaderHeight
         focusedItem: root.activeFocusItem
-        externalModalOpen: devicesWindow.opened || browserAccessWindow.visible || browserPairingDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
+        externalModalOpen: devicesWindow.opened || browserAccessWindow.visible || browserPairingDialog.opened || approvalDialog.opened || passwordGenerator.opened || folderEditor.opened || moveDialog.opened || folderMoveDialog.opened || deleteEntryDialog.opened || deleteFolderDialog.opened || mainKeyOperationDialog.opened || keyErrorDialog.opened || backupWindow.opened || importWindow.opened
         onSaveRequested: function (draftJson) {
             store.controller.saveEntry(draftJson);
         }

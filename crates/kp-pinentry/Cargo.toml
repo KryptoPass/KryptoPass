@@ -12,6 +12,7 @@ name = "kryptopass-pinentry"
 path = "src/main.rs"
 
 [dependencies]
+kryptopass-approval = { package = "kp-approval", path = "../kp-approval" }
 libc = "0.2"
 zeroize = "1"
 

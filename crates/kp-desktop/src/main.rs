@@ -70,6 +70,13 @@ fn main() {
         None
     };
 
+    // Only the user's own instance answers the pinentry; helper instances never do.
+    let _approval_server = if separate_instance {
+        None
+    } else {
+        infrastructure::approvals::start()
+    };
+
     configure_quick_style();
 
     let mut qml_engine = QQmlApplicationEngine::new();

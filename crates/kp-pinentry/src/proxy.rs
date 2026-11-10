@@ -1,25 +1,31 @@
 //! Relays gpg-agent ⇄ fallback pinentry one command at a time.
 //!
-//! Working per command, not as two blind byte pumps, is what later lets
-//! `CONFIRM` and `GETPIN` be answered by the phone instead of the fallback.
+//! Before a `CONFIRM` or `GETPIN` reaches the fallback, the running KryptoPass
+//! gets the chance to answer it (see [`crate::remote`]). Anything it cannot
+//! answer goes to the fallback, so the local dialog is always the last word.
 
 use std::io::{self, BufRead, Write};
 
 use crate::assuan::{Line, Reply, classify, read_line};
-use crate::log;
+use crate::{log, remote};
 
 /// Longest argument text copied into the log.
 const LOG_ARGUMENT: usize = 300;
 
 /// What gpg-agent said about the prompt it is about to request.
 #[derive(Default)]
-struct Prompt {
-    key: Option<String>,
-    owner: Option<String>,
+pub struct Prompt {
+    pub key: Option<String>,
+    pub owner: Option<String>,
+    pub description: String,
+    pub title: Option<String>,
     /// gpg-agent set an error: the previous answer was wrong.
-    retry: bool,
-    external_cache: bool,
-    last_command: String,
+    pub retry: bool,
+    /// gpg-agent wants the passphrase twice: a new one is being chosen.
+    pub repeat: bool,
+    pub external_cache: bool,
+    pub last_command: String,
+    last_argument: String,
 }
 
 impl Prompt {
@@ -28,9 +34,13 @@ impl Prompt {
         let argument = String::from_utf8_lossy(command.argument()).into_owned();
         match keyword.as_str() {
             "SETKEYINFO" => {
-                self.key = (!argument.is_empty() && argument != "--clear").then_some(argument);
+                self.key =
+                    (!argument.is_empty() && argument != "--clear").then(|| argument.clone());
             }
+            "SETDESC" => self.description = argument.clone(),
+            "SETTITLE" => self.title = (!argument.is_empty()).then(|| argument.clone()),
             "SETERROR" => self.retry = !argument.is_empty(),
+            "SETREPEAT" => self.repeat = true,
             "OPTION" => {
                 if let Some(owner) = argument.strip_prefix("owner=") {
                     self.owner = Some(owner.to_owned());
@@ -41,15 +51,26 @@ impl Prompt {
             _ => {}
         }
         self.last_command = keyword;
+        self.last_argument = argument;
+    }
+
+    /// `MESSAGE` and `CONFIRM --one-button` only inform; there is nothing to approve.
+    pub fn is_question(&self) -> bool {
+        match self.last_command.as_str() {
+            "GETPIN" => true,
+            "CONFIRM" => !self.last_argument.contains("--one-button"),
+            _ => false,
+        }
     }
 
     fn summary(&self) -> String {
         format!(
-            "{} key={} owner={} retry={} external-cache={}",
+            "{} key={} owner={} retry={} repeat={} external-cache={}",
             self.last_command,
             self.key.as_deref().unwrap_or("-"),
             self.owner.as_deref().unwrap_or("-"),
             self.retry,
+            self.repeat,
             self.external_cache,
         )
     }
@@ -58,6 +79,7 @@ impl Prompt {
     fn finish(&mut self) {
         if matches!(self.last_command.as_str(), "GETPIN" | "CONFIRM" | "MESSAGE") {
             self.retry = false;
+            self.repeat = false;
         }
     }
 }
@@ -83,6 +105,10 @@ pub fn run(
             "GETPIN" | "CONFIRM" | "MESSAGE"
         ) {
             log::write(format_args!("prompt {}", prompt.summary()));
+        }
+        if prompt.is_question() && remote::answer(&prompt, agent_out)? {
+            prompt.finish();
+            continue;
         }
         send(pinentry_out, &command)?;
         relay_reply(agent_in, agent_out, pinentry_in, pinentry_out, &prompt)?;

@@ -1,6 +1,7 @@
 # Aprobar desde el teléfono
 
-Estado: plan del 2026-11-09. Paso 1 hecho (`crates/kp-pinentry`), sin probar con gpg-agent.
+Estado: plan del 2026-11-09. Pasos 1 y 2 hechos (`crates/kp-pinentry`,
+`crates/kp-approval`, `infrastructure/approvals.rs`), sin probar con gpg-agent real.
 
 El teléfono aprueba operaciones de GnuPG que ocurren en el PC: confirmar el uso
 de una clave (nivel 1) y entregar la contraseña de una clave (nivel 2). gpg-agent
@@ -92,13 +93,23 @@ sesión; el teléfono nunca devuelve la clave privada.
    registra en un log qué órdenes envía gpg-agent, sin datos. Sirve para ver el
    flujo real de SSH, GPG y la bóveda.
 2. **Socket de aprobaciones en Desktop** con un aprobador local de prueba (un
-   diálogo KDE) para cerrar el circuito sin teléfono.
+   diálogo KDE) para cerrar el circuito sin teléfono. Hecho: `kp-approval`
+   define las tramas; Desktop responde `CONFIRM` con `ApprovalDialog.qml`
+   (también con la bóveda bloqueada) y devuelve «no disponible» a todo
+   `GETPIN`. Una petición a la vez; sin decisión en 55 s, el pinentry local.
 3. **Contrato y mensajes P2P** (`Approval*`) en Desktop y Android.
 4. **Nivel 1 en Android:** notificación, contexto y respuesta.
 5. **Nivel 2:** guardar la contraseña en el teléfono (se escribe en el teléfono),
    responder `GETPIN` y manejar `SETERROR`.
 6. **Interfaz en Desktop:** activar el pinentry (`pinentry-program`), elegir
    teléfono y ver el historial de aprobaciones.
+
+### Cuidado para el paso 5
+
+KryptoPass abre la bóveda a través de gpg-agent, que lanza el pinentry, que
+pregunta a KryptoPass. La respuesta a un `GETPIN` nunca puede depender del hilo
+de la interfaz ni de la bóveda: si no, el desbloqueo se bloquea a sí mismo hasta
+que caduca. El paso 2 lo evita respondiendo «no disponible» sin pasar por la UI.
 
 ## 6. Notas del protocolo pinentry
 
@@ -134,6 +145,10 @@ just pinentry-build
 pinentry-program /ruta/a/target/debug/kryptopass-pinentry
 gpg-connect-agent reloadagent /bye
 ```
+
+Para el nivel 1 con SSH, añadir `confirm` a la línea de la clave en
+`~/.gnupg/sshcontrol` (`<keygrip> 0 confirm`). Con KryptoPass abierto, cada uso
+abre su diálogo; cerrado, el de `pinentry-qt`.
 
 El log está en `~/.local/state/kryptopass/pinentry.log` (0600): órdenes y
 respuestas, con los `D` y los `INQUIRE` reducidos a su longitud. Para volver

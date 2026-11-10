@@ -1,11 +1,13 @@
 //! `kryptopass-pinentry`: the pinentry gpg-agent runs when KryptoPass handles
-//! approvals. For now it relays every command to a real pinentry and logs the
-//! flow, without secrets. See `docs/aprobacion-desde-telefono.md`.
+//! approvals. A running KryptoPass may answer `CONFIRM` and `GETPIN`; every
+//! other command, and every prompt it does not answer, goes to a real pinentry.
+//! The flow is logged without secrets. See `docs/aprobacion-desde-telefono.md`.
 
 mod assuan;
 mod fallback;
 mod log;
 mod proxy;
+mod remote;
 
 use std::io::{BufReader, BufWriter};
 use std::process::ExitCode;
