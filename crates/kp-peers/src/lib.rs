@@ -357,6 +357,9 @@ impl PeerHost {
         if !created {
             return if reset_marker_exists(directory)? {
                 Self::initialize_reset_profile(directory)
+            } else if is_unborn_profile(directory)? {
+                tracing::info!("finishing a device profile that was never initialized");
+                Self::initialize_new_profile(directory)
             } else {
                 Self::open_existing_system_profile(directory)
             };
@@ -364,13 +367,23 @@ impl PeerHost {
         Self::initialize_new_profile(directory)
     }
 
+    /// Fills a profile directory that holds nothing yet: just created, or left
+    /// empty by a first run that could not reach the keyring.
+    ///
+    /// An identity the keyring already has (the data directory was removed, as
+    /// when reinstalling) is loaded, never replaced; its new trust database is
+    /// empty, so it authorizes nobody.
     fn initialize_new_profile(directory: &Path) -> Result<Self, PeerError> {
         let keys = SystemSecretKeyStore::new(directory, SYSTEM_PROFILE_KEYRING_ID)
             .map_err(|_| PeerError::KeyStore)?;
-        if keys.load().map_err(|_| PeerError::KeyStore)?.is_some() {
-            return Err(PeerError::Profile);
-        }
-        let identity = DeviceIdentity::create_new(&keys).map_err(|_| PeerError::KeyStore)?;
+        let identity = if keys.load().map_err(|_| PeerError::KeyStore)?.is_some() {
+            tracing::warn!(
+                "device identity found without a profile; keeping it and creating empty trust"
+            );
+            DeviceIdentity::load_existing(&keys).map_err(|_| PeerError::KeyStore)?
+        } else {
+            DeviceIdentity::create_new(&keys).map_err(|_| PeerError::KeyStore)?
+        };
         SqliteTrustStore::open_new(directory, identity.device_id())
             .map_err(|_| PeerError::Profile)?;
         Ok(Self {
@@ -441,6 +454,9 @@ impl PeerHost {
                 return Err(PeerError::Profile);
             }
             Ok(_) => {}
+        }
+        if is_unborn_profile(directory)? {
+            return Self::open_system_profile(directory).map(|host| host.identity);
         }
         let keys = SystemSecretKeyStore::new(directory, SYSTEM_PROFILE_KEYRING_ID)
             .map_err(|_| PeerError::KeyStore)?;
@@ -995,6 +1011,19 @@ fn reset_marker_exists(directory: &Path) -> Result<bool, PeerError> {
             Ok(true)
         }
     }
+}
+
+/// Whether the profile directory holds nothing but the identity lock file:
+/// no trust database, no reset marker, no routes. Nothing was ever paired
+/// from it, so initializing it cannot lose or replace anything.
+fn is_unborn_profile(directory: &Path) -> Result<bool, PeerError> {
+    for entry in fs::read_dir(directory).map_err(|_| PeerError::Profile)? {
+        let entry = entry.map_err(|_| PeerError::Profile)?;
+        if entry.file_name() != ".device-identity.lock" {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 fn validate_reset_ready_directory(directory: &Path) -> Result<(), PeerError> {
