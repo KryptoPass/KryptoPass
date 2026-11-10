@@ -5,6 +5,7 @@
 //! session handle for the lifetime of a connection.
 
 /// Phone → Desktop vault-identity receiver (extension version 3).
+pub mod approvals;
 pub mod synthetic_receive;
 /// Explicit synthetic provisioning sender, independent of UI and OpenPGP engines.
 pub mod synthetic_transfer;
@@ -1003,6 +1004,8 @@ struct SyncRuntime {
     synthetic: SyntheticRuntime,
     /// The peer advertised `VaultKeys` support, so it may send that message.
     accepts_vault_keys: bool,
+    /// Approval requests to this peer, when it advertised the extension.
+    approvals: approvals::ApprovalRuntime,
 }
 
 struct SyntheticRuntime {
@@ -1514,6 +1517,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                 remote_sync_rounds_version,
                 remote_synthetic_version,
                 remote_vault_keys_version,
+                remote_approval_version,
             )) if owner_directory.session_is_current(&expected_peer, generation) => {
                 if owner_directory
                     .update_connection_state_for_generation(
@@ -1597,6 +1601,11 @@ fn start_session_internal<T: PeerTransport + 'static>(
                             round_requests: task_sync_round,
                             progress: sync_progress_tx.clone(),
                             accepts_vault_keys: remote_vault_keys_version == VAULT_KEYS_VERSION,
+                            approvals: approvals::ApprovalRuntime::new(
+                                expected_peer.device_id,
+                                generation,
+                                remote_approval_version,
+                            ),
                             synthetic: SyntheticRuntime {
                                 actor: synthetic_actor,
                                 receiver: synthetic_receiver,
@@ -1677,7 +1686,7 @@ async fn exchange_session_hello<T: PeerTransport>(
     context: &SessionHelloContext<'_>,
     directory_changes: &mut watch::Receiver<Arc<DeviceDirectorySnapshot>>,
     commands: &mut mpsc::Receiver<SessionCommand>,
-) -> Result<(u16, u32, u32, u32, u32), SessionExit> {
+) -> Result<(u16, u32, u32, u32, u32, u32), SessionExit> {
     let hello_deadline = Instant::now() + SESSION_HELLO_TIMEOUT;
     if !context
         .directory
@@ -1699,6 +1708,7 @@ async fn exchange_session_hello<T: PeerTransport>(
         sync_version: context.sync_version,
         sync_rounds_version: context.sync_rounds_version,
         vault_keys_version: VAULT_KEYS_VERSION,
+        approval_version: approvals::APPROVAL_VERSION,
     };
     let send = session.send_message(proto::MessageType::SessionHello, &hello);
     tokio::select! {
@@ -1745,6 +1755,7 @@ async fn exchange_session_hello<T: PeerTransport>(
                 hello.sync_rounds_version,
                 hello.synthetic_key_transfer_version,
                 hello.vault_keys_version,
+                hello.approval_version,
             ))
         }
         (proto::MessageType::SessionClose, MessagePayload::SessionClose(close)) => {
@@ -1789,6 +1800,7 @@ async fn run_connected_session<T: PeerTransport>(
         progress: sync_progress,
         mut synthetic,
         accepts_vault_keys,
+        mut approvals,
     } = sync_runtime;
     let mut next_observation = Instant::now();
     let mut next_local_nonce = 1_u64;
@@ -1903,11 +1915,18 @@ async fn run_connected_session<T: PeerTransport>(
         let ping_deadline = outstanding
             .map(|(_, deadline)| deadline)
             .unwrap_or(next_ping_at);
+        let approval_deadline = approvals.next_deadline();
         let selected = tokio::select! {
             () = sleep_until(next_observation) => SelectedSessionEvent::ObservePath,
             () = round_requests.notified() => SelectedSessionEvent::SyncRoundRequested,
             command = commands.recv() => SelectedSessionEvent::Command(command),
             command = synthetic.commands.recv() => SelectedSessionEvent::SyntheticCommand(command),
+            command = approvals::receive_command(&mut approvals.commands), if approvals.commands.is_some() => {
+                SelectedSessionEvent::Approval(command)
+            },
+            () = sleep_until(approval_deadline.unwrap_or_else(Instant::now)), if approval_deadline.is_some() => {
+                SelectedSessionEvent::ApprovalExpiry
+            },
             _ = synthetic.cancel.changed() => SelectedSessionEvent::SyntheticTick,
             () = tokio::time::sleep(Duration::from_millis(if synthetic.actor.progress().phase == SyntheticTransferPhase::Sending { 1 } else { 100 })),
                 if synthetic.sender_active() || synthetic.receiver.is_active() => SelectedSessionEvent::SyntheticTick,
@@ -1926,6 +1945,22 @@ async fn run_connected_session<T: PeerTransport>(
         }
         match selected {
             SelectedSessionEvent::RetrySyncInput | SelectedSessionEvent::SyntheticTick => {}
+            SelectedSessionEvent::ApprovalExpiry => approvals.expire(),
+            SelectedSessionEvent::Approval(None) => approvals.commands = None,
+            SelectedSessionEvent::Approval(Some(command)) => {
+                let sent = match approvals.command(command) {
+                    Some((message_type, approvals::ApprovalMessage::Request(request))) => {
+                        send_control_bounded(session, message_type, &request).await
+                    }
+                    Some((message_type, approvals::ApprovalMessage::Cancel(cancel))) => {
+                        send_control_bounded(session, message_type, &cancel).await
+                    }
+                    None => Ok(()),
+                };
+                if let Err(failure) = sent {
+                    return SessionExit::Failed(failure);
+                }
+            }
             SelectedSessionEvent::SyntheticCommand(Some(command)) => {
                 if let Err(failure) =
                     process_synthetic_command(session, &mut synthetic, command).await
@@ -2106,6 +2141,28 @@ async fn run_connected_session<T: PeerTransport>(
                             return SessionExit::Failed(SessionFailure::Protocol);
                         };
                         return SessionExit::Disconnected(reason, false);
+                    }
+                    (
+                        proto::MessageType::ApprovalResponse,
+                        MessagePayload::ApprovalResponse(response),
+                    ) => {
+                        if !approvals.enabled() {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        }
+                        approvals.response(response);
+                    }
+                    (
+                        proto::MessageType::ApprovalCancel,
+                        MessagePayload::ApprovalCancel(cancel),
+                    ) => {
+                        if !approvals.enabled() {
+                            return SessionExit::Failed(SessionFailure::Protocol);
+                        }
+                        approvals.remote_cancel(&cancel);
+                    }
+                    (proto::MessageType::ApprovalRequest, _) => {
+                        // Desktop asks; it never answers a phone's request.
+                        return SessionExit::Failed(SessionFailure::Protocol);
                     }
                     (proto::MessageType::VaultKeys, MessagePayload::VaultKeys(keys)) => {
                         // Only a peer that advertised the capability may send it.
@@ -2302,6 +2359,8 @@ async fn run_connected_session<T: PeerTransport>(
 }
 
 enum SelectedSessionEvent {
+    Approval(Option<approvals::ApprovalCommand>),
+    ApprovalExpiry,
     SyncRoundRequested,
     SyntheticCommand(Option<SyntheticCommand>),
     SyntheticTick,

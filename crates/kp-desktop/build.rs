@@ -82,7 +82,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/DesktopAction.qml")
         .qml_file("ui/qml/AdaptivePanes.qml")
         .qml_file("ui/qml/BrowserPairingDialog.qml")
-        .qml_file("ui/qml/ApprovalDialog.qml")
         .qml_file("ui/qml/DevicesWindow.qml")
         .qml_file("ui/qml/DeviceDetailsPage.qml")
         .qml_file("ui/qml/DeviceKeyPicker.qml")

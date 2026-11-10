@@ -1,35 +1,22 @@
-//! Answers `kryptopass-pinentry` (docs/aprobacion-desde-telefono.md, step 2).
+//! Bridges `kryptopass-pinentry` to the paired phone
+//! (`docs/aprobacion-desde-telefono.md`).
 //!
-//! A `CONFIRM` waits here until the person decides in the app's dialog; a
-//! passphrase is never answered yet, so the pinentry shows its own dialog.
-//! Nothing here touches the vault: approvals work while it is locked.
+//! No UI and no vault: the pinentry shows the local dialog itself, and this
+//! only forwards the prompt to a connected phone. That keeps it working while
+//! the vault is locked and keeps a vault unlock (which goes through gpg-agent
+//! and the pinentry) from waiting on itself.
 
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use kryptopass_approval::{Decision, Kind, Request};
-use serde_json::json;
+use kryptopass_devices::approvals::{self, ApprovalAnswer, ApprovalAsk, ApprovalKind};
 
-/// Shorter than the pinentry's own wait, so a missed dialog becomes the local
-/// pinentry instead of an error in gpg-agent.
-const DECISION_TIMEOUT: Duration = Duration::from_secs(55);
-
-struct Pending {
-    id: u64,
-    request: Request,
-    decision: Option<bool>,
-}
-
-#[derive(Default)]
-struct State {
-    next_id: u64,
-    pending: Option<Pending>,
-}
-
-fn state() -> &'static (Mutex<State>, Condvar) {
-    static STATE: OnceLock<(Mutex<State>, Condvar)> = OnceLock::new();
-    STATE.get_or_init(Default::default)
-}
+/// Shorter than the pinentry's own wait, so the phone's notification is gone
+/// before the pinentry gives up on it.
+const PHONE_TIMEOUT: Duration = Duration::from_secs(55);
+/// How often to check that the pinentry is still waiting.
+const POLL: Duration = Duration::from_millis(200);
 
 /// Starts listening; the returned server stops when dropped.
 pub fn start() -> Option<kryptopass_approval::Server> {
@@ -45,7 +32,7 @@ pub fn start() -> Option<kryptopass_approval::Server> {
     }
 }
 
-fn handle(request: Request) -> Decision {
+fn handle(request: Request, waiting: &dyn Fn() -> bool) -> Decision {
     tracing::info!(
         kind = ?request.kind,
         key = request.key.as_deref().unwrap_or("-"),
@@ -53,102 +40,58 @@ fn handle(request: Request) -> Decision {
         retry = request.retry,
         "Approvals: request from the pinentry"
     );
-    if request.kind == Kind::Passphrase {
-        tracing::info!("Approvals: no passphrase source yet; the pinentry asks locally");
+    if request.retry {
+        tracing::info!("Approvals: a retry is always answered locally");
         return Decision::Unavailable;
     }
-    let (lock, changed) = state();
-    let Ok(mut guard) = lock.lock() else {
+    let ask = ApprovalAsk {
+        kind: match request.kind {
+            Kind::Confirm => ApprovalKind::Confirm,
+            Kind::Passphrase => ApprovalKind::Passphrase,
+        },
+        key_info: request.key.clone().unwrap_or_default(),
+        description: kryptopass_approval::unescape(&request.description),
+        requester: request.owner.as_deref().and_then(requester).unwrap_or_default(),
+        host_name: host_name(),
+        expires: PHONE_TIMEOUT,
+    };
+    let Some(pending) = approvals::ask(ask) else {
+        tracing::info!("Approvals: no phone connected; the pinentry asks locally");
         return Decision::Unavailable;
     };
-    if guard.pending.is_some() {
-        tracing::info!("Approvals: another request is open; the pinentry asks locally");
-        return Decision::Unavailable;
-    }
-    guard.next_id += 1;
-    let id = guard.next_id;
-    guard.pending = Some(Pending {
-        id,
-        request,
-        decision: None,
-    });
-    let deadline = Instant::now() + DECISION_TIMEOUT;
-    let decision = loop {
-        let decided = guard
-            .pending
-            .as_ref()
-            .filter(|pending| pending.id == id)
-            .and_then(|pending| pending.decision);
-        if let Some(approve) = decided {
-            break Some(approve);
+    tracing::info!(phone = %pending.peer(), "Approvals: waiting for the phone");
+    let deadline = Instant::now() + PHONE_TIMEOUT;
+    loop {
+        if let Some(answer) = pending.wait(POLL) {
+            return match answer {
+                ApprovalAnswer::Approved => {
+                    tracing::info!("Approvals: approved on the phone");
+                    Decision::Approved
+                }
+                ApprovalAnswer::Denied => {
+                    tracing::info!("Approvals: denied on the phone");
+                    Decision::Denied
+                }
+                ApprovalAnswer::Passphrase(secret) => {
+                    tracing::info!("Approvals: passphrase from the phone");
+                    Decision::Passphrase(secret)
+                }
+                ApprovalAnswer::Unavailable => {
+                    tracing::info!("Approvals: the phone cannot answer");
+                    Decision::Unavailable
+                }
+            };
         }
-        let Some(left) = deadline.checked_duration_since(Instant::now()) else {
-            break None;
-        };
-        guard = match changed.wait_timeout(guard, left) {
-            Ok((guard, _)) => guard,
-            Err(_) => return Decision::Unavailable,
-        };
-    };
-    guard.pending = None;
-    changed.notify_all();
-    match decision {
-        Some(true) => {
-            tracing::info!(id, "Approvals: confirmed in the app");
-            Decision::Approved
+        if !waiting() {
+            tracing::info!("Approvals: answered locally first; withdrawing from the phone");
+            pending.cancel();
+            return Decision::Unavailable;
         }
-        Some(false) => {
-            tracing::info!(id, "Approvals: denied in the app");
-            Decision::Denied
+        if Instant::now() >= deadline {
+            tracing::info!("Approvals: the phone did not answer in time");
+            pending.cancel();
+            return Decision::Unavailable;
         }
-        None => {
-            tracing::info!(
-                id,
-                "Approvals: nobody decided in time; the pinentry asks locally"
-            );
-            Decision::Unavailable
-        }
-    }
-}
-
-/// The open request as JSON for the dialog, or an empty string.
-pub fn pending_json() -> String {
-    let (lock, _) = state();
-    let Ok(guard) = lock.lock() else {
-        return String::new();
-    };
-    let Some(pending) = guard
-        .pending
-        .as_ref()
-        .filter(|pending| pending.decision.is_none())
-    else {
-        return String::new();
-    };
-    let request = &pending.request;
-    json!({
-        "id": pending.id.to_string(),
-        "title": request.title.as_deref().map(kryptopass_approval::unescape),
-        "description": kryptopass_approval::unescape(&request.description),
-        "key": request.key,
-        "ssh": request.key.as_deref().is_some_and(|key| key.starts_with("s/")),
-        "requester": request.owner.as_deref().and_then(requester),
-    })
-    .to_string()
-}
-
-/// Records the person's answer for the open request with this id.
-pub fn decide(id: &str, approve: bool) {
-    let (lock, changed) = state();
-    let Ok(mut guard) = lock.lock() else {
-        return;
-    };
-    if let Some(pending) = guard
-        .pending
-        .as_mut()
-        .filter(|pending| pending.id.to_string() == id && pending.decision.is_none())
-    {
-        pending.decision = Some(approve);
-        changed.notify_all();
     }
 }
 
@@ -157,4 +100,10 @@ fn requester(owner: &str) -> Option<String> {
     let pid: u32 = owner.split(['/', ' ']).next()?.parse().ok()?;
     let name = std::fs::read_to_string(format!("/proc/{pid}/comm")).ok()?;
     Some(format!("{} ({pid})", name.trim()))
+}
+
+fn host_name() -> String {
+    std::fs::read_to_string("/proc/sys/kernel/hostname")
+        .map(|name| name.trim().to_owned())
+        .unwrap_or_default()
 }

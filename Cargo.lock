@@ -2118,6 +2118,7 @@ name = "kp-devices"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "getrandom 0.3.4",
  "kp-identity",
  "kp-pairing",
  "kp-protocol",

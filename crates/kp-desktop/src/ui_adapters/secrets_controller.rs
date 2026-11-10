@@ -24,7 +24,6 @@ use crate::infrastructure::GnuPgOpenPgp;
 use crate::storage::paths as app_paths;
 use crate::vault_access::{open_existing_session, open_session};
 
-mod approval;
 mod browser;
 mod clipboard;
 mod conflicts;
@@ -69,7 +68,6 @@ pub mod qobject {
         #[qproperty(QString, load_error, cxx_name = "loadError", READ, NOTIFY)]
         #[qproperty(QString, browser_access, cxx_name = "browserAccess", READ, NOTIFY)]
         #[qproperty(QString, browser_pairing, cxx_name = "browserPairing", READ, NOTIFY)]
-        #[qproperty(QString, approval_request, cxx_name = "approvalRequest", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
         #[qproperty(bool, busy, READ, NOTIFY)]
         #[qproperty(bool, detail_busy, cxx_name = "detailBusy", READ, NOTIFY)]
@@ -100,12 +98,6 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "decideBrowserPairing"]
         fn decide_browser_pairing(self: Pin<&mut Self>, token: &QString, approve: bool);
-        #[qinvokable]
-        #[cxx_name = "refreshApproval"]
-        fn refresh_approval(self: Pin<&mut Self>);
-        #[qinvokable]
-        #[cxx_name = "decideApproval"]
-        fn decide_approval(self: Pin<&mut Self>, id: &QString, approve: bool);
 
         #[qinvokable]
         #[cxx_name = "loadStore"]
@@ -307,7 +299,6 @@ pub mod qobject {
 pub struct SecretsControllerRust {
     browser_pairing: QString,
     browser_access: QString,
-    approval_request: QString,
     entry_records: QStringList,
     folder_records: QStringList,
     detail_json: QString,
@@ -371,7 +362,6 @@ impl Default for SecretsControllerRust {
         Self {
             browser_pairing: QString::default(),
             browser_access: QString::default(),
-            approval_request: QString::default(),
             entry_records: QStringList::default(),
             folder_records: QStringList::default(),
             detail_json: QString::default(),

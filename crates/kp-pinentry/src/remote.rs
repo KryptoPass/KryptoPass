@@ -1,11 +1,13 @@
 //! Answers a prompt through the running KryptoPass instead of the fallback.
 
 use std::io::{self, Write};
+use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use kryptopass_approval::{Decision, Kind, Request};
 use zeroize::Zeroizing;
 
+use crate::fallback::Event;
 use crate::log;
 use crate::proxy::Prompt;
 
@@ -15,22 +17,37 @@ const TIMEOUT: Duration = Duration::from_secs(60);
 
 /// gpg-error codes with the pinentry source (5 << 24), as pinentry sends them.
 const NOT_CONFIRMED: &str = "ERR 83886194 Not confirmed <Pinentry>\n";
+const CANCELED: &str = "ERR 83886179 Operation cancelled <Pinentry>\n";
 
 /// Bytes of escaped data per `D` line; Assuan lines stop at 1000.
 const DATA_CHUNK: usize = 900;
 
-/// Returns `true` when the app answered and gpg-agent has its reply;
-/// `false` sends the prompt to the fallback.
-pub fn answer(prompt: &Prompt, agent_out: &mut impl Write) -> io::Result<bool> {
+/// A request in flight to the app (and through it, the phone).
+pub struct Remote {
+    pub number: u64,
+    pub kind: Kind,
+    canceller: std::os::unix::net::UnixStream,
+}
+
+impl Remote {
+    /// Withdraws the request: the app sees the socket close and tells the phone.
+    pub fn cancel(self) {
+        let _ = self.canceller.shutdown(std::net::Shutdown::Both);
+    }
+}
+
+/// Sends the prompt to the app; its answer arrives later as
+/// [`Event::Remote`]. `None` when the app cannot be asked at all.
+pub fn start(prompt: &Prompt, number: u64, events: Sender<Event>) -> Option<Remote> {
     let kind = if prompt.last_command == "GETPIN" {
         Kind::Passphrase
     } else {
         Kind::Confirm
     };
-    if kind == Kind::Passphrase && (prompt.retry || prompt.repeat) {
+    if prompt.retry || (kind == Kind::Passphrase && prompt.repeat) {
         // A rejected or new passphrase is always typed here.
-        log::write("remote: skipped (retry or new passphrase); using the fallback");
-        return Ok(false);
+        log::write("remote: skipped (retry or new passphrase)");
+        return None;
     }
     let request = Request {
         kind,
@@ -40,27 +57,50 @@ pub fn answer(prompt: &Prompt, agent_out: &mut impl Write) -> io::Result<bool> {
         owner: prompt.owner.clone(),
         retry: prompt.retry,
     };
-    let decision = match kryptopass_approval::ask(&request, TIMEOUT) {
-        Ok(decision) => decision,
+    let asking = match kryptopass_approval::begin(&request) {
+        Ok(asking) => asking,
         Err(error) => {
-            log::write(format_args!(
-                "remote: no answer ({error}); using the fallback"
-            ));
-            return Ok(false);
+            log::write(format_args!("remote: app not reachable ({error})"));
+            return None;
         }
     };
+    let canceller = asking.canceller().ok()?;
+    let spawned = std::thread::Builder::new()
+        .name("remote-answer".into())
+        .spawn(move || {
+            let _ = events.send(Event::Remote(number, asking.finish(TIMEOUT)));
+        });
+    if spawned.is_err() {
+        return None;
+    }
+    log::write(format_args!("remote: request {number} sent to the app"));
+    Some(Remote {
+        number,
+        kind,
+        canceller,
+    })
+}
+
+/// Writes the app's answer for gpg-agent. `false` when it is no answer at all
+/// (unavailable, or not fitting the prompt) and the local dialog must decide.
+pub fn reply(
+    kind: Kind,
+    decision: Decision,
+    prompt: &Prompt,
+    agent_out: &mut impl Write,
+) -> io::Result<bool> {
     match (kind, decision) {
         (Kind::Confirm, Decision::Approved) => {
-            log::write("remote: confirmed");
+            log::write("remote: confirmed on the phone");
             agent_out.write_all(b"OK\n")?;
         }
         (Kind::Confirm, Decision::Denied) => {
-            log::write("remote: denied");
+            log::write("remote: denied on the phone");
             agent_out.write_all(NOT_CONFIRMED.as_bytes())?;
         }
         (Kind::Passphrase, Decision::Passphrase(secret)) => {
             log::write(format_args!(
-                "remote: passphrase received ({} bytes hidden)",
+                "remote: passphrase from the phone ({} bytes hidden)",
                 secret.len()
             ));
             if prompt.external_cache {
@@ -71,17 +111,15 @@ pub fn answer(prompt: &Prompt, agent_out: &mut impl Write) -> io::Result<bool> {
             agent_out.write_all(b"OK\n")?;
         }
         (Kind::Passphrase, Decision::Denied) => {
-            log::write("remote: passphrase refused");
-            agent_out.write_all(b"ERR 83886179 Operation cancelled <Pinentry>\n")?;
+            log::write("remote: passphrase refused on the phone");
+            agent_out.write_all(CANCELED.as_bytes())?;
         }
         (_, Decision::Unavailable) => {
-            log::write("remote: unavailable; using the fallback");
+            log::write("remote: the phone cannot answer");
             return Ok(false);
         }
         (kind, _) => {
-            log::write(format_args!(
-                "remote: answer does not fit a {kind:?}; using the fallback"
-            ));
+            log::write(format_args!("remote: answer does not fit a {kind:?}"));
             return Ok(false);
         }
     }

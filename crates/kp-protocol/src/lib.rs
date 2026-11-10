@@ -186,6 +186,12 @@ pub enum MessagePayload {
     SessionPong(proto::SessionPong),
     /// Authenticated active-session closure.
     SessionClose(proto::SessionClose),
+    /// Desktop asks the phone to approve a gpg-agent prompt.
+    ApprovalRequest(proto::ApprovalRequest),
+    /// The phone's answer; may carry a passphrase.
+    ApprovalResponse(proto::ApprovalResponse),
+    /// A request is over on one side.
+    ApprovalCancel(proto::ApprovalCancel),
 }
 
 impl fmt::Debug for MessagePayload {
@@ -219,6 +225,9 @@ impl fmt::Debug for MessagePayload {
             Self::VaultKeys(_) => "VaultKeys",
             Self::SessionPong(_) => "SessionPong",
             Self::SessionClose(_) => "SessionClose",
+            Self::ApprovalRequest(_) => "ApprovalRequest",
+            Self::ApprovalResponse(_) => "ApprovalResponse",
+            Self::ApprovalCancel(_) => "ApprovalCancel",
         };
         f.write_str(name)
     }
@@ -554,6 +563,9 @@ fn message_type_name(message_type: proto::MessageType) -> &'static str {
         Type::VaultKeys => "VaultKeys",
         Type::SessionPong => "SessionPong",
         Type::SessionClose => "SessionClose",
+        Type::ApprovalRequest => "ApprovalRequest",
+        Type::ApprovalResponse => "ApprovalResponse",
+        Type::ApprovalCancel => "ApprovalCancel",
     }
 }
 
@@ -666,6 +678,21 @@ fn decode_payload(type_value: i32, bytes: &[u8]) -> Result<MessagePayload, Proto
         Type::VaultKeys => decode!(proto::VaultKeys, VaultKeys, validate_vault_keys),
         Type::SessionPong => decode!(proto::SessionPong, SessionPong, validate_session_pong),
         Type::SessionClose => decode!(proto::SessionClose, SessionClose, validate_session_close),
+        Type::ApprovalRequest => decode!(
+            proto::ApprovalRequest,
+            ApprovalRequest,
+            validate_approval_request
+        ),
+        Type::ApprovalResponse => decode!(
+            proto::ApprovalResponse,
+            ApprovalResponse,
+            validate_approval_response
+        ),
+        Type::ApprovalCancel => decode!(
+            proto::ApprovalCancel,
+            ApprovalCancel,
+            validate_approval_cancel
+        ),
     })
 }
 
@@ -686,7 +713,7 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
     let mut offset = 0usize;
     let mut repeated_count = 0usize;
     let is_session_hello = type_value == proto::MessageType::SessionHello as i32;
-    let mut capabilities_seen = [false; 4];
+    let mut capabilities_seen = [false; 5];
     while offset < payload.len() {
         let key = read_varint(payload, &mut offset, type_value)?;
         let field = key >> 3;
@@ -696,7 +723,7 @@ fn preflight_payload(type_value: i32, payload: &[u8]) -> Result<(), ProtocolErro
                 message_type: type_value,
             });
         }
-        let session_capability = is_session_hello && (4..=7).contains(&field);
+        let session_capability = is_session_hello && (4..=8).contains(&field);
         if session_capability {
             let seen = &mut capabilities_seen[(field - 4) as usize];
             if wire != 0 || *seen {
@@ -883,6 +910,11 @@ fn validate_session_hello(value: &proto::SessionHello) -> Result<(), ProtocolErr
             field: "vault_keys_version",
         });
     }
+    if value.approval_version > 1 {
+        return Err(ProtocolError::InvalidField {
+            field: "approval_version",
+        });
+    }
     if value.reconnect_port > u32::from(u16::MAX) {
         return Err(ProtocolError::InvalidField {
             field: "reconnect_port",
@@ -907,6 +939,59 @@ fn validate_vault_keys(value: &proto::VaultKeys) -> Result<(), ProtocolError> {
         }
     }
     Ok(())
+}
+
+/// Approval kinds: 1 confirm, 2 passphrase. 3 (decrypt a session key) is reserved.
+pub const APPROVAL_KIND_CONFIRM: u32 = 1;
+pub const APPROVAL_KIND_PASSPHRASE: u32 = 2;
+/// Approval decisions.
+pub const APPROVAL_APPROVED: u32 = 1;
+pub const APPROVAL_DENIED: u32 = 2;
+pub const APPROVAL_PASSPHRASE: u32 = 3;
+pub const APPROVAL_UNAVAILABLE: u32 = 4;
+/// Longest passphrase an approval may carry.
+pub const MAX_APPROVAL_PASSPHRASE: usize = 1024;
+
+fn require_max(value: &str, maximum: usize, field: &'static str) -> Result<(), ProtocolError> {
+    if value.len() > maximum {
+        return Err(ProtocolError::InvalidField { field });
+    }
+    Ok(())
+}
+
+fn validate_approval_request(value: &proto::ApprovalRequest) -> Result<(), ProtocolError> {
+    require_id(&value.request_id, 16, "request_id")?;
+    if !matches!(value.kind, APPROVAL_KIND_CONFIRM | APPROVAL_KIND_PASSPHRASE) {
+        return Err(ProtocolError::InvalidField { field: "kind" });
+    }
+    require_max(&value.key_info, 128, "key_info")?;
+    require_max(&value.description, 2048, "description")?;
+    require_max(&value.requester, 256, "requester")?;
+    require_max(&value.host_name, 128, "host_name")?;
+    if !(1..=120_000).contains(&value.expires_in_millis) {
+        return Err(ProtocolError::InvalidField {
+            field: "expires_in_millis",
+        });
+    }
+    Ok(())
+}
+
+fn validate_approval_response(value: &proto::ApprovalResponse) -> Result<(), ProtocolError> {
+    require_id(&value.request_id, 16, "request_id")?;
+    let passphrase_ok = if value.decision == APPROVAL_PASSPHRASE {
+        (1..=MAX_APPROVAL_PASSPHRASE).contains(&value.passphrase.len())
+    } else {
+        (APPROVAL_APPROVED..=APPROVAL_UNAVAILABLE).contains(&value.decision)
+            && value.passphrase.is_empty()
+    };
+    if !passphrase_ok {
+        return Err(ProtocolError::InvalidField { field: "decision" });
+    }
+    Ok(())
+}
+
+fn validate_approval_cancel(value: &proto::ApprovalCancel) -> Result<(), ProtocolError> {
+    require_id(&value.request_id, 16, "request_id")
 }
 
 fn validate_session_ping(value: &proto::SessionPing) -> Result<(), ProtocolError> {

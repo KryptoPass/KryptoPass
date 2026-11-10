@@ -182,3 +182,8 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   aislado y simple; la interfaz gráfica propia va después. Plan en
   `docs/aprobacion-desde-telefono.md`. También pedidos para después: plugin de
   KRunner con atajo global y gestión de claves SSH en gpg-agent.
+- 2026-11-09 (continuación): la ventana de aprobación no vive en la app. El
+  pinentry es quien pregunta (ventana local de pinentry-qt) y a la vez pide al
+  teléfono a través de KryptoPass, que solo hace de puente P2P sin interfaz; gana
+  la primera respuesta. Más adelante: ventana propia como binario aparte y un
+  servicio de usuario dueño de P2P para aprobar con la app cerrada.

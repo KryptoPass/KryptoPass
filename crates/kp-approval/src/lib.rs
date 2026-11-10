@@ -95,18 +95,41 @@ pub(crate) fn ensure_private_directory(path: &std::path::Path) -> io::Result<()>
     }
 }
 
-/// Asks the app and waits at most `timeout` for the answer.
-pub fn ask(request: &Request, timeout: std::time::Duration) -> io::Result<Decision> {
+/// A request sent to the app, waiting for its answer.
+pub struct Asking {
+    stream: std::os::unix::net::UnixStream,
+}
+
+impl Asking {
+    /// A handle that withdraws the request from another thread: shutting it
+    /// down tells the app the answer is no longer wanted.
+    pub fn canceller(&self) -> io::Result<std::os::unix::net::UnixStream> {
+        self.stream.try_clone()
+    }
+
+    /// Waits at most `timeout` for the answer.
+    pub fn finish(mut self, timeout: std::time::Duration) -> io::Result<Decision> {
+        self.stream.set_read_timeout(Some(timeout))?;
+        let body = Zeroizing::new(read_frame(&mut self.stream)?);
+        decode_decision(&body)
+    }
+}
+
+/// Connects to the app and sends the request without waiting for the answer.
+pub fn begin(request: &Request) -> io::Result<Asking> {
     let path = socket_path()?;
     if let Some(directory) = path.parent() {
         ensure_private_directory(directory)?;
     }
-    let mut socket = std::os::unix::net::UnixStream::connect(&path)?;
-    socket.set_write_timeout(Some(timeout))?;
-    socket.set_read_timeout(Some(timeout))?;
-    write_frame(&mut socket, &encode_request(request)?)?;
-    let body = Zeroizing::new(read_frame(&mut socket)?);
-    decode_decision(&body)
+    let mut stream = std::os::unix::net::UnixStream::connect(&path)?;
+    stream.set_write_timeout(Some(std::time::Duration::from_secs(5)))?;
+    write_frame(&mut stream, &encode_request(request)?)?;
+    Ok(Asking { stream })
+}
+
+/// Asks the app and waits at most `timeout` for the answer.
+pub fn ask(request: &Request, timeout: std::time::Duration) -> io::Result<Decision> {
+    begin(request)?.finish(timeout)
 }
 
 pub(crate) fn encode_request(request: &Request) -> io::Result<Vec<u8>> {

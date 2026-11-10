@@ -15,7 +15,9 @@ const MAX_CONNECTIONS: usize = 4;
 /// Time a connected pinentry has to send its request.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub type Handler = dyn Fn(Request) -> Decision + Send + Sync;
+/// Answers one request. The second argument tells whether the pinentry is
+/// still waiting; once it returns `false` the answer is no longer wanted.
+pub type Handler = dyn Fn(Request, &dyn Fn() -> bool) -> Decision + Send + Sync;
 
 /// Stops listening and removes the socket when dropped.
 pub struct Server {
@@ -104,8 +106,32 @@ fn serve(mut stream: UnixStream, handler: &Arc<Handler>) {
     let Ok(request) = decode_request(&body) else {
         return;
     };
-    let decision = handler(request);
+    let waiting = || still_connected(&stream);
+    let decision = handler(request, &waiting);
     let _ = write_frame(&mut stream, &encode_decision(&decision));
+}
+
+/// The pinentry closes its end when its local dialog answered first.
+fn still_connected(stream: &UnixStream) -> bool {
+    use std::os::fd::AsRawFd;
+    let mut byte = 0_u8;
+    // SAFETY: a one-byte buffer that outlives the call.
+    let read = unsafe {
+        libc::recv(
+            stream.as_raw_fd(),
+            (&mut byte as *mut u8).cast(),
+            1,
+            libc::MSG_PEEK | libc::MSG_DONTWAIT,
+        )
+    };
+    match read {
+        0 => false,
+        -1 => matches!(
+            std::io::Error::last_os_error().kind(),
+            io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+        ),
+        _ => true,
+    }
 }
 
 /// Only processes of this user may ask; the directory is already 0700, this

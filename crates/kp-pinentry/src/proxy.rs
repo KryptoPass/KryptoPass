@@ -5,9 +5,20 @@
 //! answer goes to the fallback, so the local dialog is always the last word.
 
 use std::io::{self, BufRead, Write};
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
+use std::time::{Duration, Instant};
 
 use crate::assuan::{Line, Reply, classify, read_line};
+use crate::fallback::{Event, Fallback};
+use crate::remote::Remote;
 use crate::{log, remote};
+
+/// How long the app gets to answer before the local dialog opens. An app
+/// without a connected phone answers "unavailable" well within it.
+const QUICK_ANSWER: Duration = Duration::from_millis(300);
+
+/// Added to the local dialog while the phone can also answer.
+const PHONE_HINT: &str = "%0A%0ATambién puedes responder en tu teléfono.";
 
 /// Longest argument text copied into the log.
 const LOG_ARGUMENT: usize = 300;
@@ -87,18 +98,23 @@ impl Prompt {
 pub fn run(
     agent_in: &mut impl BufRead,
     agent_out: &mut impl Write,
-    pinentry_in: &mut impl BufRead,
-    pinentry_out: &mut impl Write,
+    fallback: &mut Fallback,
+    events: &Receiver<Event>,
 ) -> io::Result<()> {
     let mut prompt = Prompt::default();
     log::write("waiting for the fallback greeting");
-    relay_reply(agent_in, agent_out, pinentry_in, pinentry_out, &prompt)?;
+    for line in fallback.start(events)? {
+        send(agent_out, &line)?;
+        log::write(format_args!("pinentry> {}", describe(&line, false)));
+    }
+    let mut number = 0_u64;
     loop {
         let Some(command) = read_line(agent_in)? else {
             log::write("gpg-agent closed the connection");
             return Ok(());
         };
         prompt.observe(&command);
+        fallback.remember(&command);
         log::write(format_args!("agent> {}", describe(&command, false)));
         if matches!(
             prompt.last_command.as_str(),
@@ -106,12 +122,17 @@ pub fn run(
         ) {
             log::write(format_args!("prompt {}", prompt.summary()));
         }
-        if prompt.is_question() && remote::answer(&prompt, agent_out)? {
+        if prompt.is_question() {
+            number += 1;
+            question(
+                &command, &prompt, number, agent_in, agent_out, fallback, events,
+            )?;
             prompt.finish();
             continue;
         }
-        send(pinentry_out, &command)?;
-        relay_reply(agent_in, agent_out, pinentry_in, pinentry_out, &prompt)?;
+        fallback.ensure_running(events)?;
+        fallback.write(command.bytes())?;
+        relay(agent_in, agent_out, fallback, events, &prompt, &mut None)?;
         prompt.finish();
         if prompt.last_command == "BYE" {
             return Ok(());
@@ -119,39 +140,152 @@ pub fn run(
     }
 }
 
-/// Copies the fallback's reply to gpg-agent until `OK` or `ERR`, passing any
-/// `INQUIRE` exchange through in both directions.
-fn relay_reply(
+/// A `CONFIRM` or `GETPIN`: the phone and the local dialog race, the first
+/// answer wins and the other is withdrawn.
+fn question(
+    command: &Line,
+    prompt: &Prompt,
+    number: u64,
     agent_in: &mut impl BufRead,
     agent_out: &mut impl Write,
-    pinentry_in: &mut impl BufRead,
-    pinentry_out: &mut impl Write,
+    fallback: &mut Fallback,
+    events: &Receiver<Event>,
+) -> io::Result<()> {
+    let mut pending = remote::start(prompt, number, fallback.events());
+    if let Some(asked) = pending.take() {
+        match wait_remote(events, fallback, asked.number, QUICK_ANSWER) {
+            Some(Ok(decision)) => {
+                if remote::reply(asked.kind, decision, prompt, agent_out)? {
+                    return Ok(());
+                }
+            }
+            Some(Err(error)) => log::write(format_args!("remote: failed ({error})")),
+            None => pending = Some(asked),
+        }
+    }
+    fallback.ensure_running(events)?;
+    let hinted = pending.is_some();
+    if hinted {
+        log::write("remote: the phone may answer; local dialog opens too");
+        set_description(
+            fallback,
+            events,
+            &format!("{}{PHONE_HINT}", prompt.description),
+        )?;
+    }
+    fallback.write(command.bytes())?;
+    relay(agent_in, agent_out, fallback, events, prompt, &mut pending)?;
+    if hinted && fallback.is_running() {
+        set_description(fallback, events, &prompt.description)?;
+    }
+    Ok(())
+}
+
+/// Waits up to `timeout` for the answer to remote request `number`.
+fn wait_remote(
+    events: &Receiver<Event>,
+    fallback: &mut Fallback,
+    number: u64,
+    timeout: Duration,
+) -> Option<io::Result<kryptopass_approval::Decision>> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        let left = deadline.checked_duration_since(Instant::now())?;
+        match events.recv_timeout(left) {
+            Ok(Event::Remote(answered, result)) if answered == number => return Some(result),
+            Ok(Event::Closed(generation)) if generation == fallback.generation() => {
+                fallback.closed()
+            }
+            Ok(_) => {}
+            Err(RecvTimeoutError::Timeout) => return None,
+            Err(RecvTimeoutError::Disconnected) => {
+                return Some(Err(io::ErrorKind::BrokenPipe.into()));
+            }
+        }
+    }
+}
+
+/// Sends a description to the fallback only, swallowing its reply.
+fn set_description(
+    fallback: &mut Fallback,
+    events: &Receiver<Event>,
+    description: &str,
+) -> io::Result<()> {
+    fallback.write(format!("SETDESC {description}\n").as_bytes())?;
+    fallback.read_reply(events)?;
+    Ok(())
+}
+
+/// Copies the fallback's reply to gpg-agent until `OK` or `ERR`, passing any
+/// `INQUIRE` exchange through. If the phone answers first, its answer goes to
+/// gpg-agent instead and the dialog is closed.
+fn relay(
+    agent_in: &mut impl BufRead,
+    agent_out: &mut impl Write,
+    fallback: &mut Fallback,
+    events: &Receiver<Event>,
     prompt: &Prompt,
+    pending: &mut Option<Remote>,
 ) -> io::Result<()> {
     let public_data = prompt.last_command == "GETINFO";
     loop {
-        let Some(reply) = read_line(pinentry_in)? else {
-            log::write("the fallback pinentry exited in the middle of a command");
-            return Err(io::ErrorKind::UnexpectedEof.into());
-        };
-        send(agent_out, &reply)?;
-        log::write(format_args!("pinentry> {}", describe(&reply, public_data)));
-        match classify(&reply) {
-            Reply::Final => return Ok(()),
-            Reply::Inquire => relay_inquiry(agent_in, pinentry_out)?,
-            Reply::Data | Reply::Other => {}
+        let event = events
+            .recv()
+            .map_err(|_| io::Error::from(io::ErrorKind::BrokenPipe))?;
+        match event {
+            Event::Line(generation, reply) if generation == fallback.generation() => {
+                send(agent_out, &reply)?;
+                log::write(format_args!("pinentry> {}", describe(&reply, public_data)));
+                match classify(&reply) {
+                    Reply::Final => {
+                        if let Some(asked) = pending.take() {
+                            log::write("remote: answered locally first; withdrawing");
+                            asked.cancel();
+                        }
+                        return Ok(());
+                    }
+                    Reply::Inquire => relay_inquiry(agent_in, fallback)?,
+                    Reply::Data | Reply::Other => {}
+                }
+            }
+            Event::Closed(generation) if generation == fallback.generation() => {
+                fallback.closed();
+                log::write("the fallback pinentry exited in the middle of a command");
+                if let Some(asked) = pending.take() {
+                    asked.cancel();
+                }
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
+            Event::Remote(number, result)
+                if pending.as_ref().is_some_and(|asked| asked.number == number) =>
+            {
+                let Some(asked) = pending.take() else {
+                    continue;
+                };
+                match result {
+                    Ok(decision) => {
+                        if remote::reply(asked.kind, decision, prompt, agent_out)? {
+                            fallback.kill();
+                            return Ok(());
+                        }
+                    }
+                    Err(error) => log::write(format_args!("remote: failed ({error})")),
+                }
+                log::write("remote: no answer from the phone; the local dialog stays");
+            }
+            _ => {}
         }
     }
 }
 
 /// gpg-agent answers an `INQUIRE` with `D` lines and `END`, or with `CAN`.
-fn relay_inquiry(agent_in: &mut impl BufRead, pinentry_out: &mut impl Write) -> io::Result<()> {
+fn relay_inquiry(agent_in: &mut impl BufRead, fallback: &mut Fallback) -> io::Result<()> {
     loop {
         let Some(answer) = read_line(agent_in)? else {
             log::write("gpg-agent closed the connection during an inquiry");
             return Err(io::ErrorKind::UnexpectedEof.into());
         };
-        send(pinentry_out, &answer)?;
+        fallback.write(answer.bytes())?;
         log::write(format_args!("agent> {}", describe(&answer, false)));
         if matches!(answer.keyword().as_str(), "END" | "CAN") {
             return Ok(());

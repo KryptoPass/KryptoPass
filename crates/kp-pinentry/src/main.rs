@@ -9,7 +9,7 @@ mod log;
 mod proxy;
 mod remote;
 
-use std::io::{BufReader, BufWriter};
+use std::io::BufWriter;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -22,40 +22,18 @@ fn main() -> ExitCode {
         eprintln!("kryptopass-pinentry: no fallback pinentry found");
         return ExitCode::FAILURE;
     };
-    let mut child = match fallback::spawn(&program, &arguments) {
-        Ok(child) => child,
-        Err(error) => {
-            log::write(format_args!(
-                "could not start {}: {error}",
-                program.display()
-            ));
-            eprintln!("kryptopass-pinentry: could not start the fallback pinentry");
-            return ExitCode::FAILURE;
-        }
-    };
-    log::write(format_args!(
-        "fallback {} running as pid {}",
-        program.display(),
-        child.id()
-    ));
-
-    let (Some(child_in), Some(child_out)) = (child.stdin.take(), child.stdout.take()) else {
-        log::write("the fallback pinentry has no pipes");
-        let _ = child.kill();
-        return ExitCode::FAILURE;
-    };
+    let (events_tx, events) = std::sync::mpsc::channel();
+    let mut fallback = fallback::Fallback::new(program, arguments, events_tx);
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     let result = proxy::run(
         &mut stdin.lock(),
         &mut BufWriter::new(stdout.lock()),
-        &mut BufReader::new(child_out),
-        &mut BufWriter::new(child_in),
+        &mut fallback,
+        &events,
     );
-
-    let _ = child.kill();
-    let status = child.wait();
-    log::write(format_args!("finished: {result:?}; fallback {status:?}"));
+    drop(fallback);
+    log::write(format_args!("finished: {result:?}"));
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(_) => ExitCode::FAILURE,

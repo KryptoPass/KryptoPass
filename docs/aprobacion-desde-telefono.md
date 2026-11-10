@@ -1,7 +1,7 @@
 # Aprobar desde el teléfono
 
-Estado: plan del 2026-11-09. Pasos 1 y 2 hechos (`crates/kp-pinentry`,
-`crates/kp-approval`, `infrastructure/approvals.rs`), sin probar con gpg-agent real.
+Estado: 2026-11-09. Desktop implementa los pasos 1 a 3 y el puente de los
+niveles 1 y 2; Android, en curso. Sin probar todavía con un teléfono real.
 
 El teléfono aprueba operaciones de GnuPG que ocurren en el PC: confirmar el uso
 de una clave (nivel 1) y entregar la contraseña de una clave (nivel 2). gpg-agent
@@ -25,43 +25,63 @@ nivel 2 desbloquea la bóveda sin código específico en la app.
 ## 2. Piezas
 
 ```
-gpg-agent ──Assuan──▶ kryptopass-pinentry ──socket local──▶ KryptoPass (Desktop)
-                         │                                      │
-                         └──fallback──▶ pinentry-qt             └──sesión P2P──▶ teléfono
+gpg-agent ──Assuan──▶ kryptopass-pinentry ──┬──▶ pinentry-qt (ventana local)
+                       (un proceso por      │
+                        petición)           └──approval.sock──▶ KryptoPass ──P2P──▶ teléfono
+                                                                (puente, sin UI)
 ```
 
-1. **`kryptopass-pinentry`** (`crates/kp-pinentry`): binario aislado, solo
-   `std`. Habla Assuan con gpg-agent. Por defecto reenvía cada orden a un
-   pinentry real (fallback). Cuando haya una aprobación remota disponible, la
-   pide por el socket local y solo si no la obtiene usa el fallback.
-2. **Servicio de aprobaciones en Desktop**: socket
-   `$XDG_RUNTIME_DIR/org.kryptopass.desktop/approval.sock`, mismo patrón que
-   `browser.sock` (directorio 0700, socket 0600, comprobación de uid del par).
-   Elige el teléfono, envía la petición y devuelve la respuesta.
-3. **Mensajes P2P** sobre la sesión ya autenticada: `ApprovalRequest`,
-   `ApprovalResponse`, `ApprovalCancel`. Antes de implementarlos se registran en
-   un contrato como `docs/sync/contrato.md`, porque los comparte Kotlin.
-4. **Android**: notificación con el contexto, biometría y respuesta. Con la app
-   cerrada solo funciona si el servicio en primer plano (`HostingService`) está
-   activo; si no, el PC usa el fallback.
+1. **`kryptopass-pinentry`** (`crates/kp-pinentry`): binario aislado. Es quien
+   pregunta: ante `CONFIRM` o `GETPIN` abre la ventana local (pinentry-qt) y, a
+   la vez, pide la respuesta del teléfono a KryptoPass. Gana la primera; la otra
+   se cancela. Si el teléfono está disponible, la ventana local lo dice.
+2. **KryptoPass como puente** (`kp-approval` + `infrastructure/approvals.rs`):
+   recibe la petición por `$XDG_RUNTIME_DIR/org.kryptopass.desktop/approval.sock`
+   (0700/0600, solo el mismo uid) y la reenvía al teléfono conectado. No muestra
+   interfaz ni toca la bóveda ni el hilo de la UI, así que funciona con la bóveda
+   bloqueada y no se bloquea a sí misma al desbloquearla. Sin teléfono conectado
+   responde «no disponible» al momento. Si el pinentry cierra el socket (ganó la
+   ventana local), envía `ApprovalCancel`.
+3. **Mensajes P2P** sobre la sesión ya autenticada (§3).
+4. **Android**: notificación con el contexto, autenticación del dispositivo y
+   respuesta. Con la app cerrada solo funciona si el servicio en primer plano
+   (`HostingService`) está activo.
 
-## 3. La petición
+La sesión P2P tiene un único dueño, el proceso de KryptoPass; por eso el
+pinentry no habla con el teléfono directamente. Más adelante, un servicio de
+usuario (`kryptopass-daemon`) dueño de P2P, Sync y aprobaciones permitiría
+aprobar con la ventana cerrada. Una ventana propia más bonita que pinentry-qt
+sería otro binario (`kryptopass-pinentry-gui`) que el pinentry lanza en su lugar.
 
-Un formato genérico para los tres niveles:
+## 3. Contrato P2P
 
-| Campo | Notas |
-|---|---|
-| `request_id` | 16 B aleatorios; la respuesta lo repite y solo vale una vez |
-| `kind` | `CONFIRM` (1), `PASSPHRASE` (2), `DECRYPT_SESSION_KEY` (3, reservado) |
-| `key` | keygrip y, si se conoce, huella OpenPGP o SSH |
-| `context` | descripción de gpg-agent (`SETDESC`), proceso que lo pide (`OPTION owner`), host SSH si lo hay, nombre del equipo |
-| `expires_millis` | caducidad corta (30 s) |
-| `attempt` | contador; > 0 si gpg-agent dijo que la anterior era incorrecta (`SETERROR`) |
+En `SessionHello`, `approval_version = 8`: 1 si el lado entiende estos mensajes.
+Desktop solo envía `ApprovalRequest` a un par que anunció 1; el teléfono solo
+responde. Tipos: `APPROVAL_REQUEST = 30`, `APPROVAL_RESPONSE = 31`,
+`APPROVAL_CANCEL = 32`, canal de control.
 
-Respuesta: `request_id`, `decision` (aprobada, denegada, sin contraseña
-guardada) y, solo en `PASSPHRASE`, la contraseña. *Previsión:* en
-`DECRYPT_SESSION_KEY` la petición lleva el PKESK y la respuesta la clave de
-sesión; el teléfono nunca devuelve la clave privada.
+| Mensaje | Campos | Reglas |
+|---|---|---|
+| `ApprovalRequest` | `request_id` (16 B), `kind` (1 confirmar, 2 contraseña, 3 reservado), `key_info` (≤ 128 B), `description` (≤ 2048 B, ya sin escapes), `requester` (≤ 256 B), `host_name` (≤ 128 B), `expires_in_millis` (1..120000) | Como mucho 4 abiertas por sesión. `kind` 3 se rechaza hasta que exista. |
+| `ApprovalResponse` | `request_id`, `decision` (1 aprobada, 2 denegada, 3 contraseña, 4 no disponible), `passphrase` (1..1024 B solo con 3) | Solo para una petición abierta, una vez. 3 solo responde a `kind` 2; 1 solo a `kind` 1. |
+| `ApprovalCancel` | `request_id` | Cualquiera de los dos lados; el teléfono retira la notificación. |
+
+Un `request_id` desconocido en `ApprovalResponse` o `ApprovalCancel` se ignora
+(puede haber caducado); un mensaje mal formado cierra la sesión como cualquier
+otro error de protocolo. Al cerrarse la sesión, toda petición abierta queda
+«no disponible» y el teléfono retira sus notificaciones.
+
+### En el teléfono
+
+- **Confirmar (kind 1):** notificación con equipo, `requester`, clave y
+  descripción; «Permitir» exige autenticación del dispositivo (biometría o
+  bloqueo de pantalla); «Denegar» no.
+- **Contraseña (kind 2):** si hay una guardada para (equipo, `key_info`), se
+  envía tras biometría. Si no, se puede escribir en el teléfono y, opcionalmente,
+  guardarla (cifrada con una clave del Keystore que exige biometría). Sin nada de
+  eso: «no disponible». Las contraseñas guardadas se pueden borrar desde el
+  detalle del equipo, y desvincularlo las borra.
+- **Caducidad:** pasado `expires_in_millis` la notificación se retira sola.
 
 ## 4. Reglas de seguridad
 
@@ -137,20 +157,24 @@ Referencia: `../experimentos/pinentry-reference/pinentry/pinentry.c`.
   responda el teléfono, el proxy deberá contestar con su pid y cancelar la
   petición remota al recibir la señal.
 
-## 7. Probar el paso 1
+## 7. Probar
+
+`just install` instala `~/.local/bin/kryptopass-pinentry` junto a la app.
 
 ```
-just pinentry-build
-# en ~/.gnupg/gpg-agent.conf:
-pinentry-program /ruta/a/target/debug/kryptopass-pinentry
+# ~/.gnupg/gpg-agent.conf
+pinentry-program /home/<usuario>/.local/bin/kryptopass-pinentry
+# ~/.gnupg/sshcontrol: «confirm» en la línea de la clave SSH
+<keygrip> 0 confirm
+
 gpg-connect-agent reloadagent /bye
 ```
 
-Para el nivel 1 con SSH, añadir `confirm` a la línea de la clave en
-`~/.gnupg/sshcontrol` (`<keygrip> 0 confirm`). Con KryptoPass abierto, cada uso
-abre su diálogo; cerrado, el de `pinentry-qt`.
+Con KryptoPass abierto y el teléfono conectado, un `ssh` o una firma pide al
+teléfono y abre a la vez la ventana local con el aviso «También puedes responder
+en tu teléfono». Sin teléfono, solo la ventana local, como siempre.
 
-El log está en `~/.local/state/kryptopass/pinentry.log` (0600): órdenes y
-respuestas, con los `D` y los `INQUIRE` reducidos a su longitud. Para volver
-atrás basta quitar la línea `pinentry-program` y recargar el agente.
+Logs: `~/.local/state/kryptopass/pinentry.log` (pinentry, 0600, sin secretos),
+los de KryptoPass con el prefijo `Approvals:` y los de Android con `Approval:`.
+Para volver atrás: quitar `pinentry-program` y `confirm`, y recargar el agente.
 `KRYPTOPASS_PINENTRY_FALLBACK=/ruta/absoluta` fuerza un fallback concreto.

@@ -15,6 +15,11 @@ const MAX_LINE: usize = 4096;
 pub struct Line(Vec<u8>);
 
 impl Line {
+    /// A line built here rather than read; must end with a newline to be sent.
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(bytes.to_vec())
+    }
+
     pub fn bytes(&self) -> &[u8] {
         &self.0
     }

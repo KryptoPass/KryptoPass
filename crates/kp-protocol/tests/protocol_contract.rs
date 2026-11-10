@@ -1198,6 +1198,7 @@ fn synthetic_transfer_session_hello_keeps_capability_disabled_by_default()
 -> Result<(), Box<dyn std::error::Error>> {
     let hello = proto::SessionHello {
         vault_keys_version: 0,
+        approval_version: 0,
         session_version: 1,
         device_id: bytes(32, 1),
         reconnect_port: 0,
@@ -1220,6 +1221,7 @@ fn sync_rounds_session_capability_roundtrips_and_rejects_duplicate_or_overflow()
     for version in [0, 1] {
         let hello = proto::SessionHello {
             vault_keys_version: 0,
+            approval_version: 0,
             session_version: 1,
             device_id: bytes(32, 1),
             reconnect_port: 0,
@@ -1238,6 +1240,7 @@ fn sync_rounds_session_capability_roundtrips_and_rejects_duplicate_or_overflow()
 
     let base = proto::SessionHello {
         vault_keys_version: 0,
+        approval_version: 0,
         session_version: 1,
         device_id: bytes(32, 1),
         reconnect_port: 0,

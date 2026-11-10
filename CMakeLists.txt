@@ -28,14 +28,16 @@ set(KRYPTOPASS_CARGO_ARGS "--locked" CACHE STRING
 set(KRYPTOPASS_CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/cargo CACHE PATH
     "Cargo target directory; point it at an existing one to reuse its build")
 set(KRYPTOPASS_BINARY_PATH ${KRYPTOPASS_CARGO_TARGET_DIR}/release/${KRYPTOPASS_BINARY})
+# Pinentry for gpg-agent that lets a paired phone answer (docs/aprobacion-desde-telefono.md).
+set(KRYPTOPASS_PINENTRY_PATH ${KRYPTOPASS_CARGO_TARGET_DIR}/release/kryptopass-pinentry)
 separate_arguments(KRYPTOPASS_CARGO_ARGS_LIST UNIX_COMMAND "${KRYPTOPASS_CARGO_ARGS}")
 
 # Cargo tracks its own inputs, so the target always runs and rebuilds incrementally.
 add_custom_target(kryptopass-desktop ALL
     COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${KRYPTOPASS_CARGO_TARGET_DIR}
-            ${CARGO_EXECUTABLE} build --release -p kp-desktop ${KRYPTOPASS_CARGO_ARGS_LIST}
+            ${CARGO_EXECUTABLE} build --release -p kp-desktop -p kp-pinentry ${KRYPTOPASS_CARGO_ARGS_LIST}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    BYPRODUCTS ${KRYPTOPASS_BINARY_PATH}
+    BYPRODUCTS ${KRYPTOPASS_BINARY_PATH} ${KRYPTOPASS_PINENTRY_PATH}
     USES_TERMINAL
     COMMENT "Building ${KRYPTOPASS_BINARY} with Cargo")
 
@@ -59,6 +61,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     packaging/gen/${KRYPTOPASS_APP_ID}.desktop Cargo.toml crates/kp-desktop/Cargo.toml)
 
 install(PROGRAMS ${KRYPTOPASS_BINARY_PATH} DESTINATION ${KDE_INSTALL_BINDIR})
+install(PROGRAMS ${KRYPTOPASS_PINENTRY_PATH} DESTINATION ${KDE_INSTALL_BINDIR})
 install(FILES ${KRYPTOPASS_DESKTOP_FILE} DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES packaging/gen/${KRYPTOPASS_APP_ID}.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
 install(FILES packaging/gen/${KRYPTOPASS_APP_ID}.mime.xml
