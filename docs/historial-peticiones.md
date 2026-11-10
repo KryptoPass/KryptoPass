@@ -4,6 +4,14 @@ Copia literal del `AGENTS.md` anterior (hasta el 2026-11-07), con las peticiones
 fechadas del usuario. Es registro histórico: las reglas vigentes están en
 `AGENTS.md` y, si algo de aquí choca con ellas, mandan las de `AGENTS.md`.
 
+## 2026-11-10 — Administración de identidades en Desktop
+
+Petición: implementar en una rama y hacer commit sin GPG del flujo de identidades,
+personas, usos y protección, manteniendo OpenPGP accesible. Se implementa en
+`feat/identity-workflows`; modelo, persistencia y límites en
+[identidades-desktop.md](identidades-desktop.md). Validación mediante compilación,
+Clippy y lint QML, sin crear ni ejecutar tests.
+
 ---
 
 ## KryptoPass Desktop — guía de trabajo

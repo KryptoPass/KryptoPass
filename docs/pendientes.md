@@ -38,3 +38,13 @@ recibido, con aviso de la clave pendiente.
 - Dispositivos y transferencia de claves ya existen fuera de debug: falta la
   revisión de seguridad independiente.
 - Android: validar Keystore y biometría de producción en un teléfono real.
+
+## Administración de identidades (2026-11-10)
+
+Desktop ya ofrece identidades propias, personas con varias identidades, usos por
+componente, protección y publicación por servidor. Ver
+[identidades-desktop.md](identidades-desktop.md). La validación funcional queda a
+cargo del usuario, incluyendo tarjeta, copia SSH, publicación real y bloqueo del
+agente. Los nombres, agrupaciones y usos son metadatos locales: sincronizarlos con
+Android requiere primero diseñar su formato compartido. Las etiquetas no conceden
+permisos de automatización ni prueban accesos a servicios externos.
