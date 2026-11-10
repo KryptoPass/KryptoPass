@@ -279,18 +279,33 @@ impl qobject::SecretsController {
 
     /// Clears gpg-agent's cache for the primary key when the vault asks for it.
     pub(super) fn forget_primary_passphrase(self: Pin<&mut Self>) {
-        let Some(key) = self
+        let primary = self
             .as_ref()
             .rust()
             .primary
             .clone()
-            .filter(|key| key.forget_on_lock)
-        else {
-            return;
-        };
+            .filter(|key| key.forget_on_lock);
         std::thread::spawn(move || {
-            if let Err(error) = GnuPgOpenPgp.forget_cached_passphrase(&key.fingerprint) {
-                tracing::warn!(%error, "could not make gpg-agent forget the primary key");
+            let mut fingerprints = std::collections::BTreeSet::new();
+            if let Some(key) = primary {
+                fingerprints.insert(key.fingerprint.as_str().to_owned());
+            }
+            match crate::keyring::catalog::read() {
+                Ok(catalog) => fingerprints.extend(
+                    catalog
+                        .identities
+                        .into_iter()
+                        .filter(|(_, identity)| identity.forget_on_lock)
+                        .map(|(fingerprint, _)| fingerprint),
+                ),
+                Err(error) => tracing::warn!(%error, "could not read identity cache preferences"),
+            }
+            for fingerprint in fingerprints {
+                if let Ok(fingerprint) = KeyFingerprint::parse(&fingerprint)
+                    && let Err(error) = GnuPgOpenPgp.forget_cached_passphrase(&fingerprint)
+                {
+                    tracing::warn!(%error, "could not make gpg-agent forget an identity");
+                }
             }
         });
     }

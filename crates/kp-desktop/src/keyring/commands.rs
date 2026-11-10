@@ -31,3 +31,31 @@ pub fn probe_agent() -> Result<(), String> {
         .probe_agent()
         .map_err(|error| super::errors::describe(&error))
 }
+
+/// Observed secret availability, without reading or exporting secret material.
+pub fn availability() -> Result<String, String> {
+    let read = || -> anyhow::Result<String> {
+        let mut context = gpgme::Context::from_protocol(gpgme::Protocol::OpenPgp)?;
+        context.add_key_list_mode(gpgme::KeyListMode::WITH_SECRET)?;
+        let mut records = serde_json::Map::new();
+        for key in context.keys()? {
+            for component in key?.subkeys() {
+                if let Ok(fingerprint) = component.fingerprint() {
+                    let location = if component.is_card_key() {
+                        "card"
+                    } else if component.is_secret() {
+                        "local"
+                    } else {
+                        "public"
+                    };
+                    records.insert(
+                        fingerprint.to_owned(),
+                        serde_json::json!({"location": location}),
+                    );
+                }
+            }
+        }
+        Ok(serde_json::Value::Object(records).to_string())
+    };
+    read().map_err(|_| crate::i18n::text("No se pudo comprobar dónde está disponible cada clave."))
+}

@@ -33,7 +33,36 @@ pub mod qobject {
         #[qproperty(QString, load_error, cxx_name = "loadError", READ, NOTIFY)]
         #[qproperty(QString, operation_error, cxx_name = "operationError", READ, NOTIFY)]
         #[qproperty(QString, online_settings, cxx_name = "onlineSettings", READ, NOTIFY)]
+        #[qproperty(QString, key_availability, cxx_name = "keyAvailability", READ, NOTIFY)]
+        #[qproperty(QString, identity_catalog, cxx_name = "identityCatalog", READ, NOTIFY)]
+        #[qproperty(QString, catalog_error, cxx_name = "catalogError", READ, NOTIFY)]
+        #[qproperty(QString, identity_health, cxx_name = "identityHealth", READ, NOTIFY)]
         type KeyringController = super::KeyringControllerRust;
+
+        #[qinvokable]
+        #[cxx_name = "editCatalog"]
+        fn edit_catalog(self: Pin<&mut Self>, json: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "copySshPublicKey"]
+        fn copy_ssh_public_key(self: Pin<&mut Self>, fingerprint: &QString, target: &QString);
+
+        #[qsignal]
+        #[cxx_name = "sshPublicKeyReady"]
+        fn ssh_public_key_ready(self: Pin<&mut Self>, public_key: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "publishIdentity"]
+        fn publish_identity(
+            self: Pin<&mut Self>,
+            fingerprint: &QString,
+            server: &QString,
+            upload: bool,
+        );
+
+        #[qsignal]
+        #[cxx_name = "catalogSaved"]
+        fn catalog_saved(self: Pin<&mut Self>);
 
         #[qinvokable]
         #[cxx_name = "matchesSearch"]
@@ -84,6 +113,12 @@ pub mod qobject {
 }
 
 pub struct KeyringControllerRust {
+    /// Last listed keys, kept so identity health follows catalog edits without asking GnuPG.
+    keys: Vec<kryptopass_keyring::KeyInfo>,
+    identity_health: QString,
+    key_availability: QString,
+    identity_catalog: QString,
+    catalog_error: QString,
     metadata_search: kryptopass_core::search::MetadataSearch,
     online_settings: QString,
     status: QString,
@@ -103,7 +138,23 @@ impl Default for KeyringControllerRust {
             .ok()
             .filter(|settings| settings.validate().is_ok())
             .unwrap_or_default();
+        let (catalog, catalog_error) = match crate::keyring::catalog::read()
+            .and_then(|catalog| Ok(serde_json::to_string(&catalog)?))
+        {
+            Ok(catalog) => (catalog, String::new()),
+            Err(_) => (
+                "{}".into(),
+                crate::i18n::text(
+                    "No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.",
+                ),
+            ),
+        };
         Self {
+            keys: Vec::new(),
+            identity_health: QString::from("{}"),
+            key_availability: QString::from("{}"),
+            identity_catalog: QString::from(catalog),
+            catalog_error: QString::from(catalog_error),
             metadata_search: kryptopass_core::search::MetadataSearch::default(),
             online_settings: QString::from(serde_json::to_string(&settings).unwrap_or_default()),
             status: QString::from(crate::i18n::text("Identidades GPG no cargadas")),
@@ -119,6 +170,118 @@ impl Default for KeyringControllerRust {
 }
 
 impl qobject::KeyringController {
+    pub fn copy_ssh_public_key(mut self: Pin<&mut Self>, fingerprint: &QString, target: &QString) {
+        if *self.busy() {
+            return;
+        }
+        let fingerprint = fingerprint.to_string();
+        let target = target.to_string();
+        self.as_mut().set_busy(true);
+        self.as_mut().set_operation_error(QString::default());
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || {
+                let fingerprint = kryptopass_keyring::Fingerprint::parse(&fingerprint)?;
+                let target = kryptopass_keyring::Fingerprint::parse(&target)?;
+                kryptopass_keyring::Keyring::system().public_ssh_key(&fingerprint, &target)
+            },
+            |mut controller, result| {
+                controller.as_mut().set_busy(false);
+                match result {
+                    Ok(public_key) => controller.ssh_public_key_ready(&QString::from(public_key)),
+                    Err(_) => controller.fail_operation(
+                        "No se pudo exportar la clave pública SSH seleccionada.".into(),
+                    ),
+                }
+            },
+        );
+    }
+
+    pub fn publish_identity(
+        mut self: Pin<&mut Self>,
+        fingerprint: &QString,
+        server: &QString,
+        upload: bool,
+    ) {
+        if *self.busy() {
+            return;
+        }
+        let fingerprint = fingerprint.to_string();
+        let server = server.to_string();
+        let allowed = serde_json::from_str::<OnlineSettings>(&self.online_settings().to_string())
+            .is_ok_and(|settings| settings.enabled && settings.keyservers.contains(&server));
+        if !allowed {
+            self.fail_operation(
+                "Activa los servicios online y selecciona un servidor configurado.".into(),
+            );
+            return;
+        }
+        self.as_mut().set_busy(true);
+        self.as_mut().set_operation_error(QString::default());
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || crate::keyring::publication::run(&fingerprint, &server, upload),
+            |mut controller, result| {
+                controller.as_mut().set_busy(false);
+                controller.as_mut().reload_catalog();
+                if let Err(error) = result {
+                    controller.fail_operation(error.to_string());
+                }
+            },
+        );
+    }
+
+    pub fn edit_catalog(mut self: Pin<&mut Self>, json: &QString) {
+        if *self.busy() {
+            return;
+        }
+        let request = json.to_string();
+        self.as_mut().set_busy(true);
+        self.as_mut().set_operation_error(QString::default());
+        crate::qt::jobs::run_blocking(
+            self.qt_thread(),
+            move || {
+                let keys = crate::keyring::commands::list_keys().map_err(anyhow::Error::msg)?;
+                crate::keyring::catalog::edit(&request, &keys).map(drop)
+            },
+            |mut controller, result| {
+                controller.as_mut().set_busy(false);
+                match result {
+                    Ok(()) => {
+                        controller.as_mut().reload_catalog();
+                        controller.catalog_saved();
+                    }
+                    Err(error) => controller.fail_operation(error.to_string()),
+                }
+            },
+        );
+    }
+
+    fn reload_catalog(mut self: Pin<&mut Self>) {
+        match crate::keyring::catalog::read().and_then(|catalog| {
+            let health = crate::keyring::health::assess(
+                &self.keys,
+                &catalog,
+                crate::keyring::catalog::now(),
+            );
+            Ok((serde_json::to_string(&catalog)?, health.to_string()))
+        }) {
+            Ok((json, health)) => {
+                self.as_mut().rust_mut().identity_catalog = QString::from(json);
+                self.as_mut().identity_catalog_changed();
+                self.as_mut().rust_mut().identity_health = QString::from(health);
+                self.as_mut().identity_health_changed();
+                self.as_mut().rust_mut().catalog_error = QString::default();
+            }
+            Err(_) => {
+                self.as_mut().rust_mut().catalog_error = QString::from(crate::i18n::text(
+                    "No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.",
+                ))
+            }
+        }
+        self.catalog_error_changed();
+    }
+
     pub fn matches_search(self: Pin<&mut Self>, query: &QString, metadata: &QString) -> bool {
         self.rust_mut()
             .metadata_search
@@ -171,6 +334,7 @@ impl qobject::KeyringController {
             return;
         }
 
+        self.as_mut().reload_catalog();
         if !self.load_error().is_empty() {
             self.as_mut().rust_mut().load_error = QString::default();
             self.as_mut().load_error_changed();
@@ -181,8 +345,26 @@ impl qobject::KeyringController {
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            crate::keyring::commands::list_keys,
-            |mut controller, result| {
+            || {
+                let keys = crate::keyring::commands::list_keys();
+                let observation = keys
+                    .as_ref()
+                    .ok()
+                    .map(|keys| crate::keyring::catalog::observe(keys));
+                (keys, crate::keyring::commands::availability(), observation)
+            },
+            |mut controller, (result, availability, observation)| {
+                controller.as_mut().rust_mut().key_availability =
+                    QString::from(availability.unwrap_or_else(|_| "{}".into()));
+                controller.as_mut().key_availability_changed();
+                controller.as_mut().rust_mut().keys = result.clone().unwrap_or_default();
+                controller.as_mut().reload_catalog();
+                if observation.is_some_and(|result| result.is_err()) {
+                    controller.as_mut().rust_mut().catalog_error = QString::from(
+                        crate::i18n::text("No se pudo guardar la organización de tus identidades."),
+                    );
+                    controller.as_mut().catalog_error_changed();
+                }
                 match result {
                     Ok(keys) => {
                         controller.as_mut().rust_mut().key_records = key_records(&keys);
@@ -285,11 +467,31 @@ impl qobject::KeyringController {
                 // Reload on both success and failure because an operation can commit a partial
                 // result before reporting an error.
                 let keys = crate::keyring::commands::list_keys();
-                (outcome, keys)
+                let observation = keys
+                    .as_ref()
+                    .ok()
+                    .map(|keys| crate::keyring::catalog::observe(keys));
+                (
+                    outcome,
+                    keys,
+                    crate::keyring::commands::availability(),
+                    observation,
+                )
             },
-            move |mut controller, (outcome, keys)| {
+            move |mut controller, (outcome, keys, availability, observation)| {
+                controller.as_mut().rust_mut().key_availability =
+                    QString::from(availability.unwrap_or_else(|_| "{}".into()));
+                controller.as_mut().key_availability_changed();
+                if observation.is_some_and(|result| result.is_err()) {
+                    controller
+                        .as_mut()
+                        .set_operation_error(QString::from(crate::i18n::text(
+                            "No se pudo guardar la organización de tus identidades.",
+                        )));
+                }
                 let reload_error = match keys {
                     Ok(keys) => {
+                        controller.as_mut().rust_mut().keys = keys.clone();
                         controller.as_mut().rust_mut().key_records = key_records(&keys);
                         controller.as_mut().key_records_changed();
                         let (summaries, count) = key_summaries(keys);
@@ -316,6 +518,12 @@ impl qobject::KeyringController {
                             let armored = QString::from(armored);
                             controller.as_mut().public_key_ready(&armored);
                         }
+                        if crate::keyring::catalog::record_export(&fingerprint.to_string(), &action)
+                            .is_err()
+                        {
+                            controller.as_mut().set_operation_error(QString::from(crate::i18n::text("El archivo se exportó, pero no se pudo guardar la fecha en KryptoPass.")));
+                        }
+                        controller.as_mut().reload_catalog();
                         let message = QString::from(outcome.message);
                         controller.as_mut().set_status(message.clone());
                         controller
@@ -330,6 +538,7 @@ impl qobject::KeyringController {
                             ),
                             None => message,
                         };
+                        controller.as_mut().reload_catalog();
                         controller.as_mut().fail_operation(message);
                     }
                 }

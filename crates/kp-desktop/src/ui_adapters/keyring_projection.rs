@@ -135,6 +135,10 @@ fn subkey_record(subkey: &SubkeyInfo, is_primary: bool) -> Value {
     json!({
         "fingerprint": subkey.fingerprint.as_ref().map(Fingerprint::as_str).unwrap_or_default(),
         "isPrimary": is_primary,
+        "canEncrypt": subkey.can_encrypt,
+        "canSign": subkey.can_sign,
+        "canAuthenticate": subkey.can_authenticate,
+        "canCertify": subkey.can_certify,
         "algorithm": subkey.algorithm,
         "expiresAt": subkey.expires_at.and_then(|time| time.duration_since(UNIX_EPOCH).ok()).map(|age| age.as_secs()),
         "capabilities": capabilities(

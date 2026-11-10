@@ -6,3 +6,9 @@ mod operations;
 mod request;
 
 pub mod online;
+
+pub mod catalog;
+
+pub mod health;
+
+pub mod publication;

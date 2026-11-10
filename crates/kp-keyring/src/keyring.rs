@@ -252,6 +252,51 @@ impl Keyring {
         Ok(report)
     }
 
+    /// Exports exactly the requested authentication component in OpenSSH public format.
+    pub fn public_ssh_key(
+        &self,
+        fingerprint: &Fingerprint,
+        target: &Fingerprint,
+    ) -> Result<String> {
+        let keys = self.list_keys()?;
+        let key = keys
+            .iter()
+            .find(|key| &key.fingerprint == fingerprint)
+            .ok_or_else(|| Error::KeyNotFound(fingerprint.clone()))?;
+        let component = key
+            .subkeys
+            .iter()
+            .find(|component| component.fingerprint.as_ref() == Some(target))
+            .ok_or_else(|| Error::SubkeyNotFound {
+                key: fingerprint.clone(),
+                subkey: target.clone(),
+            })?;
+        if key.revoked
+            || key.expired
+            || key.disabled
+            || key.invalid
+            || component.revoked
+            || component.expired
+            || component.disabled
+            || component.invalid
+            || !component.can_authenticate
+        {
+            return Err(Error::KeyUnusable(target.clone()));
+        }
+        let session = self.session()?;
+        let folder = files::private_temp_dir(".kryptopass-ssh-public-")?;
+        let output = folder.path().join("public.key");
+        let path = output.to_str().ok_or(InvalidInput::Path)?;
+        self.gpg(&session).run_batch(&[
+            "--output",
+            path,
+            "--export-ssh-key",
+            &format!("{target}!"),
+        ])?;
+        let bytes = files::read_bounded(&output, 64 * 1024)?;
+        String::from_utf8(bytes.to_vec()).map_err(|_| Error::Unconfirmed(Unconfirmed::NotUtf8))
+    }
+
     /// The armored public key, ready to paste or share.
     #[instrument(level = "debug", skip(self), fields(fingerprint = %fingerprint))]
     pub fn public_key_armored(&self, fingerprint: &Fingerprint) -> Result<String> {

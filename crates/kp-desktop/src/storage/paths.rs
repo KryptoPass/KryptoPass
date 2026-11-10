@@ -123,6 +123,43 @@ pub fn save_setup_state(app_id: &str, state: &SetupState) -> Result<bool> {
     write_config_atomically(&path, directory, &contents)
 }
 
+/// Serializes catalog updates across processes; no private key material belongs here.
+pub fn with_identity_catalog<T>(
+    update: impl FnOnce(Option<Vec<u8>>) -> Result<(T, Option<Vec<u8>>)>,
+) -> Result<T> {
+    use std::os::{fd::AsRawFd, unix::fs::OpenOptionsExt};
+    let app_id = crate::app_info::APP.desktop_file_id;
+    let path = app_config_file(app_id, "identities.json", true)?.context("catalog path missing")?;
+    let lock_path = path.with_extension("lock");
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(lock_path)?;
+    // `File::lock` needs Rust 1.89; the lock is released when `lock` is closed on return.
+    // SAFETY: `lock` owns a valid descriptor for the whole call.
+    if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX) } != 0 {
+        return Err(std::io::Error::last_os_error()).context("could not lock the identity catalog");
+    }
+    let (value, contents) = update(read_private_config(&path, 2 * 1024 * 1024)?)?;
+    if let Some(contents) = contents {
+        if contents.len() > 2 * 1024 * 1024 {
+            bail!("identity catalog exceeds size limit");
+        }
+        if !write_config_atomically(
+            &path,
+            path.parent().context("catalog directory missing")?,
+            &contents,
+        )? {
+            bail!("catalog saved but directory durability could not be confirmed");
+        }
+    }
+    Ok(value)
+}
+
 /// Private application directory for browser pairing metadata, separate from vault content.
 pub fn browser_state_directory(app_id: &str) -> Result<PathBuf> {
     let path = default_database_path(app_id)?;
