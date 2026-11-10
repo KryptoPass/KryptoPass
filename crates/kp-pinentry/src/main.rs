@@ -5,6 +5,7 @@
 
 mod assuan;
 mod fallback;
+mod locate;
 mod log;
 mod proxy;
 mod remote;
@@ -32,7 +33,7 @@ fn main() -> ExitCode {
     let arguments: Vec<_> = std::env::args_os().skip(1).collect();
     log::write(format_args!("started with arguments {arguments:?}"));
 
-    let Some(program) = fallback::find() else {
+    let Some(program) = locate::fallback() else {
         log::write("no fallback pinentry found; refusing to answer");
         eprintln!("kryptopass-pinentry: no fallback pinentry found");
         return ExitCode::FAILURE;

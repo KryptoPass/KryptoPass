@@ -15,25 +15,6 @@ use crate::assuan::{Line, Reply, classify, read_line};
 use crate::log;
 use kryptopass_approval::Decision;
 
-/// Tried in order; the first executable one wins. Desktop-friendly first.
-const CANDIDATES: &[&str] = &[
-    "pinentry-qt",
-    "pinentry-qt5",
-    "pinentry-gnome3",
-    "pinentry-gtk",
-    "pinentry-gtk-2",
-    "pinentry-curses",
-    "pinentry-tty",
-    "pinentry",
-];
-
-/// Where a fallback may live. Never `PATH`: it can put a user-writable
-/// directory first, and whatever runs as the fallback sees the passphrase.
-const SYSTEM_DIRECTORIES: &[&str] = &["/usr/bin", "/usr/local/bin", "/bin"];
-
-/// Debug builds only: forces a fallback, for example a test script.
-const OVERRIDE: &str = "KRYPTOPASS_PINENTRY_FALLBACK";
-
 /// Everything the proxy waits on.
 pub enum Event {
     /// A line from the fallback of this generation.
@@ -217,38 +198,6 @@ impl Drop for Fallback {
     }
 }
 
-/// Finds the fallback, never this program itself (that would loop forever).
-pub fn find() -> Option<PathBuf> {
-    let me = std::env::current_exe().and_then(std::fs::canonicalize).ok();
-    let is_me = |path: &Path| {
-        let real = std::fs::canonicalize(path).ok();
-        real.is_some() && real == me
-    };
-    // An environment variable must not choose who sees the passphrase in a
-    // release build; gpg-agent's environment is not a trust boundary we own.
-    if cfg!(debug_assertions)
-        && let Some(chosen) = std::env::var_os(OVERRIDE).map(PathBuf::from)
-    {
-        if chosen.is_absolute() && is_executable(&chosen) && !is_me(&chosen) {
-            log::write(format_args!(
-                "debug build: fallback forced to {}",
-                chosen.display()
-            ));
-            return Some(chosen);
-        }
-        log::write(format_args!(
-            "{OVERRIDE}={} is not an absolute executable path other than this pinentry; searching instead",
-            chosen.display()
-        ));
-    }
-    CANDIDATES.iter().find_map(|name| {
-        SYSTEM_DIRECTORIES
-            .iter()
-            .map(|directory| Path::new(directory).join(name))
-            .find(|candidate| is_system_program(candidate) && !is_me(candidate))
-    })
-}
-
 /// Starts the fallback with the same arguments gpg-agent gave us. It dies with
 /// this process, so a cancelled request never leaves a dialog behind.
 fn spawn(program: &Path, arguments: &[OsString]) -> io::Result<Child> {
@@ -269,20 +218,4 @@ fn spawn(program: &Path, arguments: &[OsString]) -> io::Result<Child> {
         });
     }
     command.spawn()
-}
-
-/// Executable, owned by root and writable by nobody else: what a packaged
-/// pinentry looks like, and what another user's or this user's file does not.
-fn is_system_program(path: &Path) -> bool {
-    use std::os::unix::fs::{MetadataExt, PermissionsExt};
-    std::fs::metadata(path).is_ok_and(|metadata| {
-        let mode = metadata.permissions().mode();
-        metadata.is_file() && mode & 0o111 != 0 && mode & 0o022 == 0 && metadata.uid() == 0
-    })
-}
-
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path)
-        .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
 }
