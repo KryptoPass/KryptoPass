@@ -51,7 +51,11 @@ fn handle(request: Request, waiting: &dyn Fn() -> bool) -> Decision {
         },
         key_info: request.key.clone().unwrap_or_default(),
         description: kryptopass_approval::unescape(&request.description),
-        requester: request.owner.as_deref().and_then(requester).unwrap_or_default(),
+        requester: request
+            .owner
+            .as_deref()
+            .and_then(requester)
+            .unwrap_or_default(),
         host_name: host_name(),
         expires: PHONE_TIMEOUT,
     };
