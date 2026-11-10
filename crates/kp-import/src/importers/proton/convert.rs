@@ -63,7 +63,9 @@ pub(super) fn convert(
             } else {
                 Some(OneTimePassword::Base32(login.totp_uri.clone()))
             };
+            let (password_history, notes) = password_history_from_note(notes);
             EntryContent::Login(LoginEntry {
+                password_history,
                 username,
                 email: login.item_email.clone(),
                 password: login.password.clone(),
@@ -440,4 +442,106 @@ fn sensitive_format(arguments: std::fmt::Arguments<'_>) -> SensitiveText {
         std::alloc::handle_alloc_error(std::alloc::Layout::new::<u8>());
     }
     text
+}
+
+/// Extract only an unambiguous marked Markdown list. The remaining note is
+/// retained, with a notice that these snapshots do not carry source dates.
+fn password_history_from_note(note: SensitiveText) -> (Vec<SensitiveText>, SensitiveText) {
+    const MARKER: &str = "Password history (oldest -> newest before current):";
+    let source = note.as_str();
+    let mut offset = 0;
+    let mut start = None;
+    let mut end = 0;
+    let mut history = Vec::new();
+    for part in source.split_inclusive('\n') {
+        let line = part.trim_end_matches(['\r', '\n']);
+        if start.is_none() {
+            if line.trim() == MARKER {
+                start = Some(offset);
+            }
+        } else if let Some(value) = line.strip_prefix("- ") {
+            let Some(decoded) = decode_history_value(value) else {
+                return (Vec::new(), note);
+            };
+            if decoded.is_empty() || history.len() >= 1000 {
+                return (Vec::new(), note);
+            }
+            history.push(decoded);
+            end = offset + part.len();
+        } else if line.trim().is_empty() && history.is_empty() {
+            // A blank line between the heading and its list is valid Markdown.
+        } else {
+            break;
+        }
+        offset += part.len();
+    }
+    let Some(start) = start else {
+        return (Vec::new(), note);
+    };
+    if history.is_empty() {
+        return (Vec::new(), note);
+    }
+    let mut remaining = SensitiveText::with_capacity(source.len() + 256);
+    remaining.push_str(&source[..start]);
+    remaining.push_str(&source[end..]);
+    if !remaining.is_empty() {
+        remaining.push_str("\n\n");
+    }
+    remaining.push_str("Historial de contraseñas importado: las fechas originales no estaban disponibles y los demás campos de cada versión son una reconstrucción.");
+    (history, remaining)
+}
+
+/// Decode the escapes used in a Markdown text node. Reject unknown entities and
+/// unescaped markup instead of silently importing a different password.
+fn decode_history_value(value: &str) -> Option<SensitiveText> {
+    let mut result = SensitiveText::with_capacity(value.len());
+    let mut chars = value.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\\' => {
+                let escaped = chars.next()?;
+                if !escaped.is_ascii_punctuation() {
+                    return None;
+                }
+                result.push(escaped);
+            }
+            '&' => {
+                let mut entity = SensitiveText::new();
+                loop {
+                    let next = chars.next()?;
+                    if next == ';' {
+                        break;
+                    }
+                    if entity.len() >= 12 || !next.is_ascii_alphanumeric() && next != '#' {
+                        return None;
+                    }
+                    entity.push(next);
+                }
+                let decoded = match entity.as_str() {
+                    "amp" => '&',
+                    "lt" => '<',
+                    "gt" => '>',
+                    "quot" => '"',
+                    "apos" => '\'',
+                    _ => {
+                        let number = entity.strip_prefix('#')?;
+                        let n = if let Some(hex) = number
+                            .strip_prefix('x')
+                            .or_else(|| number.strip_prefix('X'))
+                        {
+                            u32::from_str_radix(hex, 16).ok()?
+                        } else {
+                            number.parse().ok()?
+                        };
+                        char::from_u32(n)?
+                    }
+                };
+                result.push(decoded);
+            }
+            // Markup requires a full Markdown parser and may be ambiguous.
+            '*' | '_' | '`' | '[' | ']' | '<' | '>' => return None,
+            _ => result.push(ch),
+        }
+    }
+    Some(result)
 }

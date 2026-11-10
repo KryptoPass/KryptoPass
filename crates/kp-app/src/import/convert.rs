@@ -148,6 +148,7 @@ impl<'a> Converter<'a> {
             favorite: false,
             trashed: false,
             written_millis: None,
+            previous_contents: Vec::new(),
         })
     }
 
@@ -162,6 +163,10 @@ impl<'a> Converter<'a> {
             additional_fields,
             ..
         } = entry;
+        let mut history = match &content {
+            EntryContent::Login(login) => login.password_history.clone(),
+            _ => Vec::new(),
+        };
         let mut fill = self.fill(content)?;
         for field in additional_fields {
             fill.source_field(field);
@@ -174,7 +179,27 @@ impl<'a> Converter<'a> {
                 .to_owned()
         });
         let content = self.finish(fill)?;
+        let previous_contents = if let Some(field) = template
+            .field("password")
+            .filter(|_| content.template() == &template.id)
+        {
+            history
+                .drain(..)
+                .map(|password| {
+                    let mut previous = content.clone();
+                    previous.set(field.id.clone(), FieldValue::One(password));
+                    previous
+                })
+                .collect()
+        } else if history.is_empty() {
+            Vec::new()
+        } else {
+            // A fallback template cannot represent the reconstructed history.
+            self.adaptations.rejected += 1;
+            return None;
+        };
         Some(ImportItem {
+            previous_contents,
             folder: None,
             title,
             content,

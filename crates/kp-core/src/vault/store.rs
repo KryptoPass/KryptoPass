@@ -106,6 +106,8 @@ pub struct PutItem {
 /// A new item in a [`Change::Append`].
 #[derive(Clone, Debug)]
 pub struct AppendItem {
+    /// Encrypted reconstructed previous contents, oldest first.
+    pub previous: Vec<(VersionId, Vec<u8>)>,
     pub record: ItemRecord,
     pub sealed_state: Vec<u8>,
     /// When the item was last written, in milliseconds since the Unix epoch:

@@ -122,25 +122,62 @@ pub(super) fn create_imported(
         record,
         sealed_state,
         written_millis,
+        previous,
     } = item;
-    let meta = record.meta;
+    let mut meta = record.meta;
     check_state(connection, &meta.state)?;
     check_ciphertext(&record.ciphertext)?;
     if meta.revision != 0 {
         return Err(StoreError::Rejected("a new item starts at revision 0"));
     }
     require_new(connection, meta.id)?;
-    let local = LocalVersion {
-        item: meta.id,
-        version: meta.head,
-        parents: &[],
-        clock: Hlc::next(written_millis, []),
-        state: &meta.state,
-        sealed_state,
-        content: &record.ciphertext,
+    let mut versions = previous
+        .into_iter()
+        .chain(std::iter::once((meta.head, record.ciphertext)));
+    let Some((first_id, first_content)) = versions.next() else {
+        return Ok(());
     };
-    local.write(connection, identity)?;
-    insert_item(connection, meta.id, meta.head)
+    meta.head = first_id;
+    put(
+        connection,
+        identity,
+        PutItem {
+            record: kryptopass_core::vault::ItemRecord {
+                meta: meta.clone(),
+                ciphertext: first_content,
+            },
+            sealed_state: sealed_state.clone(),
+            base: Base::New,
+            parents: Parents::Head,
+            now_millis: written_millis,
+            icon_asset: None,
+            link: LinkChange::Keep,
+        },
+    )?;
+    for (id, ciphertext) in versions {
+        let base = meta.revision;
+        meta.revision = base
+            .checked_add(1)
+            .ok_or(StoreError::Rejected("too many imported versions"))?;
+        meta.head = id;
+        put(
+            connection,
+            identity,
+            PutItem {
+                record: kryptopass_core::vault::ItemRecord {
+                    meta: meta.clone(),
+                    ciphertext,
+                },
+                sealed_state: sealed_state.clone(),
+                base: Base::Revision(base),
+                parents: Parents::Head,
+                now_millis: written_millis,
+                icon_asset: None,
+                link: LinkChange::Keep,
+            },
+        )?;
+    }
+    Ok(())
 }
 
 /// Deletes an item for good at `base`, leaving a signed deletion mark.

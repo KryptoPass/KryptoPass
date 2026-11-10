@@ -40,6 +40,8 @@ pub struct ImportItem {
     pub folder: Option<usize>,
     pub title: String,
     pub content: ItemContent,
+    /// Reconstructed prior contents, oldest first. Their original dates are unknown.
+    pub previous_contents: Vec<ItemContent>,
     pub favorite: bool,
     pub trashed: bool,
     /// When the source last changed the item, in milliseconds since the Unix
@@ -120,6 +122,7 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                 folder,
                 title,
                 mut content,
+                previous_contents,
                 favorite,
                 trashed,
                 written_millis,
@@ -144,7 +147,20 @@ impl<S: Store, C: Cipher> Vault<S, C> {
                     trashed,
                 },
             };
+            let mut previous = Vec::with_capacity(previous_contents.len());
+            for mut prior in previous_contents {
+                if prior.template() != content.template() {
+                    return Err(VaultError::TemplateChanged);
+                }
+                prior.normalize(template);
+                let plaintext = encode_item_with(&prior, template, &self.rules)?;
+                previous.push((
+                    VersionId::new(),
+                    self.cipher.encrypt(plaintext.as_slice(), &recipients)?,
+                ));
+            }
             items.push(AppendItem {
+                previous,
                 sealed_state: self.seal(&meta.state)?,
                 record: ItemRecord { meta, ciphertext },
                 written_millis: written_millis.unwrap_or(now),

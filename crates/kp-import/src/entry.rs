@@ -71,6 +71,8 @@ impl EntryContent {
 
 #[derive(Default)]
 pub struct LoginEntry {
+    /// Earlier passwords, oldest first, when explicitly provided by the source.
+    pub password_history: Vec<SensitiveText>,
     pub username: SensitiveText,
     pub email: SensitiveText,
     pub password: SensitiveText,
