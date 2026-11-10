@@ -65,6 +65,11 @@ build *args: check
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
 
+# Vulnerabilidades conocidas en dependencias (cargo install cargo-audit).
+# Las aceptadas a propósito están justificadas en .cargo/audit.toml.
+audit:
+    cargo audit
+
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
 lint: check
     python3 tools/qml_lint.py

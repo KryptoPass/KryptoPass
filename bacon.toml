@@ -20,6 +20,12 @@ need_stdout = false
 command = ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]
 need_stdout = false
 
+[jobs.audit]
+command = ["just", "audit"]
+need_stdout = true
+default_watch = false
+watch = ["Cargo.lock", ".cargo/audit.toml"]
+
 [jobs.test]
 command = ["cargo", "test", "--workspace"]
 need_stdout = true

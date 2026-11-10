@@ -1,0 +1,13 @@
+# Advisories accepted on purpose. Each needs a reason and is revisited when
+# the crate that pulls it in releases a fix. `just audit` fails on any other.
+[advisories]
+ignore = [
+    # rsa: Marvin timing attack on private-key operations observed remotely.
+    # Pulled in by ssh-key, used only to parse SSH keys and compute their
+    # fingerprints locally; no RSA decryption or signing is ever exposed.
+    # No stable ssh-key release depends on a fixed rsa yet.
+    "RUSTSEC-2023-0071",
+    # crypto-bigint: timing variability, same path (ssh-key → p256/rsa) and
+    # the same local-only use.
+    "RUSTSEC-2026-0387",
+]
