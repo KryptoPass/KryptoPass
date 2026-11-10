@@ -130,10 +130,6 @@ verify-sync-session:
     cargo clippy -p kp-protocol -p kp-sync -p kp-devices --all-targets -- -D warnings
     cargo test -p kp-protocol -p kp-sync -p kp-devices -p kp-pairing -p kp-transport
 
-# Estrés opt-in de capacidad; no forma parte de la suite rápida del ledger.
-test-sync-stress:
-    cargo test -p kp-sync --test ledger_limits -- --ignored
-
 # Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
 p2p-demo:
     cargo run -p kp-pairing --example pairing_demo

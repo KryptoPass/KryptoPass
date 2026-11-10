@@ -78,7 +78,7 @@ impl Device {
     }
 
     fn recipients(&self) -> RecipientSet {
-        RecipientSet::new(vec![KeyFingerprint::parse(&self.key.to_string()).unwrap()]).unwrap()
+        RecipientSet::new(vec![KeyFingerprint::parse(self.key.as_ref()).unwrap()]).unwrap()
     }
 
     fn content(&self, template: &str, fields: &[(&str, &str)]) -> ItemContent {
@@ -572,7 +572,7 @@ fn a_wifi_item_offers_its_qr_and_a_login_does_not() {
 fn locking_forgets_the_passphrase_of_keys_set_to_forget() {
     let device = Device::new();
     let mut session = device.session();
-    let key = KeyFingerprint::parse(&device.key.to_string()).unwrap();
+    let key = KeyFingerprint::parse(device.key.as_ref()).unwrap();
     let mut settings = session.vault().settings_of(&key).unwrap();
     settings.forget_on_lock = true;
     session.vault_mut().set_key_settings(settings).unwrap();

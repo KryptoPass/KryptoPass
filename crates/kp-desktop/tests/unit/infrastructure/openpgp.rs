@@ -1,15 +1,9 @@
 #![cfg(unix)]
 
 use super::GnuPgOpenPgp;
-#[cfg(debug_assertions)]
-use super::{IsolatedGnuPgOpenPgp, SyntheticFixture};
 use anyhow::{Context, Result, bail, ensure};
 use kryptopass_core::{KeyFingerprint, RecipientSet};
 use kryptopass_secure_memory::SensitiveText;
-#[cfg(debug_assertions)]
-use sha2::{Digest, Sha256};
-#[cfg(debug_assertions)]
-use std::fs;
 use std::{
     os::unix::fs::DirBuilderExt,
     path::{Path, PathBuf},
@@ -53,49 +47,6 @@ impl Drop for TemporaryKeyring {
     }
 }
 
-struct TemporaryFixtureHome {
-    root: PathBuf,
-    home: PathBuf,
-}
-
-impl TemporaryFixtureHome {
-    fn new() -> Result<Self> {
-        let root =
-            std::env::temp_dir().join(format!("kp-synthetic-gpg-fixture-{}", uuid::Uuid::new_v4()));
-        std::fs::DirBuilder::new().mode(0o700).create(&root)?;
-        let home = root.join("home");
-        std::fs::DirBuilder::new().mode(0o700).create(&home)?;
-        Ok(Self { root, home })
-    }
-
-    fn cleanup(&self) -> Result<()> {
-        let agent_result = Command::new("gpgconf")
-            .arg("--homedir")
-            .arg(&self.home)
-            .args(["--kill", "gpg-agent"])
-            .env("GNUPGHOME", &self.home)
-            .output();
-        let directory_result = std::fs::remove_dir_all(&self.root);
-        let output = agent_result?;
-        ensure!(
-            output.status.success(),
-            "temporary fixture agent cleanup failed"
-        );
-        directory_result?;
-        Ok(())
-    }
-}
-
-impl Drop for TemporaryFixtureHome {
-    fn drop(&mut self) {
-        if self.root.exists()
-            && let Err(error) = self.cleanup()
-        {
-            eprintln!("temporary fixture keyring cleanup failed: {error}");
-        }
-    }
-}
-
 fn tool_available(tool: &str) -> Result<bool> {
     match Command::new(tool).arg("--version").output() {
         Ok(output) => {
@@ -134,45 +85,6 @@ fn protected_process_roundtrips_with_isolated_gpg_agent() -> Result<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     Ok(())
-}
-
-#[cfg(debug_assertions)]
-fn synthetic_fixture_metadata() -> Result<(String, String)> {
-    let manifest_path = PathBuf::from(env!("KP_SYNTHETIC_FIXTURE_MANIFEST"));
-    let manifest: serde_json::Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
-    let fingerprint = manifest
-        .get("fingerprint")
-        .and_then(serde_json::Value::as_str)
-        .context("synthetic fixture manifest has no fingerprint")?;
-    let sha256 = manifest
-        .get("sha256")
-        .and_then(serde_json::Value::as_str)
-        .context("synthetic fixture manifest has no checksum")?;
-    let size = manifest
-        .get("size")
-        .and_then(serde_json::Value::as_u64)
-        .context("synthetic fixture manifest has no size")?;
-    ensure!(
-        matches!(fingerprint.len(), 40 | 64)
-            && fingerprint.bytes().all(|byte| byte.is_ascii_hexdigit()),
-        "synthetic fixture fingerprint is invalid"
-    );
-    ensure!(
-        sha256.len() == 64 && sha256.bytes().all(|byte| byte.is_ascii_hexdigit()),
-        "synthetic fixture checksum is invalid"
-    );
-    let secret_key_path = manifest_path
-        .parent()
-        .context("synthetic fixture manifest has no parent directory")?
-        .join("secret-key.pgp");
-    ensure!(
-        fs::metadata(secret_key_path)?.len() == size,
-        "synthetic fixture size does not match its manifest"
-    );
-    Ok((
-        fingerprint.to_ascii_uppercase(),
-        sha256.to_ascii_lowercase(),
-    ))
 }
 
 fn gpg(home: &Path, args: &[&str]) -> Result<Output> {

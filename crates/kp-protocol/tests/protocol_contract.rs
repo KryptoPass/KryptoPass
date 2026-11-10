@@ -302,12 +302,6 @@ fn push_varint(output: &mut Vec<u8>, mut value: u64) {
     output.push(value as u8);
 }
 
-fn append_unknown_bytes_field(output: &mut Vec<u8>, field_number: u64, data: &[u8]) {
-    push_varint(output, (field_number << 3) | 2);
-    push_varint(output, data.len() as u64);
-    output.extend_from_slice(data);
-}
-
 fn padded_to(mut value: Vec<u8>, target: usize, field_number: u64) -> Vec<u8> {
     assert!(target > value.len());
     let mut padding_len = target - value.len() - 5;
