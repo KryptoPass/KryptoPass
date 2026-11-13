@@ -19,6 +19,7 @@ Controls.ItemDelegate {
     property string parentFolderId: ""
     signal folderDropped(string folderId, string parentId, string beforeId)
     signal entryDropped(string entryId, string folderId)
+    signal contextMenuRequested(var item, real x, real y)
 
     function acceptsSource(source) {
         return !!source && source.storeAdapter === dropStore;
@@ -57,6 +58,12 @@ Controls.ItemDelegate {
         return source.folderId !== placement.before && dropStore.canMoveFolder(source.folderId, placement.parent);
     }
 
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: function (point) {
+            root.contextMenuRequested(root, point.position.x, point.position.y);
+        }
+    }
     DragHandler {
         id: folderDrag
         target: null

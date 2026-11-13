@@ -72,6 +72,10 @@ KActionCollection *actions()
         add("folderUp", QT_TRANSLATE_NOOP("Shortcuts", "Subir carpeta"), "go-up", {QKeySequence(QStringLiteral("Ctrl+Alt+Up"))});
         add("folderDown", QT_TRANSLATE_NOOP("Shortcuts", "Bajar carpeta"), "go-down", {QKeySequence(QStringLiteral("Ctrl+Alt+Down"))});
         add("moveFolder", QT_TRANSLATE_NOOP("Shortcuts", "Mover carpeta…"), "folder-move", {});
+        auto *configureApp = result->addAction(QStringLiteral("configureApp"));
+        configureApp->setText(QCoreApplication::translate("Shortcuts", "Configurar %1…").arg(QString::fromUtf8(kryptopass::identity::display_name)));
+        configureApp->setIcon(QIcon::fromTheme(QStringLiteral("preferences-other")));
+        KActionCollection::setDefaultShortcuts(configureApp, KStandardShortcut::shortcut(KStandardShortcut::Preferences));
         const auto standard = [result](const char *id, KStandardActions::StandardAction kind) {
             auto *action = KStandardActions::create(kind, qApp, [] { }, qApp);
             result->addAction(QString::fromLatin1(id), action);

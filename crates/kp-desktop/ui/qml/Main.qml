@@ -788,7 +788,10 @@ Controls.ApplicationWindow {
         enabled: !store.controller.locked
         onTriggered: devicesWindow.open()
     }
-    readonly property bool folderActionsEnabled: !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === store.scope)
+    function folderEditable(folderId) {
+        return !root.keysMode && !root.mutationsBlocked && !store.controller.locked && !editor.opened && !folderEditor.opened && store.folders.some(folder => folder.id === folderId);
+    }
+    readonly property bool folderActionsEnabled: root.folderEditable(store.scope)
     DesktopAction {
         id: folderUp
         controller: shell
@@ -828,6 +831,12 @@ Controls.ApplicationWindow {
         controller: shell
         actionId: "quit"
         onTriggered: root.close()
+    }
+    DesktopAction {
+        id: configureAppAction
+        controller: shell
+        actionId: "configureApp"
+        onTriggered: settingsDialog.open()
     }
     DesktopAction {
         id: configureShortcutsAction
@@ -895,6 +904,10 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
+                action: lockVaultAction
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
                 action: quitAction
             }
         }
@@ -935,99 +948,30 @@ Controls.ApplicationWindow {
             Controls.MenuItem {
                 action: copyFingerprint
             }
-            Controls.MenuSeparator {}
-            Controls.MenuItem {
-                action: folderUp
-            }
-            Controls.MenuItem {
-                action: folderDown
-            }
-            Controls.MenuItem {
-                action: moveFolderAction
-            }
         }
         Controls.Menu {
             title: qsTr("&Ver")
-            Controls.MenuItem {
+            RadioMenuItem {
                 action: showVaultAction
             }
-            Controls.MenuItem {
+            RadioMenuItem {
                 action: showKeysAction
             }
             Controls.MenuSeparator {}
-            Controls.MenuItem {
+            RadioMenuItem {
                 action: showAllAction
             }
-            Controls.MenuItem {
+            RadioMenuItem {
                 action: showFavoritesAction
             }
-            Controls.MenuItem {
+            RadioMenuItem {
                 action: showTrashAction
-            }
-            Controls.MenuSeparator {}
-            Controls.MenuItem {
-                action: lockVaultAction
             }
         }
         Controls.Menu {
             title: qsTr("&Preferencias")
-            Controls.Menu {
-                title: qsTr("Bloqueo por inactividad")
-                Controls.MenuItem {
-                    text: qsTr("Desactivado")
-                    checkable: true
-                    autoExclusive: true
-                    checked: shell.idleLockSeconds === 0
-                    onTriggered: shell.setIdleLockSeconds(0)
-                }
-                Controls.MenuItem {
-                    text: qsTr("1 minuto")
-                    checkable: true
-                    autoExclusive: true
-                    checked: shell.idleLockSeconds === 60
-                    onTriggered: shell.setIdleLockSeconds(60)
-                }
-                Controls.MenuItem {
-                    text: qsTr("5 minutos")
-                    checkable: true
-                    autoExclusive: true
-                    checked: shell.idleLockSeconds === 300
-                    onTriggered: shell.setIdleLockSeconds(300)
-                }
-                Controls.MenuItem {
-                    text: qsTr("15 minutos")
-                    checkable: true
-                    autoExclusive: true
-                    checked: shell.idleLockSeconds === 900
-                    onTriggered: shell.setIdleLockSeconds(900)
-                }
-            }
-            Controls.Menu {
-                title: qsTr("Autolimpieza del portapapeles")
-                Controls.MenuItem {
-                    text: qsTr("Desactivada")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 0
-                    onTriggered: secureClipboard.autoClearSeconds = 0
-                }
-                Controls.MenuItem {
-                    text: qsTr("15 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 15
-                    onTriggered: secureClipboard.autoClearSeconds = 15
-                }
-                Controls.MenuItem {
-                    text: qsTr("30 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 30
-                    onTriggered: secureClipboard.autoClearSeconds = 30
-                }
-                Controls.MenuItem {
-                    text: qsTr("60 segundos")
-                    checkable: true
-                    checked: secureClipboard.autoClearSeconds === 60
-                    onTriggered: secureClipboard.autoClearSeconds = 60
-                }
+            Controls.MenuItem {
+                action: configureAppAction
             }
             Controls.MenuItem {
                 action: configureShortcutsAction
@@ -1100,6 +1044,16 @@ Controls.ApplicationWindow {
             }
             onScopeSelectionRequested: function (scopeId) {
                 root.selectScope(root.keysMode, scopeId);
+            }
+            onFolderStepRequested: function (folderId, delta) {
+                if (!root.folderEditable(folderId))
+                    return;
+                store.controller.stepFolder(folderId, delta);
+            }
+            onFolderMoveDialogRequested: function (folderId) {
+                if (!root.folderEditable(folderId))
+                    return;
+                folderMoveDialog.prepare(folderId);
             }
             onRenameFolderRequested: {
                 if (!root.mutationsBlocked && !store.controller.locked)
@@ -1499,6 +1453,17 @@ Controls.ApplicationWindow {
         onGenerateRequested: function (length, lowercase, uppercase, digits, symbols, excluded) {
             root.beginOperation("generate", "");
             store.controller.generatePassword(length, lowercase, uppercase, digits, symbols, excluded);
+        }
+    }
+    SettingsDialog {
+        id: settingsDialog
+        idleLockSeconds: shell.idleLockSeconds
+        autoClearSeconds: secureClipboard.autoClearSeconds
+        onIdleLockSecondsRequested: function (seconds) {
+            shell.setIdleLockSeconds(seconds);
+        }
+        onAutoClearSecondsRequested: function (seconds) {
+            secureClipboard.autoClearSeconds = seconds;
         }
     }
     Backend.ImportController {

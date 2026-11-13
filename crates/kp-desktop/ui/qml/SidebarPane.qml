@@ -24,6 +24,8 @@ Controls.Pane {
     signal scopeSelectionRequested(string scopeId)
     signal renameFolderRequested
     signal deleteFolderRequested
+    signal folderStepRequested(string folderId, int delta)
+    signal folderMoveDialogRequested(string folderId)
 
     Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 14
     Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 11
@@ -220,6 +222,12 @@ Controls.Pane {
                     onScopeSelected: function (scopeId) {
                         root.scopeSelectionRequested(scopeId);
                     }
+                    onContextMenuRequested: function (item, x, y) {
+                        if (!root.entryDraggingEnabled)
+                            return;
+                        folderMenu.folderId = modelData.id;
+                        folderMenu.popup(item, x, y);
+                    }
                     Keys.onReturnPressed: clicked()
                     Keys.onEnterPressed: clicked()
                 }
@@ -255,6 +263,26 @@ Controls.Pane {
                     Layout.fillWidth: true
                 }
             }
+        }
+    }
+    Controls.Menu {
+        id: folderMenu
+        property string folderId: ""
+        Controls.MenuItem {
+            text: qsTr("Subir carpeta")
+            icon.name: "go-up"
+            onTriggered: root.folderStepRequested(folderMenu.folderId, -1)
+        }
+        Controls.MenuItem {
+            text: qsTr("Bajar carpeta")
+            icon.name: "go-down"
+            onTriggered: root.folderStepRequested(folderMenu.folderId, 1)
+        }
+        Controls.MenuSeparator {}
+        Controls.MenuItem {
+            text: qsTr("Mover carpeta…")
+            icon.name: "folder-move"
+            onTriggered: root.folderMoveDialogRequested(folderMenu.folderId)
         }
     }
 }
