@@ -1482,6 +1482,7 @@ Controls.ApplicationWindow {
         transientParent: root
         keyStore: keys
         primaryKey: store.controller.primaryKey
+        hasVault: !store.controller.setupRequired
         showInFolderAction: showBackupInFolderAction
         onOpenVaultRequested: function (path) {
             Qt.callLater(function () {

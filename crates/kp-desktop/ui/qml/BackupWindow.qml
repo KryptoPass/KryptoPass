@@ -12,6 +12,7 @@ Controls.ApplicationWindow {
     required property KeyStore keyStore
     /// Vault primary key, preselected when it can still encrypt.
     property string primaryKey: ""
+    property bool hasVault: false
     property var showInFolderAction: null
     readonly property bool opened: visible
     readonly property bool busy: backend.busy || keyStore.controller.operationBusy
@@ -23,11 +24,11 @@ Controls.ApplicationWindow {
     property bool keysExpanded: false
     property var selectedFingerprints: []
     readonly property var availableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
+    readonly property bool hasPrivateKeys: keyStore.entries.some(key => key.hasSecret)
     readonly property var selectedKeys: availableKeys.filter(key => selectedFingerprints.includes(key.id))
     readonly property var selectedPrivateKeys: selectedKeys.filter(key => key.hasSecret)
     readonly property bool eligibleSelection: selectedFingerprints.length > 0 && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
     readonly property bool ready: exportMode ? !!outputPath.toString() && eligibleSelection : !!inputPath.toString()
-    readonly property string hint: completed ? "" : exportMode ? (!outputPath.toString() ? qsTr("Elige dónde guardar la copia") : !eligibleSelection ? qsTr("Elige al menos una clave") : "") : (!inputPath.toString() ? qsTr("Elige la copia que quieres restaurar") : "")
     signal openVaultRequested(url path)
 
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint
@@ -58,6 +59,7 @@ Controls.ApplicationWindow {
         if (exporting && selectedFingerprints.length === 0)
             keysExpanded = true;
         backend.clearError();
+        restoreKeyNotice.visible = !exporting;
         if (!visible) {
             x = screen.virtualX + Math.round((screen.width - width) / 2);
             y = screen.virtualY + Math.round((screen.height - height) / 2);
@@ -96,6 +98,27 @@ Controls.ApplicationWindow {
             return;
         inputPath = url;
         backend.clearError();
+    }
+
+    /// First local file of a drop. On Wayland, Qt can hand back the portal
+    /// transfer key as if it were the URL when the portal fails, so only
+    /// file: URLs count, and the KDE/Mozilla lists (not routed through the
+    /// portal) are read too.
+    function droppedFileUrl(event) {
+        const isFile = value => /^file:\/\//i.test(value);
+        const fromList = text => (text || "").split(/\r?\n/).map(line => line.replace(/\0/g, "").trim()).find(line => isFile(line)) || "";
+        for (const url of event.urls || []) {
+            if (isFile(url.toString()))
+                return url.toString();
+        }
+        for (const format of ["application/x-kde4-urilist", "text/x-moz-url", "text/uri-list"]) {
+            if (!event.formats.includes(format))
+                continue;
+            const found = fromList(event.getDataAsString(format));
+            if (found)
+                return found;
+        }
+        return fromList(event.text);
     }
 
     function submit() {
@@ -140,25 +163,6 @@ Controls.ApplicationWindow {
         sequences: [StandardKey.Cancel]
         enabled: dialog.visible && !dialog.busy && !keyRecovery.opened && !sourceDialog.visible && !destinationDialog.visible
         onActivated: dialog.close()
-    }
-
-    header: PanelHeader {
-        headerHeight: Kirigami.Units.gridUnit * 2.5
-        RowLayout {
-            anchors.fill: parent
-            spacing: Kirigami.Units.largeSpacing
-            Kirigami.Icon {
-                source: dialog.exportMode ? "document-save" : "document-revert"
-                implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                implicitHeight: Kirigami.Units.iconSizes.smallMedium
-            }
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                level: 4
-                text: dialog.exportMode ? qsTr("Copia cifrada de la bóveda actual") : qsTr("Restaurar en una bóveda nueva")
-                elide: Text.ElideRight
-            }
-        }
     }
 
     Controls.ScrollView {
@@ -306,23 +310,21 @@ Controls.ApplicationWindow {
             }
 
             // Restore: which file.
-            Kirigami.ListSectionHeader {
-                Layout.fillWidth: true
-                visible: !dialog.exportMode
-                text: qsTr("Copia")
-            }
             Kirigami.InlineMessage {
+                id: restoreKeyNotice
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.topMargin: Kirigami.Units.largeSpacing
                 Layout.bottomMargin: Kirigami.Units.smallSpacing
                 visible: !dialog.exportMode
-                type: Kirigami.MessageType.Information
+                type: dialog.hasPrivateKeys ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
+                showCloseButton: dialog.hasPrivateKeys
                 text: qsTr("¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.")
                 actions: [
                     Kirigami.Action {
                         text: qsTr("Importar clave privada…")
-                        icon.name: "document-import"
+                        icon.name: "view-certificate-import"
                         enabled: !dialog.busy && !dialog.keyStore.controller.busy
                         onTriggered: keyRecovery.openFor("import")
                     }
@@ -337,9 +339,20 @@ Controls.ApplicationWindow {
                 implicitHeight: emptyFile.implicitHeight + Kirigami.Units.gridUnit * 2
                 visible: !dialog.exportMode && !dialog.inputPath.toString()
                 enabled: !dialog.busy
+                onEntered: function (drag) {
+                    drag.accepted = drag.hasUrls || drag.formats.includes("text/uri-list");
+                    if (drag.accepted)
+                        drag.acceptProposedAction();
+                }
                 onDropped: function (event) {
-                    if (event.hasUrls)
-                        dialog.chooseRestoreFile(event.urls[0]);
+                    const url = dialog.droppedFileUrl(event);
+                    console.info("Backup drop formats=" + event.formats.join(",") + " local=" + !!url);
+                    if (!url) {
+                        backend.clearError();
+                        return;
+                    }
+                    event.acceptProposedAction();
+                    dialog.chooseRestoreFile(url);
                 }
                 Rectangle {
                     anchors.fill: parent
@@ -420,45 +433,15 @@ Controls.ApplicationWindow {
                 }
             }
 
-            Kirigami.ListSectionHeader {
+            Controls.Label {
                 Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
                 visible: !dialog.exportMode
-                text: qsTr("Qué pasará")
-            }
-            Repeater {
-                model: dialog.exportMode ? [] : [
-                    {
-                        icon: "folder-new",
-                        text: qsTr("Se crea una bóveda nueva y se abre al terminar.")
-                    },
-                    {
-                        icon: "lock",
-                        text: qsTr("Tus datos actuales no se mezclan ni se modifican.")
-                    },
-                    {
-                        icon: "view-certificate",
-                        text: qsTr("Se usa tu clave privada automáticamente; GnuPG pedirá su contraseña si hace falta.")
-                    }
-                ]
-                delegate: RowLayout {
-                    id: stepRow
-                    required property var modelData
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Kirigami.Units.largeSpacing
-                    Layout.rightMargin: Kirigami.Units.largeSpacing
-                    spacing: Kirigami.Units.largeSpacing
-                    Kirigami.Icon {
-                        Layout.alignment: Qt.AlignTop
-                        source: stepRow.modelData.icon
-                        implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: stepRow.modelData.text
-                        wrapMode: Text.Wrap
-                    }
-                }
+                text: dialog.hasVault ? qsTr("La copia se restaura sin sobrescribir la bóveda actual.") : qsTr("Se creará una bóveda nueva a partir de esta copia y GnuPG te pedirá la contraseña de tu clave privada.")
+                color: Kirigami.Theme.disabledTextColor
+                wrapMode: Text.Wrap
             }
             Kirigami.PlaceholderMessage {
                 Layout.fillWidth: true
@@ -489,11 +472,14 @@ Controls.ApplicationWindow {
                 Accessible.name: backend.status
             }
             Controls.Label {
-                Layout.fillWidth: true
-                text: backend.busy ? backend.status : dialog.hint
+                visible: backend.busy
+                text: backend.status
                 textFormat: Text.PlainText
                 color: Kirigami.Theme.disabledTextColor
                 elide: Text.ElideRight
+            }
+            Item {
+                Layout.fillWidth: true
             }
             Controls.Button {
                 text: dialog.completed ? qsTr("Cerrar") : qsTr("Cancelar")
