@@ -379,6 +379,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Alias (se guardan como inicios de sesión)</translation>
     </message>
     <message>
+      <source>Approvals: connection lost; waiting for the same phone</source>
+      <translation>Approvals: connection lost; waiting for the same phone</translation>
+    </message>
+    <message>
       <source>Bóveda sincronizada: {indexed} recibidos.</source>
       <translation>Bóveda sincronizada: {indexed} recibidos.</translation>
     </message>
@@ -1539,10 +1543,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Approvals: listening for kryptopass-pinentry</translation>
     </message>
     <message>
-      <source>Approvals: no phone connected; the pinentry asks locally</source>
-      <translation>Approvals: no phone connected; the pinentry asks locally</translation>
-    </message>
-    <message>
       <source>Approvals: passphrase from the phone</source>
       <translation>Approvals: passphrase from the phone</translation>
     </message>
@@ -1557,6 +1557,10 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source>Approvals: the phone did not answer in time</source>
       <translation>Approvals: the phone did not answer in time</translation>
+    </message>
+    <message>
+      <source>Approvals: waiting for a phone connection or answer</source>
+      <translation>Approvals: waiting for a phone connection or answer</translation>
     </message>
     <message>
       <source>Approvals: waiting for the phone</source>
@@ -3578,18 +3582,6 @@ No incluye contraseñas ni valores de credenciales.
   <context>
     <name>BackupWindow</name>
     <message>
-      <source>Elige dónde guardar la copia</source>
-      <translation>Elige dónde guardar la copia</translation>
-    </message>
-    <message>
-      <source>Elige al menos una clave</source>
-      <translation>Elige al menos una clave</translation>
-    </message>
-    <message>
-      <source>Elige la copia que quieres restaurar</source>
-      <translation>Elige la copia que quieres restaurar</translation>
-    </message>
-    <message>
       <source>Crear copia de seguridad</source>
       <translation>Crear copia de seguridad</translation>
     </message>
@@ -3600,14 +3592,6 @@ No incluye contraseñas ni valores de credenciales.
     <message>
       <source> (tu clave)</source>
       <translation> (tu clave)</translation>
-    </message>
-    <message>
-      <source>Copia cifrada de la bóveda actual</source>
-      <translation>Copia cifrada de la bóveda actual</translation>
-    </message>
-    <message>
-      <source>Restaurar en una bóveda nueva</source>
-      <translation>Restaurar en una bóveda nueva</translation>
     </message>
     <message>
       <source>Destino</source>
@@ -3654,10 +3638,6 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Respaldar clave privada…</translation>
     </message>
     <message>
-      <source>Copia</source>
-      <translation>Copia</translation>
-    </message>
-    <message>
       <source>Suelta aquí una copia de KryptoPass</source>
       <translation>Suelta aquí una copia de KryptoPass</translation>
     </message>
@@ -3670,28 +3650,20 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Examinar…</translation>
     </message>
     <message>
-      <source>Qué pasará</source>
-      <translation>Qué pasará</translation>
-    </message>
-    <message>
-      <source>Se crea una bóveda nueva y se abre al terminar.</source>
-      <translation>Se crea una bóveda nueva y se abre al terminar.</translation>
-    </message>
-    <message>
-      <source>Tus datos actuales no se mezclan ni se modifican.</source>
-      <translation>Tus datos actuales no se mezclan ni se modifican.</translation>
-    </message>
-    <message>
-      <source>Se usa tu clave privada automáticamente; GnuPG pedirá su contraseña si hace falta.</source>
-      <translation>Se usa tu clave privada automáticamente; GnuPG pedirá su contraseña si hace falta.</translation>
-    </message>
-    <message>
       <source>¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.</source>
       <translation>¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.</translation>
     </message>
     <message>
       <source>Importar clave privada…</source>
       <translation>Importar clave privada…</translation>
+    </message>
+    <message>
+      <source>La copia se restaura sin sobrescribir la bóveda actual.</source>
+      <translation>La copia se restaura sin sobrescribir la bóveda actual.</translation>
+    </message>
+    <message>
+      <source>Se creará una bóveda nueva a partir de esta copia y GnuPG te pedirá la contraseña de tu clave privada.</source>
+      <translation>Se creará una bóveda nueva a partir de esta copia y GnuPG te pedirá la contraseña de tu clave privada.</translation>
     </message>
     <message>
       <source>Copia guardada</source>
@@ -4194,6 +4166,18 @@ Huella(s) detectadas:
     <message>
       <source>Actualiza KryptoPass en el teléfono para recibir la clave.</source>
       <translation>Actualiza KryptoPass en el teléfono para recibir la clave.</translation>
+    </message>
+    <message>
+      <source>El teléfono no tiene una huella registrada. Regístrala en sus ajustes para recibir la clave.</source>
+      <translation>El teléfono no tiene una huella registrada. Regístrala en sus ajustes para recibir la clave.</translation>
+    </message>
+    <message>
+      <source>El teléfono ya guarda el máximo de claves.</source>
+      <translation>El teléfono ya guarda el máximo de claves.</translation>
+    </message>
+    <message>
+      <source>El teléfono no puede recibir claves en este momento.</source>
+      <translation>El teléfono no puede recibir claves en este momento.</translation>
     </message>
     <message>
       <source>Espera a que termine la operación actual.</source>
@@ -5175,10 +5159,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.</translation>
     </message>
     <message>
-      <source>Empezar</source>
-      <translation>Empezar</translation>
-    </message>
-    <message>
       <source>Restaurar una copia de seguridad…</source>
       <translation>Restaurar una copia de seguridad…</translation>
     </message>
@@ -5193,6 +5173,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Crear una clave para %1</source>
       <translation>Crear una clave para %1</translation>
+    </message>
+    <message>
+      <source>Crear nueva bóveda</source>
+      <translation>Crear nueva bóveda</translation>
     </message>
     <message>
       <source>Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.</source>
@@ -7217,10 +7201,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>El archivo de actividad se generó, pero no se pudo abrir el editor de texto.</translation>
     </message>
     <message>
-      <source>La acción se completó, pero no se pudo guardar en el historial.</source>
-      <translation>La acción se completó, pero no se pudo guardar en el historial.</translation>
-    </message>
-    <message>
       <source>Desbloquear bóveda</source>
       <translation>Desbloquear bóveda</translation>
     </message>
@@ -7241,32 +7221,12 @@ https://cuenta.ejemplo.test</translation>
       <translation>Mover a otra carpeta…</translation>
     </message>
     <message>
-      <source>Autolimpieza del portapapeles</source>
-      <translation>Autolimpieza del portapapeles</translation>
-    </message>
-    <message>
       <source>Mis identidades</source>
       <translation>Mis identidades</translation>
     </message>
     <message>
       <source>Personas</source>
       <translation>Personas</translation>
-    </message>
-    <message>
-      <source>Desactivada</source>
-      <translation>Desactivada</translation>
-    </message>
-    <message>
-      <source>15 segundos</source>
-      <translation>15 segundos</translation>
-    </message>
-    <message>
-      <source>30 segundos</source>
-      <translation>30 segundos</translation>
-    </message>
-    <message>
-      <source>60 segundos</source>
-      <translation>60 segundos</translation>
     </message>
     <message>
       <source>&amp;Ver</source>
@@ -7287,26 +7247,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>&amp;Preferencias</source>
       <translation>&amp;Preferencias</translation>
-    </message>
-    <message>
-      <source>Bloqueo por inactividad</source>
-      <translation>Bloqueo por inactividad</translation>
-    </message>
-    <message>
-      <source>Desactivado</source>
-      <translation>Desactivado</translation>
-    </message>
-    <message>
-      <source>1 minuto</source>
-      <translation>1 minuto</translation>
-    </message>
-    <message>
-      <source>5 minutos</source>
-      <translation>5 minutos</translation>
-    </message>
-    <message>
-      <source>15 minutos</source>
-      <translation>15 minutos</translation>
     </message>
     <message>
       <source>A&amp;yuda</source>
@@ -8407,6 +8347,69 @@ https://cuenta.ejemplo.test</translation>
     </message>
   </context>
   <context>
+    <name>SettingsDialog</name>
+    <message>
+      <source>Desactivado</source>
+      <translation>Desactivado</translation>
+    </message>
+    <message>
+      <source>1 minuto</source>
+      <translation>1 minuto</translation>
+    </message>
+    <message>
+      <source>5 minutos</source>
+      <translation>5 minutos</translation>
+    </message>
+    <message>
+      <source>15 minutos</source>
+      <translation>15 minutos</translation>
+    </message>
+    <message>
+      <source>Desactivada</source>
+      <translation>Desactivada</translation>
+    </message>
+    <message>
+      <source>15 segundos</source>
+      <translation>15 segundos</translation>
+    </message>
+    <message>
+      <source>30 segundos</source>
+      <translation>30 segundos</translation>
+    </message>
+    <message>
+      <source>60 segundos</source>
+      <translation>60 segundos</translation>
+    </message>
+    <message>
+      <source>Configurar %1</source>
+      <translation>Configurar %1</translation>
+    </message>
+    <message>
+      <source>Bloquear la bóveda tras inactividad:</source>
+      <translation>Bloquear la bóveda tras inactividad:</translation>
+    </message>
+    <message>
+      <source>Bloquear la bóveda tras inactividad</source>
+      <translation>Bloquear la bóveda tras inactividad</translation>
+    </message>
+    <message>
+      <source>Borrar del portapapeles tras:</source>
+      <translation>Borrar del portapapeles tras:</translation>
+    </message>
+    <message>
+      <source>Borrar del portapapeles tras</source>
+      <translation>Borrar del portapapeles tras</translation>
+    </message>
+    <message>
+      <source>Los cambios se guardan al elegirlos.</source>
+      <translation>Los cambios se guardan al elegirlos.</translation>
+    </message>
+    <message>
+      <source>Cerrar</source>
+      <translation>Cerrar</translation>
+    </message>
+  </context>
+  <context>
     <name>Shortcuts</name>
     <message>
       <source>Nuevo elemento…</source>
@@ -8524,6 +8527,10 @@ https://cuenta.ejemplo.test</translation>
       <source>Mover carpeta…</source>
       <translation>Mover carpeta…</translation>
     </message>
+    <message>
+      <source>Configurar %1…</source>
+      <translation>Configurar %1…</translation>
+    </message>
   </context>
   <context>
     <name>SidebarPane</name>
@@ -8534,6 +8541,18 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Mover al nivel principal</source>
       <translation>Mover al nivel principal</translation>
+    </message>
+    <message>
+      <source>Subir carpeta</source>
+      <translation>Subir carpeta</translation>
+    </message>
+    <message>
+      <source>Bajar carpeta</source>
+      <translation>Bajar carpeta</translation>
+    </message>
+    <message>
+      <source>Mover carpeta…</source>
+      <translation>Mover carpeta…</translation>
     </message>
   </context>
   <context>
