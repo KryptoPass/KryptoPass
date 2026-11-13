@@ -12,7 +12,6 @@ con la bóveda bloqueada. Se esperan bugs; no bloquean el trabajo en features.
 
 ## 2. Cabos sueltos
 
-- `just test-sync-stress` (Desktop) apunta a `ledger_limits`, que ya no existe.
 - `just test-sync-session` (Android) apunta a `SyncSessionTest`, que ya no existe.
 - Warnings de código muerto en tests de `kp-desktop` y `kp-protocol`: clippy con
   `-D warnings` falla.

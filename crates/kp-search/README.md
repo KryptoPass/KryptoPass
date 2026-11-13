@@ -88,8 +88,8 @@ No se retienen contraseñas, TOTP, notas, dominios ni identidades en el índice.
 
 ## Verificación
 
-`just test-search` ejecuta las pruebas específicas; `bacon test-search` ofrece el
-mismo chequeo y `just verify` incluye estos tests en la puerta del workspace.
+`cargo test -p kp-search` ejecuta las pruebas específicas y `just verify` incluye
+estos tests en la puerta del workspace.
 
 Las pruebas usan únicamente datos sintéticos. Incluyen rechazo de memoria sin
 lock, borrado observado antes de reutilizar, escritura de capacidad fija,

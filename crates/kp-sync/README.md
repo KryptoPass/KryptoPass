@@ -7,20 +7,8 @@ normativo y los límites están en [sync-model.md](../../docs/sin-revisar/sync/m
 Desde la raíz Desktop:
 
 ```bash
-just test-sync
-just sync-demo
+cargo test -p kp-sync
 ```
-
-`just test-sync-stress` ejecuta aparte el caso lento de 10000 revisiones.
-Que pase la suite normal no acredita esa prueba de capacidad ni su rendimiento.
-
-`just sync-interop-host` compila el puente sintético que usa la receta
-`verify-sync-interop` del repositorio Android. Intercambia lotes por stdin/stdout
-contra una identidad fija de fixtures; no escucha red ni carga claves de usuario.
-
-La demo usa dos SQLite en memoria, identidades efímeras y datos sintéticos.
-Muestra ediciones offline concurrentes, resolución explícita y un borrado
-que conserva su historial. No abre la bóveda ni utiliza claves OpenPGP.
 
 `Ledger::create` crea una base nueva; `open_existing` exige una existente,
 comprueba su vínculo de bóveda y valida todo el historial contra `TrustSource`.
@@ -43,8 +31,8 @@ adaptador de aplicación. Las claves privadas y su transferencia son otro flujo.
 
 La extensión opt-in `SyncSession` ya implementa una ronda negociada sobre el
 owner Noise de `kp-devices`. Usa manifiestos congelados, ancestros, fragmentos,
-commit y ACK posterior a SQLite. `just test-sync-session` comprueba el motor
-y el owner autenticado; `just verify-sync-session` añade formato y Clippy.
+commit y ACK posterior a SQLite. `just verify-sync-session` comprueba el motor,
+el owner autenticado, el formato y Clippy.
 Ver [contrato de sesión](../../docs/sin-revisar/sync/sync-sobre-sesion-autenticada-v1.md). La bóveda de usuario,
 la migración, los recibos durables por peer y las rondas automáticas siguen
 pendientes. Las sesiones actuales conservan Sync desactivado por defecto.

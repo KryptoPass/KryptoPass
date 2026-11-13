@@ -23,7 +23,7 @@ registra ahí antes de implementarlo en un lado. Lo pendiente está en
   acotada a lo que tocaste: `cargo fmt --all --check` y
   `cargo clippy -p <crates> --all-targets -- -D warnings`; `just lint` si cambió
   QML. Si solo falla el formato, formatea.
-- `just quick`, `just verify`, `just smoke` y `just ready` los corre el usuario.
+- `just verify` y `just smoke` los corre el usuario.
 - `just` es la referencia. Un chequeo nuevo lleva receta en el `justfile` y job
   en `bacon.toml`, no un comando suelto en un doc.
 - Commits: un cambio coherente por commit, Conventional Commits, mensaje en

@@ -20,13 +20,14 @@
 
 ```bash
 just format   # aplica formato Rust, C++ KDE y QML
-just quick    # fmt + clippy (ciclo de edición)
+just fmt      # comprueba los tres formatos sin modificar
+just clippy   # lints Rust como errores
 just verify   # puerta completa en paralelo (antes de commitear)
 just build    # binario dev (acepta flags: just build --release)
 just run      # app en ventana (alias: just r)
 just dev      # bacon recompila y relanza al guardar
 just smoke    # arranque offscreen, falla ante errores QML
-just ready    # verify + árbol limpio (gate pre-push)
+just clean    # árbol limpio (gate pre-push junto a verify)
 bacon         # check continuo en fondo (q = job qmllint)
 ```
 
@@ -34,8 +35,8 @@ bacon         # check continuo en fondo (q = job qmllint)
 
 - `just lint` corre tras `cargo check` a propósito: necesita los
   `.qmltypes` frescos que genera el build.
-- `just fmt` comprueba los tres formatos sin modificar archivos. Los jobs
-  `bacon fmt`, `bacon fmt-native` y `bacon fmt-qml` usan esas mismas puertas.
+- `just fmt` comprueba los tres formatos sin modificar archivos; el job
+  `bacon fmt` usa esa misma puerta.
   Al actualizar la versión mayor de clang-format, revisar el diff de formato
   y actualizar el requisito de `tools/source_format.py` en el mismo cambio.
 - Sin display (compilación desatendida): `QT_QPA_PLATFORM=offscreen`.

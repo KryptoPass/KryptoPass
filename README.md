@@ -141,7 +141,7 @@ Linux x86_64; no son paquetes portables para otras distribuciones.
 ## Contribuir
 
 Las contribuciones son bienvenidas mediante incidencias y pull requests. Antes
-de enviar un cambio, ejecuta `just verify` y `just ready`; las recetas están
+de enviar un cambio, ejecuta `just verify` y `just clean`; las recetas están
 descritas en [BUILD.md](BUILD.md). Los mensajes de commit siguen
 [Conventional Commits](https://www.conventionalcommits.org/).
 

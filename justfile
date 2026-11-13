@@ -1,10 +1,12 @@
 # KryptoPass Desktop — pipeline local (just + bacon)
 #
-#   just quick    -> fmt + clippy (ciclo de edición, ~1 min)
 #   just verify   -> puerta completa en paralelo (antes de commitear)
 #   just smoke    -> arranque offscreen, falla ante errores QML
-#   just watch    -> bacon en fondo (job check)
+#   bacon         -> chequeo continuo en fondo (job check)
 #   bacon qmllint -> vigila crates/ y pasa qmllint en cada cambio
+#
+# Secciones: Desarrollo, Pruebas, Puertas, Dispositivos y P2P,
+#            Datos y perfiles, Textos y documentación, Empaquetado, Integraciones
 
 set shell := ["bash", "-uc"]
 
@@ -18,59 +20,56 @@ app_org := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metada
 qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 
 _default:
-    @just --list
+    @just --list --unsorted
 
-# Prepara o valida la clave pública sintética de Sync en la caché privada local.
-prepare-synthetic-sync-fixture:
-    python3 tools/prepare_synthetic_sync_fixture.py
-
-alias r := run
+#
+# Desarrollo
+#
 
 # Usa el broker TURN de desarrollo salvo que KP_TURN_BROKER_ORIGIN ya esté definido.
 # Corre la app en ventana (pásale args: `just run -- --help`).
+[group('Desarrollo')]
 run *args:
     export KP_TURN_BROKER_ORIGIN="${KP_TURN_BROKER_ORIGIN-https://signal.kryptopass.org}"; if [[ "$(locale charmap)" == "UTF-8" ]]; then cargo run -- {{ args }}; else LANG=C.UTF-8 LC_ALL=C.UTF-8 cargo run -- {{ args }}; fi
 
+alias r := run
+
 # Loop de dev: bacon recompila y relanza al guardar.
+[group('Desarrollo')]
 dev:
     bacon run
 
+# Compila (reenvía flags a cargo: `just build --release`).
+[group('Desarrollo')]
+build *args: check
+    cargo build {{ args }}
+
+# Compila + regenera .qmltypes (base de lint y smoke).
+[group('Desarrollo')]
+check:
+    cargo check --workspace
+
 # Formato Rust, C++ KDE y QML: debe pasar sin diff.
-fmt: fmt-rust fmt-native fmt-qml
-
-fmt-rust:
+[group('Desarrollo')]
+fmt:
     cargo fmt --all --check
-
-fmt-native:
     python3 tools/source_format.py cpp
-
-fmt-qml:
     python3 tools/source_format.py qml
 
 # Aplica el mismo formato que comprueban verify y CI.
+[group('Desarrollo')]
 format:
     cargo fmt --all
     python3 tools/source_format.py cpp --write
     python3 tools/source_format.py qml --write
 
-# Compila + regenera .qmltypes (base de lint y smoke).
-check:
-    cargo check --workspace
-
-# Compila (reenvía flags a cargo: `just build --release`).
-build *args: check
-    cargo build {{ args }}
-
 # Lints Rust como errores.
+[group('Desarrollo')]
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
 
-# Vulnerabilidades conocidas en dependencias (cargo install cargo-audit).
-# Las aceptadas a propósito están justificadas en .cargo/audit.toml.
-audit:
-    cargo audit
-
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
+[group('Desarrollo')]
 lint: check
     python3 tools/qml_lint.py
 
@@ -78,80 +77,23 @@ lint: check
 _lint-qml:
     python3 tools/qml_lint.py
 
+# Vulnerabilidades conocidas en dependencias (cargo install cargo-audit).
+# Las aceptadas a propósito están justificadas en .cargo/audit.toml.
+[group('Desarrollo')]
+audit:
+    cargo audit
+
+#
+# Pruebas
+#
+
 # Tests Rust (el agente de tests usa los suyos; esto es lo general).
+[group('Pruebas')]
 test:
     cargo test --workspace
 
-# Memoria sensible y restricciones del proceso en pruebas aisladas.
-test-security:
-    cargo test -p kp-memsec
-    cargo test -p kp-desktop process_security::tests
-    cargo test -p kp-desktop infrastructure::openpgp::tests
-
-# Índice privado, memoria estricta y adaptadores de búsqueda sin datos reales.
-test-search:
-    cargo test -p kp-search
-    cargo test -p kp-memsec --test protected_memory
-    cargo test -p kp-desktop search::
-
-# Núcleo P2P independiente de Qt.
-check-p2p:
-    cargo check -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
-
-# Señalización y transporte LAN independientes de Qt.
-check-lan:
-    cargo check -p kp-lan -p kp-peers
-
-# Primitivas de dispositivos y sesiones, sin Qt ni una interfaz nueva.
-check-devices:
-    cargo check -p kp-devices -p kp-peers
-
-# Network policy, route-generation, signaling and diagnostic privacy regressions.
-test-network-privacy:
-    cargo test -p kp-lan -p kp-peers -p kp-devices -p kp-protocol
-    cargo test -p kp-desktop transport_diagnostics
-
-test-p2p:
-    cargo test -p kp-protocol -p kp-transport -p kp-identity -p kp-pairing
-
-# Ledger causal firmado, codecs y convergencia offline; sin bóveda real ni red.
-test-sync:
-    cargo test -p kp-sync
-
-# Shared encrypted object and the signed ledger.
-test-vault-sync:
-    cargo test -p kp-core --test vault_object
-    cargo test -p kp-sync
-    cargo test -p kp-desktop vault_sync
-
-# Round Sync negociado y propietario de sesión autenticada; perfiles sintéticos.
-test-sync-session:
-    cargo test -p kp-sync --test session_sync
-    cargo test -p kp-devices
-
-# Puerta acotada a protocolo/Sync/owner; no formatea cambios QML de otros trabajos.
-verify-sync-session:
-    cargo fmt -p kp-protocol -p kp-sync -p kp-devices --check
-    cargo clippy -p kp-protocol -p kp-sync -p kp-devices --all-targets -- -D warnings
-    cargo test -p kp-protocol -p kp-sync -p kp-devices -p kp-pairing -p kp-transport
-
-# Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
-p2p-demo:
-    cargo run -p kp-pairing --example pairing_demo
-
-devices: build
-    {{ quote(desktop_binary) }} --devices --new-instance
-
-# Reabre el mismo perfil aislado; no crea carpetas ni cambia su llavero GnuPG.
-devices-profile profile: build
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for directory in {{ quote(profile / "data") }} {{ quote(profile / "config") }} {{ quote(profile / "cache") }} {{ quote(profile / "gnupg") }}; do
-        test -d "$directory"
-    done
-    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --devices --new-instance
-
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
+[group('Pruebas')]
 test-items: check
     python3 crates/kp-desktop/ui/tests/run_item_types.py
 
@@ -160,18 +102,35 @@ _test-items:
     python3 crates/kp-desktop/ui/tests/run_item_types.py
 
 # Ciclo de favicons con transporte simulado, sin acceso a internet.
+[group('Pruebas')]
 test-icons:
     cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
     cmake --build {{ quote(target_dir / "native-tests") }} --parallel 2
     ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^favicon_service_tests$'
 
 # Bloqueo de sesión, suspensión e inactividad con eventos simulados.
+[group('Pruebas')]
 test-session-lock:
     cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
     cmake --build {{ quote(target_dir / "native-tests") }} --target session_lock_tests --parallel 2
     ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^session_lock_tests$'
 
+[group('Pruebas')]
+test-packaging:
+    python3 -m unittest discover -s tests -v
+
+# Reset explícito con Secret Service separado y archivos temporales, sin datos del usuario.
+[group('Pruebas')]
+test-dev-reset:
+    cargo test -p kp-peers --test profile_reset dev_reset -- --ignored --nocapture
+
+# TURN dataplane real opt-in: pipea un bundle temporal en stdin; no consulta el broker.
+[group('Pruebas')]
+turn-smoke:
+    KP_TURN_SMOKE=1 cargo test -p kp-lan --test turn_smoke -- --ignored --nocapture
+
 # Smoke offscreen: arranca y falla si el log trae errores QML.
+[group('Pruebas')]
 smoke: build
     #!/usr/bin/env bash
     set -uo pipefail
@@ -192,18 +151,12 @@ smoke: build
     fi
     echo "smoke: arranque offscreen limpio"
 
-# TURN dataplane real opt-in: pipea un bundle temporal en stdin; no consulta el broker.
-turn-smoke:
-    KP_TURN_SMOKE=1 cargo test -p kp-lan --test turn_smoke -- --ignored --nocapture
-
-# Genera archivos de instalación desde Cargo.toml (no editar gen/ a mano).
-gen-install:
-    python3 packaging/gen_install.py
-
-# Ciclo de edición: formato y clippy (clippy ya compila y regenera .qmltypes).
-quick: fmt clippy
+#
+# Puertas
+#
 
 # Puerta completa en paralelo (sin `check`: clippy ya ejecuta build.rs y regenera tipos).
+[group('Puertas')]
 [parallel]
 verify: fmt _gate-rust _gate-native _gate-meta
 
@@ -217,33 +170,48 @@ _gate-native: test-icons test-session-lock
 
 _gate-meta: test-packaging metadata distro-check translations-check licenses handbook
 
-# Gate pre-push: todo verde y árbol limpio.
-ready: verify clean
-    @echo "ready: verde y limpio"
-
-# Bacon en fondo con el job por defecto (check).
-watch:
-    bacon
-
-# Atajo a jobs bacon concretos: `just bacon-job qmllint`.
-bacon-job job:
-    bacon {{ job }}
+# Puerta acotada a protocolo/Sync/owner; no formatea cambios QML de otros trabajos.
+[group('Puertas')]
+verify-sync-session:
+    cargo fmt -p kp-protocol -p kp-sync -p kp-devices --check
+    cargo clippy -p kp-protocol -p kp-sync -p kp-devices --all-targets -- -D warnings
+    cargo test -p kp-protocol -p kp-sync -p kp-devices -p kp-pairing -p kp-transport
 
 # Incluye archivos nuevos que todavía no están en el índice.
+[group('Puertas')]
 clean:
     python3 tools/check_clean.py
 
-# Valida el manual DocBook con el DTD de KDocTools (paquete kdoctools).
-handbook:
-    checkXML6 doc/index.docbook
+#
+# Dispositivos y P2P
+#
 
-# Enlaza el manual en el perfil del usuario para que F1 lo abra con `just run`.
-install-dev-handbook:
-    mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}"
-    ln -sfn {{ quote(justfile_directory() / "doc/index.docbook") }} "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}/index.docbook"
+[group('Dispositivos y P2P')]
+devices: build
+    {{ quote(desktop_binary) }} --devices --new-instance
+
+# Reabre el mismo perfil aislado; no crea carpetas ni cambia su llavero GnuPG.
+[group('Dispositivos y P2P')]
+devices-profile profile: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for directory in {{ quote(profile / "data") }} {{ quote(profile / "config") }} {{ quote(profile / "cache") }} {{ quote(profile / "gnupg") }}; do
+        test -d "$directory"
+    done
+    XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --devices --new-instance
+
+# Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
+[group('Dispositivos y P2P')]
+p2p-demo:
+    cargo run -p kp-pairing --example pairing_demo
+
+#
+# Datos y perfiles
+#
 
 # Aparta los datos de la app para arrancarla como recién instalada; no borra nada.
 # No toca GnuPG, el llavero del sistema, kryptopass-signal ni el toolchain Qt.
+[group('Datos y perfiles')]
 dev-reset:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -283,69 +251,103 @@ dev-reset:
     echo "Para volver atrás, con la app cerrada: just dev-reset (aparta lo nuevo) y luego"
     echo "  cp -a \"$backup/.\" \"$HOME/\""
 
-# Reset explícito con Secret Service separado y archivos temporales, sin datos del usuario.
-test-dev-reset:
-    cargo test -p kp-peers --test profile_reset dev_reset -- --ignored --nocapture
+# Prepara o valida la clave pública sintética de Sync en la caché privada local.
+[group('Datos y perfiles')]
+prepare-synthetic-sync-fixture:
+    python3 tools/prepare_synthetic_sync_fixture.py
 
+#
+# Textos y documentación
+#
+
+[group('Textos y documentación')]
 translations:
     python3 packaging/translations.py update
 
+[group('Textos y documentación')]
 translations-check:
     python3 packaging/translations.py check
 
+# Valida el manual DocBook con el DTD de KDocTools (paquete kdoctools).
+[group('Textos y documentación')]
+handbook:
+    checkXML6 doc/index.docbook
+
+# Enlaza el manual en el perfil del usuario para que F1 lo abra con `just run`.
+[group('Textos y documentación')]
+install-dev-handbook:
+    mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}"
+    ln -sfn {{ quote(justfile_directory() / "doc/index.docbook") }} "${XDG_DATA_HOME:-$HOME/.local/share}/doc/HTML/es/{{ app_id }}/index.docbook"
+
+# Captura con bóveda y configuración temporales, sin datos del usuario.
+[group('Textos y documentación')]
+screenshot: build
+    python3 packaging/capture_screenshot.py
+
+#
+# Empaquetado y distribución
+#
+
+# Genera archivos de instalación desde Cargo.toml (no editar gen/ a mano).
+[group('Empaquetado y distribución')]
+gen-install:
+    python3 packaging/gen_install.py
+
+[group('Empaquetado y distribución')]
 metadata:
     python3 packaging/gen_install.py --check
     desktop-file-validate packaging/gen/*.desktop
     xmllint --noout packaging/gen/*.mime.xml
     appstreamcli validate --no-net --pedantic packaging/gen/*.metainfo.xml
 
-test-packaging:
-    python3 -m unittest discover -s tests -v
-
+[group('Empaquetado y distribución')]
 licenses:
     reuse lint
 
 # Configura el build CMake de distribución y valida lo que instalaría (sin compilar).
+[group('Empaquetado y distribución')]
 distro-check:
     cmake -S . -B {{ quote(target_dir / "cmake-check") }} -Wno-dev >/dev/null
     ctest --test-dir {{ quote(target_dir / "cmake-check") }} --output-on-failure
 
 # Lanzador con el broker TURN de desarrollo, como `just run`; KP_TURN_BROKER_ORIGIN= lo omite.
 # Compila en release e instala con CMake, como lo haría una distro (por defecto ~/.local).
+[group('Empaquetado y distribución')]
 install prefix=(home_directory() / ".local"):
     cmake -S . -B {{ quote(target_dir / "cmake") }} -DCMAKE_INSTALL_PREFIX={{ quote(prefix) }} -DKRYPTOPASS_CARGO_TARGET_DIR={{ quote(target_dir) }} -DKRYPTOPASS_TURN_BROKER_ORIGIN="${KP_TURN_BROKER_ORIGIN-https://signal.kryptopass.org}"
     cmake --build {{ quote(target_dir / "cmake") }}
     cmake --install {{ quote(target_dir / "cmake") }}
 
 # Quita exactamente lo que instaló el último `just install`.
+[group('Empaquetado y distribución')]
 uninstall:
     cmake --build {{ quote(target_dir / "cmake") }} --target uninstall
 
-# Captura con bóveda y configuración temporales, sin datos del usuario.
-screenshot: build
-    python3 packaging/capture_screenshot.py
+#
+# Integraciones
+#
 
 # Construye el proxy de navegador sin enlazar Qt.
+[group('Integraciones')]
 browser-build:
     cargo build -p kp-browser --bin kryptopass-browser-proxy
 
 # Adapta el checkout local de KeePassXC-Browser a la identidad de Cargo.toml.
+[group('Integraciones')]
 browser-fork extension_dir:
     python3 tools/browser_integration.py prepare {{ quote(extension_dir) }}
 
 # Registro de usuario: --browser firefox, chromium, brave o brave-origin.
+[group('Integraciones')]
 browser-install-dev *args: browser-build
     python3 tools/browser_integration.py install --proxy {{ quote(target_dir / "debug/kryptopass-browser-proxy") }} {{ args }}
 
 # Construye el pinentry de aprobaciones (docs/aprobacion-desde-telefono.md).
+[group('Integraciones')]
 pinentry-build:
     cargo build -p kp-pinentry --bin kryptopass-pinentry
 
 # Servidor QML con la ubicación del build que informa Cargo.
+[group('Integraciones')]
 qmlls: check
     {{ quote(qml_tools / "qmlls") }} --no-cmake-calls --build-dir {{ quote(qml_local) }}
-
-# Synthetic provisioning sender/state regressions; no production key export.
-test-synthetic-key-transfer:
-    cargo test -p kp-devices --test synthetic_key_transfer
-    cargo test -p kp-protocol --test protocol_contract

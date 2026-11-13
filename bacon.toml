@@ -6,12 +6,6 @@
 
 default_job = "check"
 
-[jobs.test-network-privacy]
-command = ["just", "test-network-privacy"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-lan", "crates/kp-peers", "crates/kp-devices", "crates/kp-protocol", "crates/kp-desktop/src/transport_diagnostics.rs", "crates/kp-desktop/src/transport_diagnostics_tests.rs"]
-
 [jobs.check]
 command = ["cargo", "check", "--workspace"]
 need_stdout = false
@@ -30,35 +24,11 @@ watch = ["Cargo.lock", ".cargo/audit.toml"]
 command = ["cargo", "test", "--workspace"]
 need_stdout = true
 
-[jobs.test-security]
-command = ["just", "test-security"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-memsec", "crates/kp-desktop/src/process_security.rs", "crates/kp-desktop/tests/unit/process_security.rs", "crates/kp-desktop/src/infrastructure/openpgp.rs", "crates/kp-desktop/tests/unit/infrastructure/openpgp.rs"]
-
-[jobs.test-search]
-command = ["just", "test-search"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-search", "crates/kp-memsec", "crates/kp-desktop/src/search", "crates/kp-desktop/src/ui_adapters/search_controller.rs", "crates/kp-desktop/tests/unit/search_projection.rs", "crates/kp-desktop/tests/unit/search_source.rs"]
-
 [jobs.test-items]
 command = ["just", "test-items"]
 need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop/ui/qml", "crates/kp-desktop/ui/tests", "crates/kp-desktop/build.rs"]
-
-[jobs.check-p2p]
-command = ["just", "check-p2p"]
-need_stdout = false
-default_watch = false
-watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
-
-[jobs.test-p2p]
-command = ["just", "test-p2p"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
 
 [jobs.test-dev-reset]
 command = ["just", "test-dev-reset"]
@@ -72,41 +42,11 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
 
-[jobs.test-sync]
-command = ["just", "test-sync"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-sync", "crates/kp-protocol", "crates/kp-identity", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
-
-[jobs.test-sync-session]
-command = ["just", "test-sync-session"]
-need_stdout = true
-allow_warnings = false
-watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
-
-[jobs.test-vault-sync]
-command = ["just", "test-vault-sync"]
-need_stdout = true
-allow_warnings = false
-watch = ["crates/kp-core", "crates/kp-sync", "crates/kp-desktop/src/vault_sync", "crates/kp-desktop/tests/unit/vault_sync.rs", "Cargo.toml", "Cargo.lock"]
-
 [jobs.verify-sync-session]
 command = ["just", "verify-sync-session"]
 need_stdout = true
 allow_warnings = false
 watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
-
-[jobs.sync-demo]
-command = ["just", "sync-demo"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-sync", "crates/kp-identity", "Cargo.toml", "Cargo.lock"]
-
-[jobs.sync-interop-host]
-command = ["just", "sync-interop-host"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-sync", "Cargo.toml", "Cargo.lock"]
 
 [jobs.test-icons]
 command = ["just", "test-icons"]
@@ -216,42 +156,8 @@ need_stdout = true
 default_watch = false
 watch = ["crates", "tools/source_format.py", ".clang-format", ".qmlformat.ini", ".editorconfig"]
 
-[jobs.fmt-native]
-command = ["just", "fmt-native"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/native-tests", "tools/source_format.py", ".clang-format"]
-
-[jobs.fmt-qml]
-command = ["just", "fmt-qml"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-desktop/ui", "tools/source_format.py", ".qmlformat.ini"]
-
-[jobs.fmt-rust]
-command = ["just", "fmt-rust"]
-need_stdout = true
-[jobs.peers]
-command = ["cargo", "check", "-p", "kp-peers", "-p", "kp-desktop"]
-need_stdout = false
-[jobs.check-lan]
-command = ["just", "check-lan"]
-need_stdout = false
-watch = ["crates/kp-lan", "crates/kp-peers", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
-
-[jobs.check-devices]
-command = ["just", "check-devices"]
-need_stdout = false
-watch = ["crates/kp-devices", "crates/kp-pairing", "crates/kp-peers", "crates/kp-protocol", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
-
 [jobs.prepare-synthetic-sync-fixture]
 command = ["just", "prepare-synthetic-sync-fixture"]
 need_stdout = true
 default_watch = false
 watch = ["tools/prepare_synthetic_sync_fixture.py"]
-
-[jobs.test-synthetic-key-transfer]
-command = ["just", "test-synthetic-key-transfer"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-devices", "crates/kp-protocol"]
