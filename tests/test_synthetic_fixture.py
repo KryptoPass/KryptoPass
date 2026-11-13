@@ -15,7 +15,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GENERATOR = ROOT / "scripts" / "prepare_synthetic_sync_fixture.py"
+GENERATOR = ROOT / "tools" / "prepare_synthetic_sync_fixture.py"
 FIXTURE_ID = "kp-synthetic-key-v1"
 
 
