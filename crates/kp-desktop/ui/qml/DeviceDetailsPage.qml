@@ -13,6 +13,11 @@ Controls.ScrollView {
     readonly property string connectionGeneration: String(modelData.connectionGeneration || "")
     readonly property string syntheticTransferPhase: String(modelData.syntheticTransferPhase || "unsupported")
     readonly property int keyTransferVersion: Number(modelData.keyTransferVersion || 0)
+    readonly property int keyTransferUnavailableReason: Number(modelData.keyTransferUnavailableReason || 0)
+    readonly property string keyTransferUnavailableText: keyTransferUnavailableReason === 1 ? qsTr("El teléfono no tiene una huella registrada. Regístrala en sus ajustes para recibir la clave.")
+        : keyTransferUnavailableReason === 2 ? qsTr("El teléfono ya guarda el máximo de claves.")
+        : keyTransferUnavailableReason === 3 ? qsTr("El teléfono no puede recibir claves en este momento.")
+        : qsTr("Actualiza KryptoPass en el teléfono para recibir la clave.")
     readonly property var syncedKeys: host.vaultSyncKeyIds(deviceId)
     readonly property var syncKeyRows: keyList.syncKeyRows
     readonly property bool vaultSyncOn: host.controller.vaultSyncPeers.indexOf(deviceId) >= 0
@@ -231,7 +236,7 @@ Controls.ScrollView {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !deviceRow.canSend && !deviceRow.transferPending
-                    text: deviceRow.connection !== "connected" ? qsTr("Conecta este dispositivo para enviar la clave.") : deviceRow.transferEnded ? qsTr("Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. La vinculación se conserva.") : deviceRow.keyTransferVersion < 2 ? qsTr("Actualiza KryptoPass en el teléfono para recibir la clave.") : deviceRow.syntheticTransferPhase === "ready" ? qsTr("Espera a que termine la operación actual.") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
+                    text: deviceRow.connection !== "connected" ? qsTr("Conecta este dispositivo para enviar la clave.") : deviceRow.transferEnded ? qsTr("Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. La vinculación se conserva.") : deviceRow.keyTransferVersion < 2 ? deviceRow.keyTransferUnavailableText : deviceRow.syntheticTransferPhase === "ready" ? qsTr("Espera a que termine la operación actual.") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor

@@ -230,6 +230,10 @@ message SessionHello {
   uint32 sync_rounds_version = 6; // 0 single round; 1 repeat rounds on this Noise session
   uint32 vault_keys_version = 7;  // 0 unsupported; 1 accepts VaultKeys from the peer (and may send it)
   uint32 approval_version = 8;    // 0 unsupported; 1 Desktop may send ApprovalRequest, the phone answers
+  // Why the sender cannot take part in key transfer when synthetic_key_transfer_version is 0.
+  // 0 unspecified (or the sender is simply an older build), 1 no enrolled strong biometric,
+  // 2 the identity store is full, 3 other local cause. Informational only: never gates anything.
+  uint32 key_transfer_unavailable_reason = 9;
 }
 
 // Public fingerprints of the OpenPGP keys the sender holds private keys for, so the

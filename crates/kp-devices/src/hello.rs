@@ -18,7 +18,7 @@ pub(crate) async fn exchange_session_hello<T: PeerTransport>(
     context: &SessionHelloContext<'_>,
     directory_changes: &mut watch::Receiver<Arc<DeviceDirectorySnapshot>>,
     commands: &mut mpsc::Receiver<SessionCommand>,
-) -> Result<(u16, u32, u32, u32, u32, u32), SessionExit> {
+) -> Result<(u16, u32, u32, u32, u32, u32, u32), SessionExit> {
     let hello_deadline = Instant::now() + SESSION_HELLO_TIMEOUT;
     if !context
         .directory
@@ -41,6 +41,7 @@ pub(crate) async fn exchange_session_hello<T: PeerTransport>(
         sync_rounds_version: context.sync_rounds_version,
         vault_keys_version: VAULT_KEYS_VERSION,
         approval_version: approvals::APPROVAL_VERSION,
+        key_transfer_unavailable_reason: 0,
     };
     let send = session.send_message(proto::MessageType::SessionHello, &hello);
     tokio::select! {
@@ -88,6 +89,7 @@ pub(crate) async fn exchange_session_hello<T: PeerTransport>(
                 hello.synthetic_key_transfer_version,
                 hello.vault_keys_version,
                 hello.approval_version,
+                hello.key_transfer_unavailable_reason,
             ))
         }
         (proto::MessageType::SessionClose, MessagePayload::SessionClose(close)) => {

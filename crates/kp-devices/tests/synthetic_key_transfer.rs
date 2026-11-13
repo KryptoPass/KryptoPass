@@ -368,6 +368,7 @@ async fn owner_roundtrips_transfer_only_after_acceptance_and_valid_receipt() {
             &proto::SessionHello {
                 vault_keys_version: 0,
                 approval_version: 0,
+                key_transfer_unavailable_reason: 0,
                 session_version: 1,
                 device_id: peer_id.as_bytes().to_vec(),
                 reconnect_port: 0,
@@ -597,6 +598,7 @@ async fn queued_start_then_cancel_is_processed_before_any_key_chunk() {
                 &proto::SessionHello {
                     vault_keys_version: 0,
                     approval_version: 0,
+                    key_transfer_unavailable_reason: 0,
                     session_version: 1,
                     device_id: peer_id.as_bytes().to_vec(),
                     reconnect_port: 0,

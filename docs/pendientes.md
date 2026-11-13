@@ -19,9 +19,10 @@ con la bóveda bloqueada. Se esperan bugs; no bloquean el trabajo en features.
 
 ## 3. Transferencia de la identidad OpenPGP teléfono → Desktop
 
-Falta importación create-only en GnuPG, aceptación local en Desktop y recibo con
-desafío. Ya no espera a Sync. Detalle en
-`../kryptopass-android/docs/key-provisioning-flow.md`.
+Implementada en ambos lados (`../kryptopass-android/docs/key-transfer-v3.md`,
+`kp-devices/src/synthetic_receive.rs`). Falta validarla en el teléfono real:
+importación create-only en GnuPG, aceptación local en Desktop y recibo con
+desafío.
 
 ## 4. Bloqueo de claves y Sync
 

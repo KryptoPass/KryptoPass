@@ -541,6 +541,7 @@ impl qobject::PeersController {
                     "syntheticTransferPhase": synthetic_progress.map_or("unsupported", |progress| key_transfer::synthetic_transfer_phase_code(progress.phase)),
                     "syntheticTransferId": synthetic_transfer_id,
                     "keyTransferVersion": synthetic_progress.map_or(0, |progress| progress.version),
+                    "keyTransferUnavailableReason": synthetic_progress.map_or(0, |progress| progress.peer_unavailable_reason),
                     "alias": alias,
                     "vaultKeys": vault_keys,
                     "displayName": name,

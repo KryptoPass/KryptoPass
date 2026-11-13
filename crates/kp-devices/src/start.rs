@@ -192,6 +192,7 @@ fn start_session_internal<T: PeerTransport + 'static>(
                 remote_synthetic_version,
                 remote_vault_keys_version,
                 remote_approval_version,
+                remote_key_transfer_unavailable_reason,
             )) if owner_directory.session_is_current(&expected_peer, generation) => {
                 if owner_directory
                     .update_connection_state_for_generation(
@@ -254,10 +255,12 @@ fn start_session_internal<T: PeerTransport + 'static>(
                         local_version = KEY_TRANSFER_VERSION,
                         remote_synthetic_version,
                         effective_synthetic_version,
+                        remote_key_transfer_unavailable_reason,
                         "Key transfer negotiation"
                     );
                     let synthetic_actor =
-                        SyntheticTransferSender::with_version(effective_synthetic_version);
+                        SyntheticTransferSender::with_version(effective_synthetic_version)
+                            .with_peer_unavailable_reason(remote_key_transfer_unavailable_reason);
                     let synthetic_receiver = SyntheticTransferReceiver::new(
                         effective_synthetic_version,
                         owner_inbound_material,

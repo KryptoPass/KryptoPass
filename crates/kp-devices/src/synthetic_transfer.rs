@@ -82,6 +82,9 @@ pub struct SyntheticTransferProgress {
     /// Extension version both endpoints negotiated; 2 also accepts the vault
     /// identity, 3 also the phone → Desktop direction.
     pub version: u32,
+    /// Why the peer announced no key transfer (0 unknown or older build, 1 no enrolled strong
+    /// biometric, 2 identity store full, 3 other); only meaningful while `version` is 0.
+    pub peer_unavailable_reason: u32,
     /// The phone → Desktop operation of this session, if one was offered.
     pub inbound: Option<crate::synthetic_receive::InboundTransferProgress>,
 }
@@ -218,6 +221,7 @@ impl SyntheticTransferSender {
                 },
                 transfer_id: None,
                 version,
+                peer_unavailable_reason: 0,
                 inbound: None,
             },
             prepared: None,
@@ -225,6 +229,13 @@ impl SyntheticTransferSender {
             next_chunk: 0,
             used: false,
         }
+    }
+
+    /// Records the reason the peer gave for not offering key transfer; informational only.
+    #[must_use]
+    pub fn with_peer_unavailable_reason(mut self, reason: u32) -> Self {
+        self.progress.peer_unavailable_reason = reason;
+        self
     }
 
     /// Returns only metadata suitable for observable application state.
