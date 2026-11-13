@@ -317,12 +317,13 @@ Controls.ScrollView {
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Flow {
+                    id: deviceActions
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.largeSpacing
                     Controls.Button {
                         text: deviceRow.modelData.isActive ? qsTr("Desconectar") : qsTr("Reconectar")
                         icon.name: deviceRow.modelData.isActive ? "network-disconnect" : "network-connect"
-                        Kirigami.Theme.textColor: deviceRow.modelData.isActive ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.linkColor
+                        Kirigami.Theme.textColor: deviceRow.modelData.isActive ? deviceActions.Kirigami.Theme.negativeTextColor : deviceActions.Kirigami.Theme.linkColor
                         enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.syncBusy && !deviceRow.host.controller.maintenanceBusy && deviceRow.host.controller.statusCode !== "closing"
                         onClicked: {
                             if (deviceRow.modelData.isActive)
@@ -334,7 +335,7 @@ Controls.ScrollView {
                     Controls.Button {
                         text: qsTr("Olvidar dispositivo…")
                         icon.name: "edit-delete"
-                        Kirigami.Theme.textColor: Kirigami.Theme.negativeTextColor
+                        Kirigami.Theme.textColor: deviceActions.Kirigami.Theme.negativeTextColor
                         enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.aliasBusy
                         onClicked: deviceRow.host.forgetDevice(deviceRow.modelData)
                     }
