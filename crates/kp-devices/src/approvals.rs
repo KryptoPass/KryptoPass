@@ -3,11 +3,12 @@
 //! Each live session whose peer advertised `approval_version` 1 registers a
 //! route here. [`ask`] sends a request through the newest route and returns a
 //! [`PendingApproval`] to wait on from any thread. When the session ends, its
-//! open requests resolve as [`ApprovalAnswer::Unavailable`].
+//! answer channels close so the bridge can wait for the same phone to reconnect.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kryptopass_identity::DeviceId;
@@ -65,6 +66,8 @@ pub(crate) enum ApprovalCommand {
         id: [u8; 16],
         ask: ApprovalAsk,
         reply: SyncSender<ApprovalAnswer>,
+        deadline: Instant,
+        cancelled: Arc<AtomicBool>,
     },
     Cancel([u8; 16]),
 }
@@ -83,6 +86,7 @@ pub struct PendingApproval {
     peer: DeviceId,
     answers: Receiver<ApprovalAnswer>,
     commands: mpsc::Sender<ApprovalCommand>,
+    cancelled: Arc<AtomicBool>,
 }
 
 impl PendingApproval {
@@ -92,28 +96,39 @@ impl PendingApproval {
         self.peer
     }
 
-    /// Waits up to `timeout`. `None` means still waiting; a closed session
-    /// answers [`ApprovalAnswer::Unavailable`].
-    pub fn wait(&self, timeout: Duration) -> Option<ApprovalAnswer> {
+    /// Waits up to `timeout`. `Ok(None)` means still waiting; a closed session
+    /// returns an error, distinct from the phone explicitly being unavailable.
+    pub fn wait(&self, timeout: Duration) -> Result<Option<ApprovalAnswer>, RecvTimeoutError> {
         match self.answers.recv_timeout(timeout) {
-            Ok(answer) => Some(answer),
-            Err(RecvTimeoutError::Timeout) => None,
-            Err(RecvTimeoutError::Disconnected) => Some(ApprovalAnswer::Unavailable),
+            Ok(answer) => Ok(Some(answer)),
+            Err(RecvTimeoutError::Timeout) => Ok(None),
+            Err(error) => Err(error),
         }
     }
 
     /// Withdraws the request; the phone removes its notification.
     pub fn cancel(self) {
+        drop(self);
+    }
+}
+
+impl Drop for PendingApproval {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Release);
         let _ = self.commands.try_send(ApprovalCommand::Cancel(self.id));
     }
 }
 
 /// Sends `ask` to the most recently connected phone that supports approvals.
+/// Once a phone has been asked, pass its identity to keep retries on that phone.
 /// `None` when there is none, or its queue is full.
-pub fn ask(ask: ApprovalAsk) -> Option<PendingApproval> {
+pub fn ask(ask: ApprovalAsk, peer: Option<DeviceId>) -> Option<PendingApproval> {
     let (peer, commands) = {
         let routes = ROUTES.lock().ok()?;
-        let route = routes.last()?;
+        let route = routes
+            .iter()
+            .rev()
+            .find(|route| peer.is_none_or(|peer| route.peer == peer))?;
         (route.peer, route.commands.clone())
     };
     let mut id = [0_u8; 16];
@@ -121,14 +136,23 @@ pub fn ask(ask: ApprovalAsk) -> Option<PendingApproval> {
         getrandom::fill(&mut id).ok()?;
     }
     let (reply, answers) = sync_channel(1);
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let deadline = Instant::now() + ask.expires.min(Duration::from_secs(120));
     commands
-        .try_send(ApprovalCommand::Ask { id, ask, reply })
+        .try_send(ApprovalCommand::Ask {
+            id,
+            ask,
+            reply,
+            deadline,
+            cancelled: cancelled.clone(),
+        })
         .ok()?;
     Some(PendingApproval {
         id,
         peer,
         answers,
         commands,
+        cancelled,
     })
 }
 
@@ -165,6 +189,7 @@ struct Open {
     kind: ApprovalKind,
     reply: SyncSender<ApprovalAnswer>,
     deadline: Instant,
+    cancelled: Arc<AtomicBool>,
 }
 
 impl ApprovalRuntime {
@@ -205,21 +230,30 @@ impl ApprovalRuntime {
         command: ApprovalCommand,
     ) -> Option<(proto::MessageType, ApprovalMessage)> {
         match command {
-            ApprovalCommand::Ask { id, ask, reply } => {
+            ApprovalCommand::Ask {
+                id,
+                ask,
+                reply,
+                deadline,
+                cancelled,
+            } => {
+                let expires = deadline.saturating_duration_since(Instant::now());
+                if cancelled.load(Ordering::Acquire) || expires.as_millis() == 0 {
+                    let _ = reply.try_send(ApprovalAnswer::Unavailable);
+                    return None;
+                }
                 if self.open.len() >= MAX_OPEN {
                     tracing::info!("Approvals: too many open requests; unavailable");
                     let _ = reply.try_send(ApprovalAnswer::Unavailable);
                     return None;
                 }
-                let expires = ask
-                    .expires
-                    .clamp(Duration::from_millis(1), Duration::from_secs(120));
                 self.open.insert(
                     id,
                     Open {
                         kind: ask.kind,
                         reply,
-                        deadline: Instant::now() + expires,
+                        deadline,
+                        cancelled,
                     },
                 );
                 tracing::info!(kind = ?ask.kind, "Approvals: request sent to the phone");
@@ -258,6 +292,11 @@ impl ApprovalRuntime {
             tracing::info!("Approvals: answer for an unknown or expired request ignored");
             return;
         };
+        if open.cancelled.load(Ordering::Acquire) || Instant::now() >= open.deadline {
+            response.passphrase.zeroize();
+            let _ = open.reply.try_send(ApprovalAnswer::Unavailable);
+            return;
+        }
         let answer = match (open.kind, response.decision) {
             (ApprovalKind::Confirm, APPROVAL_APPROVED) => ApprovalAnswer::Approved,
             (_, APPROVAL_DENIED) => ApprovalAnswer::Denied,

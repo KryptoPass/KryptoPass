@@ -196,3 +196,7 @@ Peticiones vigentes del usuario (2026-10-18 a 2026-10-23), como reglas:
   teléfono a través de KryptoPass, que solo hace de puente P2P sin interfaz; gana
   la primera respuesta. Más adelante: ventana propia como binario aparte y un
   servicio de usuario dueño de P2P para aprobar con la app cerrada.
+- 2026-11-10: recuperar las solicitudes de pinentry pendientes al abrir la app
+  del teléfono o reconectar, sin cancelar y repetir en Desktop. El puente espera
+  dentro de los 55 s originales; tras un primer envío solo reintenta con el mismo
+  teléfono, y las solicitudes canceladas, respondidas o caducadas no se recuperan.

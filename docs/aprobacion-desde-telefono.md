@@ -40,8 +40,10 @@ gpg-agent ──Assuan──▶ kryptopass-pinentry ──┬──▶ pinentry-
    (0700/0600, solo el mismo uid) y la reenvía al teléfono conectado. No muestra
    interfaz ni toca la bóveda ni el hilo de la UI, así que funciona con la bóveda
    bloqueada y no se bloquea a sí misma al desbloquearla. Sin teléfono conectado
-   responde «no disponible» al momento. Si el pinentry cierra el socket (ganó la
-   ventana local), envía `ApprovalCancel`.
+   conserva la petición en memoria hasta que conecte, con un plazo total de 55 s
+   desde la solicitud; la ventana local sigue disponible. Si el pinentry cierra
+   el socket (ganó la ventana local), retira la petición y envía `ApprovalCancel`
+   si llegó a enviarla.
 3. **Mensajes P2P** sobre la sesión ya autenticada (§3).
 4. **Android**: notificación con el contexto, autenticación del dispositivo y
    respuesta. Con la app cerrada solo funciona si el servicio en primer plano
@@ -69,24 +71,33 @@ responde. Tipos: `APPROVAL_REQUEST = 30`, `APPROVAL_RESPONSE = 31`,
 Un `request_id` desconocido en `ApprovalResponse` o `ApprovalCancel` se ignora
 (puede haber caducado); un mensaje mal formado cierra la sesión como cualquier
 otro error de protocolo. Al cerrarse la sesión, toda petición abierta queda
-«no disponible» y el teléfono retira sus notificaciones.
+invalidada en esa sesión y el teléfono retira sus notificaciones. Si el pinentry
+sigue esperando, Desktop puede crear una nueva petición al reconectar **el mismo
+teléfono**, con otro `request_id` y solo el tiempo restante del plazo original.
+Una denegación, cancelación o respuesta explícita «no disponible» del teléfono
+termina la solicitud; no se reintenta. Antes del primer envío puede atenderla
+cualquier par autenticado que anuncie la extensión, igual que al estar conectado.
+No se guardan solicitudes en disco ni se cambia el formato de los mensajes.
 
 ### En el teléfono
 
 - **Confirmar (kind 1):** notificación con equipo, `requester`, clave y
   descripción; «Permitir» exige autenticación del dispositivo (biometría o
   bloqueo de pantalla); «Denegar» no.
-- **Contraseña (kind 2):** si hay una guardada para (equipo, `key_info`), se
-  envía tras biometría. Si no, se puede escribir en el teléfono y, opcionalmente,
-  guardarla (cifrada con una clave del Keystore que exige biometría). Sin nada de
-  eso: «no disponible». Las contraseñas guardadas se pueden borrar desde el
-  detalle del equipo, y desvincularlo las borra.
+- **Contraseña (kind 2):** el teléfono guarda como mucho una contraseña por
+  clave, compartida con su bóveda. Si la clave del `key_info` (keygrip) está en
+  el teléfono, tiene contraseña guardada y este equipo está permitido, se envía
+  tras biometría; permitir el equipo es explícito en la solicitud. Si no, se
+  escribe en el teléfono y, opcionalmente, se guarda para esa clave. Sin nada de
+  eso: «no disponible». Desvincular el equipo revoca su permiso sin borrar la
+  contraseña; se administra en «Claves → Contraseña y huella».
 - **Caducidad:** pasado `expires_in_millis` la notificación se retira sola.
 
 ## 4. Reglas de seguridad
 
-1. **Fallo cerrado.** Sin respuesta, error, caducidad o sesión caída: se abre el
-   pinentry local. Nunca se aprueba por omisión.
+1. **Fallo cerrado.** Sin respuesta, error o caducidad decide el pinentry local.
+   Una sesión caída permite esperar la reconexión dentro del plazo original,
+   con el diálogo local disponible. Nunca se aprueba por omisión.
 2. **Local y remoto a la vez.** El diálogo local y la notificación se muestran
    juntos; gana la primera respuesta y la otra se cancela (`ApprovalCancel` o
    cerrar el pinentry local). Así no se espera a un teléfono ausente.
@@ -172,7 +183,19 @@ gpg-connect-agent reloadagent /bye
 
 Con KryptoPass abierto y el teléfono conectado, un `ssh` o una firma pide al
 teléfono y abre a la vez la ventana local con el aviso «También puedes responder
-en tu teléfono». Sin teléfono, solo la ventana local, como siempre.
+en tu teléfono». Si el teléfono conecta mientras sigue pendiente, recibe la
+solicitud sin cancelar y repetir desde Desktop, siempre dentro de los 55 s.
+
+Comprobación manual de la recuperación:
+
+- Abrir un pinentry con el teléfono desconectado; abrir la app y reconectar antes
+  de los 55 s: debe aparecer la solicitud y poder responderse con biometría.
+- Cortar y recuperar la conexión con una solicitud abierta: debe volver a
+  aparecer en el mismo teléfono, sin ampliar el plazo original.
+- Cancelar o responder en el PC antes de reconectar: no debe llegar la solicitud.
+- Reconectar después del plazo, o tras denegar en el teléfono: no debe reaparecer.
+- Conectar otro teléfono después de que el primero reciba la solicitud: no debe
+  recibir el reintento destinado al primero.
 
 Logs: `~/.local/state/kryptopass/pinentry.log` (pinentry, 0600, sin secretos),
 los de KryptoPass con el prefijo `Approvals:` y los de Android con `Approval:`.
