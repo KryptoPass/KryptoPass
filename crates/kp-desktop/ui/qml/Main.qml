@@ -454,9 +454,6 @@ Controls.ApplicationWindow {
             if (!Qt.openUrlExternally(path))
                 root.notify(qsTr("El archivo de actividad se generó, pero no se pudo abrir el editor de texto."), "warning");
         }
-        function onHistoryRecordFailed() {
-            root.notify(qsTr("La acción se completó, pero no se pudo guardar en el historial."), "warning");
-        }
         function onPasswordGenerated(value) {
             if (root.pendingOperation !== "generate")
                 return;
