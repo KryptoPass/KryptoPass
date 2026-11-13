@@ -48,3 +48,31 @@ cargo del usuario, incluyendo tarjeta, copia SSH, publicación real y bloqueo de
 agente. Los nombres, agrupaciones y usos son metadatos locales: sincronizarlos con
 Android requiere primero diseñar su formato compartido. Las etiquetas no conceden
 permisos de automatización ni prueban accesos a servicios externos.
+
+## Red entre iguales (2026-11-11)
+
+Pedido por el usuario: todos los dispositivos propios se sincronizan entre sí
+directamente, sin intermediario obligatorio y vinculando cada dispositivo una
+sola vez. Orden acordado:
+
+1. **Teléfono como anfitrión.** «Mostrar mi código» funciona por relay y LAN
+   (corregidos el 2026-11-11: socket del relay cerrado al llegar el invitado y
+   validación de `WebRtcTransport` que rechazaba el rol de anfitrión). Falta
+   validar de punta a punta y avisar en la hoja cuando el relay cae.
+2. **Desktop se une a un código.** «Introducir código» en Desktop, para vincular
+   desde el teléfono sin cámara. Android ya permite copiar el código.
+3. **Varias sesiones a la vez.** Hoy cada lado tiene una (`activeSession` en
+   Android, `session_active`/`active_device_id` en Desktop). Mapa de sesiones por
+   dispositivo; aprobaciones, Sync y transferencias por sesión; papeles
+   simétricos por pareja (si ambos llaman, gana la del `device_id` menor).
+4. **Presentaciones.** Un dispositivo de confianza envía por la sesión
+   autenticada una presentación firmada de los que conoce (id, nombre, rutas).
+   El presentado se conecta cuando puede; Noise comprueba la identidad y la
+   confianza se concede con una aprobación local de un toque en cada lado, sin
+   QR ni emojis. Las rutas nunca conceden acceso. Sin reenvío de versiones de
+   terceros: la confianza de autores sigue siendo explícita y no transitiva.
+5. **Regla de VPN.** Rediseñar como modo explícito: con VPN activa, WebRTC, ICE
+   y TURN salen por la VPN; se bloquea solo si no se puede garantizar, y la UI
+   dice por qué. Hoy `VPN_COVERAGE_UNVERIFIABLE` lo bloquea todo en silencio.
+
+Todo queda sujeto a la revisión de seguridad independiente (§5).

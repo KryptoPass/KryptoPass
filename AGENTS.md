@@ -64,6 +64,9 @@ registra ahí antes de implementarlo en un lado. Lo pendiente está en
 
 - Ninguna identidad se vuelve confiable por parsing, descubrimiento, una bandera
   de UI o una confirmación remota sin aprobación humana local (Noise XX + SAS).
+  Segunda vía autorizada el 2026-11-11: una presentación firmada por un
+  dispositivo ya confiable, recibida por su sesión autenticada, más aprobación
+  local en ambos lados y comprobación de la identidad con Noise. Nunca automática.
 - La identidad del dispositivo se crea al abrir la bóveda en un equipo sin perfil
   (`src/vault_access.rs`). Nunca se regenera una identidad existente o corrupta.
   Si falta el trust de una identidad existente, puede recrearse vacío (no
