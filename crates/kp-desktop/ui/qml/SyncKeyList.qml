@@ -26,9 +26,13 @@ ColumnLayout {
         const declared = phoneKeys === null ? null : phoneKeys.map(upper);
         const lockedKey = upper(host.controller.vaultSyncLockedKey);
         const ids = [];
-        const add = id => { if (ids.indexOf(id) < 0) ids.push(id); };
+        const add = id => {
+            if (ids.indexOf(id) < 0)
+                ids.push(id);
+        };
         selected.forEach(add);
-        if (declared !== null) declared.forEach(add);
+        if (declared !== null)
+            declared.forEach(add);
         host.keyStore.entries.filter(key => key.hasSecret).forEach(key => add(upper(key.id)));
         return ids.map(id => {
             const entry = host.keyStore.entries.find(key => upper(key.id) === id);

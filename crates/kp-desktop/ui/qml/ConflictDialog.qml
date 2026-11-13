@@ -106,8 +106,16 @@ Controls.Dialog {
 
                     Repeater {
                         model: [
-                            {side: "ours", label: qsTr("Este equipo"), value: row.modelData.ours},
-                            {side: "theirs", label: qsTr("Otro dispositivo"), value: row.modelData.theirs}
+                            {
+                                side: "ours",
+                                label: qsTr("Este equipo"),
+                                value: row.modelData.ours
+                            },
+                            {
+                                side: "theirs",
+                                label: qsTr("Otro dispositivo"),
+                                value: row.modelData.theirs
+                            }
                         ]
 
                         Controls.RadioButton {
