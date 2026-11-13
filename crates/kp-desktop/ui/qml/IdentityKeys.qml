@@ -435,6 +435,12 @@ Controls.ScrollView {
                 readonly property bool canPromote: root.hasSecret && !modelData.primary && usable
                 readonly property bool canRevoke: root.hasSecret && !modelData.revoked
                 readonly property bool canCertify: !root.hasSecret && root.hasCertifier && usable
+                // Deferred like IdentityRow.titleCap to avoid a recursive rearrange.
+                property real idCap: Number.POSITIVE_INFINITY
+                onWidthChanged: Qt.callLater(uidRow.updateIdCap)
+                function updateIdCap() {
+                    uidRow.idCap = uidRow.width > 0 ? uidRow.width * 0.7 : Number.POSITIVE_INFINITY;
+                }
                 Layout.fillWidth: true
                 Layout.topMargin: 4
                 Layout.bottomMargin: 4
@@ -455,7 +461,7 @@ Controls.ScrollView {
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
                         Controls.Label {
-                            Layout.maximumWidth: uidRow.width * 0.7
+                            Layout.maximumWidth: uidRow.idCap
                             Layout.rightMargin: Kirigami.Units.smallSpacing
                             text: uidRow.modelData.id
                             textFormat: Text.PlainText

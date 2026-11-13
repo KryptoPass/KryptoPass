@@ -15,6 +15,13 @@ RowLayout {
     property string help: ""
     property string status: ""
     default property alias actions: actionRow.data
+    /// Title cap (55 % of the row). Updated after the layout pass: binding it
+    /// to the row's own width makes the RowLayout rearrange itself recursively.
+    property real titleCap: Number.POSITIVE_INFINITY
+    onWidthChanged: Qt.callLater(root.updateTitleCap)
+    function updateTitleCap() {
+        root.titleCap = root.width > 0 ? root.width * 0.55 : Number.POSITIVE_INFINITY;
+    }
     Layout.fillWidth: true
     Layout.topMargin: 4
     Layout.bottomMargin: 4
@@ -32,7 +39,7 @@ RowLayout {
         text: root.title
         textFormat: Text.PlainText
         elide: Text.ElideRight
-        Layout.maximumWidth: root.width * 0.55
+        Layout.maximumWidth: root.titleCap
         Layout.alignment: Qt.AlignVCenter
     }
     HelpButton {
