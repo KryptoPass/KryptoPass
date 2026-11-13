@@ -109,8 +109,8 @@ Rectangle {
             Controls.Button {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Kirigami.Units.largeSpacing
-                text: qsTr("Empezar")
-                icon.name: "go-next"
+                text: qsTr("Crear nueva bóveda")
+                icon.name: "document-new"
                 highlighted: true
                 onClicked: root.step = 1
             }
@@ -343,7 +343,7 @@ Rectangle {
     Controls.ToolButton {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Kirigami.Units.gridUnit
+        anchors.bottomMargin: Kirigami.Units.largeSpacing * 2
         text: qsTr("¿Necesitas ayuda?")
         icon.name: "help-contents"
         onClicked: root.handbookRequested("first-run")

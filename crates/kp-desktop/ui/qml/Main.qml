@@ -600,14 +600,14 @@ Controls.ApplicationWindow {
         id: importVaultAction
         controller: shell
         actionId: "importVault"
-        enabled: !root.mutationsBlocked
+        enabled: !root.mutationsBlocked && !store.controller.setupRequired
         onTriggered: importWindow.prepare()
     }
     DesktopAction {
         id: exportBackupAction
         controller: shell
         actionId: "exportBackup"
-        enabled: !root.mutationsBlocked
+        enabled: !root.mutationsBlocked && !store.controller.setupRequired
         onTriggered: backupWindow.openForExport()
     }
     DesktopAction {
@@ -863,6 +863,8 @@ Controls.ApplicationWindow {
         onTriggered: shell.showAboutKdeDialog()
     }
     menuBar: Controls.MenuBar {
+        // Onboarding is a single guided flow; the menus belong to the vault.
+        visible: !store.controller.setupRequired
         Controls.Menu {
             title: qsTr("&Archivo")
             Controls.MenuItem {
