@@ -460,9 +460,7 @@ fn password_history_from_note(note: SensitiveText) -> (Vec<SensitiveText>, Sensi
                 start = Some(offset);
             }
         } else if let Some(value) = line.strip_prefix("- ") {
-            let Some(decoded) = decode_history_value(value) else {
-                return (Vec::new(), note);
-            };
+            let decoded = decode_history_value(value);
             if decoded.is_empty() || history.len() >= 1000 {
                 return (Vec::new(), note);
             }
@@ -491,57 +489,67 @@ fn password_history_from_note(note: SensitiveText) -> (Vec<SensitiveText>, Sensi
     (history, remaining)
 }
 
-/// Decode the escapes used in a Markdown text node. Reject unknown entities and
-/// unescaped markup instead of silently importing a different password.
-fn decode_history_value(value: &str) -> Option<SensitiveText> {
+/// Decode the escapes used in a Markdown text node. Every other character is
+/// kept literally: raw `*`, `_` or `<` belong to the password.
+fn decode_history_value(value: &str) -> SensitiveText {
     let mut result = SensitiveText::with_capacity(value.len());
     let mut chars = value.chars().peekable();
     while let Some(ch) = chars.next() {
         match ch {
-            '\\' => {
-                let escaped = chars.next()?;
-                if !escaped.is_ascii_punctuation() {
-                    return None;
+            '\\' => match chars.next() {
+                Some(escaped) if escaped.is_ascii_punctuation() => result.push(escaped),
+                Some(other) => {
+                    result.push('\\');
+                    result.push(other);
                 }
-                result.push(escaped);
-            }
+                None => result.push('\\'),
+            },
             '&' => {
                 let mut entity = SensitiveText::new();
-                loop {
-                    let next = chars.next()?;
-                    if next == ';' {
+                while let Some(&next) = chars.peek() {
+                    if next == ';'
+                        || entity.len() >= 12
+                        || !next.is_ascii_alphanumeric() && next != '#'
+                    {
                         break;
                     }
-                    if entity.len() >= 12 || !next.is_ascii_alphanumeric() && next != '#' {
-                        return None;
-                    }
                     entity.push(next);
+                    chars.next();
                 }
-                let decoded = match entity.as_str() {
-                    "amp" => '&',
-                    "lt" => '<',
-                    "gt" => '>',
-                    "quot" => '"',
-                    "apos" => '\'',
-                    _ => {
-                        let number = entity.strip_prefix('#')?;
-                        let n = if let Some(hex) = number
-                            .strip_prefix('x')
-                            .or_else(|| number.strip_prefix('X'))
-                        {
-                            u32::from_str_radix(hex, 16).ok()?
-                        } else {
-                            number.parse().ok()?
-                        };
-                        char::from_u32(n)?
-                    }
-                };
-                result.push(decoded);
+                if chars.peek() == Some(&';')
+                    && let Some(decoded) = decode_entity(&entity)
+                {
+                    chars.next();
+                    result.push(decoded);
+                } else {
+                    result.push('&');
+                    result.push_str(entity.as_str());
+                }
             }
-            // Markup requires a full Markdown parser and may be ambiguous.
-            '*' | '_' | '`' | '[' | ']' | '<' | '>' => return None,
             _ => result.push(ch),
         }
     }
-    Some(result)
+    result
+}
+
+fn decode_entity(entity: &SensitiveText) -> Option<char> {
+    match entity.as_str() {
+        "amp" => Some('&'),
+        "lt" => Some('<'),
+        "gt" => Some('>'),
+        "quot" => Some('"'),
+        "apos" => Some('\''),
+        _ => {
+            let number = entity.as_str().strip_prefix('#')?;
+            let value = if let Some(hex) = number
+                .strip_prefix('x')
+                .or_else(|| number.strip_prefix('X'))
+            {
+                u32::from_str_radix(hex, 16).ok()?
+            } else {
+                number.parse().ok()?
+            };
+            char::from_u32(value)
+        }
+    }
 }
