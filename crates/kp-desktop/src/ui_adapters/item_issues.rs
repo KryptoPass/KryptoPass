@@ -12,11 +12,15 @@ use kryptopass_core::{IssueTarget, ItemIssue, ItemIssues};
 
 /// A save the vault refused for its fields, already explained for the editor.
 #[derive(Debug)]
-pub(super) struct InvalidItem(pub(super) String);
+pub(super) struct InvalidItem {
+    pub(super) message: String,
+    /// First template field named by the refusal, for focusing its input.
+    pub(super) field: Option<String>,
+}
 
 impl fmt::Display for InvalidItem {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.0)
+        formatter.write_str(&self.message)
     }
 }
 
@@ -28,7 +32,14 @@ pub(super) fn explain(error: VaultError, template: &str) -> anyhow::Error {
     match error {
         VaultError::Invalid(issues) => {
             tracing::info!(issues = %issues, "the item was refused for its fields");
-            anyhow::Error::new(InvalidItem(describe(&issues, template)))
+            let field = issues.0.iter().find_map(|issue| match &issue.target {
+                IssueTarget::Field(id) => Some(id.as_str().to_owned()),
+                _ => None,
+            });
+            anyhow::Error::new(InvalidItem {
+                message: describe(&issues, template),
+                field,
+            })
         }
         other => other.into(),
     }

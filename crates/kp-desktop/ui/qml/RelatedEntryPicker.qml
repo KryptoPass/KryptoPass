@@ -7,6 +7,9 @@ import org.kde.kirigami as Kirigami
 ColumnLayout {
     id: root
 
+    Accessible.role: Accessible.Grouping
+    Accessible.name: qsTr("Elemento vinculado")
+
     property var entries: []
     property var kindOptions: []
     property var folders: []

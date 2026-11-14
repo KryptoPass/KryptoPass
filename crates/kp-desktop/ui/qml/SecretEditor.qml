@@ -34,6 +34,7 @@ Controls.Pane {
     property string pendingEntryId: ""
     property string discardAction: ""
     property string saveError: ""
+    property string invalidField: ""
     property var pendingRelatedEntry: null
     property bool opened: false
     property var pendingNavigation: null
@@ -41,6 +42,23 @@ Controls.Pane {
 
     readonly property bool saving: storeAdapter.controller.saving
     readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !preparingSecretMaterial && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
+    readonly property string iconStateText: storeAdapter.controller.iconBusy ? qsTr("Preparando imagen…") : draftIcon?.kind === "image" ? qsTr("Imagen personalizada") : draftIcon?.kind === "theme" ? draftIcon.name : qsTr("Automático")
+    readonly property string saveBlockReason: {
+        if (!loaded)
+            return "";
+        const missing = [];
+        if (!titleField.text.trim())
+            missing.push(qsTr("Nombre"));
+        for (const label of fieldsHost.missingRequiredFields)
+            missing.push(label);
+        if (missing.length === 1)
+            return qsTr("Falta completar: %1.").arg(missing[0]);
+        if (missing.length > 1)
+            return qsTr("Falta completar: %1 y %2.").arg(missing[0]).arg(missing[1]);
+        if (!recipientChooser.eligibleSelection)
+            return qsTr("Elige al menos una clave válida para cifrar el elemento.");
+        return "";
+    }
 
     signal saveRequested(string draftJson)
     signal generatePasswordRequested
@@ -84,6 +102,10 @@ Controls.Pane {
 
     function updateDirty() {
         dirty = loaded && !draftBaseline.matches(currentDraft());
+        if (saveError)
+            saveError = "";
+        if (invalidField)
+            invalidField = "";
     }
 
     function requestEntry(id) {
@@ -157,6 +179,7 @@ Controls.Pane {
         const relatedPrefill = !resultId ? pendingRelatedEntry : null;
         pendingRelatedEntry = null;
         loaded = false;
+        invalidField = "";
         entryId = resultId;
         draftFolderId = draft.folder || "";
         relatedEntryId = draft.relatedEntryId || "";
@@ -207,6 +230,7 @@ Controls.Pane {
             return;
         savePending = true;
         saveError = "";
+        invalidField = "";
         saveRequested(JSON.stringify(currentDraft()));
     }
 
@@ -283,6 +307,7 @@ Controls.Pane {
         draftFolderId = "";
         revision = null;
         saveError = "";
+        invalidField = "";
         titleField.text = "";
         draftIcon = null;
         draftIconSource = "";
@@ -326,6 +351,13 @@ Controls.Pane {
 
     Shortcut {
         sequences: [StandardKey.Save]
+        context: Qt.WindowShortcut
+        enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened && !iconWindow.opened && !iconMenu.opened
+        onActivated: editor.submit()
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+Return", "Ctrl+Enter"]
         context: Qt.WindowShortcut
         enabled: editor.opened && editor.canSave && !editor.externalModalOpen && !discardDialog.opened && !iconWindow.opened && !iconMenu.opened
         onActivated: editor.submit()
@@ -403,7 +435,10 @@ Controls.Pane {
                 editor.saveError = editor.storeAdapter.controller.errorMessage;
             if (editor.savePending && !editor.storeAdapter.controller.saving) {
                 editor.savePending = false;
+                editor.invalidField = editor.storeAdapter.controller.editorErrorField || "";
                 editor.saveError = editor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar el elemento.");
+                if (editor.invalidField)
+                    Qt.callLater(fieldsHost.focusInvalidField);
             } else if (editor.waitingForEditor && !editor.storeAdapter.controller.editorBusy) {
                 editor.waitingForEditor = false;
                 editor.pendingRelatedEntry = null;
@@ -461,6 +496,8 @@ Controls.Pane {
                         Layout.fillWidth: true
                         visible: !!editor.saveError
                         type: Kirigami.MessageType.Error
+                        icon.name: "dialog-warning"
+                        icon.color: Kirigami.Theme.negativeTextColor
                         text: editor.saveError
                     }
 
@@ -468,72 +505,6 @@ Controls.Pane {
                         Layout.fillWidth: true
                         enabled: !editor.saving && !editor.savePending
                         spacing: 16
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 6
-                            Controls.Label {
-                                text: qsTr("Nombre")
-                            }
-                            Controls.TextField {
-                                id: titleField
-                                objectName: "entryNameField"
-                                Layout.fillWidth: true
-                                Accessible.name: qsTr("Nombre del elemento")
-                                placeholderText: qsTr("Ej. Correo personal")
-                                onTextEdited: editor.updateDirty()
-                            }
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Controls.Label {
-                                text: qsTr("Icono")
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                EntryIcon {
-                                    entryIcon: editor.draftIcon
-                                    imageSource: editor.draftIconSource
-                                    fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
-                                    Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                                    Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                                }
-                                Controls.Label {
-                                    Layout.fillWidth: true
-                                    text: editor.storeAdapter.controller.iconBusy ? qsTr("Preparando imagen…") : editor.draftIcon?.kind === "image" ? qsTr("Imagen personalizada") : editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : qsTr("Automático")
-                                    textFormat: Text.PlainText
-                                    elide: Text.ElideRight
-                                }
-                                Controls.Button {
-                                    text: qsTr("Cambiar…")
-                                    Accessible.name: qsTr("Cambiar icono del elemento")
-                                    enabled: !editor.storeAdapter.controller.iconBusy
-                                    onClicked: iconMenu.open()
-                                    Controls.Menu {
-                                        id: iconMenu
-                                        Controls.MenuItem {
-                                            text: qsTr("Usar favicon automático")
-                                            onTriggered: {
-                                                editor.draftIcon = null;
-                                                editor.draftIconSource = "";
-                                                editor.updateDirty();
-                                            }
-                                        }
-                                        Controls.MenuItem {
-                                            text: qsTr("Elegir imagen…")
-                                            onTriggered: {
-                                                editor.externalModalOpen = true;
-                                                iconFileDialog.open();
-                                            }
-                                        }
-                                        Controls.MenuItem {
-                                            text: qsTr("Elegir icono del tema…")
-                                            onTriggered: iconWindow.openWith(editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "", titleField.text.trim(), kindField.currentText, editor.storeAdapter.kindIcon(kindField.currentValue || "login"))
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         GridLayout {
                             Layout.fillWidth: true
                             columns: editorForm.width < 360 ? 1 : 2
@@ -554,6 +525,7 @@ Controls.Pane {
                                     textRole: "name"
                                     valueRole: "id"
                                     Accessible.name: qsTr("Tipo de elemento")
+                                    Accessible.description: editor.entryId ? qsTr("El tipo no se puede cambiar al editar un elemento existente.") : qsTr("Cambia el tipo para elegir otro formulario antes de escribir los datos.")
                                     enabled: !editor.entryId && !editor.preparingSecretMaterial
                                     onActivated: {
                                         if (!editor.entryId && !editor.preparingSecretMaterial)
@@ -582,11 +554,78 @@ Controls.Pane {
                                 }
                             }
                         }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Controls.Button {
+                                id: iconButton
+                                objectName: "entryIconButton"
+                                Layout.alignment: Qt.AlignBottom
+                                Layout.preferredWidth: titleField.implicitHeight
+                                Layout.preferredHeight: titleField.implicitHeight
+                                padding: 4
+                                text: qsTr("Cambiar icono del elemento")
+                                display: Controls.AbstractButton.IconOnly
+                                focusPolicy: Qt.ClickFocus
+                                activeFocusOnTab: false
+                                Accessible.name: text
+                                Accessible.description: editor.iconStateText
+                                Controls.ToolTip.visible: hovered || visualFocus
+                                Controls.ToolTip.text: qsTr("%1 · %2").arg(text).arg(editor.iconStateText)
+                                onClicked: iconMenu.open()
+                                contentItem: EntryIcon {
+                                    entryIcon: editor.draftIcon
+                                    imageSource: editor.draftIconSource
+                                    fallbackIcon: editor.storeAdapter.kindIcon(kindField.currentValue || "login")
+                                    iconSize: Kirigami.Units.iconSizes.medium
+                                }
+                                Controls.Menu {
+                                    id: iconMenu
+                                    y: iconButton.height
+                                    Controls.MenuItem {
+                                        text: qsTr("Usar favicon automático")
+                                        onTriggered: {
+                                            editor.draftIcon = null;
+                                            editor.draftIconSource = "";
+                                            editor.updateDirty();
+                                        }
+                                    }
+                                    Controls.MenuItem {
+                                        text: qsTr("Elegir imagen…")
+                                        onTriggered: {
+                                            editor.externalModalOpen = true;
+                                            iconFileDialog.open();
+                                        }
+                                    }
+                                    Controls.MenuItem {
+                                        text: qsTr("Elegir icono del tema…")
+                                        onTriggered: iconWindow.openWith(editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "", titleField.text.trim(), kindField.currentText, editor.storeAdapter.kindIcon(kindField.currentValue || "login"))
+                                    }
+                                }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+                                Controls.Label {
+                                    text: qsTr("Nombre *")
+                                }
+                                Controls.TextField {
+                                    id: titleField
+                                    objectName: "entryNameField"
+                                    Layout.fillWidth: true
+                                    Accessible.name: qsTr("Nombre del elemento")
+                                    Accessible.description: qsTr("Obligatorio. Identifica el elemento en la lista.")
+                                    placeholderText: qsTr("Ej. Correo personal")
+                                    onTextEdited: editor.updateDirty()
+                                }
+                            }
+                        }
                     }
 
                     SecretFieldsHost {
                         id: fieldsHost
                         Layout.fillWidth: true
+                        invalidField: editor.invalidField
                         enabled: !editor.saving && !editor.savePending && !editor.preparingSecretMaterial
                         onEdited: editor.updateDirty()
                         onGeneratePasswordRequested: editor.generatePasswordRequested()
@@ -644,8 +683,17 @@ Controls.Pane {
             background: null
             contentItem: RowLayout {
                 spacing: 8
+                Controls.Label {
+                    Layout.fillWidth: true
+                    visible: editor.opened && editor.loaded && editor.saveBlockReason.length > 0
+                    text: editor.saveBlockReason
+                    horizontalAlignment: Text.AlignRight
+                    color: Kirigami.Theme.disabledTextColor
+                    wrapMode: Text.Wrap
+                }
                 Item {
                     Layout.fillWidth: true
+                    visible: !editor.opened || !editor.loaded || editor.saveBlockReason.length === 0
                 }
                 Controls.BusyIndicator {
                     visible: editor.saving
@@ -665,6 +713,7 @@ Controls.Pane {
                     icon.name: "document-save"
                     highlighted: true
                     enabled: editor.canSave
+                    Accessible.description: editor.saveBlockReason
                     onClicked: editor.submit()
                 }
             }

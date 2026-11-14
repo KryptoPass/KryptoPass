@@ -192,6 +192,41 @@ ColumnLayout {
             sourceEditor.forceActiveFocus();
     }
 
+    function toolbarItemEnabled(index) {
+        const action = root.toolbarActions[index];
+        if (!action)
+            return false;
+        if (action.name === "undo")
+            return sourceEditor.canUndo;
+        if (action.name === "redo")
+            return sourceEditor.canRedo;
+        return true;
+    }
+
+    function adjacentToolbarItem(index, step) {
+        for (let candidate = index + step; candidate >= 0 && candidate < root.toolbarActions.length; candidate += step) {
+            if (root.toolbarItemEnabled(candidate))
+                return toolbarRepeater.itemAt(candidate);
+        }
+        return null;
+    }
+
+    function firstEnabledToolbarIndex() {
+        for (let index = 0; index < root.toolbarActions.length; index++) {
+            if (root.toolbarItemEnabled(index))
+                return index;
+        }
+        return -1;
+    }
+
+    function firstToolbarItem() {
+        return root.adjacentToolbarItem(-1, 1);
+    }
+
+    function lastToolbarItem() {
+        return root.adjacentToolbarItem(root.toolbarActions.length, -1);
+    }
+
     function replaceText(start, end, replacement) {
         sourceEditor.select(start, end);
         sourceEditor.cursorSelection.text = replacement;
@@ -374,12 +409,15 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
+        Accessible.role: Accessible.PageTabList
+        Accessible.name: qsTr("Modo de edición")
 
         Controls.ButtonGroup {
             id: previewModeGroup
         }
 
         Controls.ToolButton {
+            id: editModeButton
             objectName: root.objectNamePrefix + "EditModeButton"
             text: qsTr("Editar")
             icon.name: "document-edit"
@@ -387,11 +425,17 @@ ColumnLayout {
             autoExclusive: true
             Controls.ButtonGroup.group: previewModeGroup
             checked: !root.previewMode
-            activeFocusOnTab: true
+            activeFocusOnTab: !root.previewMode
+            KeyNavigation.right: previewModeButton
+            KeyNavigation.tab: !root.previewMode ? (root.firstToolbarItem() || sourceEditor) : null
             Accessible.name: qsTr("Editar Markdown")
+            Accessible.role: Accessible.PageTab
+            Accessible.checkable: true
+            Accessible.checked: editModeButton.checked
             onClicked: root.setPreviewMode(false)
         }
         Controls.ToolButton {
+            id: previewModeButton
             objectName: root.objectNamePrefix + "ModeButton"
             text: qsTr("Previsualizar")
             icon.name: "document-preview"
@@ -399,8 +443,13 @@ ColumnLayout {
             autoExclusive: true
             Controls.ButtonGroup.group: previewModeGroup
             checked: root.previewMode
-            activeFocusOnTab: true
+            activeFocusOnTab: root.previewMode
+            KeyNavigation.left: editModeButton
+            KeyNavigation.tab: !root.previewMode ? (root.firstToolbarItem() || sourceEditor) : null
             Accessible.name: qsTr("Previsualizar Markdown")
+            Accessible.role: Accessible.PageTab
+            Accessible.checkable: true
+            Accessible.checked: previewModeButton.checked
             onClicked: root.setPreviewMode(true)
         }
         Item {
@@ -416,10 +465,12 @@ ColumnLayout {
         spacing: Kirigami.Units.smallSpacing
 
         Repeater {
+            id: toolbarRepeater
             model: root.toolbarActions
             delegate: Controls.ToolButton {
                 id: toolButton
                 required property var modelData
+                required property int index
                 objectName: root.objectNamePrefix + toolButton.modelData.suffix
                 width: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
                 height: width
@@ -427,7 +478,11 @@ ColumnLayout {
                 display: Controls.AbstractButton.IconOnly
                 icon.name: toolButton.modelData.icon
                 enabled: toolButton.modelData.name === "undo" ? sourceEditor.canUndo : toolButton.modelData.name === "redo" ? sourceEditor.canRedo : true
-                activeFocusOnTab: true
+                activeFocusOnTab: toolButton.index === root.firstEnabledToolbarIndex()
+                KeyNavigation.left: root.adjacentToolbarItem(toolButton.index, -1)
+                KeyNavigation.right: root.adjacentToolbarItem(toolButton.index, 1)
+                KeyNavigation.tab: sourceEditor
+                KeyNavigation.backtab: root.adjacentToolbarItem(toolButton.index, -1) || editModeButton
                 Accessible.name: toolButton.modelData.label
                 Controls.ToolTip.visible: hovered || visualFocus
                 Controls.ToolTip.text: toolButton.modelData.tip
@@ -463,6 +518,7 @@ ColumnLayout {
                 selectByKeyboard: true
                 persistentSelection: true
                 activeFocusOnTab: true
+                KeyNavigation.backtab: root.lastToolbarItem() || editModeButton
                 Accessible.name: root.accessibleName
                 placeholderText: root.placeholderText
                 onTextChanged: {

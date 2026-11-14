@@ -7,6 +7,9 @@ import org.kde.kirigami as Kirigami
 ColumnLayout {
     id: root
 
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.label
+
     property string label: qsTr("Notas")
     property alias accessibleName: editor.accessibleName
     property alias placeholderText: editor.placeholderText

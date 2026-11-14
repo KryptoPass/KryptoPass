@@ -65,6 +65,13 @@ pub mod qobject {
         #[qproperty(QString, editor_json, cxx_name = "editorJson", READ, NOTIFY)]
         #[qproperty(QString, conflict_json, cxx_name = "conflictJson", READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
+        #[qproperty(
+            QString,
+            editor_error_field,
+            cxx_name = "editorErrorField",
+            READ,
+            NOTIFY
+        )]
         #[qproperty(QString, load_error, cxx_name = "loadError", READ, NOTIFY)]
         #[qproperty(QString, browser_access, cxx_name = "browserAccess", READ, NOTIFY)]
         #[qproperty(QString, browser_pairing, cxx_name = "browserPairing", READ, NOTIFY)]
@@ -306,6 +313,8 @@ pub struct SecretsControllerRust {
     version_json: QString,
     history_version_index: Option<usize>,
     error_message: QString,
+    /// Template field id the last editor refusal pointed at; empty when it named none.
+    editor_error_field: QString,
     /// Why the vault list could not load; empty otherwise. Only the list reads it: a refused
     /// save or a failed move is an error of that action, shown where the action happened.
     load_error: QString,
@@ -369,6 +378,7 @@ impl Default for SecretsControllerRust {
             version_json: QString::default(),
             history_version_index: None,
             error_message: QString::default(),
+            editor_error_field: QString::default(),
             load_error: QString::default(),
             operation_error_active: false,
             status: QString::from(crate::i18n::text("Bóveda no cargada")),
@@ -585,9 +595,12 @@ impl qobject::SecretsController {
                 Err(error) => {
                     tracing::warn!(error = %format!("{error:#}"), "vault change failed");
                     if let Some(invalid) = error.downcast_ref::<item_issues::InvalidItem>() {
+                        controller.as_mut().set_editor_error_field(QString::from(
+                            invalid.field.as_deref().unwrap_or_default(),
+                        ));
                         controller
                             .as_mut()
-                            .fail_message(QString::from(invalid.0.as_str()));
+                            .fail_message(QString::from(invalid.message.as_str()));
                         return;
                     }
                     let vault_error = error.downcast_ref::<VaultError>();
@@ -666,6 +679,13 @@ impl qobject::SecretsController {
         if self.error_message() != &value {
             self.as_mut().rust_mut().error_message = value;
             self.error_message_changed();
+        }
+    }
+
+    fn set_editor_error_field(mut self: Pin<&mut Self>, value: QString) {
+        if self.editor_error_field() != &value {
+            self.as_mut().rust_mut().editor_error_field = value;
+            self.editor_error_field_changed();
         }
     }
 
@@ -782,7 +802,8 @@ impl qobject::SecretsController {
         }
         crate::infrastructure::entry_icons::clear_stage();
         self.as_mut().set_icon_busy(false);
-        self.set_editor_json(QString::default());
+        self.as_mut().set_editor_json(QString::default());
+        self.as_mut().set_editor_error_field(QString::default());
     }
 
     fn begin_editor_operation(mut self: Pin<&mut Self>) -> u64 {

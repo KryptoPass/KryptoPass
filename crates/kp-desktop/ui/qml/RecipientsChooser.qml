@@ -8,6 +8,9 @@ import org.kryptopass.desktop as Backend
 ColumnLayout {
     id: chooser
 
+    Accessible.role: Accessible.Grouping
+    Accessible.name: qsTr("Quién tiene acceso")
+
     required property KeyStore keyStore
     readonly property Backend.ContactsController contactsController: keyStore.contactsController
     property var selectedFingerprints: []
@@ -156,32 +159,47 @@ ColumnLayout {
             spacing: Kirigami.Units.smallSpacing
 
             Controls.Button {
-                text: qsTr("Actualizar contactos")
-                icon.name: "view-refresh"
-                enabled: !chooser.contactsController.busy
-                onClicked: chooser.contactsController.refreshContacts()
-            }
-            Controls.Button {
-                text: qsTr("Importar clave…")
-                icon.name: "document-import"
-                enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
-                onClicked: recoveryDialog.openFor("import")
-            }
-            Controls.Button {
-                text: qsTr("Obtener del servidor…")
-                icon.name: "download"
-                enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
-                onClicked: recoveryDialog.openFor("refreshExternal")
-            }
-            Controls.Button {
-                text: qsTr("Elegir desde contactos")
-                icon.name: "contact-new"
-                enabled: !chooser.contactsController.busy && chooser.contactRows.length > 0 && chooser.encryptableKeys.length > 0
-                onClicked: {
-                    chooser.contactsController.clearRecipientSelection();
-                    chooser.contactsController.chooseRecipient(JSON.stringify(chooser.encryptableKeys.map(key => key.id)));
-                    if (Array.from(chooser.contactsController.recipientCandidates).length > 0)
-                        contactRecipientDialog.open();
+                id: keyActionsButton
+                text: qsTr("Añadir o importar clave")
+                icon.name: "list-add"
+                Accessible.name: qsTr("Añadir o importar una clave de acceso")
+                Controls.ToolTip.visible: hovered || visualFocus
+                Controls.ToolTip.text: qsTr("Actualizar contactos, importar una clave o buscarla en un servidor")
+                onClicked: keyActionsMenu.open()
+                Controls.Menu {
+                    id: keyActionsMenu
+                    y: keyActionsButton.height
+                    Controls.MenuItem {
+                        text: qsTr("Actualizar contactos de KDE")
+                        icon.name: "view-refresh"
+                        enabled: !chooser.contactsController.busy
+                        onTriggered: chooser.contactsController.refreshContacts()
+                    }
+                    Controls.MenuSeparator {}
+                    Controls.MenuItem {
+                        text: qsTr("Importar clave desde un archivo…")
+                        icon.name: "document-import"
+                        enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
+                        onTriggered: recoveryDialog.openFor("import")
+                    }
+                    Controls.MenuItem {
+                        text: qsTr("Obtener clave del servidor…")
+                        icon.name: "download"
+                        enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
+                        onTriggered: recoveryDialog.openFor("refreshExternal")
+                    }
+                    Controls.MenuSeparator {}
+                    Controls.MenuItem {
+                        text: qsTr("Elegir desde contactos")
+                        icon.name: "contact-new"
+                        enabled: !chooser.contactsController.busy && chooser.contactRows.length > 0 && chooser.encryptableKeys.length > 0
+                        onTriggered: {
+                            chooser.contactsController.clearRecipientSelection();
+                            chooser.contactsController.chooseRecipient(JSON.stringify(chooser.encryptableKeys.map(key => key.id)));
+                            if (Array.from(chooser.contactsController.recipientCandidates).length > 0)
+                                contactRecipientDialog.open();
+                        }
+                    }
                 }
             }
         }

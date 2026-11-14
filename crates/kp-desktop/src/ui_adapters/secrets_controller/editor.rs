@@ -102,6 +102,7 @@ impl qobject::SecretsController {
         if *self.busy() {
             return;
         }
+        self.as_mut().set_editor_error_field(QString::default());
 
         let Some(session) = self.as_ref().rust().editor_session else {
             self.as_mut()

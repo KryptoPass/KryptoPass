@@ -6,8 +6,10 @@ Item {
     id: root
 
     property string kind: "login"
+    property string invalidField: ""
     readonly property SecretFields form: formLoader.item as SecretFields
     readonly property bool ready: !!form && formLoader.status === Loader.Ready
+    readonly property var missingRequiredFields: form ? form.missingRequiredFields : []
     property var cachedFields: ({})
     property var pendingFields: null
     property bool updating: false
@@ -67,6 +69,15 @@ Item {
             form.applyGeneratedPassword(value);
     }
 
+    function focusInvalidField() {
+        return form ? form.focusInvalidField() : false;
+    }
+
+    onInvalidFieldChanged: {
+        if (form)
+            form.invalidField = invalidField;
+    }
+
     function applyPreparedSshKey(json) {
         if (form)
             form.applyPreparedSshKey(json);
@@ -84,6 +95,7 @@ Item {
         onLoaded: {
             const wasUpdating = root.updating;
             root.updating = true;
+            root.form.invalidField = root.invalidField;
             root.form.loadFields(root.pendingFields || {});
             root.pendingFields = null;
             root.updating = wasUpdating;

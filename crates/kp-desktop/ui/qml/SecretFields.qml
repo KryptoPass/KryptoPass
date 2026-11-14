@@ -4,12 +4,18 @@ import QtQuick.Layouts
 
 // Shared editor contract. Concrete forms own their draft fields and clearing.
 ColumnLayout {
+    property string invalidField: ""
+    property var missingRequiredFields: []
+
     signal edited
     signal generatePasswordRequested
     signal prepareSshKeyRequested(url fileUrl, string passphrase)
     signal prepareTotpQrRequested(url fileUrl)
     signal externalModalRequested(bool opened)
 
+    function focusInvalidField() {
+        return false;
+    }
     function loadFields(fields) {
         throw new Error("SecretFields.loadFields must be implemented by the form");
     }

@@ -16,6 +16,10 @@ SecretFields {
     property string notes: ""
     property bool passwordVisible: false
     readonly property var normalizedUrls: String(urlsText || "").split(/\r?\n/).map(value => value.trim()).filter(value => !!value)
+    readonly property bool usernameInvalid: invalidField === "username"
+    readonly property bool passwordInvalid: invalidField === "password"
+    readonly property bool totpInvalid: invalidField === "totp"
+    readonly property bool urlsInvalid: invalidField === "urls"
 
     onUsernameChanged: edited()
     onPasswordChanged: edited()
@@ -51,7 +55,21 @@ SecretFields {
         password = value;
     }
 
+    function focusInvalidField() {
+        const target = usernameInvalid ? usernameField : passwordInvalid ? passwordField : totpInvalid ? totpField : urlsInvalid ? urlsField : null;
+        if (!target)
+            return false;
+        target.forceActiveFocus();
+        return true;
+    }
+
     spacing: 24
+
+    Binding {
+        target: root
+        property: "missingRequiredFields"
+        value: root.password.length > 0 ? [] : [qsTr("Contraseña")]
+    }
 
     function setUrls(values) {
         const next = Array.isArray(values) ? values.map(value => String(value || "").trim()).filter(value => !!value) : [];
@@ -67,6 +85,8 @@ SecretFields {
     ColumnLayout {
         Layout.fillWidth: true
         spacing: 16
+        Accessible.role: Accessible.Grouping
+        Accessible.name: qsTr("Datos de acceso")
         Controls.Label {
             text: qsTr("Datos de acceso")
             font.weight: Font.DemiBold
@@ -78,18 +98,29 @@ SecretFields {
                 text: qsTr("Correo o usuario")
             }
             Controls.TextField {
+                id: usernameField
                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
                 text: root.username
                 Accessible.name: qsTr("Correo o usuario")
+                Accessible.description: root.usernameInvalid ? qsTr("Revisa este campo.") : ""
                 onTextEdited: root.username = text
+                Rectangle {
+                    anchors.fill: parent
+                    visible: root.usernameInvalid
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Kirigami.Theme.negativeTextColor
+                    radius: Kirigami.Units.smallSpacing
+                    z: 2
+                }
             }
         }
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
             Controls.Label {
-                text: qsTr("Contraseña")
+                text: qsTr("Contraseña *")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -105,6 +136,7 @@ SecretFields {
                     echoMode: root.passwordVisible ? TextInput.Normal : TextInput.Password
                     passwordMaskDelay: 0
                     Accessible.name: qsTr("Contraseña")
+                    Accessible.description: root.passwordInvalid ? qsTr("Obligatorio. Revisa este campo.") : qsTr("Obligatorio.")
                     onTextEdited: root.password = text
                     Controls.ToolButton {
                         id: revealButton
@@ -117,9 +149,20 @@ SecretFields {
                         display: Controls.AbstractButton.IconOnly
                         checkable: true
                         checked: root.passwordVisible
+                        Accessible.checkable: true
+                        Accessible.checked: root.passwordVisible
                         onClicked: root.passwordVisible = !root.passwordVisible
                         Controls.ToolTip.visible: hovered || visualFocus
                         Controls.ToolTip.text: text
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: root.passwordInvalid
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Kirigami.Theme.negativeTextColor
+                        radius: Kirigami.Units.smallSpacing
+                        z: 2
                     }
                 }
                 Controls.Button {
@@ -150,6 +193,7 @@ SecretFields {
                     passwordMaskDelay: 0
                     placeholderText: qsTr("Base32 u otpauth:// (opcional)")
                     Accessible.name: qsTr("Semilla TOTP, inicialmente oculta")
+                    Accessible.description: root.totpInvalid ? qsTr("La semilla TOTP no es válida. %1").arg(totpHint.text) : totpHint.text
                     onTextEdited: root.totpInput = text
                     Controls.ToolButton {
                         id: totpRevealButton
@@ -162,13 +206,25 @@ SecretFields {
                         display: Controls.AbstractButton.IconOnly
                         checkable: true
                         checked: root.totpVisible
+                        Accessible.checkable: true
+                        Accessible.checked: root.totpVisible
                         onClicked: root.totpVisible = !root.totpVisible
                         Controls.ToolTip.visible: hovered || visualFocus
                         Controls.ToolTip.text: text
                     }
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: root.totpInvalid
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Kirigami.Theme.negativeTextColor
+                        radius: Kirigami.Units.smallSpacing
+                        z: 2
+                    }
                 }
             }
             Controls.Label {
+                id: totpHint
                 Layout.fillWidth: true
                 text: qsTr("La semilla se guarda cifrada. Déjala vacía para quitar TOTP; no aparece en la vista de lectura.")
                 color: Kirigami.Theme.disabledTextColor
@@ -182,18 +238,36 @@ SecretFields {
                 text: qsTr("Sitios web")
             }
             Controls.TextArea {
+                id: urlsField
                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
                 text: root.urlsText
                 placeholderText: qsTr("https://ejemplo.test\nhttps://cuenta.ejemplo.test")
                 Accessible.name: qsTr("Direcciones de sitios web, una por línea")
+                Accessible.description: root.urlsInvalid ? qsTr("Revisa las direcciones web. %1").arg(urlsHint.text) : urlsHint.text
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 textFormat: TextEdit.PlainText
                 onTextEdited: root.updateUrlsText(text)
+                Keys.onTabPressed: function (event) {
+                    const next = nextItemInFocusChain();
+                    if (next)
+                        next.forceActiveFocus(Qt.TabFocusReason);
+                    event.accepted = true;
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    visible: root.urlsInvalid
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Kirigami.Theme.negativeTextColor
+                    radius: Kirigami.Units.smallSpacing
+                    z: 2
+                }
             }
             Controls.Label {
+                id: urlsHint
                 Layout.fillWidth: true
                 text: qsTr("La primera dirección se conserva como sitio principal.")
                 color: Kirigami.Theme.disabledTextColor

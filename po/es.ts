@@ -7012,8 +7012,24 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Correo o usuario</translation>
     </message>
     <message>
+      <source>Revisa este campo.</source>
+      <translation>Revisa este campo.</translation>
+    </message>
+    <message>
+      <source>Contraseña *</source>
+      <translation>Contraseña *</translation>
+    </message>
+    <message>
       <source>Contraseña</source>
       <translation>Contraseña</translation>
+    </message>
+    <message>
+      <source>Obligatorio. Revisa este campo.</source>
+      <translation>Obligatorio. Revisa este campo.</translation>
+    </message>
+    <message>
+      <source>Obligatorio.</source>
+      <translation>Obligatorio.</translation>
     </message>
     <message>
       <source>Ocultar contraseña</source>
@@ -7044,6 +7060,10 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Semilla TOTP, inicialmente oculta</translation>
     </message>
     <message>
+      <source>La semilla TOTP no es válida. %1</source>
+      <translation>La semilla TOTP no es válida. %1</translation>
+    </message>
+    <message>
       <source>Ocultar semilla TOTP</source>
       <translation>Ocultar semilla TOTP</translation>
     </message>
@@ -7068,6 +7088,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Direcciones de sitios web, una por línea</source>
       <translation>Direcciones de sitios web, una por línea</translation>
+    </message>
+    <message>
+      <source>Revisa las direcciones web. %1</source>
+      <translation>Revisa las direcciones web. %1</translation>
     </message>
     <message>
       <source>La primera dirección se conserva como sitio principal.</source>
@@ -7414,6 +7438,10 @@ https://cuenta.ejemplo.test</translation>
       <translation>Resaltar</translation>
     </message>
     <message>
+      <source>Modo de edición</source>
+      <translation>Modo de edición</translation>
+    </message>
+    <message>
       <source>Editar</source>
       <translation>Editar</translation>
     </message>
@@ -7700,18 +7728,6 @@ https://cuenta.ejemplo.test</translation>
       <translation>Elegir contacto %1, huella %2</translation>
     </message>
     <message>
-      <source>Actualizar contactos</source>
-      <translation>Actualizar contactos</translation>
-    </message>
-    <message>
-      <source>Importar clave…</source>
-      <translation>Importar clave…</translation>
-    </message>
-    <message>
-      <source>Obtener del servidor…</source>
-      <translation>Obtener del servidor…</translation>
-    </message>
-    <message>
       <source>Elegir desde contactos</source>
       <translation>Elegir desde contactos</translation>
     </message>
@@ -7734,6 +7750,30 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Buscar personas con clave OpenPGP</source>
       <translation>Buscar personas con clave OpenPGP</translation>
+    </message>
+    <message>
+      <source>Añadir o importar clave</source>
+      <translation>Añadir o importar clave</translation>
+    </message>
+    <message>
+      <source>Añadir o importar una clave de acceso</source>
+      <translation>Añadir o importar una clave de acceso</translation>
+    </message>
+    <message>
+      <source>Actualizar contactos, importar una clave o buscarla en un servidor</source>
+      <translation>Actualizar contactos, importar una clave o buscarla en un servidor</translation>
+    </message>
+    <message>
+      <source>Actualizar contactos de KDE</source>
+      <translation>Actualizar contactos de KDE</translation>
+    </message>
+    <message>
+      <source>Importar clave desde un archivo…</source>
+      <translation>Importar clave desde un archivo…</translation>
+    </message>
+    <message>
+      <source>Obtener clave del servidor…</source>
+      <translation>Obtener clave del servidor…</translation>
     </message>
     <message>
       <source>No hay claves que coincidan con la búsqueda.</source>
@@ -8161,6 +8201,10 @@ https://cuenta.ejemplo.test</translation>
       <translation>Nuevo elemento</translation>
     </message>
     <message>
+      <source>Elige al menos una clave válida para cifrar el elemento.</source>
+      <translation>Elige al menos una clave válida para cifrar el elemento.</translation>
+    </message>
+    <message>
       <source>No se puede editar este tipo de elemento.</source>
       <translation>No se puede editar este tipo de elemento.</translation>
     </message>
@@ -8189,20 +8233,28 @@ https://cuenta.ejemplo.test</translation>
       <translation>Cerrar editor</translation>
     </message>
     <message>
-      <source>Nombre</source>
-      <translation>Nombre</translation>
+      <source>El tipo no se puede cambiar al editar un elemento existente.</source>
+      <translation>El tipo no se puede cambiar al editar un elemento existente.</translation>
+    </message>
+    <message>
+      <source>Cambia el tipo para elegir otro formulario antes de escribir los datos.</source>
+      <translation>Cambia el tipo para elegir otro formulario antes de escribir los datos.</translation>
+    </message>
+    <message>
+      <source>%1 · %2</source>
+      <translation>%1 · %2</translation>
     </message>
     <message>
       <source>Nombre del elemento</source>
       <translation>Nombre del elemento</translation>
     </message>
     <message>
-      <source>Ej. Correo personal</source>
-      <translation>Ej. Correo personal</translation>
+      <source>Obligatorio. Identifica el elemento en la lista.</source>
+      <translation>Obligatorio. Identifica el elemento en la lista.</translation>
     </message>
     <message>
-      <source>Icono</source>
-      <translation>Icono</translation>
+      <source>Ej. Correo personal</source>
+      <translation>Ej. Correo personal</translation>
     </message>
     <message>
       <source>Preparando imagen…</source>
@@ -8215,10 +8267,6 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Automático</source>
       <translation>Automático</translation>
-    </message>
-    <message>
-      <source>Cambiar…</source>
-      <translation>Cambiar…</translation>
     </message>
     <message>
       <source>Cambiar icono del elemento</source>
@@ -8241,6 +8289,18 @@ https://cuenta.ejemplo.test</translation>
       <translation>Tipo</translation>
     </message>
     <message>
+      <source>Nombre</source>
+      <translation>Nombre</translation>
+    </message>
+    <message>
+      <source>Falta completar: %1.</source>
+      <translation>Falta completar: %1.</translation>
+    </message>
+    <message>
+      <source>Falta completar: %1 y %2.</source>
+      <translation>Falta completar: %1 y %2.</translation>
+    </message>
+    <message>
       <source>Tipo de elemento</source>
       <translation>Tipo de elemento</translation>
     </message>
@@ -8251,6 +8311,10 @@ https://cuenta.ejemplo.test</translation>
     <message>
       <source>Carpeta del elemento</source>
       <translation>Carpeta del elemento</translation>
+    </message>
+    <message>
+      <source>Nombre *</source>
+      <translation>Nombre *</translation>
     </message>
     <message>
       <source>Guardando elemento</source>
