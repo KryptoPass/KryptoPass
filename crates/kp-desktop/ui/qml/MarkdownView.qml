@@ -9,6 +9,8 @@ Controls.Control {
     id: root
     required property MarkdownDocument document
     property bool selectable: true
+    property bool showBackground: true
+    property color codeBackgroundColor: Kirigami.Theme.alternateBackgroundColor
     property string accessibleLabel: qsTr("Documento Markdown")
     readonly property var spoilerActions: document?.spoilerActions || []
     readonly property var revealedActions: document?.revealedActions || []
@@ -75,7 +77,7 @@ Controls.Control {
 
     function updateTheme() {
         if (document)
-            document.setTheme(Kirigami.Theme.highlightColor.toString(), Kirigami.Theme.highlightedTextColor.toString(), Kirigami.Theme.linkColor.toString(), Kirigami.Theme.alternateBackgroundColor.toString(), Kirigami.Theme.disabledTextColor.toString());
+            document.setTheme(Kirigami.Theme.highlightColor.toString(), Kirigami.Theme.highlightedTextColor.toString(), Kirigami.Theme.linkColor.toString(), root.codeBackgroundColor.toString(), Kirigami.Theme.disabledTextColor.toString());
     }
     onDocumentChanged: updateTheme()
     Component.onCompleted: updateTheme()
@@ -96,7 +98,7 @@ Controls.Control {
     }
 
     background: Rectangle {
-        color: Kirigami.Theme.backgroundColor
+        color: root.showBackground ? Kirigami.Theme.backgroundColor : "transparent"
         border.width: textView.activeFocus ? 1 : 0
         border.color: Kirigami.Theme.focusColor
     }

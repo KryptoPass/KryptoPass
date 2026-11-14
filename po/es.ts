@@ -4084,10 +4084,6 @@ Huella(s) detectadas:
       <source>Ocultar %1</source>
       <translation>Ocultar %1</translation>
     </message>
-    <message>
-      <source>Tiempo restante del código de verificación</source>
-      <translation>Tiempo restante del código de verificación</translation>
-    </message>
   </context>
   <context>
     <name>DeviceDetailsPage</name>
@@ -4975,14 +4971,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Ver en la papelera</translation>
     </message>
     <message>
-      <source>Desbloquea la bóveda para crear un elemento vinculado.</source>
-      <translation>Desbloquea la bóveda para crear un elemento vinculado.</translation>
-    </message>
-    <message>
-      <source>Crea un secreto personalizado para acompañar este elemento.</source>
-      <translation>Crea un secreto personalizado para acompañar este elemento.</translation>
-    </message>
-    <message>
       <source>Crear seguridad</source>
       <translation>Crear seguridad</translation>
     </message>
@@ -5013,6 +5001,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Descifrando el contenido del elemento…</source>
       <translation>Descifrando el contenido del elemento…</translation>
+    </message>
+    <message>
+      <source>Crear un secreto personalizado vinculado a este elemento</source>
+      <translation>Crear un secreto personalizado vinculado a este elemento</translation>
     </message>
     <message>
       <source>Ningún elemento seleccionado</source>
@@ -7984,8 +7976,12 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Se renueva en %1 s</translation>
     </message>
     <message>
-      <source>Opciones del código de verificación</source>
-      <translation>Opciones del código de verificación</translation>
+      <source>Código temporal que se renueva automáticamente.</source>
+      <translation>Código temporal que se renueva automáticamente.</translation>
+    </message>
+    <message>
+      <source>Más opciones del código de verificación</source>
+      <translation>Más opciones del código de verificación</translation>
     </message>
     <message>
       <source>Copiar próximo código</source>
@@ -8006,6 +8002,14 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Abrir %1 en el navegador</source>
       <translation>Abrir %1 en el navegador</translation>
+    </message>
+    <message>
+      <source>Copiar sitio web</source>
+      <translation>Copiar sitio web</translation>
+    </message>
+    <message>
+      <source>Copiar %1</source>
+      <translation>Copiar %1</translation>
     </message>
     <message>
       <source>No hay sitios web guardados.</source>
@@ -8720,6 +8724,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Se renueva en %1 s</source>
       <translation>Se renueva en %1 s</translation>
+    </message>
+    <message>
+      <source>Código temporal que se renueva automáticamente.</source>
+      <translation>Código temporal que se renueva automáticamente.</translation>
     </message>
     <message>
       <source>Copiar próximo código</source>

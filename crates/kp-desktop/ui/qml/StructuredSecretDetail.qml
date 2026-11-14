@@ -9,8 +9,13 @@ SecretContentView {
 
     property bool showTotp: false
     property bool showQr: false
+    readonly property var totp: root.fields?.totp || null
 
     implicitHeight: content.implicitHeight
+
+    function formatTotpCode(value) {
+        return String(value || "").replace(/(\d{3})(?=\d)/g, "$1 ");
+    }
 
     ColumnLayout {
         id: content
@@ -25,12 +30,14 @@ SecretContentView {
             DetailField {
                 Layout.fillWidth: true
                 label: qsTr("Código de verificación")
-                value: root.fields?.totp?.currentCode || ""
+                value: root.formatTotpCode(root.totp?.currentCode || "")
                 copyLabel: qsTr("Copiar código de verificación")
-                copyEnabled: !!root.fields?.totp?.currentCode
+                copyEnabled: !!root.totp?.currentCode
                 prominent: true
-                hint: root.fields?.totp?.remainingSeconds > 0 ? qsTr("Se renueva en %1 s").arg(root.fields?.totp?.remainingSeconds || 0) : ""
-                progress: root.fields?.totp?.period > 0 ? Math.max(0, Math.min(1, Number(root.fields?.totp?.remainingSeconds || 0) / Number(root.fields?.totp?.period || 1))) : -1
+                hint: root.totp?.remainingSeconds > 0 ? qsTr("Se renueva en %1 s").arg(root.totp?.remainingSeconds || 0) : ""
+                progress: root.totp?.period > 0 ? Math.max(0, Math.min(1, Number(root.totp?.remainingSeconds || 0) / Number(root.totp?.period || 1))) : -1
+                progressColor: Number(root.totp?.remainingSeconds) < 5 ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.highlightColor
+                accessibleDescription: qsTr("Código temporal que se renueva automáticamente.")
                 onCopyRequested: root.copyTotpRequested(false)
 
                 Controls.ToolButton {

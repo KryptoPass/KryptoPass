@@ -77,6 +77,8 @@ Controls.Frame {
             Layout.minimumHeight: root.minimumContentHeight
             visible: root.value.length > 0
             padding: 0
+            showBackground: false
+            codeBackgroundColor: "transparent"
             document: renderedDocument
             accessibleLabel: root.accessibleLabel
             onLinkRequested: link => Qt.openUrlExternally(link)

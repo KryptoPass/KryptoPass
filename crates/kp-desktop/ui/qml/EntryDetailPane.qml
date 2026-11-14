@@ -304,6 +304,9 @@ Controls.Pane {
                         onCopyFieldRequested: function (field) {
                             root.storeAdapter.controller.copyField(field);
                         }
+                        onCopyUrlRequested: function (index) {
+                            root.storeAdapter.controller.copyUrl(index);
+                        }
                         onRevealFieldRequested: function (field) {
                             root.storeAdapter.controller.toggleField(field);
                         }
@@ -319,7 +322,7 @@ Controls.Pane {
                     Controls.Frame {
                         Layout.fillWidth: true
                         Layout.margins: Kirigami.Units.largeSpacing
-                        visible: root.hasRelatedEntryReference || (!!root.selected && !root.selected.trashed)
+                        visible: root.hasRelatedEntryReference
                         padding: Kirigami.Units.largeSpacing
                         contentItem: ColumnLayout {
                             spacing: Kirigami.Units.smallSpacing
@@ -373,30 +376,6 @@ Controls.Pane {
                                 onClicked: root.relatedEntryTrashRequested(root.relatedEntry)
                             }
 
-                            RowLayout {
-                                Layout.fillWidth: true
-                                visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
-                                spacing: Kirigami.Units.largeSpacing
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Layout.minimumWidth: 0
-                                    Controls.Label {
-                                        Layout.fillWidth: true
-                                        text: root.storeAdapter.controller.locked ? qsTr("Desbloquea la bóveda para crear un elemento vinculado.") : qsTr("Crea un secreto personalizado para acompañar este elemento.")
-                                        textFormat: Text.PlainText
-                                        wrapMode: Text.Wrap
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-                                }
-                                Controls.Button {
-                                    objectName: "createSecurityButton"
-                                    text: qsTr("Crear seguridad")
-                                    icon.name: "list-add"
-                                    enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy && !root.storeAdapter.controller.editorBusy
-                                    onClicked: root.createSecurityRequested(root.selected)
-                                }
-                            }
-
                             Kirigami.InlineMessage {
                                 Layout.fillWidth: true
                                 visible: root.hasRelatedEntryReference && !root.relatedEntry
@@ -404,6 +383,19 @@ Controls.Pane {
                                 text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
                             }
                         }
+                    }
+
+                    Controls.Button {
+                        objectName: "createSecurityButton"
+                        Layout.alignment: Qt.AlignRight
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
+                        text: qsTr("Crear seguridad")
+                        icon.name: "list-add"
+                        flat: true
+                        Accessible.name: qsTr("Crear un secreto personalizado vinculado a este elemento")
+                        enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy && !root.storeAdapter.controller.editorBusy
+                        onClicked: root.createSecurityRequested(root.selected)
                     }
                 }
             }

@@ -158,6 +158,9 @@ pub mod qobject {
         #[cxx_name = "copyField"]
         fn copy_field(self: Pin<&mut Self>, field: &QString);
         #[qinvokable]
+        #[cxx_name = "copyUrl"]
+        fn copy_url(self: Pin<&mut Self>, index: i32);
+        #[qinvokable]
         #[cxx_name = "toggleField"]
         fn toggle_field(self: Pin<&mut Self>, field: &QString);
         #[qinvokable]

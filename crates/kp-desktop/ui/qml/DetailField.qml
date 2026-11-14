@@ -10,6 +10,7 @@ Controls.Frame {
     required property string label
     property string value: ""
     property string hint: ""
+    property string accessibleDescription: ""
     property string copyLabel: qsTr("Copiar %1").arg(label)
     property bool copyEnabled: value.length > 0
     property bool multiline: false
@@ -19,6 +20,7 @@ Controls.Frame {
     property string hideLabel: qsTr("Ocultar %1").arg(label)
     property bool prominent: false
     property real progress: -1
+    property color progressColor: Kirigami.Theme.highlightColor
     default property alias extraActions: extraActions.data
 
     signal copyRequested
@@ -52,7 +54,7 @@ Controls.Frame {
                 readOnly: true
                 selectByMouse: true
                 Accessible.name: root.label
-                Accessible.description: root.hint
+                Accessible.description: root.accessibleDescription.length > 0 ? root.accessibleDescription : root.hint
             }
 
             Controls.TextField {
@@ -74,7 +76,7 @@ Controls.Frame {
                 font.pointSize: Kirigami.Theme.defaultFont.pointSize * (root.prominent ? 1.5 : 1)
                 font.weight: root.prominent ? Font.Medium : Font.Normal
                 Accessible.name: root.label
-                Accessible.description: root.hint
+                Accessible.description: root.accessibleDescription.length > 0 ? root.accessibleDescription : root.hint
             }
             Controls.ToolButton {
                 visible: root.revealable
@@ -103,6 +105,7 @@ Controls.Frame {
         Controls.Label {
             Layout.fillWidth: true
             visible: root.hint.length > 0
+            Accessible.ignored: root.progress >= 0
             text: root.hint
             textFormat: Text.PlainText
             color: Kirigami.Theme.disabledTextColor
@@ -114,7 +117,8 @@ Controls.Frame {
             from: 0
             to: 1
             value: Math.max(0, Math.min(1, root.progress))
-            Accessible.name: qsTr("Tiempo restante del código de verificación")
+            palette.highlight: root.progressColor
+            Accessible.ignored: true
         }
     }
 }

@@ -12,6 +12,7 @@ Item {
     signal copyPasswordRequested
     signal copyTotpRequested(bool next)
     signal copyFieldRequested(string field)
+    signal copyUrlRequested(int index)
     signal revealFieldRequested(string field)
     signal qrRequested
     signal versionOpenRequested(int index)

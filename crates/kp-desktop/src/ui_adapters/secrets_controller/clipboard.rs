@@ -29,6 +29,29 @@ impl qobject::SecretsController {
         self.as_mut().copy_login_field(&["password"]);
     }
 
+    pub fn copy_url(mut self: Pin<&mut Self>, index: i32) {
+        if index < 0 || !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let value = self
+            .as_ref()
+            .rust()
+            .detail_content
+            .as_ref()
+            .and_then(|content| {
+                content
+                    .value("urls")
+                    .map(FieldValue::texts)
+                    .unwrap_or(&[])
+                    .get(index as usize)
+                    .filter(|value| !value.is_empty())
+                    .cloned()
+            });
+        if let Some(value) = value {
+            self.as_mut().request_copy(value);
+        }
+    }
+
     pub(super) fn copy_login_field(mut self: Pin<&mut Self>, fields: &[&str]) {
         if !self.as_ref().can_copy_login_value() {
             return;
