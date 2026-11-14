@@ -1119,17 +1119,6 @@ Controls.ApplicationWindow {
                         Controls.ToolTip.text: text
                     }
                     Controls.ToolButton {
-                        visible: !root.keysMode && !!store.selected && !store.selected.trashed
-                        text: qsTr("Mover a otra carpeta…")
-                        icon.name: "folder-move"
-                        enabled: editEntry.enabled
-                        display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
-                        onClicked: moveDialog.openMove()
-                        Controls.ToolTip.visible: hovered || visualFocus
-                        Controls.ToolTip.text: text
-                        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                    }
-                    Controls.ToolButton {
                         action: refreshKeys
                         visible: root.keysMode
                         display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
@@ -1153,6 +1142,7 @@ Controls.ApplicationWindow {
                     Controls.ToolButton {
                         action: lockVaultAction
                         display: Controls.AbstractButton.IconOnly
+                        Accessible.name: text
                         Controls.ToolTip.visible: hovered || visualFocus
                         Controls.ToolTip.text: text
                         Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
@@ -1282,6 +1272,7 @@ Controls.ApplicationWindow {
             revealed: root.revealed
             headerHeight: root.panelHeaderHeight
             editAction: editEntry
+            moveAction: moveEntryAction
             trashAction: trashEntry
             favoriteAction: favoriteEntryAction
             restoreAction: restoreEntryAction
@@ -1317,7 +1308,7 @@ Controls.ApplicationWindow {
                         root.navigateToRelatedEntry(entry);
                     });
             }
-            onCreateSecurityRequested: function (entry) {
+            onCreateRelatedEntryRequested: function (entry) {
                 if (!root.mutationsBlocked && !store.controller.locked)
                     editor.guardNavigation(function () {
                         editor.openRelatedEntry(entry);

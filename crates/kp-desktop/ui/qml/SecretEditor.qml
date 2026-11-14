@@ -199,10 +199,10 @@ Controls.Pane {
             const customIndex = kindField.model.findIndex(option => option.id === "custom");
             if (customIndex < 0) {
                 waitingForEditor = false;
-                saveError = qsTr("No se puede crear el elemento de seguridad.");
+                saveError = qsTr("No se puede crear el elemento vinculado.");
                 return;
             }
-            titleField.text = qsTr("Seguridad de %1").arg(relatedPrefill.title);
+            titleField.text = qsTr("Elemento vinculado de %1").arg(relatedPrefill.title);
             draftFolderId = relatedPrefill.folder;
             kindField.currentIndex = customIndex;
             fieldsHost.loadContent({

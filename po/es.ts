@@ -4071,6 +4071,21 @@ Huella(s) detectadas:
     </message>
   </context>
   <context>
+    <name>DetailActionBar</name>
+    <message>
+      <source>Acciones del elemento</source>
+      <translation>Acciones del elemento</translation>
+    </message>
+    <message>
+      <source>Crear elemento vinculado</source>
+      <translation>Crear elemento vinculado</translation>
+    </message>
+    <message>
+      <source>Crear un elemento vinculado a este</source>
+      <translation>Crear un elemento vinculado a este</translation>
+    </message>
+  </context>
+  <context>
     <name>DetailField</name>
     <message>
       <source>Copiar %1</source>
@@ -4971,10 +4986,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Ver en la papelera</translation>
     </message>
     <message>
-      <source>Crear seguridad</source>
-      <translation>Crear seguridad</translation>
-    </message>
-    <message>
       <source>El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.</source>
       <translation>El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.</translation>
     </message>
@@ -5001,10 +5012,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Descifrando el contenido del elemento…</source>
       <translation>Descifrando el contenido del elemento…</translation>
-    </message>
-    <message>
-      <source>Crear un secreto personalizado vinculado a este elemento</source>
-      <translation>Crear un secreto personalizado vinculado a este elemento</translation>
     </message>
     <message>
       <source>Ningún elemento seleccionado</source>
@@ -7231,10 +7238,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>&amp;Editar</translation>
     </message>
     <message>
-      <source>Mover a otra carpeta…</source>
-      <translation>Mover a otra carpeta…</translation>
-    </message>
-    <message>
       <source>Mis identidades</source>
       <translation>Mis identidades</translation>
     </message>
@@ -8211,14 +8214,6 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>No se puede editar este tipo de elemento.</translation>
     </message>
     <message>
-      <source>No se puede crear el elemento de seguridad.</source>
-      <translation>No se puede crear el elemento de seguridad.</translation>
-    </message>
-    <message>
-      <source>Seguridad de %1</source>
-      <translation>Seguridad de %1</translation>
-    </message>
-    <message>
       <source>Elegir imagen del elemento</source>
       <translation>Elegir imagen del elemento</translation>
     </message>
@@ -8301,6 +8296,14 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Falta completar: %1 y %2.</source>
       <translation>Falta completar: %1 y %2.</translation>
+    </message>
+    <message>
+      <source>No se puede crear el elemento vinculado.</source>
+      <translation>No se puede crear el elemento vinculado.</translation>
+    </message>
+    <message>
+      <source>Elemento vinculado de %1</source>
+      <translation>Elemento vinculado de %1</translation>
     </message>
     <message>
       <source>Tipo de elemento</source>

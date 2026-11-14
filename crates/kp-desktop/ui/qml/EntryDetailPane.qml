@@ -14,6 +14,7 @@ Controls.Pane {
     required property bool revealed
     required property real headerHeight
     required property Controls.Action editAction
+    required property Controls.Action moveAction
     required property Controls.Action trashAction
     required property Controls.Action favoriteAction
     required property Controls.Action restoreAction
@@ -39,7 +40,7 @@ Controls.Pane {
     signal notificationRequested(string message)
     signal relatedEntryOpenRequested(var entry)
     signal relatedEntryTrashRequested(var entry)
-    signal createSecurityRequested(var entry)
+    signal createRelatedEntryRequested(var entry)
 
     function copySelectedFingerprint() {
         keyDetail.copyFingerprint();
@@ -85,36 +86,20 @@ Controls.Pane {
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
                 }
-                Controls.ToolButton {
-                    action: root.favoriteAction
-                    visible: !root.keysMode && !!root.selected && !root.selected.trashed
-                    Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: text
-                }
-                Controls.ToolButton {
-                    action: root.editAction
-                    visible: !root.keysMode
-                }
-                Controls.ToolButton {
-                    action: root.trashAction
-                    visible: !root.keysMode && !!root.selected && !root.selected.trashed
-                    display: Controls.AbstractButton.IconOnly
-                    Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: text
-                }
-                Controls.ToolButton {
-                    action: root.restoreAction
-                    visible: !root.keysMode && !!root.selected && root.selected.trashed
-                    display: Controls.AbstractButton.IconOnly
-                    Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: text
-                }
-                Controls.ToolButton {
-                    action: root.deleteAction
-                    visible: !root.keysMode && !!root.selected && root.selected.trashed
-                    display: Controls.AbstractButton.IconOnly
-                    Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: text
+                DetailActionBar {
+                    visible: !root.keysMode && !!root.selected
+                    editAction: root.editAction
+                    favoriteAction: root.favoriteAction
+                    moveAction: root.moveAction
+                    trashAction: root.trashAction
+                    restoreAction: root.restoreAction
+                    deleteAction: root.deleteAction
+                    trashed: !!root.selected?.trashed
+                    hasRelatedEntry: root.hasRelatedEntryReference
+                    locked: root.storeAdapter.controller.locked
+                    busy: root.storeAdapter.controller.busy
+                    editorBusy: root.storeAdapter.controller.editorBusy
+                    onCreateRelatedEntryRequested: root.createRelatedEntryRequested(root.selected)
                 }
                 Controls.ToolButton {
                     action: root.copyFingerprintAction
@@ -383,19 +368,6 @@ Controls.Pane {
                                 text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
                             }
                         }
-                    }
-
-                    Controls.Button {
-                        objectName: "createSecurityButton"
-                        Layout.alignment: Qt.AlignRight
-                        Layout.margins: Kirigami.Units.largeSpacing
-                        visible: !!root.selected && !root.selected.trashed && !root.hasRelatedEntryReference
-                        text: qsTr("Crear seguridad")
-                        icon.name: "list-add"
-                        flat: true
-                        Accessible.name: qsTr("Crear un secreto personalizado vinculado a este elemento")
-                        enabled: !root.storeAdapter.controller.locked && !root.storeAdapter.controller.busy && !root.storeAdapter.controller.editorBusy
-                        onClicked: root.createSecurityRequested(root.selected)
                     }
                 }
             }

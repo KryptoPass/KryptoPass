@@ -199,6 +199,7 @@ ColumnLayout {
 
         Controls.Frame {
             Layout.fillWidth: true
+            Layout.fillHeight: true
             visible: root.recipients.length > 0
             padding: Kirigami.Units.largeSpacing
             contentItem: ColumnLayout {
@@ -269,6 +270,7 @@ ColumnLayout {
 
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.fillHeight: true
             visible: root.hasHistory
             spacing: Kirigami.Units.largeSpacing
 
@@ -394,6 +396,7 @@ ColumnLayout {
 
             Controls.Frame {
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 visible: root.hasHistory
                 padding: Kirigami.Units.largeSpacing
                 contentItem: ColumnLayout {

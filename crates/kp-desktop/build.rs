@@ -103,6 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/SidebarPane.qml")
         .qml_file("ui/qml/EntryListPane.qml")
         .qml_file("ui/qml/EntryDetailPane.qml")
+        .qml_file("ui/qml/DetailActionBar.qml")
         .qml_file("ui/qml/EntryPickerDialog.qml")
         .qml_file("ui/qml/RelatedEntryPicker.qml")
         .qml_file("ui/qml/SecretEditor.qml")
