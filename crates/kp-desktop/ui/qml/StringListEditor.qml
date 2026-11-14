@@ -7,9 +7,14 @@ import org.kde.kirigami as Kirigami
 ColumnLayout {
     id: root
 
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.label
+
     property string label: ""
     property string addLabel: qsTr("Agregar elemento")
     property string inputLabel: label
+    property string accessibleDescription: ""
+    property bool invalid: false
     property var values: []
     property var workingValues: []
     property int maximumValues: 100
@@ -82,6 +87,14 @@ ColumnLayout {
         });
     }
 
+    function focusFirstValue() {
+        const row = valueRepeater.itemAt(0);
+        if (!row)
+            return false;
+        row.focusValueField();
+        return true;
+    }
+
     function removeValue(index) {
         if (index < 0 || index >= valueModel.count)
             return;
@@ -141,7 +154,17 @@ ColumnLayout {
                 text: valueRow.value
                 placeholderText: root.inputLabel
                 Accessible.name: root.inputLabel + " " + (valueRow.index + 1)
+                Accessible.description: root.accessibleDescription
                 onTextEdited: root.editValue(valueRow.index, text)
+                Rectangle {
+                    anchors.fill: parent
+                    visible: root.invalid
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Kirigami.Theme.negativeTextColor
+                    radius: Kirigami.Units.smallSpacing
+                    z: 2
+                }
             }
 
             Controls.ToolButton {

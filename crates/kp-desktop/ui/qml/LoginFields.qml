@@ -10,12 +10,11 @@ SecretFields {
     property string username: ""
     property string password: ""
     property var urls: []
-    property string urlsText: ""
     property string totpInput: ""
     property bool totpVisible: false
     property string notes: ""
     property bool passwordVisible: false
-    readonly property var normalizedUrls: String(urlsText || "").split(/\r?\n/).map(value => value.trim()).filter(value => !!value)
+    readonly property var normalizedUrls: (Array.isArray(urls) ? urls : []).map(value => String(value || "").trim()).filter(value => !!value)
     readonly property bool usernameInvalid: invalidField === "username"
     readonly property bool passwordInvalid: invalidField === "password"
     readonly property bool totpInvalid: invalidField === "totp"
@@ -23,7 +22,7 @@ SecretFields {
 
     onUsernameChanged: edited()
     onPasswordChanged: edited()
-    onUrlsTextChanged: edited()
+    onUrlsChanged: edited()
     onTotpInputChanged: edited()
     onNotesChanged: edited()
 
@@ -56,11 +55,21 @@ SecretFields {
     }
 
     function focusInvalidField() {
-        const target = usernameInvalid ? usernameField : passwordInvalid ? passwordField : totpInvalid ? totpField : urlsInvalid ? urlsField : null;
-        if (!target)
-            return false;
-        target.forceActiveFocus();
-        return true;
+        if (usernameInvalid) {
+            usernameField.forceActiveFocus();
+            return true;
+        }
+        if (passwordInvalid) {
+            passwordField.forceActiveFocus();
+            return true;
+        }
+        if (totpInvalid) {
+            totpField.forceActiveFocus();
+            return true;
+        }
+        if (urlsInvalid)
+            return urlsEditor.focusFirstValue();
+        return false;
     }
 
     spacing: 24
@@ -72,14 +81,7 @@ SecretFields {
     }
 
     function setUrls(values) {
-        const next = Array.isArray(values) ? values.map(value => String(value || "").trim()).filter(value => !!value) : [];
-        urls = next;
-        urlsText = next.join("\n");
-    }
-
-    function updateUrlsText(text) {
-        urlsText = String(text || "");
-        urls = normalizedUrls;
+        urls = Array.isArray(values) ? values.map(value => String(value || "").trim()).filter(value => !!value) : [];
     }
 
     ColumnLayout {
@@ -234,36 +236,19 @@ SecretFields {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            Controls.Label {
-                text: qsTr("Sitios web")
-            }
-            Controls.TextArea {
-                id: urlsField
-                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+            StringListEditor {
+                id: urlsEditor
+                objectName: "loginUrlsEditor"
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 4)
-                text: root.urlsText
-                placeholderText: qsTr("https://ejemplo.test\nhttps://cuenta.ejemplo.test")
-                Accessible.name: qsTr("Direcciones de sitios web, una por línea")
-                Accessible.description: root.urlsInvalid ? qsTr("Revisa las direcciones web. %1").arg(urlsHint.text) : urlsHint.text
-                wrapMode: TextEdit.Wrap
-                selectByMouse: true
-                textFormat: TextEdit.PlainText
-                onTextEdited: root.updateUrlsText(text)
-                Keys.onTabPressed: function (event) {
-                    const next = nextItemInFocusChain();
-                    if (next)
-                        next.forceActiveFocus(Qt.TabFocusReason);
-                    event.accepted = true;
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    visible: root.urlsInvalid
-                    color: "transparent"
-                    border.width: 1
-                    border.color: Kirigami.Theme.negativeTextColor
-                    radius: Kirigami.Units.smallSpacing
-                    z: 2
+                label: qsTr("Sitios web")
+                inputLabel: qsTr("Sitio web")
+                addLabel: qsTr("Añadir sitio web")
+                maximumValues: 100
+                invalid: root.urlsInvalid
+                accessibleDescription: root.urlsInvalid ? qsTr("Revisa las direcciones web. %1").arg(urlsHint.text) : urlsHint.text
+                values: root.urls
+                onValuesEdited: function (values) {
+                    root.urls = values;
                 }
             }
             Controls.Label {

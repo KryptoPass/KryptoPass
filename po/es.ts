@@ -7080,14 +7080,12 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Sitios web</translation>
     </message>
     <message>
-      <source>https://ejemplo.test
-https://cuenta.ejemplo.test</source>
-      <translation>https://ejemplo.test
-https://cuenta.ejemplo.test</translation>
+      <source>Sitio web</source>
+      <translation>Sitio web</translation>
     </message>
     <message>
-      <source>Direcciones de sitios web, una por línea</source>
-      <translation>Direcciones de sitios web, una por línea</translation>
+      <source>Añadir sitio web</source>
+      <translation>Añadir sitio web</translation>
     </message>
     <message>
       <source>Revisa las direcciones web. %1</source>
