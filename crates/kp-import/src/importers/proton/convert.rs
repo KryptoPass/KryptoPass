@@ -479,13 +479,9 @@ fn password_history_from_note(note: SensitiveText) -> (Vec<SensitiveText>, Sensi
     if history.is_empty() {
         return (Vec::new(), note);
     }
-    let mut remaining = SensitiveText::with_capacity(source.len() + 256);
+    let mut remaining = SensitiveText::with_capacity(source.len());
     remaining.push_str(&source[..start]);
     remaining.push_str(&source[end..]);
-    if !remaining.is_empty() {
-        remaining.push_str("\n\n");
-    }
-    remaining.push_str("Historial de contraseñas importado: las fechas originales no estaban disponibles y los demás campos de cada versión son una reconstrucción.");
     (history, remaining)
 }
 
