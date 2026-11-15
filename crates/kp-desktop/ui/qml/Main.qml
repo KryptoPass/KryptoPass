@@ -573,11 +573,17 @@ Controls.ApplicationWindow {
         onTriggered: folderEditor.openFolder(false)
     }
     DesktopAction {
-        id: refreshKeys
+        id: refreshView
         controller: shell
         actionId: "refreshKeys"
-        enabled: root.keysMode && !keys.controller.busy && !keys.controller.operationBusy
-        onTriggered: keys.controller.refreshKeys()
+        text: root.keysMode ? qsTr("Recargar llavero") : qsTr("Recargar bóveda")
+        enabled: root.keysMode ? (!keys.controller.busy && !keys.controller.operationBusy) : (!store.controller.locked && !store.controller.busy && !root.mutationsBlocked)
+        onTriggered: {
+            if (root.keysMode)
+                keys.controller.refreshKeys();
+            else if (!store.controller.locked)
+                store.controller.loadStore();
+        }
     }
     DesktopAction {
         id: createKey
@@ -881,13 +887,14 @@ Controls.ApplicationWindow {
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
+                action: refreshView
+            }
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
                 action: createKey
             }
             Controls.MenuItem {
                 action: importKey
-            }
-            Controls.MenuItem {
-                action: refreshKeys
             }
             Controls.MenuSeparator {}
             Controls.MenuItem {
@@ -998,7 +1005,7 @@ Controls.ApplicationWindow {
     Controls.ToolButton {
         id: toolbarSizeHint
         visible: false
-        action: refreshKeys
+        action: refreshView
     }
 
     MoveFolderDialog {
@@ -1119,7 +1126,7 @@ Controls.ApplicationWindow {
                         Controls.ToolTip.text: text
                     }
                     Controls.ToolButton {
-                        action: refreshKeys
+                        action: refreshView
                         visible: root.keysMode
                         display: panes.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
                         Controls.ToolTip.visible: hovered || visualFocus
@@ -1166,7 +1173,7 @@ Controls.ApplicationWindow {
                     Kirigami.Action {
                         text: qsTr("Reintentar")
                         icon.name: "view-refresh"
-                        enabled: refreshKeys.enabled
+                        enabled: refreshView.enabled
                         onTriggered: keys.controller.refreshKeys()
                     },
                     Kirigami.Action {

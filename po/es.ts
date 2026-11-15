@@ -3582,12 +3582,12 @@ No incluye contraseñas ni valores de credenciales.
   <context>
     <name>BackupWindow</name>
     <message>
-      <source>Crear copia de seguridad</source>
-      <translation>Crear copia de seguridad</translation>
-    </message>
-    <message>
       <source>Restaurar copia de seguridad</source>
       <translation>Restaurar copia de seguridad</translation>
+    </message>
+    <message>
+      <source>Exportar copia de seguridad</source>
+      <translation>Exportar copia de seguridad</translation>
     </message>
     <message>
       <source> (tu clave)</source>
@@ -6155,10 +6155,6 @@ Huella completa; compárala con el teléfono:</translation>
   <context>
     <name>ImportWindow</name>
     <message>
-      <source>Importar desde otro gestor</source>
-      <translation>Importar desde otro gestor</translation>
-    </message>
-    <message>
       <source>Seleccionar exportación de %1</source>
       <translation>Seleccionar exportación de %1</translation>
     </message>
@@ -6184,6 +6180,10 @@ Huella completa; compárala con el teléfono:</translation>
         <numerusform>%n elemento</numerusform>
         <numerusform>%n elementos</numerusform>
       </translation>
+    </message>
+    <message>
+      <source>Importar desde otro gestor de contraseñas</source>
+      <translation>Importar desde otro gestor de contraseñas</translation>
     </message>
     <message>
       <source>Desde %1</source>
@@ -7220,6 +7220,14 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>El archivo de actividad se generó, pero no se pudo abrir el editor de texto.</source>
       <translation>El archivo de actividad se generó, pero no se pudo abrir el editor de texto.</translation>
+    </message>
+    <message>
+      <source>Recargar llavero</source>
+      <translation>Recargar llavero</translation>
+    </message>
+    <message>
+      <source>Recargar bóveda</source>
+      <translation>Recargar bóveda</translation>
     </message>
     <message>
       <source>Desbloquear bóveda</source>
@@ -8513,12 +8521,12 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Importar clave OpenPGP…</translation>
     </message>
     <message>
-      <source>Importar desde otro gestor…</source>
-      <translation>Importar desde otro gestor…</translation>
+      <source>Importar desde otro gestor de contraseñas…</source>
+      <translation>Importar desde otro gestor de contraseñas…</translation>
     </message>
     <message>
-      <source>Crear copia de seguridad…</source>
-      <translation>Crear copia de seguridad…</translation>
+      <source>Exportar copia de seguridad…</source>
+      <translation>Exportar copia de seguridad…</translation>
     </message>
     <message>
       <source>Restaurar copia de seguridad…</source>

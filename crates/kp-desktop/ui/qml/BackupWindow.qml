@@ -37,7 +37,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 18
-    title: exportMode ? qsTr("Crear copia de seguridad") : qsTr("Restaurar copia de seguridad")
+    title: exportMode ? qsTr("Exportar copia de seguridad") : qsTr("Restaurar copia de seguridad")
 
     function prepare(exporting) {
         if (busy)

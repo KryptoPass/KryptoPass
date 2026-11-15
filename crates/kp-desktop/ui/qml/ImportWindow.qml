@@ -40,7 +40,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 20
-    title: qsTr("Importar desde otro gestor")
+    title: qsTr("Importar desde otro gestor de contraseñas")
 
     function prepare() {
         if (busy)
