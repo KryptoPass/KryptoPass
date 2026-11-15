@@ -285,6 +285,10 @@ Controls.Pane {
                         onVersionCopyRequested: function (field) {
                             root.storeAdapter.controller.copyHistoryValue(field);
                         }
+                        onVersionCopyUrlRequested: function (index) {
+                            root.storeAdapter.controller.copyHistoryUrl(index);
+                        }
+                        onVersionRevealRequested: root.storeAdapter.controller.toggleHistoryPassword()
                         onActivityExportRequested: root.storeAdapter.controller.exportActivity()
                         onCopyFieldRequested: function (field) {
                             root.storeAdapter.controller.copyField(field);

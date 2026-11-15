@@ -16,6 +16,7 @@ ColumnLayout {
     property bool historyOpen: false
     property bool historyExpanded: false
     property string historyEntryId: ""
+    property Item versionReturnItem: null
     readonly property SecretContentView contentView: contentLoader.item as SecretContentView
     readonly property var historyItems: Array.isArray(root.detail?.content?.fields?.history?.events) ? root.detail.content.fields.history.events : []
     readonly property var visibleHistoryItems: root.historyItems.slice(0, root.historyExpanded ? 20 : 5)
@@ -35,6 +36,8 @@ ColumnLayout {
     signal versionOpenRequested(int index)
     signal versionCloseRequested
     signal versionCopyRequested(string field)
+    signal versionCopyUrlRequested(int index)
+    signal versionRevealRequested
     signal activityExportRequested
 
     spacing: Kirigami.Units.largeSpacing
@@ -95,13 +98,6 @@ ColumnLayout {
     function eventTime(timestamp) {
         const date = new Date(Number(timestamp) * 1000);
         return isNaN(date.getTime()) ? "" : date.toLocaleTimeString(Qt.locale(), Locale.LongFormat);
-    }
-
-    onVersionDetailChanged: {
-        if (versionDetail)
-            versionDialog.open();
-        else
-            versionDialog.close();
     }
 
     onDetailChanged: {
@@ -437,9 +433,13 @@ ColumnLayout {
                                 }
                             }
                             Controls.Button {
+                                id: versionOpenButton
                                 text: qsTranslate("SecretDetail", "Consultar")
                                 Accessible.name: qsTranslate("SecretDetail", "Consultar versión anterior del %1").arg(root.formatEventTime(versionRow.modelData.at))
-                                onClicked: root.versionOpenRequested(versionRow.modelData.index)
+                                onClicked: {
+                                    root.versionReturnItem = versionOpenButton;
+                                    root.versionOpenRequested(versionRow.modelData.index);
+                                }
                             }
                         }
                     }
@@ -448,117 +448,27 @@ ColumnLayout {
         }
     }
 
-    QtObject {
-        readonly property Controls.Dialog popup: Controls.Dialog {
-            id: versionDialog
-            parent: Controls.Overlay.overlay
-            anchors.centerIn: parent
-            width: Math.min(Kirigami.Units.gridUnit * 30, parent ? parent.width - Kirigami.Units.largeSpacing * 2 : 540)
-            height: Math.min(implicitHeight, parent ? parent.height - Kirigami.Units.largeSpacing * 2 : 600)
-            modal: true
-            title: qsTranslate("SecretDetail", "Versión anterior")
-            standardButtons: Controls.Dialog.Close
-            onClosed: root.versionCloseRequested()
-            contentItem: Controls.ScrollView {
-                id: versionScroll
-                contentWidth: availableWidth
-                clip: true
-                leftPadding: Kirigami.Units.largeSpacing
-                rightPadding: Kirigami.Units.largeSpacing
-                topPadding: Kirigami.Units.smallSpacing
-                bottomPadding: Kirigami.Units.smallSpacing
-                implicitHeight: Math.min(versionFields.implicitHeight, Kirigami.Units.gridUnit * 24)
-                ColumnLayout {
-                    id: versionFields
-                    width: versionScroll.availableWidth
-                    spacing: Kirigami.Units.largeSpacing
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: root.formatEventTime(root.versionDetail?.at)
-                        color: Kirigami.Theme.disabledTextColor
-                        wrapMode: Text.Wrap
-                    }
-                    Kirigami.FormLayout {
-                        Layout.fillWidth: true
-                        Controls.Label {
-                            Kirigami.FormData.label: qsTranslate("SecretDetail", "Nombre:")
-                            Layout.fillWidth: true
-                            text: root.versionDetail?.title || qsTranslate("SecretDetail", "Sin nombre")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Kirigami.FormData.label: qsTranslate("SecretDetail", "Correo o usuario:")
-                            Layout.fillWidth: true
-                            text: root.versionDetail?.username || qsTranslate("SecretDetail", "Sin usuario")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                        Controls.Label {
-                            Kirigami.FormData.label: qsTranslate("SecretDetail", "Contraseña:")
-                            text: root.versionDetail?.hasPassword ? qsTranslate("SecretDetail", "Contraseña oculta") : qsTranslate("SecretDetail", "Sin contraseña")
-                        }
-                        Controls.Label {
-                            Kirigami.FormData.label: qsTranslate("SecretDetail", "Sitios web:")
-                            Layout.fillWidth: true
-                            text: root.versionDetail?.urls?.join("\n") || qsTranslate("SecretDetail", "Sin sitios web")
-                            textFormat: Text.PlainText
-                            wrapMode: Text.WrapAnywhere
-                        }
-                    }
-                    SecretTextSection {
-                        objectName: "markdownVersionNotesSection"
-                        heading: qsTranslate("SecretDetail", "Notas")
-                        Layout.fillWidth: true
-                        visible: root.visible && versionDialog.visible && !!root.versionDetail?.notes
-                        value: root.versionDetail?.notes || ""
-                        documentKey: (root.detail?.id || "") + ":" + (root.versionDetail?.index ?? "")
-                        accessibleLabel: qsTranslate("SecretDetail", "Notas de la versión anterior")
-                    }
-                    Controls.Button {
-                        text: qsTranslate("SecretDetail", "Copiar contraseña anterior")
-                        icon.name: "edit-copy"
-                        enabled: !!root.versionDetail?.hasPassword
-                        onClicked: root.versionCopyRequested("password")
-                    }
-                    Controls.Button {
-                        visible: !!root.versionDetail?.username
-                        text: qsTranslate("SecretDetail", "Copiar usuario anterior")
-                        icon.name: "edit-copy"
-                        onClicked: root.versionCopyRequested("username")
-                    }
-                    Controls.Button {
-                        visible: !!root.versionDetail?.title
-                        text: qsTranslate("SecretDetail", "Copiar nombre anterior")
-                        icon.name: "edit-copy"
-                        onClicked: root.versionCopyRequested("title")
-                    }
-                    Controls.Button {
-                        visible: !!root.versionDetail?.urls?.length
-                        text: qsTranslate("SecretDetail", "Copiar sitios web anteriores")
-                        icon.name: "edit-copy"
-                        onClicked: root.versionCopyRequested("urls")
-                    }
-                    Controls.Button {
-                        visible: !!root.versionDetail?.notes
-                        text: qsTranslate("SecretDetail", "Copiar notas anteriores")
-                        icon.name: "edit-copy"
-                        onClicked: root.versionCopyRequested("notes")
-                    }
-                    Controls.Button {
-                        visible: !!root.versionDetail?.hasTotp
-                        text: qsTranslate("SecretDetail", "Copiar configuración de verificación anterior")
-                        icon.name: "edit-copy"
-                        onClicked: root.versionCopyRequested("totp")
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: qsTranslate("SecretDetail", "Consultar o copiar estos datos no cambia la versión actual.")
-                        color: Kirigami.Theme.disabledTextColor
-                        wrapMode: Text.Wrap
-                    }
-                }
-            }
+    VersionDialog {
+        id: versionDialog
+        versionDetail: root.versionDetail
+        versions: root.versions
+        currentTitle: root.detail?.title || ""
+        onRevealRequested: root.versionRevealRequested()
+        onCopyRequested: function (field) {
+            root.versionCopyRequested(field);
+        }
+        onCopyUrlRequested: function (index) {
+            root.versionCopyUrlRequested(index);
+        }
+        onOpenVersionRequested: function (index) {
+            root.versionOpenRequested(index);
+        }
+        onVersionClosed: {
+            root.versionCloseRequested();
+            Qt.callLater(function () {
+                if (root.versionReturnItem)
+                    root.versionReturnItem.forceActiveFocus();
+            });
         }
     }
 }

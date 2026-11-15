@@ -16,7 +16,11 @@ Controls.Frame {
     property string viewObjectName: "markdownSectionView"
     property string emptyText: ""
     property string emptyObjectName: ""
+    property string badge: ""
+    property string copyLabel: ""
     property real minimumContentHeight: Kirigami.Units.gridUnit * 3
+
+    signal copyRequested
     readonly property bool effectivelyVisible: {
         let item = root;
         while (item) {
@@ -52,12 +56,33 @@ Controls.Frame {
     padding: Kirigami.Units.largeSpacing
     contentItem: ColumnLayout {
         spacing: Kirigami.Units.smallSpacing
-        Controls.Label {
+        RowLayout {
             Layout.fillWidth: true
-            text: root.heading
-            textFormat: Text.PlainText
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.Wrap
+            spacing: Kirigami.Units.largeSpacing
+            Controls.Label {
+                text: root.heading
+                textFormat: Text.PlainText
+                color: Kirigami.Theme.disabledTextColor
+                wrapMode: Text.Wrap
+            }
+            FieldBadge {
+                Layout.alignment: Qt.AlignVCenter
+                text: root.badge
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            Controls.ToolButton {
+                Layout.alignment: Qt.AlignVCenter
+                visible: root.copyLabel.length > 0
+                text: root.copyLabel
+                icon.name: "edit-copy"
+                display: Controls.AbstractButton.IconOnly
+                Accessible.name: text
+                onClicked: root.copyRequested()
+                Controls.ToolTip.visible: hovered || visualFocus
+                Controls.ToolTip.text: text
+            }
         }
         Controls.Label {
             objectName: root.emptyObjectName

@@ -8087,64 +8087,68 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Consultar versión anterior del %1</translation>
     </message>
     <message>
-      <source>Nombre:</source>
-      <translation>Nombre:</translation>
+      <source>%1 · Versión %2 de %3</source>
+      <translation>%1 · Versión %2 de %3</translation>
+    </message>
+    <message>
+      <source>Solo lectura. Consultar o copiar estos datos no modifica el actual.</source>
+      <translation>Solo lectura. Consultar o copiar estos datos no modifica el actual.</translation>
+    </message>
+    <message>
+      <source>Nombre</source>
+      <translation>Nombre</translation>
     </message>
     <message>
       <source>Sin nombre</source>
       <translation>Sin nombre</translation>
     </message>
     <message>
-      <source>Correo o usuario:</source>
-      <translation>Correo o usuario:</translation>
+      <source>Copiar nombre</source>
+      <translation>Copiar nombre</translation>
     </message>
     <message>
-      <source>Contraseña:</source>
-      <translation>Contraseña:</translation>
+      <source>Modificado</source>
+      <translation>Modificado</translation>
     </message>
     <message>
-      <source>Contraseña oculta</source>
-      <translation>Contraseña oculta</translation>
+      <source>Mostrar contraseña anterior</source>
+      <translation>Mostrar contraseña anterior</translation>
     </message>
     <message>
-      <source>Sitios web:</source>
-      <translation>Sitios web:</translation>
+      <source>Ocultar contraseña anterior</source>
+      <translation>Ocultar contraseña anterior</translation>
     </message>
     <message>
-      <source>Sin sitios web</source>
-      <translation>Sin sitios web</translation>
+      <source>Configuración de verificación guardada</source>
+      <translation>Configuración de verificación guardada</translation>
+    </message>
+    <message>
+      <source>Copiar configuración anterior</source>
+      <translation>Copiar configuración anterior</translation>
+    </message>
+    <message>
+      <source>Anterior</source>
+      <translation>Anterior</translation>
+    </message>
+    <message>
+      <source>Versión %1 de %2</source>
+      <translation>Versión %1 de %2</translation>
+    </message>
+    <message>
+      <source>Siguiente</source>
+      <translation>Siguiente</translation>
+    </message>
+    <message>
+      <source>Cerrar</source>
+      <translation>Cerrar</translation>
     </message>
     <message>
       <source>Notas de la versión anterior</source>
       <translation>Notas de la versión anterior</translation>
     </message>
     <message>
-      <source>Copiar contraseña anterior</source>
-      <translation>Copiar contraseña anterior</translation>
-    </message>
-    <message>
-      <source>Copiar usuario anterior</source>
-      <translation>Copiar usuario anterior</translation>
-    </message>
-    <message>
-      <source>Copiar nombre anterior</source>
-      <translation>Copiar nombre anterior</translation>
-    </message>
-    <message>
-      <source>Copiar sitios web anteriores</source>
-      <translation>Copiar sitios web anteriores</translation>
-    </message>
-    <message>
       <source>Copiar notas anteriores</source>
       <translation>Copiar notas anteriores</translation>
-    </message>
-    <message>
-      <source>Copiar configuración de verificación anterior</source>
-      <translation>Copiar configuración de verificación anterior</translation>
-    </message>
-    <message>
-      <source>Consultar o copiar estos datos no cambia la versión actual.</source>
-      <translation>Consultar o copiar estos datos no cambia la versión actual.</translation>
     </message>
     <message>
       <source>Contenido</source>

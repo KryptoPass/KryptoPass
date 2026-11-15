@@ -11,6 +11,7 @@ Controls.Frame {
     property string value: ""
     property string hint: ""
     property string accessibleDescription: ""
+    property string badge: ""
     property string copyLabel: qsTr("Copiar %1").arg(label)
     property bool copyEnabled: value.length > 0
     property bool multiline: false
@@ -32,12 +33,22 @@ Controls.Frame {
     contentItem: ColumnLayout {
         spacing: Kirigami.Units.smallSpacing
 
-        Controls.Label {
+        RowLayout {
             Layout.fillWidth: true
-            text: root.label
-            textFormat: Text.PlainText
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.Wrap
+            spacing: Kirigami.Units.largeSpacing
+            Controls.Label {
+                text: root.label
+                textFormat: Text.PlainText
+                color: Kirigami.Theme.disabledTextColor
+                wrapMode: Text.Wrap
+            }
+            FieldBadge {
+                Layout.alignment: Qt.AlignVCenter
+                text: root.badge
+            }
+            Item {
+                Layout.fillWidth: true
+            }
         }
         RowLayout {
             Layout.fillWidth: true

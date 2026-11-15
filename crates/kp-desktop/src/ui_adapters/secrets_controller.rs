@@ -188,6 +188,12 @@ pub mod qobject {
         #[cxx_name = "copyHistoryValue"]
         fn copy_history_value(self: Pin<&mut Self>, field: &QString);
         #[qinvokable]
+        #[cxx_name = "copyHistoryUrl"]
+        fn copy_history_url(self: Pin<&mut Self>, index: i32);
+        #[qinvokable]
+        #[cxx_name = "toggleHistoryPassword"]
+        fn toggle_history_password(self: Pin<&mut Self>);
+        #[qinvokable]
         #[cxx_name = "exportActivity"]
         fn export_activity(self: Pin<&mut Self>);
         #[qinvokable]
@@ -346,6 +352,7 @@ pub struct SecretsControllerRust {
     detail_versions: Vec<(VersionId, u64)>,
     /// The earlier version open in the history view.
     history_item: Option<Item>,
+    history_password_revealed: bool,
     conflict_json: QString,
     /// The conflict open for merging; its dialog reads it through `conflict_json`.
     conflict: Option<Conflict>,
@@ -404,6 +411,7 @@ impl Default for SecretsControllerRust {
             detail_content: None,
             detail_versions: Vec::new(),
             history_item: None,
+            history_password_revealed: false,
             conflict_json: QString::default(),
             conflict: None,
             conflict_revealed: std::collections::BTreeSet::new(),

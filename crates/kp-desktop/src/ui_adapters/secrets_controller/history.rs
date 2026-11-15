@@ -42,32 +42,10 @@ impl qobject::SecretsController {
                         return;
                     }
                 };
-                #[derive(serde::Serialize)]
-                #[serde(rename_all = "camelCase")]
-                struct VersionProjection<'a> {
-                    at: u64,
-                    title: &'a str,
-                    username: SensitiveText,
-                    urls: &'a [SensitiveText],
-                    notes: SensitiveText,
-                    has_password: bool,
-                    has_totp: bool,
-                }
-                let projection =
-                    super::super::secrets_projection::sensitive_json(&VersionProjection {
-                        at: version.1,
-                        title: &item.meta.state.title,
-                        username: field_text(&item.content, "username"),
-                        urls: item.content.value("urls").map_or(&[], FieldValue::texts),
-                        notes: field_text(&item.content, "notes"),
-                        has_password: !field_text(&item.content, "password").is_empty(),
-                        has_totp: !field_text(&item.content, "totp").is_empty(),
-                    });
-                if let Ok(projection) = projection {
-                    controller.as_mut().rust_mut().history_version_index = Some(index);
-                    controller.as_mut().rust_mut().history_item = Some(item);
-                    controller.set_version_json(QString::from(projection.as_str()));
-                }
+                controller.as_mut().rust_mut().history_password_revealed = false;
+                controller.as_mut().rust_mut().history_version_index = Some(index);
+                controller.as_mut().rust_mut().history_item = Some(item);
+                controller.as_mut().publish_history_version();
             },
         );
     }
@@ -75,7 +53,72 @@ impl qobject::SecretsController {
     pub fn close_history_version(mut self: Pin<&mut Self>) {
         self.as_mut().rust_mut().history_version_index = None;
         self.as_mut().rust_mut().history_item = None;
+        self.as_mut().rust_mut().history_password_revealed = false;
         self.set_version_json(QString::default());
+    }
+
+    fn publish_history_version(mut self: Pin<&mut Self>) {
+        let projection = {
+            let object = self.as_ref();
+            let state = object.rust();
+            let (Some(item), Some(index)) =
+                (state.history_item.as_ref(), state.history_version_index)
+            else {
+                return;
+            };
+            let Some((_, at)) = state.detail_versions.get(index) else {
+                return;
+            };
+            version_projection(
+                item,
+                *at,
+                index,
+                state.history_password_revealed,
+                state.detail_content.as_ref(),
+            )
+        };
+        if let Ok(projection) = projection {
+            self.as_mut()
+                .set_version_json(QString::from(projection.as_str()));
+        }
+    }
+
+    pub fn toggle_history_password(mut self: Pin<&mut Self>) {
+        if !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let has_password = {
+            let object = self.as_ref();
+            let state = object.rust();
+            state
+                .history_item
+                .as_ref()
+                .is_some_and(|item| !field_text(&item.content, "password").is_empty())
+        };
+        if !has_password {
+            return;
+        }
+        let revealed = self.as_ref().rust().history_password_revealed;
+        self.as_mut().rust_mut().history_password_revealed = !revealed;
+        self.as_mut().publish_history_version();
+    }
+
+    pub fn copy_history_url(self: Pin<&mut Self>, index: i32) {
+        if index < 0 || !self.as_ref().can_copy_login_value() {
+            return;
+        }
+        let value = self.as_ref().rust().history_item.as_ref().and_then(|item| {
+            item.content
+                .value("urls")
+                .map(FieldValue::texts)
+                .unwrap_or(&[])
+                .get(index as usize)
+                .filter(|value| !value.is_empty())
+                .cloned()
+        });
+        if let Some(value) = value {
+            self.clipboard_requested(&QString::from(value.as_str()));
+        }
     }
 
     pub fn copy_history_value(self: Pin<&mut Self>, field: &QString) {
@@ -126,6 +169,55 @@ impl qobject::SecretsController {
             Err(_) => self.fail("No se pudo generar el archivo de actividad. Comprueba el espacio disponible e inténtalo de nuevo."),
         }
     }
+}
+
+fn version_projection(
+    item: &Item,
+    at: u64,
+    index: usize,
+    reveal_password: bool,
+    current: Option<&ItemContent>,
+) -> anyhow::Result<SensitiveText> {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct VersionProjection<'a> {
+        at: u64,
+        index: usize,
+        title: &'a str,
+        username: SensitiveText,
+        password: SensitiveText,
+        password_revealed: bool,
+        urls: &'a [SensitiveText],
+        notes: SensitiveText,
+        has_password: bool,
+        has_totp: bool,
+        changed_fields: Vec<&'static str>,
+    }
+
+    let content = &item.content;
+    let has_password = !field_text(content, "password").is_empty();
+    let password = if reveal_password && has_password {
+        field_text(content, "password")
+    } else {
+        SensitiveText::new()
+    };
+    let changed_fields = ["username", "password", "urls", "notes", "totp"]
+        .into_iter()
+        .filter(|field| current.is_none_or(|current| current.value(field) != content.value(field)))
+        .collect();
+    super::super::secrets_projection::sensitive_json(&VersionProjection {
+        at,
+        index,
+        title: &item.meta.state.title,
+        username: field_text(content, "username"),
+        password,
+        password_revealed: reveal_password && has_password,
+        urls: content.value("urls").map_or(&[], FieldValue::texts),
+        notes: field_text(content, "notes"),
+        has_password,
+        has_totp: !field_text(content, "totp").is_empty(),
+        changed_fields,
+    })
 }
 
 pub(super) fn write_activity_report(report: &str) -> anyhow::Result<std::path::PathBuf> {
