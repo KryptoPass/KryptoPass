@@ -6198,6 +6198,10 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Cambiar gestor</translation>
     </message>
     <message>
+      <source>Desbloquea la bóveda para importar los elementos.</source>
+      <translation>Desbloquea la bóveda para importar los elementos.</translation>
+    </message>
+    <message>
       <source>Gestores disponibles</source>
       <translation>Gestores disponibles</translation>
     </message>

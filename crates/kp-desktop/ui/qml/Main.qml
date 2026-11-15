@@ -603,14 +603,14 @@ Controls.ApplicationWindow {
         id: importVaultAction
         controller: shell
         actionId: "importVault"
-        enabled: !root.mutationsBlocked && !store.controller.setupRequired
+        enabled: !root.mutationsBlocked && !store.controller.setupRequired && !store.controller.locked
         onTriggered: importWindow.prepare()
     }
     DesktopAction {
         id: exportBackupAction
         controller: shell
         actionId: "exportBackup"
-        enabled: !root.mutationsBlocked && !store.controller.setupRequired
+        enabled: !root.mutationsBlocked && !store.controller.setupRequired && !store.controller.locked
         onTriggered: backupWindow.openForExport()
     }
     DesktopAction {
@@ -1470,6 +1470,7 @@ Controls.ApplicationWindow {
         controller: importController
         keyStore: keys
         primaryKey: store.controller.primaryKey
+        vaultLocked: store.controller.locked
         onImported: store.controller.loadStore()
     }
     BackupWindow {

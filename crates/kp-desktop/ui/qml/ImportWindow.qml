@@ -11,6 +11,7 @@ Controls.ApplicationWindow {
     required property var keyStore
     /// Vault primary key, preselected when it can still encrypt.
     property string primaryKey: ""
+    property bool vaultLocked: false
     required property var controller
     readonly property bool opened: visible
     readonly property bool busy: dialog.controller.busy || keyStore.controller.operationBusy
@@ -183,6 +184,15 @@ Controls.ApplicationWindow {
         ColumnLayout {
             width: scroll.availableWidth
             spacing: Kirigami.Units.smallSpacing
+
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                visible: dialog.vaultLocked && !dialog.completed
+                type: Kirigami.MessageType.Warning
+                text: qsTr("Desbloquea la bóveda para importar los elementos.")
+            }
 
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
@@ -547,7 +557,7 @@ Controls.ApplicationWindow {
                 visible: !dialog.completed
                 text: qsTr("Importar")
                 icon.name: "document-import"
-                enabled: dialog.reviewed && dialog.eligibleSelection && !dialog.busy
+                enabled: dialog.reviewed && dialog.eligibleSelection && !dialog.busy && !dialog.vaultLocked
                 onClicked: dialog.controller.importReviewed(JSON.stringify(dialog.selectedFingerprints))
             }
         }
