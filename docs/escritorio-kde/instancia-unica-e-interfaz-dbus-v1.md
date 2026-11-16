@@ -20,7 +20,8 @@ No se registran como instancia única, y pueden convivir con la del usuario:
 
 - `--browser-integration`: host de mensajería nativa del navegador.
 - `--screenshot`: capturas de packaging.
-- `--new-instance`: perfiles aislados, `just smoke` y `just pairing-lab*`.
+- `--new-instance`: perfiles aislados, `just smoke` y las recetas de perfiles
+  de dispositivos del `justfile`.
 
 Si el registro falla (sin bus de sesión), la app arranca igual y lo anota en
 el log.

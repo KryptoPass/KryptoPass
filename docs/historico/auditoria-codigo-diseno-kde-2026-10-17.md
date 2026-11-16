@@ -1,5 +1,10 @@
 # Auditoría de código, diseño e integración KDE
 
+> **Histórico.** La sustituye [la revisión del 15-11-2026](../escritorio-kde/revision-practicas-kde-2026-11-15.md).
+> Revisado contra `3e131d6` el 16-11-2026: las correcciones siguen aplicadas, y
+> los hallazgos 6 (`KWindowStateSaver`) y 11 (enlaces del README) también están
+> resueltos. Del 4 ya existe `SettingsDialog`. Solo sigue abierto el 10 (lógica en QML).
+
 Fecha: 17 de octubre de 2026. Base: `76e0cd2` y cambios locales presentes durante
 la revisión. Alcance: `kryptopass-desktop`, Rust + CXX-Qt + QML/Kirigami.
 Android, extensiones y repositorios de referencia quedan fuera de esta revisión.

@@ -13,6 +13,5 @@ reescribirá lo vigente y se descartará el resto.
 - `transporte/`: LAN, Internet, TURN, privacidad de red, recuperación e ICE.
 - `sync/`: ledger, sesión y rondas de Sync, bóveda sincronizada y claves sintéticas.
 - `dispositivos-android/`: interoperabilidad, vinculación, API y UI de dispositivos.
-- `escritorio-kde/`: integración KDE, auditoría de diseño y D-Bus.
 - `evidencia/`: registros fechados de pruebas y mediciones.
 - `capturas/`: imágenes usadas por los documentos.

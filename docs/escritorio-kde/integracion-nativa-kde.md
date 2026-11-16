@@ -40,6 +40,7 @@ aplicación. No se ejecutan comandos de Dolphin ni se abren URLs arbitrarias.
 ## Criterio para nuevas mejoras
 
 Priorizar cambios pequeños que mejoren acciones, teclado, foco y uso de
-los componentes del sistema. Bandeja, instancias únicas y otras integraciones
-necesitan una necesidad concreta y deben respetar el bloqueo de la bóveda.
+los componentes del sistema. La instancia única ya existe
+([instancia-unica-e-interfaz-dbus-v1.md](instancia-unica-e-interfaz-dbus-v1.md)).
+Bandeja y otras integraciones necesitan una necesidad concreta y deben respetar el bloqueo de la bóveda.
 No añadir servicios o preferencias que dupliquen los de Plasma.

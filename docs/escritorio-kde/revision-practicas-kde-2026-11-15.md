@@ -1,7 +1,8 @@
 # Revisión de prácticas KDE y C++
 
 Fecha: 15 de noviembre de 2026. Base: `ae355e9` más los cambios locales
-presentes durante la revisión. Alcance: capa nativa C++, integración KDE,
+presentes durante la revisión. Comprobada de nuevo contra `3e131d6` el 16 de
+noviembre: los hallazgos siguen vigentes. Alcance: capa nativa C++, integración KDE,
 i18n, build y empaquetado de `kryptopass-desktop`. Android, extensiones y
 repositorios de referencia quedan fuera.
 
@@ -51,9 +52,9 @@ versión.
 
 #### 1. El C++ de la aplicación no compila con las puertas de calidad de KDE
 
-Evidencia: `crates/kp-desktop/build.rs:197-205` solo añade rutas de include al
+Evidencia: `cc_builder` en `crates/kp-desktop/build.rs` solo añade rutas de include al
 `cc::Build`. Las advertencias `-Wall -Wextra -Wpedantic -Werror` existen solo
-en las pruebas nativas (`crates/kp-desktop/native-tests/CMakeLists.txt:16-18,31-33`),
+en las pruebas nativas (`crates/kp-desktop/native-tests/CMakeLists.txt`),
 no en el C++ de la aplicación. Como ese C++ lo compila `cc` y no CMake,
 `KDECompilerSettings` no lo cubre.
 
@@ -68,13 +69,19 @@ Propuesta:
   ejecutarse al menos sobre las pruebas nativas con un `compile_commands.json`.
 - Incorporar el chequeo a `bacon.toml` y, si se acepta, a CI.
 
+Cuidado: el `cc::Build` también compila el C++ que genera CXX-Qt, que no
+controlamos. Primero las advertencias sin `-Werror`; los defines `QT_NO_CAST_*`
+y `-Werror`, solo sobre `src/native` cuando compile limpio.
+
 #### 2. KI18n no se usa
 
 Evidencia: QML usa `qsTr()`/`qsTranslate()`, C++ usa
 `QCoreApplication::translate()` y la extracción se hace con un script propio
 que inspecciona literales de Rust y genera `.ts`
-(`packaging/translations.py:41-65`). El runtime carga los `.qm` desde `:/i18n`
+(`packaging/translations.py`). El runtime carga los `.qm` desde `:/i18n`
 con `QTranslator` (`crates/kp-desktop/src/native/desktop_integration.cpp:103-113`).
+El script decide qué literal es de interfaz con heurísticas (espacios, no ASCII,
+mayúscula inicial).
 
 Un equipo KDE espera `i18n()` en QML con `KLocalizedContext`,
 `KLocalizedString`/`i18n()` en C++, catálogos `.po` y `ki18n_install(po)`.
@@ -84,20 +91,16 @@ fuente es español mientras desktop y AppStream son inglés.
 
 Propuesta: migrar QML y C++ a KI18n y `.po`, con `KLocalizedContext` fijado en
 el `QQmlEngine`. Mantener el dominio de traducción en la identidad generada.
-Si el proyecto va a seguir siendo independiente de KDE, la lengua fuente en
-español es una decisión de producto válida; si se busca que KDE lo mantenga,
-la fuente debería ser inglés.
+La lengua fuente sigue en español (ver «Decisiones»).
 
-#### 3. KCrash: decidir, no añadir a ciegas
+#### 3. KCrash: decidido, queda fuera
 
 Evidencia: no hay ninguna referencia a `KCrash`. Es lo estándar en KDE, pero
-aquí choca con el hardening: `crates/kp-desktop/src/process_security.rs:9,27`
+aquí choca con el hardening: `crates/kp-desktop/src/process_security.rs:9,23-30`
 desactiva core dumps y `PR_SET_DUMPABLE` para que un crash no deje secretos
 en disco.
 
-Propuesta: decidir explícitamente entre `KCrash::initialize()` con DrKonqi
-(asumiendo la limitación de backtrace si no hay core) o documentar por qué se
-mantiene fuera. En cualquiera de los dos casos, dejarlo escrito y probado.
+Decisión en «Decisiones»: no se añade.
 
 #### 4. Identidad y configuración repartidas
 
@@ -132,8 +135,10 @@ estable (por ejemplo `kryptopassrc`) y centralizar las claves.
 #### 6. Falta QCommandLineParser
 
 Evidencia: no hay `QCommandLineParser` ni manejo de `--help`/`--version`; los
-flags se interpretan a mano (`--new-entry`, `--search`, `--devices`) desde
-Rust/QML.
+flags se interpretan a mano y en varios sitios: `--browser-integration`,
+`--screenshot` y `--new-instance` en `src/main.rs`; `--new-entry` y `--search`
+en `src/app_shell.rs`; `--devices` dos veces, en `desktop_integration.cpp` y
+en `Main.qml`.
 
 Propuesta: construir `QCommandLineParser` con
 `KAboutData::setupCommandLine()` y `processCommandLine()`, después de crear
@@ -144,24 +149,26 @@ los errores de uso se comportan como en el resto de KDE.
 
 - **D-Bus activation.** El `.desktop` no declara `DBusActivatable=true` y solo
   se conecta `KDBusService::activateRequested`
-  (`crates/kp-desktop/src/native/desktop_bus.cpp:74`). Añadir
-  `DBusActivatable=true` y conectar `activateActionRequested` para que
-  NewEntry/Search funcionen por D-Bus como en otras apps KDE.
+  (`crates/kp-desktop/src/native/desktop_bus.cpp:74`). Hace falta la línea en
+  el `.desktop`, un `.service` en `share/dbus-1/services/` y conectar
+  `activateActionRequested`. Antes, decidir qué hacen NewEntry/Search si la
+  app arranca por D-Bus con la bóveda bloqueada.
 - **Lanzar KAddressBook.** `QProcess::startDetached("kaddressbook")`
   (`crates/kp-desktop/src/native/kde_contacts.cpp:566`) evita la integración
   KDE. Usar `KService` + `KIO::ApplicationLauncherJob` (KIO ya está enlazado).
-- **Listas manuales en `build.rs`.** Hay 97 llamadas `qml_file()` y todos los
-  `.cpp_file()` escritos a mano. `qml_lint` detecta el desfase de QML, pero no
+- **Listas manuales en `build.rs`.** Cada `.qml` y cada `.cpp` se lista a
+  mano. `qml_lint` detecta el desfase de QML, pero no
   el de C++. Automatizar el descubrimiento y mantener solo una allowlist para
   los singletons (`EntryTypes`, `FolderPalette`).
 - **Cobertura nativa.** Solo hay pruebas de `favicon_service` y
   `session_lock`. La lógica de huellas OpenPGP de `kde_contacts.cpp` es
   sensible y no tiene pruebas. Extraerla a funciones puras y cubrirla con
-  QtTest, o moverla a Rust.
-- **Literales de UI restantes.** `spacing: 12/4` en
-  `IdentityKeys.qml:190,318,459`, `KeyContactPanel.qml:16` e
-  `IdentityServers.qml:60`; `font.pixelSize` en `DevicesWindow.qml:656`
-  (mejor `Kirigami.Heading`). El selector de contacto es un `QDialog` con
+  QtTest, o moverla a Rust. Son 569 líneas que mezclan parsing de huellas y
+  UI: separar la lógica pura y la presentación.
+- **Literales de UI restantes.** No son casos sueltos: quedan unos 60
+  `spacing`/`*Margin` numéricos distintos de 0 en el QML (sobre todo 6, 8 y
+  12). Hace falta un barrido a `Kirigami.Units`, no una lista cerrada.
+  `font.pixelSize` en `DevicesWindow.qml:656` (mejor `Kirigami.Heading`). El selector de contacto es un `QDialog` con
   `QListWidget` y `QMessageBox`; para una app Kirigami, mejor un diálogo QML
   alimentado por el bridge.
 - **CI.** El workflow solo publica releases. Un job de PR con `just verify` en
@@ -180,8 +187,6 @@ los errores de uso se comportan como en el resto de KDE.
 - **Categorías de logging.** Hoy solo hay un `qWarning`; añadir
   `Q_LOGGING_CATEGORY` y `KDE_INSTALL_LOGGINGCATEGORIESDIR` cuando el C++
   crezca, y decidir cómo se relaciona con `tracing`.
-- **`kde_contacts.cpp`.** 569 líneas mezclan parsing de huellas y UI. Separar
-  la lógica pura y la presentación.
 - **Modelos QML tipados.** Acciones y contactos cruzan el bridge como JSON y
   se parsean en QML. A largo plazo, `QAbstractItemModel` o propiedades
   tipadas encajan mejor con Qt/KDE y evitan JavaScript de transformación.
@@ -193,7 +198,17 @@ los errores de uso se comportan como en el resto de KDE.
 3. KConfig en los tres ajustes nativos.
 4. Auto-descubrimiento de QML y C++ en `build.rs`.
 
-La migración a KI18n y la decisión sobre KCrash merecen cambios separados.
+La migración a KI18n merece un cambio aparte.
+
+## Decisiones
+
+Tomadas el 16 de noviembre de 2026.
+
+- **Sin KCrash.** DrKonqi necesita el core, que `PR_SET_DUMPABLE=0` y
+  `RLIMIT_CORE=0` impiden a propósito, y un backtrace de un gestor de
+  contraseñas puede contener secretos. Un crash se diagnostica con el log.
+- **Lengua fuente en español.** El proyecto no busca, por ahora, que lo
+  mantenga KDE. Si eso cambia, la fuente pasa a inglés junto con KI18n.
 
 ## Límites de esta revisión
 
