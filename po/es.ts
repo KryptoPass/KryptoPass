@@ -6515,6 +6515,85 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
+    <name>KeyImportReview</name>
+    <message>
+      <source>Guardar copia de la clave privada</source>
+      <translation>Guardar copia de la clave privada</translation>
+    </message>
+    <message>
+      <source>Archivos OpenPGP (*.asc *.gpg *.pgp)</source>
+      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp)</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
+    </message>
+    <message>
+      <source>Clave OpenPGP</source>
+      <translation>Clave OpenPGP</translation>
+    </message>
+    <message>
+      <source>Sin identidad</source>
+      <translation>Sin identidad</translation>
+    </message>
+    <message>
+      <source>Copiar huella</source>
+      <translation>Copiar huella</translation>
+    </message>
+    <message>
+      <source>Confianza en GnuPG</source>
+      <translation>Confianza en GnuPG</translation>
+    </message>
+    <message>
+      <source>Sin confianza absoluta</source>
+      <translation>Sin confianza absoluta</translation>
+    </message>
+    <message>
+      <source>Marcar como mía…</source>
+      <translation>Marcar como mía…</translation>
+    </message>
+    <message>
+      <source>Respaldo de clave privada</source>
+      <translation>Respaldo de clave privada</translation>
+    </message>
+    <message>
+      <source>Exportar copia privada…</source>
+      <translation>Exportar copia privada…</translation>
+    </message>
+    <message>
+      <source>Caducidad</source>
+      <translation>Caducidad</translation>
+    </message>
+    <message>
+      <source>Cifrado</source>
+      <translation>Cifrado</translation>
+    </message>
+    <message>
+      <source>Sin subclave de cifrado vigente</source>
+      <translation>Sin subclave de cifrado vigente</translation>
+    </message>
+    <message>
+      <source>Añadir subclave de cifrado…</source>
+      <translation>Añadir subclave de cifrado…</translation>
+    </message>
+    <message>
+      <source>Clave principal de la bóveda</source>
+      <translation>Clave principal de la bóveda</translation>
+    </message>
+    <message>
+      <source>Esta bóveda usa otra clave</source>
+      <translation>Esta bóveda usa otra clave</translation>
+    </message>
+    <message>
+      <source>Esta clave no es válida para usarla con la bóveda.</source>
+      <translation>Esta clave no es válida para usarla con la bóveda.</translation>
+    </message>
+    <message>
+      <source>Marca la clave como propia para poder cifrar con ella.</source>
+      <translation>Marca la clave como propia para poder cifrar con ella.</translation>
+    </message>
+  </context>
+  <context>
     <name>KeyListDelegate</name>
     <message>
       <source>Sin correo electrónico</source>
@@ -6716,6 +6795,14 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Continuar</translation>
     </message>
     <message>
+      <source>Revisa la clave antes de usarla.</source>
+      <translation>Revisa la clave antes de usarla.</translation>
+    </message>
+    <message>
+      <source>Revisar clave OpenPGP</source>
+      <translation>Revisar clave OpenPGP</translation>
+    </message>
+    <message>
       <source>Operación completada.</source>
       <translation>Operación completada.</translation>
     </message>
@@ -6880,12 +6967,24 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Material que se eliminará del llavero</translation>
     </message>
     <message>
-      <source>No se ha elegido un archivo.</source>
-      <translation>No se ha elegido un archivo.</translation>
+      <source>Suelta aquí tu clave OpenPGP</source>
+      <translation>Suelta aquí tu clave OpenPGP</translation>
     </message>
     <message>
-      <source>Elegir archivo OpenPGP…</source>
-      <translation>Elegir archivo OpenPGP…</translation>
+      <source>Archivos admitidos: .asc, .gpg, .pgp</source>
+      <translation>Archivos admitidos: .asc, .gpg, .pgp</translation>
+    </message>
+    <message>
+      <source>Examinar…</source>
+      <translation>Examinar…</translation>
+    </message>
+    <message>
+      <source>Cambiar…</source>
+      <translation>Cambiar…</translation>
+    </message>
+    <message>
+      <source>No se ha elegido un archivo.</source>
+      <translation>No se ha elegido un archivo.</translation>
     </message>
     <message>
       <source>Elegir destino…</source>
@@ -6926,6 +7025,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Cerrar</source>
       <translation>Cerrar</translation>
+    </message>
+    <message>
+      <source>Cancelar</source>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <source>Seleccionar clave OpenPGP para importar</source>
@@ -7002,6 +7105,22 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Desbloqueando…</source>
       <translation>Desbloqueando…</translation>
+    </message>
+    <message>
+      <source>Revisar clave…</source>
+      <translation>Revisar clave…</translation>
+    </message>
+    <message>
+      <source>Importar clave privada…</source>
+      <translation>Importar clave privada…</translation>
+    </message>
+    <message>
+      <source>Restaurar copia de seguridad…</source>
+      <translation>Restaurar copia de seguridad…</translation>
+    </message>
+    <message>
+      <source>Salir</source>
+      <translation>Salir</translation>
     </message>
   </context>
   <context>
@@ -7168,6 +7287,10 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Crea un elemento para empezar.</source>
       <translation>Crea un elemento para empezar.</translation>
+    </message>
+    <message>
+      <source>Crear elemento…</source>
+      <translation>Crear elemento…</translation>
     </message>
     <message>
       <source>Error al cargar claves</source>

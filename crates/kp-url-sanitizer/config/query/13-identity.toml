@@ -1,0 +1,9 @@
+# User hints and prefill values.
+[[query_rule]]
+id = "identity.exact"
+class = "identity"
+key = { kind = "exact", values = [
+  "username", "email", "login_hint", "casemailaddress", "mn", "pai",
+  "prepopulatedloginid", "failedsignincount", "disableloginprepopulate",
+  "ext-login-allow-phone", "screen_hint",
+] }

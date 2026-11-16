@@ -173,6 +173,7 @@ Controls.ApplicationWindow {
 
         ColumnLayout {
             width: scroll.availableWidth
+            height: Math.max(scroll.availableHeight, implicitHeight)
             spacing: Kirigami.Units.smallSpacing
 
             Kirigami.InlineMessage {
@@ -319,6 +320,7 @@ Controls.ApplicationWindow {
                 Layout.bottomMargin: Kirigami.Units.smallSpacing
                 visible: !dialog.exportMode
                 type: dialog.hasPrivateKeys ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
+                icon.name: dialog.hasPrivateKeys ? "dialog-information" : "dialog-warning"
                 showCloseButton: dialog.hasPrivateKeys
                 text: qsTr("¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.")
                 actions: [
@@ -336,8 +338,11 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                Layout.bottomMargin: Kirigami.Units.smallSpacing
+                Layout.fillHeight: true
                 implicitHeight: emptyFile.implicitHeight + Kirigami.Units.gridUnit * 2
-                visible: !dialog.exportMode && !dialog.inputPath.toString()
+                visible: !dialog.exportMode
                 enabled: !dialog.busy
                 onEntered: function (drag) {
                     drag.accepted = drag.hasUrls || drag.formats.includes("text/uri-list");
@@ -365,6 +370,7 @@ Controls.ApplicationWindow {
                     id: emptyFile
                     anchors.centerIn: parent
                     width: parent.width - Kirigami.Units.gridUnit * 2
+                    visible: !dialog.inputPath.toString()
                     spacing: Kirigami.Units.smallSpacing
                     Kirigami.Icon {
                         Layout.alignment: Qt.AlignHCenter
@@ -394,42 +400,41 @@ Controls.ApplicationWindow {
                         onClicked: sourceDialog.open()
                     }
                 }
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.smallSpacing
-                visible: !dialog.exportMode && !!dialog.inputPath.toString()
-                spacing: Kirigami.Units.largeSpacing
-                Kirigami.Icon {
-                    source: "application-pgp-encrypted"
-                    fallback: "text-x-generic"
-                    implicitWidth: Kirigami.Units.iconSizes.medium
-                    implicitHeight: Kirigami.Units.iconSizes.medium
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: dialog.fileName(dialog.inputPath)
-                        textFormat: Text.PlainText
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideMiddle
+                RowLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - Kirigami.Units.gridUnit * 2
+                    visible: !!dialog.inputPath.toString()
+                    spacing: Kirigami.Units.largeSpacing
+                    Kirigami.Icon {
+                        source: "application-pgp-encrypted"
+                        fallback: "text-x-generic"
+                        implicitWidth: Kirigami.Units.iconSizes.medium
+                        implicitHeight: Kirigami.Units.iconSizes.medium
                     }
-                    Controls.Label {
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        text: dialog.displayPath(dialog.inputPath)
-                        textFormat: Text.PlainText
-                        color: Kirigami.Theme.disabledTextColor
-                        elide: Text.ElideMiddle
+                        spacing: 0
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: dialog.fileName(dialog.inputPath)
+                            textFormat: Text.PlainText
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideMiddle
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: dialog.displayPath(dialog.inputPath)
+                            textFormat: Text.PlainText
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideMiddle
+                        }
                     }
-                }
-                Controls.ToolButton {
-                    text: qsTr("Cambiar…")
-                    icon.name: "document-open"
-                    enabled: !dialog.busy
-                    onClicked: sourceDialog.open()
+                    Controls.Button {
+                        text: qsTr("Cambiar…")
+                        icon.name: "document-open"
+                        enabled: !dialog.busy
+                        onClicked: sourceDialog.open()
+                    }
                 }
             }
 

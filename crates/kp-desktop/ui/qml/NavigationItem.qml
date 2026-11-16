@@ -17,6 +17,8 @@ Controls.ItemDelegate {
     property bool folderDraggingEnabled: false
     property bool acceptsFolderDrop: false
     property string parentFolderId: ""
+    property real scrollPosition: 0
+    property bool hoverToolTipSuppressed: false
     signal folderDropped(string folderId, string parentId, string beforeId)
     signal entryDropped(string entryId, string folderId)
     signal contextMenuRequested(var item, real x, real y)
@@ -184,7 +186,15 @@ Controls.ItemDelegate {
     rightPadding: Kirigami.Units.largeSpacing
     highlighted: selectedScope === scopeId
     onClicked: root.scopeSelected(scopeId)
-    Controls.ToolTip.visible: (folderDrop.containsDrag && folderDrop.validTarget) || (folderDraggingEnabled && hovered && !folderDrag.active)
+    onScrollPositionChanged: {
+        if (hovered)
+            hoverToolTipSuppressed = true;
+    }
+    onHoveredChanged: {
+        if (!hovered)
+            hoverToolTipSuppressed = false;
+    }
+    Controls.ToolTip.visible: (folderDrop.containsDrag && folderDrop.validTarget) || (folderDraggingEnabled && hovered && !folderDrag.active && !hoverToolTipSuppressed)
     Controls.ToolTip.delay: folderDrop.containsDrag ? 0 : Kirigami.Units.toolTipDelay
     Controls.ToolTip.text: folderDrop.containsDrag ? folderDrop.edge === "inside" ? qsTr("Mover dentro de «%1»").arg(text) : folderDrop.edge === "before" ? qsTr("Colocar antes de «%1»").arg(text) : qsTr("Colocar después de «%1» y sus subcarpetas").arg(text) : qsTr("Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para anidar, o en un borde para ordenar.")
 

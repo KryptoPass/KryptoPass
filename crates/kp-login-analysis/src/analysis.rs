@@ -3,9 +3,10 @@ use std::path::Path;
 
 use email_address::EmailAddress;
 use thiserror::Error;
+use url::Url;
 use zeroize::Zeroizing;
 
-use crate::data::{Export, ExportError, LoginEntry, UserIdentifier};
+use crate::data::{Export, ExportError};
 use crate::decisions::{DecisionError, DecisionPolicy};
 use crate::documents::{CanonicalUser, DocumentError, DocumentPolicy};
 use crate::scope::{OriginScope, ScopeError, ScopeKind, ScopeResolver};
@@ -23,6 +24,17 @@ pub enum AnalysisError {
     Decision(#[from] DecisionError),
     #[error(transparent)]
     Document(#[from] DocumentError),
+}
+
+/// One source login, borrowed for the duration of analysis.
+pub struct LoginInput<'a> {
+    pub source: SourceRef,
+    pub username: &'a str,
+    pub email: &'a str,
+    pub password: &'a str,
+    pub urls: Vec<&'a str>,
+    pub modified_ms: u64,
+    pub trashed: bool,
 }
 
 pub struct Analyzer {
@@ -62,69 +74,92 @@ impl Analyzer {
     }
 
     pub fn analyze(&self, export: &Export) -> Analysis {
+        let inputs = export.iter_vaults().flat_map(|(vault_id, vault)| {
+            vault.items.iter().filter_map(move |item| {
+                let login = item.login()?;
+                Some(LoginInput {
+                    source: SourceRef {
+                        vault_id: vault_id.to_owned(),
+                        item_id: item.item_id.clone(),
+                    },
+                    username: &login.item_username,
+                    email: &login.item_email,
+                    password: login.password.as_str(),
+                    urls: login.urls.iter().map(String::as_str).collect(),
+                    modified_ms: item.create_time.max(item.modify_time).saturating_mul(1000),
+                    trashed: item.state == 2,
+                })
+            })
+        });
+        self.analyze_inputs(inputs)
+    }
+
+    /// Analyzes borrowed logins without changing or serializing their contents.
+    pub fn analyze_inputs<'a>(&self, inputs: impl IntoIterator<Item = LoginInput<'a>>) -> Analysis {
         let mut groups: BTreeMap<OriginScope, BTreeMap<CanonicalUser, CredentialGroup>> =
             BTreeMap::new();
-
         let mut unassigned = Vec::new();
-        for (vault_id, vault) in export.iter_vaults() {
-            for item in &vault.items {
-                let Some(content) = item.login() else {
+        for login in inputs {
+            if login.trashed {
+                unassigned.push(Unassigned {
+                    source: login.source,
+                    reason: UnassignedReason::Trashed,
+                });
+                continue;
+            }
+            let variant = if !login.username.trim().is_empty() {
+                login.username.trim()
+            } else if !login.email.trim().is_empty() {
+                login.email.trim()
+            } else {
+                "(sin usuario)"
+            }
+            .to_owned();
+            let mut seen_scopes = BTreeSet::new();
+            let mut invalid = login.urls.is_empty();
+            for raw in &login.urls {
+                let Ok(url) = Url::parse(raw.trim()) else {
+                    invalid = true;
                     continue;
                 };
-                let Some(login) = LoginEntry::from_item(&vault.name, item) else {
-                    continue;
-                };
-                let source = SourceRef {
-                    vault_id: vault_id.to_owned(),
-                    item_id: item.item_id.clone(),
-                };
-                if login.trashed {
-                    unassigned.push(Unassigned {
-                        source,
-                        reason: UnassignedReason::Trashed,
-                    });
+                if !matches!(url.scheme(), "http" | "https") || url.host().is_none() {
+                    invalid = true;
                     continue;
                 }
-                if login.urls.is_empty() || !login.invalid_urls.is_empty() {
-                    unassigned.push(Unassigned {
-                        source: source.clone(),
-                        reason: UnassignedReason::MissingOrInvalidUrl,
-                    });
+                let scope = self.scopes.resolve(&url);
+                let user = self
+                    .documents
+                    .canonical(&variant, scope.registrable_domain());
+                let first = seen_scopes.insert(scope.clone());
+                let credential = groups
+                    .entry(scope)
+                    .or_default()
+                    .entry(user)
+                    .or_default()
+                    .credential(login.password);
+                credential.sources.insert(login.source.clone());
+                credential.urls += 1;
+                credential.has_reset_path |= self.decisions.is_reset_path(url.path());
+                if let Some(segment) = url
+                    .path_segments()
+                    .and_then(|mut segments| segments.next())
+                    .filter(|segment| {
+                        !segment.is_empty() && segment.len() <= 32 && !segment.contains(':')
+                    })
+                {
+                    credential.subpaths.insert(segment.to_owned());
                 }
-                let variant = identity_variant(&login);
-                let password = content.password.as_str();
-                let login_time = login.created_at_ms.max(login.modified_at_ms);
-                let mut seen_scopes = BTreeSet::new();
-                for url in &login.urls {
-                    let scope = self.scopes.resolve(url);
-                    let user = self
-                        .documents
-                        .canonical(&variant, scope.registrable_domain());
-                    let first = seen_scopes.insert(scope.clone());
-                    let credential = groups
-                        .entry(scope)
-                        .or_default()
-                        .entry(user.clone())
-                        .or_default()
-                        .credential(password);
-                    credential.sources.insert(source.clone());
-                    credential.urls += 1;
-                    credential.has_reset_path |= self.decisions.is_reset_path(url.path());
-                    if let Some(segment) = url
-                        .path_segments()
-                        .and_then(|mut segments| segments.next())
-                        .filter(|segment| {
-                            !segment.is_empty() && segment.len() <= 32 && !segment.contains(':')
-                        })
-                    {
-                        credential.subpaths.insert(segment.to_owned());
-                    }
-                    if first {
-                        credential.logins += 1;
-                        *credential.variants.entry(variant.clone()).or_default() += 1;
-                        credential.newest_ms = credential.newest_ms.max(login_time);
-                    }
+                if first {
+                    credential.logins += 1;
+                    *credential.variants.entry(variant.clone()).or_default() += 1;
+                    credential.newest_ms = credential.newest_ms.max(login.modified_ms);
                 }
+            }
+            if invalid {
+                unassigned.push(Unassigned {
+                    source: login.source,
+                    reason: UnassignedReason::MissingOrInvalidUrl,
+                });
             }
         }
 
@@ -135,7 +170,7 @@ impl Analyzer {
                         .newest_ms
                         .cmp(&left.newest_ms)
                         .then_with(|| left.variants.cmp(&right.variants))
-                        .then_with(|| left.password.cmp(&right.password))
+                        .then_with(|| left.sources.cmp(&right.sources))
                 });
             }
         }
@@ -180,6 +215,9 @@ impl Analyzer {
             } else {
                 Decision::Single
             };
+        }
+        if credentials.len() > 64 {
+            return Decision::Review;
         }
 
         let exact = credentials
@@ -437,17 +475,6 @@ impl CredentialGroup {
     }
 }
 
-fn identity_variant(login: &LoginEntry) -> String {
-    match &login.user {
-        UserIdentifier::Email(email) => email.to_string(),
-        UserIdentifier::Username(value) => value.clone(),
-        UserIdentifier::Missing => login
-            .email
-            .clone()
-            .unwrap_or_else(|| "(sin usuario)".to_owned()),
-    }
-}
-
 fn context_for(scope: &OriginScope, user: &CanonicalUser) -> UsernameContext {
     if let Some(text) = user.as_text()
         && text.parse::<EmailAddress>().is_ok()
@@ -557,14 +584,15 @@ fn detect_typo(
         if index == keep {
             continue;
         }
-        let distance = strsim::levenshtein(&credential.password, &dominant.password);
+        let similar_password = credential.password.len() <= 256
+            && dominant.password.len() <= 256
+            && strsim::levenshtein(&credential.password, &dominant.password)
+                <= decisions.typo_max_password_distance();
         let username_typo = credential
             .variants
             .keys()
             .any(|value| usernames.is_shift_typo(value));
-        if credential.logins <= decisions.typo_max_logins()
-            && (distance <= decisions.typo_max_password_distance() || username_typo)
-        {
+        if credential.logins <= decisions.typo_max_logins() && (similar_password || username_typo) {
             matches += 1;
         }
     }
@@ -596,6 +624,8 @@ fn rotation_evidence(
     }
     if credentials.iter().enumerate().any(|(index, credential)| {
         index != primary
+            && credential.password.len() <= 256
+            && credentials[primary].password.len() <= 256
             && strsim::levenshtein(&credential.password, &credentials[primary].password)
                 <= decisions.rotation_max_password_distance()
     }) {

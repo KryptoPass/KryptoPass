@@ -1,0 +1,37 @@
+[settings]
+# Each phase is implemented generically by the engine. Remove one to skip it.
+phases = [
+  "multi_frame",
+  "matrix_params",
+  "path_segments",
+  "fragment",
+  "auth_path",
+  "query",
+  "trailing_slash",
+]
+strip_dangling_query = true
+
+[settings.query]
+key_case = "lower"
+drop_valueless = true
+decode_slashes = true
+trace_kept = true
+
+[settings.path]
+decode_segments = true
+strip_matrix = true
+matrix_pattern = ';[a-zA-Z0-9_$-]+=[^/]+'
+
+[settings.fragment]
+drop_empty = true
+spa_prefixes = ["/", "!/"]
+auth_values = ["login", "signup", "register", "signin"]
+strip_query = true
+drop_root = true
+drop_unroutable = true
+
+[settings.multi_frame]
+enabled = true
+candidate_pattern = '(?:^|,)\s*(?P<url>(?i:https?://))'
+candidate_group = "url"
+invalid_score = -999

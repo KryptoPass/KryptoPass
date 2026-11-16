@@ -22,6 +22,7 @@ Controls.Pane {
     required property Controls.Action copyFingerprintAction
 
     property bool editing: false
+    property bool listEmpty: false
     property alias editorHost: editorHost
 
     readonly property var selected: storeAdapter.selected
@@ -382,8 +383,8 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         anchors.verticalCenterOffset: root.headerHeight / 2
-        visible: !root.editing && !root.keysMode && !root.selected
-        icon.name: "document-encrypt"
+        visible: !root.editing && !root.keysMode && !root.selected && !root.listEmpty
+        icon.name: "view-list-details"
         text: qsTr("Ningún elemento seleccionado")
         explanation: qsTr("Selecciona un elemento de la lista para ver su contenido.")
     }

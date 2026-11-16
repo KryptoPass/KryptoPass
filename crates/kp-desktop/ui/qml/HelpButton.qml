@@ -10,6 +10,7 @@ Controls.ToolButton {
 
     icon.name: "help-contextual"
     display: Controls.AbstractButton.IconOnly
+    focusPolicy: Qt.NoFocus
     text: qsTr("Más información")
     implicitWidth: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
     implicitHeight: implicitWidth

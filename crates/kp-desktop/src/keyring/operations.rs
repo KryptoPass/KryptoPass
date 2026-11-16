@@ -28,6 +28,7 @@ fn run(keyring: &Keyring, request: Request) -> kryptopass_keyring::Result<Operat
     Ok(match request {
         Request::Create { user_id, expiry } => {
             let fingerprint = keyring.create_key(&user_id, expiry)?;
+            keyring.mark_as_own(&fingerprint)?;
             selected(
                 crate::i18n::format(
                     "Clave OpenPGP creada con subclave de cifrado: %1.",

@@ -1,0 +1,30 @@
+# Semantic scoring for captures that contain several URLs.
+[[score_rule]]
+id = "score.auth"
+score = 30
+match = { kind = "host_path_regex", pattern = '(?i)(login|signin|sign-in|logon|auth|sso|register|signup)' }
+
+[[score_rule]]
+id = "score.frame-key"
+score = -25
+match = { kind = "query_key_present", values = ["frame_id", "iframeId"] }
+
+[[score_rule]]
+id = "score.web-message"
+score = -25
+match = { kind = "query_value_equals", key = "response_mode", value = "web_message" }
+
+[[score_rule]]
+id = "score.long-query"
+score = -15
+match = { kind = "query_length", greater_than = 200 }
+
+[[score_rule]]
+id = "score.checkout"
+score = -35
+match = { kind = "path_regex", pattern = '(?i)(checkout|payselect)' }
+
+[[score_rule]]
+id = "score.https"
+score = 5
+match = { kind = "scheme", value = "https" }

@@ -1,0 +1,21 @@
+# Cosmetic preferences, locale, UI flags and application selectors.
+[[query_rule]]
+id = "ui.exact"
+class = "ui"
+key = { kind = "exact", values = [
+  "theme", "login_theme", "uiflavor", "skin", "hl", "lang", "language",
+  "locale", "mkt", "lc", "lcid", "ui_locales", "l", "wp_lang", "countrycode",
+  "country_code", "cc", "viewmode", "authviewmode", "view_type", "display",
+  "mode", "type", "method", "service", "app", "appid", "application",
+  "product", "domain", "realm", "ctx", "authtype", "socialproviderpref",
+  "provider", "source", "src", "sec", "site", "channel", "loginchannel",
+  "creation_flow", "creation_point", "platform", "security_profile",
+  "version", "v", "rv", "skversion", "authversion", "devicetype",
+  "procedureid", "musicterritory", "sif_profile", "paymentvisited",
+  "accountstatuspolicy", "pageid", "ignoreauthstate", "switch_account",
+  "showrememberme", "lostauthenticator", "aup", "lw", "fl", "lic",
+  "interacted", "firsttime", "forcelink", "autologin", "show_region",
+  "isloggingin", "loggedout", "error", "message", "facebook", "twitter",
+  "sso", "plan", "billing", "minimumcycle", "currency", "nc2", "cta",
+  "leadsource", "skip_suggest", "projectname",
+] }

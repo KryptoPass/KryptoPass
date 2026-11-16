@@ -1,0 +1,17 @@
+# Explicit exceptions. Higher priority wins over the drop rules above.
+[[query_rule]]
+id = "keep.routing-route"
+class = "routing"
+priority = 100
+action = "keep"
+key = { kind = "exact", values = ["r"] }
+value = { kind = "regex", pattern = '(?i)^[a-z0-9_-]+/[a-z0-9_-]+$' }
+
+[[query_rule]]
+id = "keep.handler-login-type"
+class = "routing"
+priority = 100
+action = "keep"
+key = { kind = "exact", values = ["type"] }
+value = { kind = "regex", pattern = '(?i)^login$' }
+path = { kind = "regex", pattern = '(?i)\.svp$' }

@@ -6,6 +6,7 @@
 //! [`Vault::import`](kryptopass_core::vault::Vault::import) stores the batch.
 
 mod convert;
+mod review;
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -21,6 +22,7 @@ use crate::error::AppError;
 pub use convert::{
     Adaptations, ImportOptions, PreparedImport, prepare_import, prepare_import_with_options,
 };
+pub use review::{ImportReview, ReviewEntry, ReviewGroup};
 
 /// Every importer the app offers. Encrypted exports are decrypted with
 /// `keyring`, which may ask for the export's passphrase in pinentry.

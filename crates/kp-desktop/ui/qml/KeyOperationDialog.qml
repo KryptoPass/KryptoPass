@@ -108,6 +108,18 @@ Controls.Dialog {
     modal: true
     closePolicy: Controls.Popup.NoAutoClose
     title: titleForAction()
+    Controls.Overlay.modal: Rectangle {
+        color: "#80000000"
+    }
+    header: Controls.Pane {
+        padding: Kirigami.Units.largeSpacing
+        background: null
+        contentItem: Controls.Label {
+            text: dialog.title
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+        }
+    }
 
     function normalizedFingerprint(value) {
         return (value || "").replace(/\s+/g, "").toUpperCase();
@@ -115,6 +127,32 @@ Controls.Dialog {
 
     function isFullFingerprint(value) {
         return /^(?:[A-F0-9]{40}|[A-F0-9]{64})$/.test(normalizedFingerprint(value));
+    }
+
+    function displayPath(path) {
+        return decodeURIComponent(String(path || "").replace(/^file:\/\//, ""));
+    }
+
+    function fileName(path) {
+        const parts = displayPath(path).split("/");
+        return parts[parts.length - 1];
+    }
+
+    function droppedFileUrl(event) {
+        const isFile = value => /^file:\/\//i.test(value);
+        const fromList = text => (text || "").split(/\r?\n/).map(line => line.replace(/\0/g, "").trim()).find(line => isFile(line)) || "";
+        for (const url of event.urls || []) {
+            if (isFile(url.toString()))
+                return url.toString();
+        }
+        for (const format of ["application/x-kde4-urilist", "text/x-moz-url", "text/uri-list"]) {
+            if (!event.formats.includes(format))
+                continue;
+            const found = fromList(event.getDataAsString(format));
+            if (found)
+                return found;
+        }
+        return fromList(event.text);
     }
 
     function requestFingerprint() {
@@ -268,6 +306,10 @@ Controls.Dialog {
             else if (action === "refreshExternal" && !fingerprint)
                 fingerprintField.forceActiveFocus();
         });
+        if (action === "import") {
+            fileDialog.open();
+            return;
+        }
         open();
     }
 
@@ -369,9 +411,17 @@ Controls.Dialog {
             }
             Kirigami.InlineMessage {
                 Layout.fillWidth: true
-                visible: !!dialog.completionMessage
+                visible: !!dialog.completionMessage && !(dialog.action === "import" && !!dialog.completedFingerprint)
                 type: Kirigami.MessageType.Positive
                 text: dialog.completionMessage
+            }
+
+            KeyImportReview {
+                id: importReview
+                Layout.fillWidth: true
+                visible: dialog.action === "import" && !!dialog.completionMessage && !!dialog.completedFingerprint
+                selectedKey: dialog.keyStore.entries.find(key => key.id.toUpperCase() === (dialog.completedFingerprint || "").toUpperCase()) || null
+                keyStore: dialog.keyStore
             }
 
             Controls.Button {
@@ -446,7 +496,7 @@ Controls.Dialog {
 
             Controls.Label {
                 Layout.fillWidth: true
-                visible: dialog.action === "import"
+                visible: dialog.action === "import" && !dialog.completionMessage
                 text: qsTr("Elige un archivo OpenPGP para importar. El llavero solo se modifica con el contenido del archivo; ninguna identidad se acepta por su correo.")
                 wrapMode: Text.Wrap
             }
@@ -637,9 +687,103 @@ Controls.Dialog {
                 Accessible.name: qsTr("Material que se eliminará del llavero")
             }
 
+            DropArea {
+                id: importFileDrop
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 7
+                visible: dialog.action === "import" && !dialog.completionMessage
+                enabled: !dialog.controllerBusy
+                onEntered: function (drag) {
+                    drag.accepted = drag.hasUrls || drag.formats.includes("text/uri-list");
+                    if (drag.accepted)
+                        drag.acceptProposedAction();
+                }
+                onDropped: function (event) {
+                    const url = dialog.droppedFileUrl(event);
+                    if (!url)
+                        return;
+                    event.acceptProposedAction();
+                    dialog.filePath = url;
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Kirigami.Units.cornerRadius
+                    color: importFileDrop.containsDrag ? Qt.alpha(Kirigami.Theme.highlightColor, 0.1) : "transparent"
+                    border.width: 1
+                    border.color: importFileDrop.containsDrag ? Kirigami.Theme.highlightColor : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.25)
+                }
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - Kirigami.Units.gridUnit * 2
+                    visible: !dialog.filePath
+                    spacing: Kirigami.Units.smallSpacing
+                    Kirigami.Icon {
+                        Layout.alignment: Qt.AlignHCenter
+                        source: "view-certificate-import"
+                        implicitWidth: Kirigami.Units.iconSizes.large
+                        implicitHeight: Kirigami.Units.iconSizes.large
+                    }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Suelta aquí tu clave OpenPGP")
+                        wrapMode: Text.Wrap
+                    }
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Archivos admitidos: .asc, .gpg, .pgp")
+                        color: Kirigami.Theme.disabledTextColor
+                        wrapMode: Text.Wrap
+                    }
+                    Controls.Button {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: Kirigami.Units.smallSpacing
+                        text: qsTr("Examinar…")
+                        icon.name: "document-open"
+                        enabled: !dialog.controllerBusy
+                        onClicked: fileDialog.open()
+                    }
+                }
+                RowLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - Kirigami.Units.gridUnit * 2
+                    visible: !!dialog.filePath
+                    spacing: Kirigami.Units.largeSpacing
+                    Kirigami.Icon {
+                        source: "view-certificate-import"
+                        implicitWidth: Kirigami.Units.iconSizes.medium
+                        implicitHeight: Kirigami.Units.iconSizes.medium
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: dialog.fileName(dialog.filePath)
+                            textFormat: Text.PlainText
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideMiddle
+                        }
+                        Controls.Label {
+                            Layout.fillWidth: true
+                            text: dialog.displayPath(dialog.filePath)
+                            textFormat: Text.PlainText
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideMiddle
+                        }
+                    }
+                    Controls.Button {
+                        text: qsTr("Cambiar…")
+                        icon.name: "document-open"
+                        enabled: !dialog.controllerBusy
+                        onClicked: fileDialog.open()
+                    }
+                }
+            }
             Controls.Label {
                 Layout.fillWidth: true
-                visible: dialog.needsFile
+                visible: dialog.needsFile && dialog.action !== "import"
                 text: dialog.filePath ? dialog.filePath : qsTr("No se ha elegido un archivo.")
                 textFormat: Text.PlainText
                 color: dialog.filePath ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
@@ -647,10 +791,10 @@ Controls.Dialog {
             }
             Controls.Button {
                 Layout.alignment: Qt.AlignLeft
-                visible: dialog.needsFile
+                visible: dialog.needsFile && dialog.action !== "import"
                 enabled: !dialog.controllerBusy
-                text: dialog.action === "import" ? qsTr("Elegir archivo OpenPGP…") : qsTr("Elegir destino…")
-                icon.name: dialog.action === "import" ? "document-open" : "document-save-as"
+                text: qsTr("Elegir destino…")
+                icon.name: "document-save-as"
                 onClicked: fileDialog.open()
             }
 
@@ -686,7 +830,8 @@ Controls.Dialog {
 
     footer: Controls.DialogButtonBox {
         Controls.Button {
-            text: qsTr("Cerrar")
+            text: dialog.action === "import" && dialog.completionMessage ? qsTr("Continuar") : dialog.completionMessage ? qsTr("Cerrar") : qsTr("Cancelar")
+            highlighted: dialog.action === "import" && dialog.completionMessage
             enabled: !dialog.controllerBusy
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
             onClicked: dialog.reject()
@@ -712,7 +857,17 @@ Controls.Dialog {
         fileMode: dialog.action === "import" ? Dialogs.FileDialog.OpenFile : Dialogs.FileDialog.SaveFile
         defaultSuffix: dialog.action === "backupPrivate" ? "gpg" : "asc"
         nameFilters: [qsTr("Archivos OpenPGP (*.asc *.gpg *.pgp *.key)"), qsTr("Todos los archivos (*)")]
-        onAccepted: dialog.filePath = selectedFile.toString()
+        onAccepted: {
+            dialog.filePath = selectedFile.toString();
+            if (dialog.action === "import") {
+                dialog.submit();
+                dialog.open();
+            }
+        }
+        onRejected: {
+            if (dialog.action === "import" && !dialog.opened)
+                dialog.open();
+        }
     }
 
     onRejected: {

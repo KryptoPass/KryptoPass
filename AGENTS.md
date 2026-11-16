@@ -32,6 +32,25 @@ registra ahí antes de implementarlo en un lado. Lo pendiente está en
   reportan. Otras skills locales en `.agents/skills/`: `qt-ui-design`,
   `ux-writing-content-design`.
 
+## Git: comandos peligrosos
+
+- Antes de cualquier comando de Git, ejecuta y lee `git status`, `git diff` y
+  `git stash list`. Nunca actúes sobre el árbol de trabajo, el índice o el
+  historial sin saber qué hay modificado, sin seguimiento o en staging.
+- Prohibido sin petición explícita del usuario y sin haber revisado el estado:
+  `git reset --hard`, `git reset` que descarte cambios, `git checkout -- .`,
+  `git checkout .`, `git restore` sobre cambios locales, `git clean` en
+  cualquiera de sus formas, `git stash drop`/`clear`, `git branch -D`,
+  `git push --force`, `git rebase`, `git commit --amend`, `git filter-branch`,
+  `git filter-repo`, `git update-ref -d`, `git reflog expire`,
+  `git gc --prune=now` y `git worktree remove --force`.
+- Nunca descartar trabajo no commiteado, propio o ajeno, ni staged ni en stash.
+  Ante cualquier duda, detente y pregunta.
+- No usar `git add -A` ni `git add .`: añade ficheros concretos tras revisar el
+  diff, para no stagear secretos, artefactos ni cambios ajenos.
+- No cambiar de rama, hacer merge/pull/rebase, crear worktrees ni tocar stashes
+  con cambios sin commitear sin aprobación.
+
 ## Bridge Rust/QML
 
 - Cada `.qml` debe estar en `build.rs` (`QmlModule::qml_file`); si falta, el

@@ -10,7 +10,7 @@ pub mod username;
 
 pub use analysis::{
     Analysis, AnalysisError, Analyzer, Credential, CredentialRole, Decision, DecisionKind,
-    RotationEvidence, ScopeGroup, SourceRef, Unassigned, UnassignedReason, UserGroup,
+    LoginInput, RotationEvidence, ScopeGroup, SourceRef, Unassigned, UnassignedReason, UserGroup,
 };
 pub use data::{Export, ExportError};
 pub use decisions::DecisionPolicy;

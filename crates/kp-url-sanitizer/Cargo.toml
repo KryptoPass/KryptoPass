@@ -1,0 +1,19 @@
+[package]
+name = "kp-url-sanitizer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Configurable heuristic sanitizer and canonicalizer for login URLs"
+publish = false
+
+[dependencies]
+percent-encoding = "2.3"
+regex = "1.13"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+toml = "0.8"
+url = "2"
+
+[lints]
+workspace = true

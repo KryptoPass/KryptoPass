@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
 
 // First run of this installation: choose or create the vault key, then back it up.
@@ -16,14 +17,26 @@ Rectangle {
     signal setupFinished(string vaultKey, bool dedicated)
 
     property int step: 0
+    property int previousStep: 0
     property string chosenKey: ""
     property bool creating: false
+    property bool importing: false
+    property string importedFingerprint: ""
+    property string reviewSource: "import"
     property bool backedUp: false
     property string errorText: ""
     readonly property var ownKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt && key.hasSecret)
-    readonly property bool busy: creating || keyStore.controller.operationBusy
+    readonly property var importedKey: importedFingerprint ? (keyStore.entries.find(key => key.id.toUpperCase() === importedFingerprint.toUpperCase()) || null) : null
+    readonly property bool importedKeyReady: !!importedKey && importedKey.hasSecret && importedKey.statusCode === "valid" && importedKey.canEncrypt && !importedKey.needsOwnTrust
+    readonly property bool busy: creating || importing || keyStore.controller.operationBusy
 
-    onStepChanged: errorText = ""
+    onStepChanged: {
+        errorText = "";
+        stepShift.x = root.step > root.previousStep ? 16 : -16;
+        root.previousStep = root.step;
+        setupHost.opacity = 0;
+        stepFade.restart();
+    }
 
     color: Kirigami.Theme.backgroundColor
     Kirigami.Theme.colorSet: Kirigami.Theme.View
@@ -43,20 +56,67 @@ Rectangle {
 
     function useExistingKey() {
         const key = ownKeys[existingKeys.currentIndex];
-        if (key)
-            setupFinished(key.id, false);
+        if (!key)
+            return;
+        if (key.needsOwnTrust) {
+            importedFingerprint = key.id;
+            reviewSource = "existing";
+            backedUp = (key.health?.items || []).some(item => item.code === "backupSaved");
+            step = 2;
+            return;
+        }
+        setupFinished(key.id, false);
+    }
+
+    function importKey(url) {
+        if (busy)
+            return;
+        errorText = "";
+        importing = true;
+        keyStore.controller.clearOperationError();
+        keyStore.controller.runOperation(JSON.stringify({
+            action: "import",
+            path: url.toString()
+        }));
     }
 
     Connections {
         target: root.keyStore.controller
         function onOperationFinished(fingerprint, message) {
+            if (root.importing) {
+                root.importing = false;
+                root.importedFingerprint = fingerprint || "";
+                if (root.importedFingerprint) {
+                    // The key came from a local file, which is the backup the user already has.
+                    root.reviewSource = "import";
+                    root.backedUp = true;
+                    Qt.callLater(function () {
+                        const index = root.ownKeys.findIndex(key => key.id.toUpperCase() === root.importedFingerprint.toUpperCase());
+                        if (index >= 0) {
+                            existingChoice.checked = true;
+                            existingKeys.currentIndex = index;
+                        }
+                    });
+                    root.step = 2;
+                } else {
+                    root.errorText = qsTr("La importación no devolvió ninguna clave.");
+                }
+                return;
+            }
             if (!root.creating)
                 return;
             root.creating = false;
             root.chosenKey = fingerprint;
-            root.step = 2;
+            root.step = 3;
         }
         function onOperationFailed(message) {
+            if (root.importing) {
+                root.importing = false;
+                root.keyStore.controller.clearOperationError();
+                if (!message.toLowerCase().includes("cancel"))
+                    root.errorText = message;
+                return;
+            }
             if (!root.creating)
                 return;
             root.creating = false;
@@ -75,267 +135,321 @@ Rectangle {
         onWheel: wheel => wheel.accepted = true
     }
 
-    StackLayout {
+    Item {
+        id: setupHost
         anchors.centerIn: parent
-        width: Math.min(parent.width - Kirigami.Units.gridUnit * 4, Kirigami.Units.gridUnit * 26)
-        height: Math.min(parent.height - Kirigami.Units.gridUnit * 2, implicitHeight)
-        currentIndex: root.step
-
-        // 0 — welcome
-        ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            Kirigami.Icon {
-                Layout.alignment: Qt.AlignHCenter
-                source: root.logo.toString() || "security-high"
-                fallback: "security-high"
-                implicitWidth: Kirigami.Units.iconSizes.enormous
-                implicitHeight: Kirigami.Units.iconSizes.enormous
-            }
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                level: 1
-                text: qsTr("Te damos la bienvenida a %1").arg(Application.displayName)
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                Controls.Label {
-                    text: qsTr("Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.")
-                    color: Kirigami.Theme.disabledTextColor
-                    wrapMode: Text.Wrap
-                }
-            }
-            Controls.Button {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: Kirigami.Units.largeSpacing
-                text: qsTr("Crear nueva bóveda")
-                icon.name: "document-new"
-                highlighted: true
-                onClicked: root.step = 1
-            }
-            Controls.ToolButton {
-                Layout.alignment: Qt.AlignHCenter
-                text: qsTr("Restaurar una copia de seguridad…")
-                icon.name: "document-revert"
-                onClicked: root.restoreRequested()
-            }
+        width: Math.min(parent.width - Kirigami.Units.gridUnit * 4, Kirigami.Units.gridUnit * 29)
+        readonly property var currentPage: setupPages.children[root.step] || null
+        height: Math.min(parent.height - Kirigami.Units.gridUnit * 2, currentPage && currentPage.implicitHeight > 0 ? currentPage.implicitHeight : setupPages.implicitHeight)
+        opacity: 0
+        transform: Translate {
+            id: stepShift
+            x: 0
         }
+        Component.onCompleted: stepFade.start()
 
-        // 1 — vault key: two clear alternatives, the dedicated key first.
-        ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            Kirigami.Icon {
-                Layout.alignment: Qt.AlignHCenter
-                source: "view-certificate"
-                implicitWidth: Kirigami.Units.iconSizes.huge
-                implicitHeight: Kirigami.Units.iconSizes.huge
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
+        StackLayout {
+            id: setupPages
+            anchors.fill: parent
+            currentIndex: root.step
+
+            // 0 — welcome
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+                Kirigami.Icon {
+                    Layout.alignment: Qt.AlignHCenter
+                    source: root.logo.toString() || "security-high"
+                    fallback: "security-high"
+                    implicitWidth: Kirigami.Units.iconSizes.enormous
+                    implicitHeight: Kirigami.Units.iconSizes.enormous
+                }
                 Kirigami.Heading {
-                    level: 1
-                    text: qsTr("Clave de la bóveda")
-                }
-                HelpButton {
-                    help: qsTr("Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.")
-                }
-            }
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                visible: root.errorText.length > 0
-                type: Kirigami.MessageType.Error
-                text: root.errorText
-            }
-
-            Controls.ButtonGroup {
-                id: keyChoice
-            }
-            Controls.ItemDelegate {
-                id: createChoice
-                // The chosen row carries the highlight, so hover never looks like a selection.
-                highlighted: checked
-                Layout.fillWidth: true
-                Layout.topMargin: Kirigami.Units.largeSpacing
-                checkable: true
-                checked: true
-                enabled: !root.busy
-                Controls.ButtonGroup.group: keyChoice
-                Accessible.name: qsTr("Crear una clave para %1").arg(Application.displayName)
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
-                    Controls.RadioButton {
-                        Layout.alignment: Qt.AlignTop
-                        checked: createChoice.checked
-                        focusPolicy: Qt.NoFocus
-                        onClicked: createChoice.checked = true
-                    }
-                    Kirigami.Icon {
-                        Layout.alignment: Qt.AlignTop
-                        source: "view-certificate-add"
-                        selected: createChoice.highlighted
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Kirigami.Units.smallSpacing
-                        RowLayout {
-                            // A custom contentItem does not inherit the highlighted text color.
-                            Controls.Label {
-                                text: qsTr("Crear una clave para %1").arg(Application.displayName)
-                                font.weight: Font.DemiBold
-                                color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
-                            }
-                            Controls.Label {
-                                text: qsTr("Recomendada")
-                                color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
-                                font: Kirigami.Theme.smallFont
-                            }
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: qsTr("Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.").arg(Application.displayName)
-                            wrapMode: Text.Wrap
-                            color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
-                            opacity: createChoice.highlighted ? 0.85 : 1
-                        }
-                    }
-                }
-            }
-            Controls.ItemDelegate {
-                id: existingChoice
-                // The chosen row carries the highlight, so hover never looks like a selection.
-                highlighted: checked
-                Layout.fillWidth: true
-                checkable: true
-                enabled: !root.busy
-                Controls.ButtonGroup.group: keyChoice
-                Accessible.name: qsTr("Usar una de mis claves")
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
-                    Controls.RadioButton {
-                        Layout.alignment: Qt.AlignTop
-                        checked: existingChoice.checked
-                        focusPolicy: Qt.NoFocus
-                        onClicked: existingChoice.checked = true
-                    }
-                    Kirigami.Icon {
-                        Layout.alignment: Qt.AlignTop
-                        source: "view-certificate"
-                        selected: existingChoice.highlighted
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Kirigami.Units.smallSpacing
-                        Controls.Label {
-                            text: qsTr("Usar una de mis claves")
-                            font.weight: Font.DemiBold
-                            color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            visible: root.ownKeys.length === 0
-                            text: qsTr("No hay claves privadas en este equipo.")
-                            wrapMode: Text.Wrap
-                            color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
-                            opacity: existingChoice.highlighted ? 0.85 : 1
-                        }
-                        Controls.ComboBox {
-                            id: existingKeys
-                            Layout.fillWidth: true
-                            visible: root.ownKeys.length > 0
-                            enabled: existingChoice.checked && !root.busy
-                            model: root.ownKeys.map(key => (key.title || key.email) + " · " + key.id.slice(-8))
-                            Accessible.name: qsTr("Clave existente")
-                        }
-                        Controls.ToolButton {
-                            text: qsTr("Importar una clave privada…")
-                            icon.name: "document-import"
-                            enabled: !root.busy
-                            onClicked: {
-                                existingChoice.checked = true;
-                                keyOperation.openFor("import");
-                            }
-                        }
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.topMargin: Kirigami.Units.largeSpacing
-                Controls.Button {
-                    text: qsTr("Atrás")
-                    icon.name: "go-previous"
-                    enabled: !root.busy
-                    onClicked: root.step = 0
-                }
-                Item {
                     Layout.fillWidth: true
+                    level: 1
+                    text: qsTr("Te damos la bienvenida a %1").arg(Application.displayName)
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    Controls.Label {
+                        text: qsTr("Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.")
+                        color: Kirigami.Theme.disabledTextColor
+                        wrapMode: Text.Wrap
+                    }
                 }
                 Controls.Button {
-                    text: root.creating ? qsTr("Creando la clave…") : qsTr("Continuar")
-                    icon.name: "go-next"
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    text: qsTr("Crear nueva bóveda")
+                    icon.name: "document-new"
                     highlighted: true
-                    enabled: !root.busy && (createChoice.checked || (existingChoice.checked && existingKeys.currentIndex >= 0 && root.ownKeys.length > 0))
-                    onClicked: {
-                        if (createChoice.checked)
-                            root.createVaultKey();
-                        else
-                            root.useExistingKey();
+                    onClicked: root.step = 1
+                }
+                Controls.ToolButton {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: qsTr("Restaurar una copia de seguridad…")
+                    icon.name: "document-revert"
+                    onClicked: root.restoreRequested()
+                }
+            }
+
+            // 1 — vault key: two clear alternatives, the dedicated key first.
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+                Kirigami.Icon {
+                    Layout.alignment: Qt.AlignHCenter
+                    source: "view-certificate"
+                    implicitWidth: Kirigami.Units.iconSizes.huge
+                    implicitHeight: Kirigami.Units.iconSizes.huge
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    Kirigami.Heading {
+                        level: 1
+                        text: qsTr("Clave de la bóveda")
                     }
+                    HelpButton {
+                        help: qsTr("Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.")
+                    }
+                }
+                Kirigami.InlineMessage {
+                    Layout.fillWidth: true
+                    visible: root.errorText.length > 0
+                    type: Kirigami.MessageType.Error
+                    text: root.errorText
+                }
+
+                Controls.ButtonGroup {
+                    id: keyChoice
+                }
+                Controls.ItemDelegate {
+                    id: createChoice
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    checkable: true
+                    checked: true
+                    enabled: !root.busy
+                    Controls.ButtonGroup.group: keyChoice
+                    Accessible.name: qsTr("Crear una clave para %1").arg(Application.displayName)
+                    background: Rectangle {
+                        radius: Kirigami.Units.cornerRadius
+                        color: createChoice.checked ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.10) : createChoice.hovered ? Kirigami.Theme.alternateBackgroundColor : "transparent"
+                        border.width: createChoice.checked ? 2 : 1
+                        border.color: createChoice.checked ? Kirigami.Theme.highlightColor : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.25)
+                    }
+                    contentItem: RowLayout {
+                        spacing: Kirigami.Units.largeSpacing
+                        Controls.RadioButton {
+                            Layout.alignment: Qt.AlignTop
+                            checked: createChoice.checked
+                            focusPolicy: Qt.NoFocus
+                            onClicked: createChoice.checked = true
+                        }
+                        Kirigami.Icon {
+                            Layout.alignment: Qt.AlignTop
+                            source: "view-certificate-add"
+                            selected: createChoice.highlighted
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            RowLayout {
+                                // A custom contentItem does not inherit the highlighted text color.
+                                Controls.Label {
+                                    text: qsTr("Crear una clave para %1").arg(Application.displayName)
+                                    font.weight: Font.DemiBold
+                                    color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                                }
+                                Controls.Label {
+                                    text: qsTr("Recomendada")
+                                    color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
+                                    font: Kirigami.Theme.smallFont
+                                }
+                            }
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                text: qsTr("Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.").arg(Application.displayName)
+                                wrapMode: Text.Wrap
+                                color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
+                                opacity: createChoice.highlighted ? 0.85 : 1
+                            }
+                        }
+                    }
+                }
+                Controls.ItemDelegate {
+                    id: existingChoice
+                    Layout.fillWidth: true
+                    checkable: true
+                    enabled: !root.busy
+                    Controls.ButtonGroup.group: keyChoice
+                    Accessible.name: qsTr("Usar una de mis claves")
+                    background: Rectangle {
+                        radius: Kirigami.Units.cornerRadius
+                        color: existingChoice.checked ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.10) : existingChoice.hovered ? Kirigami.Theme.alternateBackgroundColor : "transparent"
+                        border.width: existingChoice.checked ? 2 : 1
+                        border.color: existingChoice.checked ? Kirigami.Theme.highlightColor : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.25)
+                    }
+                    contentItem: RowLayout {
+                        spacing: Kirigami.Units.largeSpacing
+                        Controls.RadioButton {
+                            Layout.alignment: Qt.AlignTop
+                            checked: existingChoice.checked
+                            focusPolicy: Qt.NoFocus
+                            onClicked: existingChoice.checked = true
+                        }
+                        Kirigami.Icon {
+                            Layout.alignment: Qt.AlignTop
+                            source: "view-certificate"
+                            selected: existingChoice.highlighted
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Controls.Label {
+                                text: qsTr("Usar una de mis claves")
+                                font.weight: Font.DemiBold
+                                color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                            }
+                            Controls.Label {
+                                Layout.fillWidth: true
+                                visible: root.ownKeys.length === 0
+                                text: qsTr("No hay claves privadas en este equipo.")
+                                wrapMode: Text.Wrap
+                                color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
+                                opacity: existingChoice.highlighted ? 0.85 : 1
+                            }
+                            Controls.ComboBox {
+                                id: existingKeys
+                                Layout.fillWidth: true
+                                visible: root.ownKeys.length > 0
+                                enabled: existingChoice.checked && !root.busy
+                                model: root.ownKeys.map(key => (key.title || key.email) + " · " + key.id.slice(-8))
+                                Accessible.name: qsTr("Clave existente")
+                            }
+                            Controls.Button {
+                                Layout.alignment: Qt.AlignLeft
+                                text: qsTr("Importar una clave privada…")
+                                icon.name: "document-import"
+                                enabled: !root.busy
+                                onClicked: {
+                                    existingChoice.checked = true;
+                                    importDialog.open();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    Controls.Button {
+                        text: qsTr("Atrás")
+                        icon.name: "go-previous"
+                        enabled: !root.busy
+                        onClicked: root.step = 0
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    Controls.Button {
+                        text: root.creating ? qsTr("Creando la clave…") : qsTr("Continuar")
+                        icon.name: "go-next"
+                        highlighted: true
+                        enabled: !root.busy && (createChoice.checked || (existingChoice.checked && existingKeys.currentIndex >= 0 && root.ownKeys.length > 0))
+                        onClicked: {
+                            if (createChoice.checked)
+                                root.createVaultKey();
+                            else
+                                root.useExistingKey();
+                        }
+                    }
+                }
+            }
+
+            // 2 — review an imported or selected key before it becomes the vault key.
+            KeyReviewPage {
+                title: root.reviewSource === "import" ? qsTr("Revisa la clave importada") : qsTr("Revisa la clave seleccionada")
+                subtitle: qsTr("Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.")
+                selectedKey: root.importedKey
+                keyStore: root.keyStore
+                importedFromFile: root.reviewSource === "import"
+                onBackRequested: root.step = 1
+                onAccepted: {
+                    root.chosenKey = root.importedFingerprint;
+                    root.step = 3;
+                }
+            }
+
+            // 3 — back up the new key
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+                Kirigami.Icon {
+                    Layout.alignment: Qt.AlignHCenter
+                    source: root.backedUp ? "dialog-ok-apply" : "document-save"
+                    implicitWidth: Kirigami.Units.iconSizes.huge
+                    implicitHeight: Kirigami.Units.iconSizes.huge
+                }
+                Kirigami.Heading {
+                    Layout.fillWidth: true
+                    level: 1
+                    text: root.backedUp ? qsTr("Copia guardada") : qsTr("Guarda una copia de tu clave")
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: !root.backedUp
+                    Controls.Label {
+                        text: qsTr("Sin ella no podrás abrir la bóveda si pierdes este equipo.")
+                        color: Kirigami.Theme.disabledTextColor
+                        wrapMode: Text.Wrap
+                    }
+                }
+                Controls.Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    visible: !root.backedUp
+                    text: qsTr("Guardar copia de la clave…")
+                    icon.name: "document-save-as"
+                    highlighted: true
+                    enabled: !root.busy
+                    onClicked: keyOperation.openFor("backupPrivate", root.chosenKey)
+                }
+                Controls.Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: root.backedUp ? Kirigami.Units.largeSpacing : 0
+                    text: root.backedUp ? qsTr("Abrir la bóveda") : qsTr("Más tarde")
+                    icon.name: root.backedUp ? "go-next" : ""
+                    highlighted: root.backedUp
+                    flat: !root.backedUp
+                    enabled: !root.busy
+                    onClicked: root.setupFinished(root.chosenKey, true)
                 }
             }
         }
+    }
 
-        // 2 — back up the new key
-        ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            Kirigami.Icon {
-                Layout.alignment: Qt.AlignHCenter
-                source: root.backedUp ? "dialog-ok-apply" : "document-save"
-                implicitWidth: Kirigami.Units.iconSizes.huge
-                implicitHeight: Kirigami.Units.iconSizes.huge
-            }
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                level: 1
-                text: root.backedUp ? qsTr("Copia guardada") : qsTr("Guarda una copia de tu clave")
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                visible: !root.backedUp
-                Controls.Label {
-                    text: qsTr("Sin ella no podrás abrir la bóveda si pierdes este equipo.")
-                    color: Kirigami.Theme.disabledTextColor
-                    wrapMode: Text.Wrap
-                }
-            }
-            Controls.Button {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: Kirigami.Units.largeSpacing
-                visible: !root.backedUp
-                text: qsTr("Guardar copia de la clave…")
-                icon.name: "document-save-as"
-                highlighted: true
-                enabled: !root.busy
-                onClicked: keyOperation.openFor("backupPrivate", root.chosenKey)
-            }
-            Controls.Button {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: root.backedUp ? Kirigami.Units.largeSpacing : 0
-                text: root.backedUp ? qsTr("Abrir la bóveda") : qsTr("Más tarde")
-                icon.name: root.backedUp ? "go-next" : ""
-                highlighted: root.backedUp
-                flat: !root.backedUp
-                enabled: !root.busy
-                onClicked: root.setupFinished(root.chosenKey, true)
-            }
+    ParallelAnimation {
+        id: stepFade
+        NumberAnimation {
+            target: setupHost
+            property: "opacity"
+            to: 1
+            duration: 150
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: stepShift
+            property: "x"
+            to: 0
+            duration: 150
+            easing.type: Easing.OutCubic
         }
     }
 
@@ -349,12 +463,22 @@ Rectangle {
         onClicked: root.handbookRequested("first-run")
     }
 
+    Dialogs.FileDialog {
+        id: importDialog
+        title: qsTr("Seleccionar clave OpenPGP para importar")
+        fileMode: Dialogs.FileDialog.OpenFile
+        nameFilters: [qsTr("Archivos OpenPGP (*.asc *.gpg *.pgp *.key)"), qsTr("Todos los archivos (*)")]
+        onAccepted: root.importKey(selectedFile)
+    }
+
     KeyOperationDialog {
         id: keyOperation
         keyStore: root.keyStore
         onClosed: {
-            if (action === "backupPrivate" && completionMessage)
+            if (action === "backupPrivate" && completionMessage) {
                 root.backedUp = true;
+                return;
+            }
         }
     }
 }

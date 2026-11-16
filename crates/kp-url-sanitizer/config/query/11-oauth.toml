@@ -1,0 +1,15 @@
+# OAuth2, OIDC, SAML, WS-Federation and OpenID protocol state.
+[[query_rule]]
+id = "oauth.exact"
+class = "oauth"
+key = { kind = "exact", values = [
+  "client_id", "response_type", "response_mode", "state", "nonce", "scope",
+  "prompt", "code_challenge", "code_challenge_method", "acr_values",
+  "samlrequest", "relaystate", "sig", "claims", "resource", "audience",
+  "oauth_challenge", "request_id", "client-request-id", "client_info",
+  "client_data", "tab_id", "session_code", "execution", "wa", "wtrealm",
+  "wctx", "rpsnv", "rver", "wp", "cbcxt", "aadredir", "msafed", "msaredir",
+  "msaoauth2", "instance_aware", "protectedtoken", "sso_reload",
+  "session_hint", "iss", "hd", "access_type", "refresh_token",
+  "web_message_target", "web_message_uri",
+] }

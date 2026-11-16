@@ -1,0 +1,12 @@
+# Redirect, return and continuation parameters.
+[[query_rule]]
+id = "redirect.exact"
+class = "redirect"
+key = { kind = "exact", values = [
+  "return_url", "returnurl", "return", "returnto", "return_to",
+  "redirect_uri", "redirect_url", "redirect", "redirect_to", "redirectto",
+  "continue", "next", "next_url", "nexturl", "dest", "destination",
+  "url", "callback", "goto", "target", "starturl", "fromuri", "wreply",
+  "post_login_redirect_uri", "post_register_redirect_uri", "landing_page",
+  "cancelurl", "successurl", "backto__", "from", "base_return_url",
+] }

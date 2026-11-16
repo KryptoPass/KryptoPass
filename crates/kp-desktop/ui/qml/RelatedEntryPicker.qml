@@ -161,7 +161,7 @@ ColumnLayout {
             id: relatedEntryButton
             objectName: "relatedEntryButton"
             text: root.relatedEntryId ? qsTr("Cambiar vínculo…") : qsTr("Vincular elemento…")
-            icon.name: "insert-link"
+            icon.name: "link"
             onClicked: root.openPicker()
         }
         Controls.Button {

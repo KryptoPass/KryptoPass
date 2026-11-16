@@ -31,6 +31,7 @@ const MAX_CUSTOM_KEY_BYTES: usize = 512;
 /// [`Vault::import`](kryptopass_core::vault::Vault::import).
 pub struct PreparedImport {
     pub batch: ImportBatch,
+    pub review: super::review::ImportReview,
     /// What the source held, as the importer counted it.
     pub source: EntryStatistics,
     pub warnings: Vec<EntryWarning>,
@@ -75,6 +76,7 @@ pub fn prepare_import_with_options(
     language: &str,
     options: ImportOptions,
 ) -> Result<PreparedImport, AppError> {
+    let review = super::review::analyze(&entries)?;
     let source = entries.statistics().clone();
     let (folders, entries, warnings) = entries.into_parts();
     let mut converter = Converter {
@@ -154,6 +156,7 @@ pub fn prepare_import_with_options(
     );
     Ok(PreparedImport {
         batch,
+        review,
         source,
         warnings,
         adaptations,

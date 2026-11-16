@@ -1,0 +1,10 @@
+# Paths that already identify an authentication endpoint; their query is state.
+[[auth_path_rule]]
+id = "auth.explicit"
+class = "auth"
+path = { kind = "regex", pattern = '(?i)(^|/)(login|log-in|signin|sign-in|logon|signup|sign-up|register|registrations|registro|authorize|authenticate|auth|sso|identifier|createusername|resetpassword|resetpwd|reset|new_password|forgotpassword|recovery|iseniatlogin|wp-login\.php|login\.php|login\.pl|login\.esp|login\.htm|login\.html|login\.srf|post\.srf|login\.do|register\.php|inicio-de-sesion)(/|$|\.)' }
+
+[[trailing_slash_rule]]
+id = "auth.trailing-slash"
+class = "auth"
+path = { kind = "regex", pattern = '(?i)/(login|signin|sign-in|signup|register)/$' }

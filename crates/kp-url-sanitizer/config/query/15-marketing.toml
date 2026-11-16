@@ -1,0 +1,8 @@
+# Marketing, ads and referrer parameters.
+[[query_rule]]
+id = "marketing.exact"
+class = "marketing"
+key = { kind = "exact", values = [
+  "ref", "ref_", "referrer", "r", "cmnhd_ref", "gclid", "gbraid", "wbraid",
+  "fbclid", "msclkid", "mc_cid", "mc_eid",
+] }

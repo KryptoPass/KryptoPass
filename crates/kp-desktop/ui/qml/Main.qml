@@ -153,6 +153,9 @@ Controls.ApplicationWindow {
     property string pendingSensitiveAction: ""
     property url pendingVaultPath: ""
     property string closeMessage: ""
+    readonly property string lockPrimaryFingerprint: (store.controller.primaryKey || "").toUpperCase()
+    readonly property var lockPrimaryKeyRecord: root.lockPrimaryFingerprint ? (keys.entries.find(key => key.id.toUpperCase() === root.lockPrimaryFingerprint) || null) : null
+    readonly property bool lockCanReviewKey: !!root.lockPrimaryKeyRecord
     readonly property bool storeOperationBusy: store.controller.busy || store.controller.editorBusy || store.controller.saving
     readonly property bool mutationsBlocked: storeOperationBusy || backupWindow.busy || importWindow.busy || editor.savePending || folderEditor.pending
     readonly property bool sensitiveTransitionBlocked: store.controller.busy || store.controller.saving || backupWindow.busy || importWindow.busy || editor.savePending || folderEditor.pending || keys.controller.operationBusy
@@ -1225,6 +1228,7 @@ Controls.ApplicationWindow {
             keyStore: keys
             scopeTitle: root.scopeTitle
             headerHeight: root.panelHeaderHeight
+            newEntryAction: newEntry
             editAction: editEntry
             moveAction: moveEntryAction
             trashAction: trashEntry
@@ -1272,6 +1276,7 @@ Controls.ApplicationWindow {
             anchors.fill: parent
             focus: true
             editing: editor.opened
+            listEmpty: store.visibleEntries.length === 0
             keysMode: root.keysMode
             storeAdapter: store
             keyStore: keys
@@ -1374,13 +1379,19 @@ Controls.ApplicationWindow {
         }
     }
     LockScreen {
+        id: lockScreen
         anchors.fill: parent
         z: 10
         visible: store.controller.locked && !store.controller.setupRequired
+        keyStore: keys
         unlockEnabled: lockVaultAction.enabled
         unlocking: store.controller.unlocking
+        canReviewKey: root.lockCanReviewKey
+        primaryFingerprint: store.controller.primaryKey
         errorMessage: store.controller.errorMessage
         onUnlockRequested: root.requestLock()
+        onRestoreRequested: backupWindow.openForRestore()
+        onQuitRequested: quitAction.trigger()
     }
     SecretEditor {
         id: editor

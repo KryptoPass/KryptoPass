@@ -1,0 +1,33 @@
+# Value-shape heuristics applied to every parameter.
+[[query_rule]]
+id = "value.empty"
+class = "value"
+key = { kind = "any" }
+value = { kind = "empty" }
+
+[[query_rule]]
+id = "value.long"
+class = "value"
+key = { kind = "any" }
+value = { kind = "length", min = 33 }
+
+[[query_rule]]
+id = "value.nested"
+class = "value"
+key = { kind = "any" }
+value = { kind = "any", matches = [
+  { kind = "prefix", values = ["/", "http://", "https://"], case_insensitive = true },
+  { kind = "contains", values = ["%2f", "%3a", "@"], case_insensitive = true },
+] }
+
+[[query_rule]]
+id = "value.entropy"
+class = "value"
+key = { kind = "any" }
+value = { kind = "entropy", min_length = 10, min_bits = 3.35, require_alpha = true, require_digit = true }
+
+[[query_rule]]
+id = "value.trivial-root"
+class = "routing"
+key = { kind = "exact", values = ["p", "page", "a0", "a1", "a2", "a3"] }
+path = { kind = "regex", pattern = '(?i)(?:^/$|logon\.html$)' }

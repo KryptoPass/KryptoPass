@@ -1,6 +1,36 @@
 use super::PreparedImport;
 use kryptopass_import::{EntryType, EntryWarningKind, ImportError};
 
+/// The import dialog's temporary comparison; passwords never leave Rust.
+pub(crate) fn review_json(plan: &PreparedImport) -> String {
+    let groups: Vec<_> = plan
+        .review
+        .groups
+        .iter()
+        .map(|group| {
+            let entries: Vec<_> = group
+                .entries
+                .iter()
+                .map(|entry| {
+                    serde_json::json!({
+                        "title": entry.title.as_str(),
+                        "folder": entry.folder.as_str(),
+                        "passwordGroup": entry.password_group,
+                        "hasPassword": entry.has_password,
+                    })
+                })
+                .collect();
+            serde_json::json!({
+                "domain": group.domain.as_str(),
+                "username": group.username.as_str(),
+                "differentPasswords": group.different_passwords,
+                "entries": entries,
+            })
+        })
+        .collect();
+    serde_json::json!({ "groups": groups, "unassigned": plan.review.unassigned }).to_string()
+}
+
 /// Counts per entry type, labelled for display; QML picks the icon from `kind`.
 pub(crate) fn summary_json(plan: &PreparedImport) -> String {
     let source = &plan.source;

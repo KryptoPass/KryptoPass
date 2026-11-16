@@ -8,7 +8,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../packaging/icons");
     println!("cargo:rerun-if-changed=../../po");
     println!("cargo:rerun-if-changed=../../packaging/translations.py");
-    println!("cargo:rerun-if-changed=../../tools/prepare_synthetic_sync_fixture.py");
     println!("cargo:rerun-if-env-changed=KP_SYNTHETIC_FIXTURE_DIR");
     println!("cargo:rerun-if-env-changed=XDG_CACHE_HOME");
     println!("cargo:rerun-if-env-changed=HOME");
@@ -46,24 +45,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         manifest_directory.join(fixture_directory)
     };
     let fixture_manifest = fixture_directory.join("fixture.json");
-    if env::var("PROFILE").as_deref() == Ok("debug") {
-        let fixture_script =
-            manifest_directory.join("../../tools/prepare_synthetic_sync_fixture.py");
-        let prepared = Command::new("python3")
-            .arg(&fixture_script)
-            .arg("--directory")
-            .arg(&fixture_directory)
-            .output()?;
-        if !prepared.status.success() {
-            let message = String::from_utf8_lossy(&prepared.stderr);
-            return Err(format!("synthetic fixture preparation failed: {}", message.trim()).into());
-        }
-        println!("cargo:rerun-if-changed={}", fixture_manifest.display());
-        println!(
-            "cargo:rerun-if-changed={}",
-            fixture_directory.join("secret-key.pgp").display()
-        );
-    }
     let fixture_directory_text = fixture_directory
         .to_str()
         .ok_or("synthetic fixture path is not valid UTF-8")?;
@@ -155,6 +136,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .qml_file("ui/qml/IdentityRow.qml")
         .qml_file("ui/qml/IdentityAddDialog.qml")
         .qml_file("ui/qml/KeyOperationDialog.qml")
+        .qml_file("ui/qml/KeyImportReview.qml")
+        .qml_file("ui/qml/KeyReviewPage.qml")
         .qml_file("ui/qml/OnlineServicesDialog.qml")
         .qml_file("ui/qml/ToastHost.qml")
         .qml_file("ui/qml/KeyContactPanel.qml")

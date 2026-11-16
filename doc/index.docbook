@@ -141,9 +141,8 @@
 <para><menuchoice><guimenu>Archivo</guimenu><guimenuitem>Importar desde otro gestor…</guimenuitem></menuchoice> añade a la bóveda actual los datos exportados por otro gestor de contraseñas.</para>
 <procedure>
 <step><para>Elige el gestor de origen.</para></step>
-<step><para>Si quieres organizar los accesos por sitio, marca <guilabel>Crear subcarpetas por dominio</guilabel>. Se conservarán las carpetas originales; los accesos con direcciones ambiguas permanecerán en su ubicación.</para></step>
 <step><para>Suelta el archivo exportado en la ventana o búscalo con <guibutton>Examinar…</guibutton>.</para></step>
-<step><para>Revisa lo que se importará. Los avisos naranjas indican datos que no llegarán a la bóveda; <guilabel>Detalles de la conversión</guilabel> explica cómo se adaptan los demás.</para></step>
+<step><para>Revisa lo que se importará y las posibles coincidencias entre accesos. Los avisos naranjas indican datos que no llegarán a la bóveda; <guilabel>Detalles de la conversión</guilabel> explica cómo se adaptan los demás.</para></step>
 <step><para>Comprueba <guilabel>Cifrar con</guilabel> y pulsa <guibutton>Importar</guibutton>.</para></step>
 </procedure>
 <para>Gestores admitidos actualmente: Proton Pass (exportaciones <filename>.json</filename>, <filename>.zip</filename> y <filename>.pgp</filename>).</para>

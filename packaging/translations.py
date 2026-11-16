@@ -90,9 +90,13 @@ def main():
         for catalog in sorted(CATALOG.parent.glob("*.ts")):
             name = f"{domain}_{catalog.stem}.qm"
             output = args.output / name
-            subprocess.run([qt_tool("lrelease"), "-silent", str(catalog), "-qm", str(output)], check=True)
+            if not output.is_file() or catalog.stat().st_mtime > output.stat().st_mtime:
+                subprocess.run([qt_tool("lrelease"), "-silent", str(catalog), "-qm", str(output)], check=True)
             ET.SubElement(group, "file", alias=name).text = str(output.resolve())
-        ET.ElementTree(resources).write(args.output / "translations.qrc", encoding="utf-8")
+        content = ET.tostring(resources, encoding="utf-8") + b"\n"
+        target = args.output / "translations.qrc"
+        if not target.is_file() or target.read_bytes() != content:
+            target.write_bytes(content)
 
 
 if __name__ == "__main__":

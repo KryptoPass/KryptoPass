@@ -1,0 +1,14 @@
+# Parameter families that are ephemeral by prefix.
+[[query_rule]]
+id = "prefix.tracking"
+class = "tracking"
+key = { kind = "prefix", values = [
+  "utm_", "first_utm_", "gad_", "_ga", "_gl",
+] }
+
+[[query_rule]]
+id = "prefix.protocol"
+class = "protocol"
+key = { kind = "prefix", values = [
+  "openid.", "x-client-", "ext-", "csrf",
+] }

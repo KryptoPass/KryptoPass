@@ -2350,6 +2350,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kp-url-sanitizer"
+version = "0.1.0"
+dependencies = [
+ "percent-encoding",
+ "regex",
+ "serde",
+ "thiserror 2.0.21",
+ "toml",
+ "url",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

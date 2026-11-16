@@ -3,4 +3,5 @@ lint = "clippy --all-targets -- --deny warnings"
 format = "fmt --all -- --check"
 
 [target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]

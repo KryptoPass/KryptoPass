@@ -60,7 +60,19 @@ Controls.Pane {
                     bottomPadding: Kirigami.Units.smallSpacing
                     readonly property string sectionTitle: root.keysMode ? qsTranslate("Main", "Claves") : qsTranslate("Main", "Carpetas")
                     Accessible.name: qsTranslate("Main", "Cambiar sección: %1").arg(sectionTitle)
-                    onClicked: sectionMenu.popup(sectionPicker, 0, sectionPicker.height)
+                    onClicked: {
+                        sectionToolTipTimer.stop();
+                        sectionToolTip.close();
+                        sectionMenu.popup(sectionPicker, 0, sectionPicker.height);
+                    }
+                    onHoveredChanged: {
+                        if (hovered) {
+                            sectionToolTipTimer.start();
+                        } else {
+                            sectionToolTipTimer.stop();
+                            sectionToolTip.close();
+                        }
+                    }
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
                         Kirigami.Heading {
@@ -75,9 +87,6 @@ Controls.Pane {
                             Layout.preferredHeight: width
                         }
                     }
-                    Controls.ToolTip.visible: hovered
-                    Controls.ToolTip.text: qsTranslate("Main", "Cambiar entre carpetas y claves")
-                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                     Controls.Menu {
                         id: sectionMenu
                         Controls.MenuItem {
@@ -210,6 +219,7 @@ Controls.Pane {
                         root.entryMoveRequested(entryId, folderId);
                     }
                     folderDraggingEnabled: root.entryDraggingEnabled && !root.keysMode
+                    scrollPosition: folderList.contentY
                     acceptsFolderDrop: folderDraggingEnabled
                     parentFolderId: modelData.parent
                     onFolderDropped: function (folderId, parentId, beforeId) {
@@ -284,5 +294,24 @@ Controls.Pane {
             icon.name: "folder-move"
             onTriggered: root.folderMoveDialogRequested(folderMenu.folderId)
         }
+    }
+    Controls.ToolTip {
+        id: sectionToolTip
+        parent: sectionPicker
+        x: Math.round((sectionPicker.width - width) / 2)
+        y: sectionPicker.height + Kirigami.Units.smallSpacing
+        text: qsTranslate("Main", "Cambiar entre carpetas y claves")
+        closePolicy: Controls.Popup.NoAutoClose
+        background: Rectangle {
+            color: Kirigami.Theme.backgroundColor
+            border.width: 1
+            border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.25)
+            radius: Kirigami.Units.smallSpacing
+        }
+    }
+    Timer {
+        id: sectionToolTipTimer
+        interval: 600
+        onTriggered: sectionToolTip.open()
     }
 }

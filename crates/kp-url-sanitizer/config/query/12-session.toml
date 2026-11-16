@@ -1,0 +1,14 @@
+# Ephemeral session, CSRF and flow identifiers.
+[[query_rule]]
+id = "session.exact"
+class = "session"
+key = { kind = "exact", values = [
+  "token", "tkn", "temporary_token", "_token", "key", "crc", "public_key",
+  "authkey", "flowname", "flowentry", "flow_ctx", "flowtrackingid", "flow",
+  "dsh", "ifkv", "ddm", "tl", "ec", "rapt", "pli", "authuser", "uaid",
+  "contextid", "opid", "bk", "ct", "cobrandid", "id", "uid", "pid",
+  "serverid", "frame_id", "iframeid", "device_id", "deviceid", "ext-oai-did",
+  "csrfnonce", "csrftimestamp", "csrftoken", "sitestate", "prevrid", "refid",
+  "ticket_id", "invite", "org_id", "ck", "continuation-type",
+  "client-environment", "desktop_protocol", "localauth", "saaf", "port", "t",
+] }

@@ -16,6 +16,7 @@ Controls.Pane {
     property bool entryDraggingEnabled: false
     property bool searchEnabled: true
     property bool contextMenuEnabled: true
+    property var newEntryAction: null
     property var editAction: null
     property var moveAction: null
     property var trashAction: null
@@ -406,7 +407,7 @@ Controls.Pane {
         anchors.centerIn: parent
         width: parent.width - Kirigami.Units.largeSpacing * 4
         visible: entryList.count === 0
-        helpfulAction: root.loadFailed || (root.hasSearchQuery && !root.loading) ? emptyListAction : null
+        helpfulAction: root.loadFailed || (root.hasSearchQuery && !root.loading) ? emptyListAction : !root.keysMode && !root.loading && !root.storeAdapter.controller.locked ? emptyCreateAction : null
         icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.hasSearchQuery ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.loadError ? "dialog-error" : "document-new"
         text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.controller.busy ? qsTranslate("Main", "Actualizando elementos…") : root.storeAdapter.controller.loadError ? qsTranslate("Main", "No se pudo cargar la bóveda") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
         explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.controller.loadError ? root.storeAdapter.controller.loadError : root.storeAdapter.controller.busy ? qsTranslate("Main", "Consultando el almacenamiento local cifrado.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro título, carpeta o tipo.") : qsTranslate("Main", "Crea un elemento para empezar.")
@@ -422,6 +423,16 @@ Controls.Pane {
                 root.keysMode ? root.keyStore.controller.refreshKeys() : root.storeAdapter.controller.loadStore();
             else
                 root.activeStore.query = "";
+        }
+    }
+    Kirigami.Action {
+        id: emptyCreateAction
+        text: qsTranslate("Main", "Crear elemento…")
+        icon.name: "document-new"
+        enabled: !root.loading && !root.storeAdapter.controller.locked && !!root.newEntryAction
+        onTriggered: {
+            if (root.newEntryAction)
+                root.newEntryAction.trigger();
         }
     }
 }

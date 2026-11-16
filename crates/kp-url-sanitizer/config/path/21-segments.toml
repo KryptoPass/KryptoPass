@@ -1,0 +1,33 @@
+# Ephemeral path segments. All thresholds live here, not in Rust.
+[[path_segment_rule]]
+id = "segment.uuid"
+class = "session"
+match = { kind = "regex", pattern = '(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+
+[[path_segment_rule]]
+id = "segment.hex"
+class = "session"
+match = { kind = "regex", pattern = '(?i)^[0-9a-f]{16,}$' }
+
+[[path_segment_rule]]
+id = "segment.base64"
+class = "payload"
+match = { kind = "all", matches = [
+  { kind = "prefix", values = ["eyJ", "H4sI"] },
+  { kind = "length", min = 25 },
+] }
+
+[[path_segment_rule]]
+id = "segment.entropy"
+class = "payload"
+match = { kind = "entropy", min_length = 29, min_bits = 4.05 }
+
+[[path_segment_rule]]
+id = "segment.mixed-entropy"
+class = "payload"
+match = { kind = "entropy", min_length = 29, min_bits = 3.75, require_alpha = true, require_digit = true, require_mixed_case = true }
+
+[[path_segment_rule]]
+id = "segment.dense-id"
+class = "session"
+match = { kind = "character_classes", min_length = 18, charset_pattern = '^[a-zA-Z0-9_-]+$', min_digits = 2, min_uppercase = 2, min_lowercase = 4, min_transitions = 5 }
