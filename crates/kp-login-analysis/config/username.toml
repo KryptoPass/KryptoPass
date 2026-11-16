@@ -1,0 +1,10 @@
+# Accidental Shift typos: too many uppercase letters with one stray lowercase.
+[shift_typo]
+uppercase_ratio = 0.70
+max_lowercase = 1
+
+# Case-class preference when variant frequencies tie. Earlier wins.
+[preferences]
+internal = ["all_caps", "mixed", "lower"]
+public = ["mixed", "lower", "all_caps"]
+email = ["lower", "mixed", "all_caps"]

@@ -1,0 +1,19 @@
+# Country-specific national document IDs. The grouping key uses country + kind +
+# normalized digits; the original variant is always preserved.
+[documents]
+
+[[documents.countries]]
+code = "ve"
+tlds = ["ve"]
+min_digits = 6
+max_digits = 9
+default_kind = "cedula"
+number_separators = [".", " ", "-"]
+prefixes = [
+  { value = "v-", kind = "cedula" },
+  { value = "e-", kind = "extranjero" },
+  { value = "j-", kind = "juridico" },
+  { value = "v", kind = "cedula" },
+  { value = "e", kind = "extranjero" },
+  { value = "j", kind = "juridico" },
+]

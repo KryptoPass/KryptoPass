@@ -28,6 +28,7 @@ Controls.ApplicationWindow {
     property bool completed: false
     property bool keysExpanded: false
     property bool detailsExpanded: false
+    property bool domainFolders: false
     property var selectedFingerprints: []
     readonly property var availableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
     readonly property var selectedKeys: availableKeys.filter(key => selectedFingerprints.includes(key.id))
@@ -53,6 +54,7 @@ Controls.ApplicationWindow {
         }
         clearReview();
         selectedImporterId = "";
+        domainFolders = false;
         const primary = availableKeys.find(key => key.id.toUpperCase() === primaryKey.toUpperCase());
         const ownKeys = availableKeys.filter(key => key.hasSecret);
         selectedFingerprints = primary ? [primary.id] : ownKeys.length === 1 ? [ownKeys[0].id] : [];
@@ -100,7 +102,7 @@ Controls.ApplicationWindow {
             return;
         clearReview();
         inputPath = url;
-        controller.review(url, selectedImporter.id);
+        controller.review(url, selectedImporter.id, domainFolders);
     }
 
     function displayPath(path) {
@@ -257,6 +259,31 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
                 visible: !dialog.completed && !!dialog.selectedImporter
                 text: qsTr("Archivo")
+            }
+
+            Controls.CheckBox {
+                objectName: "importDomainFolders"
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                visible: !dialog.completed && !!dialog.selectedImporter
+                enabled: !dialog.busy
+                text: qsTr("Crear subcarpetas por dominio")
+                checked: dialog.domainFolders
+                onToggled: {
+                    dialog.domainFolders = checked;
+                    if (dialog.hasFile)
+                        dialog.controller.review(dialog.inputPath, dialog.selectedImporter.id, checked);
+                }
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing * 2
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                visible: !dialog.completed && !!dialog.selectedImporter && dialog.domainFolders
+                text: qsTr("Conserva las carpetas originales. Los accesos sin dominio claro permanecen en su carpeta.")
+                wrapMode: Text.Wrap
+                color: Kirigami.Theme.disabledTextColor
             }
 
             // Empty state, sized by its own content so nothing spills over the frame.

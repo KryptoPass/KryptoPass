@@ -1,0 +1,53 @@
+# Functional/infrastructure labels that may be removed from the start of a
+# subdomain. If nothing remains, the scope collapses to the registrable domain.
+[scope]
+role_labels = [
+  "www",
+  "m",
+  "auth",
+  "login",
+  "signin",
+  "signup",
+  "sso",
+  "ssoapps",
+  "ssoappsdev",
+  "id",
+  "idp",
+  "iam",
+  "account",
+  "accounts",
+  "authenticate",
+  "authentication",
+  "myaccount",
+  "profile",
+  "users",
+  "api",
+  "app",
+  "dashboard",
+  "dash",
+  "portal",
+  "store",
+  "support",
+]
+
+# Case-insensitive regular expressions for role labels carrying a numeric
+# suffix, such as www30 or auth0.
+role_label_patterns = [
+  '^www\d+$',
+  '^auth\d+$',
+]
+
+# Functional suffixes stripped from the tenant label before building the scope.
+tenant_suffixes = ["-admin", "-dev", "-qa"]
+
+# Domain suffixes treated as internal corporate scopes for ordering. These are
+# still resolved with the PSL; the suffix only changes the priority bucket.
+internal_domain_suffixes = [".lac", ".space"]
+
+# Hosts that expose the same local service. Keys are normalized (lowercase,
+# no brackets); the alias is applied before appending a non-default port.
+[scope.host_aliases]
+"127.0.0.1" = "localhost"
+"0.0.0.0" = "localhost"
+"::1" = "localhost"
+"::" = "localhost"

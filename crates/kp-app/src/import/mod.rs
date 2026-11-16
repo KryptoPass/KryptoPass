@@ -18,7 +18,9 @@ use kryptopass_keyring::{Keyring, Unlock};
 
 use crate::error::AppError;
 
-pub use convert::{Adaptations, PreparedImport, prepare_import};
+pub use convert::{
+    Adaptations, ImportOptions, PreparedImport, prepare_import, prepare_import_with_options,
+};
 
 /// Every importer the app offers. Encrypted exports are decrypted with
 /// `keyring`, which may ask for the export's passphrase in pinentry.

@@ -1,0 +1,34 @@
+# Generic accounts that commonly collide across subsystems of the same scope.
+generic_usernames = [
+  "admin",
+  "administrator",
+  "root",
+  "guest",
+  "test",
+  "user",
+  "demo",
+  "operator",
+]
+
+# Path fragments that indicate a password rotation flow.
+reset_path_keywords = [
+  "reset",
+  "change-password",
+  "changepassword",
+  "new-password",
+  "forgot",
+  "recovery",
+  "recuperar",
+  "restablecer",
+]
+
+# A single failed login saved by the browser before the real one.
+[typo]
+max_logins = 1
+dominant_logins = 3
+max_password_distance = 1
+
+# Signals that two passwords for the same account are a rotation.
+[rotation]
+min_time_gap_days = 7
+max_password_distance = 2

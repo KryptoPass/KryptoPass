@@ -17,14 +17,19 @@ pub fn registry() -> Result<ImporterRegistry> {
     Ok(kryptopass_app::importers(&Keyring::system())?)
 }
 
-pub fn review_export(path: &Path, importer_id: &str) -> Result<PreparedImport> {
+pub fn review_export(
+    path: &Path,
+    importer_id: &str,
+    domain_folders: bool,
+) -> Result<PreparedImport> {
     let registry = registry()?;
     let entries = kryptopass_app::read_export(&registry, importer_id, path)?;
     let templates = crate::vault_access::templates()?;
-    Ok(kryptopass_app::prepare_import(
+    Ok(kryptopass_app::prepare_import_with_options(
         entries,
         templates,
         &crate::vault_access::language(),
+        kryptopass_app::ImportOptions { domain_folders },
     )?)
 }
 

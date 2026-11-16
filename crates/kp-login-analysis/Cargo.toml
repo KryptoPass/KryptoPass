@@ -1,0 +1,23 @@
+[package]
+name = "kp-login-analysis"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Login analysis and domain folder suggestions"
+publish = false
+
+[dependencies]
+email_address = "0.2"
+psl = "2"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+strsim = "0.11"
+thiserror = "2"
+toml = "0.8"
+url = { version = "2", features = ["serde"] }
+zeroize = { version = "1", features = ["serde"] }
+
+[lints]
+workspace = true

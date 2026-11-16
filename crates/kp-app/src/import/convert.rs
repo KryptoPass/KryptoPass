@@ -7,7 +7,7 @@
 //! value an added field. Only an entry that does not fit even that is left
 //! out, and counted.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use kp_template::{Library, Template};
 use kryptopass_core::util::{clean_line, has_control_characters};
@@ -59,6 +59,22 @@ pub fn prepare_import(
     templates: &TemplateRegistry,
     language: &str,
 ) -> Result<PreparedImport, AppError> {
+    prepare_import_with_options(entries, templates, language, ImportOptions::default())
+}
+
+/// Optional organization of entries within their original imported folders.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ImportOptions {
+    pub domain_folders: bool,
+}
+
+/// Converts the export and optionally places unambiguous logins in domain folders.
+pub fn prepare_import_with_options(
+    entries: ImportedEntries,
+    templates: &TemplateRegistry,
+    language: &str,
+    options: ImportOptions,
+) -> Result<PreparedImport, AppError> {
     let source = entries.statistics().clone();
     let (folders, entries, warnings) = entries.into_parts();
     let mut converter = Converter {
@@ -88,8 +104,40 @@ pub fn prepare_import(
                 .and_then(|parent| indices.get(&parent).copied()),
         });
     }
+    let mut domain_folders = BTreeMap::new();
+    if options.domain_folders {
+        for entry in &entries {
+            if let EntryContent::Login(login) = &entry.content
+                && let Some(domain) =
+                    kp_login_analysis::domain_folder(login.urls.iter().map(|url| url.as_str()))
+            {
+                let parent = entry.folder.and_then(|id| indices.get(&id).copied());
+                domain_folders.entry((parent, domain)).or_insert(0usize);
+            }
+        }
+        // Vault import visits sibling folders in reverse batch order.
+        for ((parent, domain), index) in domain_folders.iter_mut().rev() {
+            *index = batch.folders.len();
+            batch.folders.push(ImportFolder {
+                name: domain.clone(),
+                parent: *parent,
+            });
+        }
+    }
     for entry in entries {
         let folder = entry.folder.and_then(|id| indices.get(&id).copied());
+        let folder = if options.domain_folders {
+            match &entry.content {
+                EntryContent::Login(login) => {
+                    kp_login_analysis::domain_folder(login.urls.iter().map(|url| url.as_str()))
+                        .and_then(|domain| domain_folders.get(&(folder, domain)).copied())
+                        .or(folder)
+                }
+                _ => folder,
+            }
+        } else {
+            folder
+        };
         if let Some(mut item) = converter.entry(entry) {
             item.folder = folder;
             batch.items.push(item);

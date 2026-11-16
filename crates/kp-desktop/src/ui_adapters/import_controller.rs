@@ -30,7 +30,7 @@ pub mod qobject {
         #[cxx_name = "clearSensitiveState"]
         fn clear_sensitive_state(self: Pin<&mut Self>);
         #[qinvokable]
-        fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString);
+        fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString, domain_folders: bool);
         #[qinvokable]
         #[cxx_name = "importReviewed"]
         fn import_reviewed(self: Pin<&mut Self>, recipients_json: &QString);
@@ -97,7 +97,12 @@ impl qobject::ImportController {
         self.set_error_message(QString::default());
     }
 
-    pub fn review(mut self: Pin<&mut Self>, input: &QUrl, importer_id: &QString) {
+    pub fn review(
+        mut self: Pin<&mut Self>,
+        input: &QUrl,
+        importer_id: &QString,
+        domain_folders: bool,
+    ) {
         if *self.busy() {
             return;
         }
@@ -125,7 +130,7 @@ impl qobject::ImportController {
             .set_status(QString::from("Leyendo y revisando la exportación…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || review_export(&input, &importer_id),
+            move || review_export(&input, &importer_id, domain_folders),
             move |mut controller, result| {
                 controller.as_mut().set_busy(false);
                 if controller.as_ref().rust().review_operation != operation {
