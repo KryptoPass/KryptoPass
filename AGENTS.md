@@ -12,6 +12,10 @@ formato común está en `docs/sync/contrato.md`: cualquier cambio de formato se
 registra ahí antes de implementarlo en un lado. Lo pendiente está en
 `docs/pendientes.md`; el historial de peticiones, en `docs/historial-peticiones.md`.
 
+`experiments/` guarda prototipos. Ningún crate de `crates/` depende de ellos;
+algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
+`experiments/README.md`.
+
 ## Cómo trabajar
 
 - Antes de editar, declara objetivo, archivos, plan y verificación. No amplíes el
