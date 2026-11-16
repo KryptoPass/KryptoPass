@@ -21,7 +21,6 @@ Controls.ApplicationWindow {
     readonly property bool hasFile: !!inputPath.toString()
     readonly property bool reviewed: dialog.controller.reviewed && !completed
     readonly property var summary: JSON.parse(dialog.controller.summaryJson || "{}")
-    readonly property var review: JSON.parse(dialog.controller.reviewJson || "{}")
     readonly property var notes: JSON.parse(dialog.controller.warningsJson || "[]")
     readonly property var losses: notes.filter(note => note.loss)
     readonly property var conversions: notes.filter(note => !note.loss)
@@ -29,10 +28,6 @@ Controls.ApplicationWindow {
     property bool completed: false
     property bool keysExpanded: false
     property bool detailsExpanded: false
-    property string reviewPage: "summary"
-    property int reviewIndex: -1
-    readonly property var reviewGroups: review.groups || []
-    readonly property var selectedReviewGroup: reviewGroups[reviewIndex] || null
     property var selectedFingerprints: []
     readonly property var availableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
     readonly property var selectedKeys: availableKeys.filter(key => selectedFingerprints.includes(key.id))
@@ -73,8 +68,6 @@ Controls.ApplicationWindow {
         completed = false;
         keysExpanded = false;
         detailsExpanded = false;
-        reviewPage = "summary";
-        reviewIndex = -1;
     }
 
     function clearSensitiveState() {
@@ -82,8 +75,6 @@ Controls.ApplicationWindow {
         inputPath = "";
         completed = false;
         selectedFingerprints = [];
-        reviewPage = "summary";
-        reviewIndex = -1;
         sourceDialog.close();
         hide();
     }
@@ -109,7 +100,7 @@ Controls.ApplicationWindow {
             return;
         clearReview();
         inputPath = url;
-        controller.review(url, selectedImporter.id, false);
+        controller.review(url, selectedImporter.id);
     }
 
     function displayPath(path) {
@@ -143,14 +134,7 @@ Controls.ApplicationWindow {
     Shortcut {
         sequences: [StandardKey.Cancel]
         enabled: dialog.visible && !dialog.busy && !sourceDialog.visible
-        onActivated: {
-            if (dialog.reviewPage === "details")
-                dialog.reviewPage = "groups";
-            else if (dialog.reviewPage === "groups")
-                dialog.reviewPage = "summary";
-            else
-                dialog.close();
-        }
+        onActivated: dialog.close()
     }
     Connections {
         target: dialog.controller
@@ -167,7 +151,7 @@ Controls.ApplicationWindow {
             anchors.fill: parent
             spacing: Kirigami.Units.largeSpacing
             Kirigami.Icon {
-                visible: !!dialog.selectedImporter && dialog.reviewPage === "summary"
+                visible: !!dialog.selectedImporter
                 source: dialog.selectedImporter?.iconSource || "document-import"
                 fallback: "document-import"
                 placeholder: "document-import"
@@ -177,12 +161,12 @@ Controls.ApplicationWindow {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: dialog.reviewPage === "details" ? qsTr("Comparar accesos") : dialog.reviewPage === "groups" ? qsTr("Revisión de accesos") : dialog.selectedImporter ? qsTr("Desde %1").arg(dialog.selectedImporter.name) : qsTr("¿Desde qué gestor importas?")
+                text: dialog.selectedImporter ? qsTr("Desde %1").arg(dialog.selectedImporter.name) : qsTr("¿Desde qué gestor importas?")
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
             }
             Controls.ToolButton {
-                visible: !!dialog.selectedImporter && !dialog.completed && dialog.reviewPage === "summary"
+                visible: !!dialog.selectedImporter && !dialog.completed
                 enabled: !dialog.busy
                 text: qsTr("Cambiar gestor")
                 icon.name: "go-previous"
@@ -193,7 +177,6 @@ Controls.ApplicationWindow {
 
     Controls.ScrollView {
         id: scroll
-        visible: dialog.reviewPage === "summary"
         anchors.fill: parent
         contentWidth: availableWidth
         clip: true
@@ -445,41 +428,6 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.reviewed
-                text: qsTr("Revisión de accesos")
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                visible: dialog.reviewed
-                Controls.Label {
-                    Layout.fillWidth: true
-                    text: dialog.reviewGroups.length ? qsTr("%1 posibles coincidencias").arg(dialog.reviewGroups.length) : qsTr("Sin coincidencias detectadas")
-                    wrapMode: Text.Wrap
-                }
-                Controls.Button {
-                    visible: dialog.reviewGroups.length > 0
-                    text: qsTr("Revisar…")
-                    icon.name: "edit-find"
-                    onClicked: {
-                        dialog.reviewIndex = -1;
-                        dialog.reviewPage = "groups";
-                    }
-                }
-            }
-            Controls.Label {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                visible: dialog.reviewed && (dialog.review.unassigned || 0) > 0
-                text: qsTr("Accesos con URL ausente o no válida: %1").arg(dialog.review.unassigned || 0)
-                wrapMode: Text.Wrap
-                color: Kirigami.Theme.disabledTextColor
-            }
-
-            Kirigami.ListSectionHeader {
-                Layout.fillWidth: true
-                visible: dialog.reviewed
                 text: qsTr("Cifrar con")
             }
             RowLayout {
@@ -578,155 +526,6 @@ Controls.ApplicationWindow {
         }
     }
 
-    ColumnLayout {
-        anchors.fill: parent
-        visible: dialog.reviewPage === "groups" && dialog.reviewed
-        spacing: 0
-
-        Controls.Label {
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.largeSpacing
-            text: qsTr("Posibles coincidencias dentro del archivo. Selecciona un grupo para compararlo.")
-            wrapMode: Text.Wrap
-            color: Kirigami.Theme.disabledTextColor
-        }
-        Controls.ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-            AppListView {
-                id: reviewGroupList
-                model: dialog.reviewPage === "groups" ? dialog.reviewGroups : []
-                activeFocusOnTab: true
-                Accessible.role: Accessible.List
-                delegate: Controls.ItemDelegate {
-                    id: groupRow
-                    required property var modelData
-                    required property int index
-                    width: reviewGroupList.width
-                    focus: true
-                    Accessible.name: qsTr("%1, %2, %3 accesos").arg(modelData.domain).arg(modelData.username).arg(modelData.entries.length)
-                    onClicked: {
-                        dialog.reviewIndex = index;
-                        dialog.reviewPage = "details";
-                    }
-                    Keys.onReturnPressed: clicked()
-                    Keys.onEnterPressed: clicked()
-                    contentItem: RowLayout {
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            spacing: 2
-                            Controls.Label {
-                                Layout.fillWidth: true
-                                text: groupRow.modelData.domain
-                                textFormat: Text.PlainText
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-                            Controls.Label {
-                                Layout.fillWidth: true
-                                text: groupRow.modelData.username
-                                textFormat: Text.PlainText
-                                color: Kirigami.Theme.disabledTextColor
-                                elide: Text.ElideRight
-                            }
-                        }
-                        Controls.Label {
-                            text: Number(groupRow.modelData.entries.length).toLocaleString(Qt.locale(), "f", 0)
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        Kirigami.Icon {
-                            source: "go-next"
-                            implicitWidth: Kirigami.Units.iconSizes.small
-                            implicitHeight: Kirigami.Units.iconSizes.small
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    ColumnLayout {
-        anchors.fill: parent
-        visible: dialog.reviewPage === "details" && dialog.reviewed && !!dialog.selectedReviewGroup
-        spacing: Kirigami.Units.smallSpacing
-
-        Kirigami.Heading {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            Layout.topMargin: Kirigami.Units.largeSpacing
-            level: 3
-            text: dialog.selectedReviewGroup?.domain || ""
-            textFormat: Text.PlainText
-            elide: Text.ElideRight
-        }
-        Controls.Label {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            text: dialog.selectedReviewGroup?.username || ""
-            textFormat: Text.PlainText
-            elide: Text.ElideRight
-            color: Kirigami.Theme.disabledTextColor
-        }
-        Controls.Label {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            text: dialog.selectedReviewGroup?.differentPasswords ? qsTr("Las contraseñas son diferentes.") : qsTr("Las contraseñas coinciden o están vacías.")
-            wrapMode: Text.Wrap
-        }
-        Controls.Label {
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            text: qsTr("Los accesos se importarán por separado.")
-            wrapMode: Text.Wrap
-            color: Kirigami.Theme.disabledTextColor
-        }
-        Controls.ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.margins: Kirigami.Units.largeSpacing
-            clip: true
-            AppListView {
-                id: reviewEntryList
-                spacing: Kirigami.Units.smallSpacing
-                model: dialog.reviewPage === "details" ? (dialog.selectedReviewGroup?.entries || []) : []
-                Accessible.role: Accessible.List
-                delegate: Controls.Frame {
-                    id: reviewEntry
-                    required property var modelData
-                    width: reviewEntryList.width
-                    contentItem: ColumnLayout {
-                        spacing: Kirigami.Units.smallSpacing
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: reviewEntry.modelData.title || qsTr("Sin título")
-                            textFormat: Text.PlainText
-                            font.weight: Font.DemiBold
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: reviewEntry.modelData.folder || qsTr("Sin carpeta")
-                            textFormat: Text.PlainText
-                            color: Kirigami.Theme.disabledTextColor
-                            wrapMode: Text.Wrap
-                        }
-                        Controls.Label {
-                            Layout.fillWidth: true
-                            text: !reviewEntry.modelData.hasPassword ? qsTr("Sin contraseña") : dialog.selectedReviewGroup?.differentPasswords ? qsTr("Contraseña %1").arg(reviewEntry.modelData.passwordGroup + 1) : qsTr("Misma contraseña")
-                            wrapMode: Text.Wrap
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     footer: PanelFooter {
         headerHeight: Kirigami.Units.gridUnit * 2.5
         RowLayout {
@@ -734,35 +533,28 @@ Controls.ApplicationWindow {
             spacing: Kirigami.Units.largeSpacing
             Controls.BusyIndicator {
                 running: dialog.controller.busy
-                visible: running && dialog.reviewPage === "summary"
+                visible: running
                 implicitWidth: Kirigami.Units.iconSizes.smallMedium
                 implicitHeight: Kirigami.Units.iconSizes.smallMedium
                 Accessible.name: dialog.controller.status
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: dialog.reviewPage !== "summary" ? "" : dialog.controller.busy ? dialog.controller.status : dialog.hint
+                text: dialog.controller.busy ? dialog.controller.status : dialog.hint
                 textFormat: Text.PlainText
                 color: Kirigami.Theme.disabledTextColor
                 elide: Text.ElideRight
             }
             Controls.Button {
                 objectName: "closeImportWindow"
-                visible: dialog.reviewPage === "summary"
                 text: dialog.completed ? qsTr("Cerrar") : qsTr("Cancelar")
                 icon.name: dialog.completed ? "dialog-close" : "dialog-cancel"
                 enabled: !dialog.busy
                 onClicked: dialog.close()
             }
             Controls.Button {
-                visible: dialog.reviewPage !== "summary"
-                text: qsTr("Volver")
-                icon.name: "go-previous"
-                onClicked: dialog.reviewPage = dialog.reviewPage === "details" ? "groups" : "summary"
-            }
-            Controls.Button {
                 objectName: "confirmImportWindow"
-                visible: !dialog.completed && dialog.reviewPage === "summary"
+                visible: !dialog.completed
                 text: qsTr("Importar")
                 icon.name: "document-import"
                 enabled: dialog.reviewed && dialog.eligibleSelection && !dialog.busy && !dialog.vaultLocked

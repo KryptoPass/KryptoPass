@@ -28,10 +28,7 @@ pub use draft::{Draft, Origin};
 pub use error::AppError;
 pub use form::{Form, FormChoice, FormField, FormSection};
 pub use generator::{generate_for, settings_for};
-pub use import::{
-    Adaptations, ImportOptions, ImportReview, PreparedImport, ReviewEntry, ReviewGroup, importers,
-    prepare_import, prepare_import_with_options, read_export,
-};
+pub use import::{Adaptations, PreparedImport, importers, prepare_import, read_export};
 pub use search::{VaultSearchSource, catalog_records};
 pub use session::{AppVault, VaultSession};
 pub use sync::{SyncSelection, index_received, index_received_report};

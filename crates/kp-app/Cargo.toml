@@ -20,7 +20,6 @@ kryptopass-search = { package = "kp-search", path = "../kp-search" }
 kryptopass-import = { package = "kp-import", path = "../kp-import" }
 kryptopass-identity = { package = "kp-identity", path = "../kp-identity" }
 kp-template = { path = "../kp-template" }
-kp-login-analysis = { path = "../kp-login-analysis" }
 anyhow = "1"
 serde_json = "1"
 thiserror = "2.0"

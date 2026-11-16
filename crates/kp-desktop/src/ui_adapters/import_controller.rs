@@ -20,7 +20,6 @@ pub mod qobject {
         #[qproperty(QString, importers_json, cxx_name = "importersJson", READ, NOTIFY)]
         #[qproperty(QString, summary_json, cxx_name = "summaryJson", READ, NOTIFY)]
         #[qproperty(QString, warnings_json, cxx_name = "warningsJson", READ, NOTIFY)]
-        #[qproperty(QString, review_json, cxx_name = "reviewJson", READ, NOTIFY)]
         #[qproperty(QString, status, READ, NOTIFY)]
         #[qproperty(QString, error_message, cxx_name = "errorMessage", READ, NOTIFY)]
         type ImportController = super::ImportControllerRust;
@@ -31,7 +30,7 @@ pub mod qobject {
         #[cxx_name = "clearSensitiveState"]
         fn clear_sensitive_state(self: Pin<&mut Self>);
         #[qinvokable]
-        fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString, domain_folders: bool);
+        fn review(self: Pin<&mut Self>, input: &QUrl, importer_id: &QString);
         #[qinvokable]
         #[cxx_name = "importReviewed"]
         fn import_reviewed(self: Pin<&mut Self>, recipients_json: &QString);
@@ -48,7 +47,6 @@ pub struct ImportControllerRust {
     importers_json: QString,
     summary_json: QString,
     warnings_json: QString,
-    review_json: QString,
     status: QString,
     error_message: QString,
     plan: Option<PreparedImport>,
@@ -68,7 +66,6 @@ impl Default for ImportControllerRust {
             importers_json: QString::from(importers_json),
             summary_json: QString::default(),
             warnings_json: QString::default(),
-            review_json: QString::default(),
             status: QString::default(),
             error_message: QString::default(),
             plan: None,
@@ -96,17 +93,11 @@ impl qobject::ImportController {
         self.as_mut().set_reviewed(false);
         self.as_mut().set_summary_json(QString::default());
         self.as_mut().set_warnings_json(QString::default());
-        self.as_mut().set_review_json(QString::default());
         self.as_mut().set_status(QString::default());
         self.set_error_message(QString::default());
     }
 
-    pub fn review(
-        mut self: Pin<&mut Self>,
-        input: &QUrl,
-        importer_id: &QString,
-        domain_folders: bool,
-    ) {
+    pub fn review(mut self: Pin<&mut Self>, input: &QUrl, importer_id: &QString) {
         if *self.busy() {
             return;
         }
@@ -134,7 +125,7 @@ impl qobject::ImportController {
             .set_status(QString::from("Leyendo y revisando la exportación…"));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
-            move || review_export(&input, &importer_id, domain_folders),
+            move || review_export(&input, &importer_id),
             move |mut controller, result| {
                 controller.as_mut().set_busy(false);
                 if controller.as_ref().rust().review_operation != operation {
@@ -148,9 +139,6 @@ impl qobject::ImportController {
                         controller
                             .as_mut()
                             .set_warnings_json(QString::from(presentation::warnings_json(&plan)));
-                        controller
-                            .as_mut()
-                            .set_review_json(QString::from(presentation::review_json(&plan)));
                         let has_items = !plan.batch.items.is_empty();
                         controller.as_mut().rust_mut().plan = Some(plan);
                         controller.as_mut().set_reviewed(has_items);
@@ -239,13 +227,6 @@ impl qobject::ImportController {
         if self.warnings_json() != &value {
             self.as_mut().rust_mut().warnings_json = value;
             self.warnings_json_changed();
-        }
-    }
-
-    fn set_review_json(mut self: Pin<&mut Self>, value: QString) {
-        if self.review_json() != &value {
-            self.as_mut().rust_mut().review_json = value;
-            self.review_json_changed();
         }
     }
 

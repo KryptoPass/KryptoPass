@@ -1981,7 +1981,6 @@ dependencies = [
  "kp-identity",
  "kp-import",
  "kp-keyring",
- "kp-login-analysis",
  "kp-search",
  "kp-store",
  "kp-sync",
