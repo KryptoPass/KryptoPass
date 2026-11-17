@@ -465,8 +465,8 @@ TestCase {
             signalName: "revealFieldRequested"
         });
         verify(copySpy.valid && revealSpy.valid);
-        const copyButton = findButtonWithText(field, qsTr("Copiar Card number"));
-        const revealButton = findButtonWithText(field, qsTr("Mostrar Card number"));
+        const copyButton = findButtonWithText(field, "Copy Card number");
+        const revealButton = findButtonWithText(field, "Show Card number");
         verify(copyButton !== null, "detail row copy button should be addressable");
         verify(revealButton !== null, "detail row reveal button should be addressable");
         mouseClick(copyButton);
