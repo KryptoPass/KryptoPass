@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: dialog
@@ -13,7 +14,7 @@ Controls.Dialog {
     width: Math.min(Kirigami.Units.gridUnit * 36, parent ? parent.width - 32 : 640)
     height: Math.min(implicitHeight, parent ? parent.height - 32 : 600)
     modal: true
-    title: qsTr("Servicios online de OpenPGP")
+    title: KI18n.i18nc("@title:window", "OpenPGP Online Services")
     standardButtons: Controls.Dialog.NoButton
     function edit() {
         const settings = JSON.parse(keyStore.controller.onlineSettings);
@@ -43,15 +44,15 @@ Controls.Dialog {
             }
             Controls.CheckBox {
                 id: active
-                text: qsTr("Activar consultas online")
+                text: KI18n.i18nc("@option:check", "Enable online lookups")
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Las consultas se realizan cuando las solicitas. El servicio recibe la huella o el ID de la clave.")
+                text: KI18n.i18n("Lookups happen only when you request them. The service receives the key's fingerprint or ID.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
-                text: qsTr("Servicios de consulta en el navegador")
+                text: KI18n.i18nc("@title:group", "Lookup services in the browser")
             }
             Controls.TextArea {
                 id: services
@@ -59,15 +60,15 @@ Controls.Dialog {
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 6
                 wrapMode: TextEdit.WrapAnywhere
                 selectByMouse: true
-                Accessible.name: qsTr("URLs de servicios online, una por línea")
+                Accessible.name: KI18n.i18n("Online service URLs, one per line")
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Una URL HTTP o HTTPS por línea. Añade, edita, elimina o mueve las líneas; la primera es la predeterminada. Marcadores de KGpg: $$FPR$$, $$ID16$$ y $$ID8$$; en minúsculas: $$fpr$$, $$id16$$ y $$id8$$.")
+                text: KI18n.i18n("One HTTP or HTTPS URL per line. Add, edit, remove or reorder the lines; the first one is the default. KGpg placeholders: $$FPR$$, $$ID16$$ and $$ID8$$; in lowercase: $$fpr$$, $$id16$$ and $$id8$$.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
-                text: qsTr("Servidores para obtener y actualizar claves")
+                text: KI18n.i18nc("@title:group", "Servers for fetching and refreshing keys")
             }
             Controls.TextArea {
                 id: servers
@@ -75,22 +76,22 @@ Controls.Dialog {
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 4
                 selectByMouse: true
                 wrapMode: TextEdit.WrapAnywhere
-                Accessible.name: qsTr("Servidores de claves, uno por línea")
+                Accessible.name: KI18n.i18n("Key servers, one per line")
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Una dirección HKP, HKPS, HTTP o HTTPS por línea. El primer servidor es el predeterminado. Si la lista está vacía, se usa la configuración de GnuPG.")
+                text: KI18n.i18n("One HKP, HKPS, HTTP or HTTPS address per line. The first server is the default. If the list is empty, GnuPG's configuration is used.")
                 wrapMode: Text.Wrap
             }
         }
     }
     footer: Controls.DialogButtonBox {
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             onClicked: dialog.reject()
         }
         Controls.Button {
-            text: qsTr("Guardar configuración")
+            text: KI18n.i18nc("@action:button", "Save Settings")
             icon.name: "document-save"
             onClicked: {
                 const settings = {

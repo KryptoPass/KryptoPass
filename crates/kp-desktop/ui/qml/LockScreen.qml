@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // Covers the vault while it is locked so names, folders and counts stay hidden.
 Rectangle {
@@ -63,7 +64,7 @@ Rectangle {
             if (fingerprint)
                 root.openReview(fingerprint, true);
             else
-                root.localError = qsTr("La importación no devolvió ninguna clave.");
+                root.localError = KI18n.i18n("The import returned no key.");
         }
         function onOperationFailed(message) {
             if (!root.importing)
@@ -108,7 +109,7 @@ Rectangle {
         Kirigami.Heading {
             Layout.fillWidth: true
             level: 1
-            text: qsTr("%1 está bloqueado").arg(Application.displayName)
+            text: KI18n.i18n("%1 is locked", Application.displayName)
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
         }
@@ -126,10 +127,10 @@ Rectangle {
                 running: root.importing
                 implicitWidth: Kirigami.Units.iconSizes.smallMedium
                 implicitHeight: implicitWidth
-                Accessible.name: qsTr("Importando clave")
+                Accessible.name: KI18n.i18n("Importing key")
             }
             Controls.Label {
-                text: qsTr("Importando clave…")
+                text: KI18n.i18n("Importing key…")
                 color: Kirigami.Theme.disabledTextColor
             }
         }
@@ -137,7 +138,7 @@ Rectangle {
             id: unlockButton
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Kirigami.Units.largeSpacing
-            text: root.unlocking ? qsTr("Desbloqueando…") : qsTr("Desbloquear")
+            text: root.unlocking ? KI18n.i18n("Unlocking…") : KI18n.i18nc("@action:button", "Unlock")
             icon.name: "object-unlocked"
             highlighted: true
             enabled: root.unlockEnabled && !root.unlocking && !root.importing
@@ -162,19 +163,19 @@ Rectangle {
 
             Controls.Button {
                 visible: root.canReviewKey
-                text: qsTr("Revisar clave…")
+                text: KI18n.i18nc("@action:button", "Review Key…")
                 icon.name: "view-certificate"
                 enabled: !root.keyBusy
                 onClicked: root.openReview(root.primaryFingerprint, false)
             }
             Controls.Button {
-                text: qsTr("Importar clave privada…")
+                text: KI18n.i18nc("@action:button", "Import Private Key…")
                 icon.name: "document-import"
                 enabled: !root.keyBusy
                 onClicked: importDialog.open()
             }
             Controls.Button {
-                text: qsTr("Restaurar copia de seguridad…")
+                text: KI18n.i18nc("@action:button", "Restore Backup…")
                 icon.name: "document-revert"
                 enabled: !root.keyBusy
                 onClicked: root.restoreRequested()
@@ -183,7 +184,7 @@ Rectangle {
         Controls.ToolButton {
             Layout.alignment: Qt.AlignHCenter
             visible: (root.localError.length > 0 || root.errorMessage.length > 0) && !root.unlocking
-            text: qsTr("Salir")
+            text: KI18n.i18nc("@action:button", "Quit")
             icon.name: "application-exit"
             enabled: !root.keyBusy
             onClicked: root.quitRequested()
@@ -194,8 +195,8 @@ Rectangle {
         anchors.centerIn: parent
         width: Math.min(parent.width - Kirigami.Units.gridUnit * 4, Kirigami.Units.gridUnit * 29)
         visible: root.reviewFingerprint.length > 0
-        title: root.reviewImportedFromFile ? qsTr("Revisa la clave importada") : qsTr("Revisa la clave de la bóveda")
-        subtitle: root.reviewImportedFromFile ? qsTr("Verifica la huella digital y marca la clave como propia para desbloquear la bóveda.") : qsTr("Marca la clave como propia para desbloquear la bóveda.")
+        title: root.reviewImportedFromFile ? KI18n.i18nc("@title", "Review the imported key") : KI18n.i18nc("@title", "Review the vault key")
+        subtitle: root.reviewImportedFromFile ? KI18n.i18n("Verify the fingerprint and mark the key as your own to unlock the vault.") : KI18n.i18n("Mark the key as your own to unlock the vault.")
         selectedKey: root.reviewKey
         keyStore: root.keyStore
         importedFromFile: root.reviewImportedFromFile
@@ -208,9 +209,9 @@ Rectangle {
 
     Dialogs.FileDialog {
         id: importDialog
-        title: qsTr("Seleccionar clave OpenPGP para importar")
+        title: KI18n.i18nc("@title:window", "Select OpenPGP Key to Import")
         fileMode: Dialogs.FileDialog.OpenFile
-        nameFilters: [qsTr("Archivos OpenPGP (*.asc *.gpg *.pgp *.key)"), qsTr("Todos los archivos (*)")]
+        nameFilters: [KI18n.i18n("OpenPGP files (*.asc *.gpg *.pgp *.key)"), KI18n.i18n("All files (*)")]
         onAccepted: root.importKey(selectedFile)
     }
 }

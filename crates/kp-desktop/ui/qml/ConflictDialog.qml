@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // Merges two diverging versions of an item: one side per difference. Concealed
 // conflicts come with nothing selected, so the person has to look at both.
@@ -24,7 +25,7 @@ Controls.Dialog {
     height: Math.min(implicitHeight, parent.height - Kirigami.Units.gridUnit * 4)
     modal: true
     closePolicy: Controls.Popup.NoAutoClose
-    title: qsTr("Elegir qué conservar")
+    title: KI18n.i18nc("@title:window", "Choose What to Keep")
 
     // Accepting closes the dialog on its own, so visibility cannot be a binding.
     onConflictChanged: {
@@ -48,11 +49,11 @@ Controls.Dialog {
 
     footer: Controls.DialogButtonBox {
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
         }
         Controls.Button {
-            text: qsTr("Guardar combinación")
+            text: KI18n.i18nc("@action:button", "Save Combination")
             enabled: root.complete && !root.storeAdapter.controller.busy
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
         }
@@ -99,7 +100,7 @@ Controls.Dialog {
                             visible: row.modelData.concealed
                             flat: true
                             icon.name: row.modelData.revealed ? "view-hidden" : "view-visible"
-                            text: row.modelData.revealed ? qsTr("Ocultar") : qsTr("Mostrar")
+                            text: row.modelData.revealed ? KI18n.i18nc("@action:button", "Hide") : KI18n.i18nc("@action:button", "Show")
                             onClicked: root.storeAdapter.controller.toggleConflictValue(row.modelData.key)
                         }
                     }
@@ -108,12 +109,12 @@ Controls.Dialog {
                         model: [
                             {
                                 side: "ours",
-                                label: qsTr("Este equipo"),
+                                label: KI18n.i18nc("@label conflict side", "This computer"),
                                 value: row.modelData.ours
                             },
                             {
                                 side: "theirs",
-                                label: qsTr("Otro dispositivo"),
+                                label: KI18n.i18nc("@label conflict side", "Other device"),
                                 value: row.modelData.theirs
                             }
                         ]
@@ -130,7 +131,7 @@ Controls.Dialog {
                                 if (row.modelData.concealed && !row.modelData.revealed)
                                     value = "••••••••";
                                 else if (!value)
-                                    value = qsTr("(vacío)");
+                                    value = KI18n.i18nc("@label field value", "(empty)");
                                 return modelData.label + ": " + value;
                             }
                         }

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: generator
@@ -16,7 +17,7 @@ Controls.Dialog {
     anchors.centerIn: parent
     width: Math.min(Kirigami.Units.gridUnit * 30, windowWidth - Kirigami.Units.gridUnit * 4)
     modal: true
-    title: qsTr("Generar contraseña")
+    title: KI18n.i18nc("@title:window", "Generate Password")
     closePolicy: generating ? Controls.Popup.NoAutoClose : Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
 
     function openGenerator() {
@@ -34,7 +35,7 @@ Controls.Dialog {
 
     function rejectGeneration(message) {
         generating = false;
-        operationError = message || qsTr("No se pudo generar la contraseña. Revisa las opciones e inténtalo de nuevo.");
+        operationError = message || KI18n.i18n("The password could not be generated. Check the options and try again.");
     }
 
     function clearSensitiveState() {
@@ -56,7 +57,7 @@ Controls.Dialog {
 
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Elige la longitud y las clases de caracteres. Se incluirá al menos un carácter de cada clase seleccionada.")
+            text: KI18n.i18n("Choose the length and character classes. At least one character from each selected class will be included.")
             wrapMode: Text.Wrap
         }
 
@@ -71,7 +72,7 @@ Controls.Dialog {
             Layout.fillWidth: true
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Longitud")
+                text: KI18n.i18nc("@label:spinbox", "Length")
             }
             Controls.SpinBox {
                 id: lengthField
@@ -79,7 +80,7 @@ Controls.Dialog {
                 to: 1024
                 value: 20
                 editable: true
-                Accessible.name: qsTr("Longitud de la contraseña")
+                Accessible.name: KI18n.i18n("Password length")
             }
         }
 
@@ -88,40 +89,40 @@ Controls.Dialog {
             spacing: Kirigami.Units.smallSpacing
             Controls.CheckBox {
                 id: lowercaseField
-                text: qsTr("Minúsculas")
+                text: KI18n.i18nc("@option:check", "Lowercase")
                 checked: true
             }
             Controls.CheckBox {
                 id: uppercaseField
-                text: qsTr("Mayúsculas")
+                text: KI18n.i18nc("@option:check", "Uppercase")
                 checked: true
             }
             Controls.CheckBox {
                 id: digitsField
-                text: qsTr("Números")
+                text: KI18n.i18nc("@option:check", "Digits")
                 checked: true
             }
             Controls.CheckBox {
                 id: symbolsField
-                text: qsTr("Símbolos")
+                text: KI18n.i18nc("@option:check", "Symbols")
                 checked: true
             }
         }
 
         Controls.Label {
-            text: qsTr("Caracteres que quieres excluir")
+            text: KI18n.i18nc("@label:textbox", "Characters to exclude")
         }
         Controls.TextField {
             id: excludedField
             Layout.fillWidth: true
-            Accessible.name: qsTr("Caracteres excluidos")
-            placeholderText: qsTr("Ej. 0O1l")
+            Accessible.name: KI18n.i18n("Excluded characters")
+            placeholderText: KI18n.i18nc("@info:placeholder", "E.g. 0O1l")
         }
 
         Controls.Label {
             Layout.fillWidth: true
             visible: generator.generating
-            text: qsTr("Generando con el generador criptográfico del sistema…")
+            text: KI18n.i18n("Generating with the system's cryptographic generator…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -129,7 +130,7 @@ Controls.Dialog {
 
     footer: RowLayout {
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             enabled: !generator.generating
             onClicked: generator.close()
         }
@@ -137,7 +138,7 @@ Controls.Dialog {
             Layout.fillWidth: true
         }
         Controls.Button {
-            text: generator.generating ? qsTr("Generando…") : qsTr("Generar")
+            text: generator.generating ? KI18n.i18n("Generating…") : KI18n.i18nc("@action:button", "Generate")
             icon.name: "tools-wizard"
             enabled: !generator.generating && (lowercaseField.checked || uppercaseField.checked || digitsField.checked || symbolsField.checked)
             onClicked: {

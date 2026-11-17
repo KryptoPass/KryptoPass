@@ -3871,41 +3871,6 @@ La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de rellen
     </message>
   </context>
   <context>
-    <name>ConflictDialog</name>
-    <message>
-      <source>Elegir qué conservar</source>
-      <translation>Elegir qué conservar</translation>
-    </message>
-    <message>
-      <source>Cancelar</source>
-      <translation>Cancelar</translation>
-    </message>
-    <message>
-      <source>Guardar combinación</source>
-      <translation>Guardar combinación</translation>
-    </message>
-    <message>
-      <source>Ocultar</source>
-      <translation>Ocultar</translation>
-    </message>
-    <message>
-      <source>Mostrar</source>
-      <translation>Mostrar</translation>
-    </message>
-    <message>
-      <source>Este equipo</source>
-      <translation>Este equipo</translation>
-    </message>
-    <message>
-      <source>Otro dispositivo</source>
-      <translation>Otro dispositivo</translation>
-    </message>
-    <message>
-      <source>(vacío)</source>
-      <translation>(vacío)</translation>
-    </message>
-  </context>
-  <context>
     <name>Contacts</name>
     <message>
       <source>No se pudo guardar el contacto en KDE Contacts.</source>
@@ -5191,129 +5156,6 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
-    <name>FirstRunScreen</name>
-    <message>
-      <source>Te damos la bienvenida a %1</source>
-      <translation>Te damos la bienvenida a %1</translation>
-    </message>
-    <message>
-      <source>Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.</source>
-      <translation>Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.</translation>
-    </message>
-    <message>
-      <source>Restaurar una copia de seguridad…</source>
-      <translation>Restaurar una copia de seguridad…</translation>
-    </message>
-    <message>
-      <source>Clave de la bóveda</source>
-      <translation>Clave de la bóveda</translation>
-    </message>
-    <message>
-      <source>Creando la clave…</source>
-      <translation>Creando la clave…</translation>
-    </message>
-    <message>
-      <source>Crear una clave para %1</source>
-      <translation>Crear una clave para %1</translation>
-    </message>
-    <message>
-      <source>La importación no devolvió ninguna clave.</source>
-      <translation>La importación no devolvió ninguna clave.</translation>
-    </message>
-    <message>
-      <source>Crear nueva bóveda</source>
-      <translation>Crear nueva bóveda</translation>
-    </message>
-    <message>
-      <source>Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.</source>
-      <translation>Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.</translation>
-    </message>
-    <message>
-      <source>Clave existente</source>
-      <translation>Clave existente</translation>
-    </message>
-    <message>
-      <source>Importar una clave privada…</source>
-      <translation>Importar una clave privada…</translation>
-    </message>
-    <message>
-      <source>Atrás</source>
-      <translation>Atrás</translation>
-    </message>
-    <message>
-      <source>Revisa la clave importada</source>
-      <translation>Revisa la clave importada</translation>
-    </message>
-    <message>
-      <source>Revisa la clave seleccionada</source>
-      <translation>Revisa la clave seleccionada</translation>
-    </message>
-    <message>
-      <source>Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.</source>
-      <translation>Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.</translation>
-    </message>
-    <message>
-      <source>Copia guardada</source>
-      <translation>Copia guardada</translation>
-    </message>
-    <message>
-      <source>Guarda una copia de tu clave</source>
-      <translation>Guarda una copia de tu clave</translation>
-    </message>
-    <message>
-      <source>Sin ella no podrás abrir la bóveda si pierdes este equipo.</source>
-      <translation>Sin ella no podrás abrir la bóveda si pierdes este equipo.</translation>
-    </message>
-    <message>
-      <source>¿Necesitas ayuda?</source>
-      <translation>¿Necesitas ayuda?</translation>
-    </message>
-    <message>
-      <source>Seleccionar clave OpenPGP para importar</source>
-      <translation>Seleccionar clave OpenPGP para importar</translation>
-    </message>
-    <message>
-      <source>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</source>
-      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</translation>
-    </message>
-    <message>
-      <source>Todos los archivos (*)</source>
-      <translation>Todos los archivos (*)</translation>
-    </message>
-    <message>
-      <source>Guardar copia de la clave…</source>
-      <translation>Guardar copia de la clave…</translation>
-    </message>
-    <message>
-      <source>Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.</source>
-      <translation>Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.</translation>
-    </message>
-    <message>
-      <source>Recomendada</source>
-      <translation>Recomendada</translation>
-    </message>
-    <message>
-      <source>Usar una de mis claves</source>
-      <translation>Usar una de mis claves</translation>
-    </message>
-    <message>
-      <source>No hay claves privadas en este equipo.</source>
-      <translation>No hay claves privadas en este equipo.</translation>
-    </message>
-    <message>
-      <source>Continuar</source>
-      <translation>Continuar</translation>
-    </message>
-    <message>
-      <source>Abrir la bóveda</source>
-      <translation>Abrir la bóveda</translation>
-    </message>
-    <message>
-      <source>Más tarde</source>
-      <translation>Más tarde</translation>
-    </message>
-  </context>
-  <context>
     <name>FolderAppearancePicker</name>
     <message>
       <source>Carpeta</source>
@@ -5571,13 +5413,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Seleccionar carpeta</source>
       <translation>Seleccionar carpeta</translation>
-    </message>
-  </context>
-  <context>
-    <name>HelpButton</name>
-    <message>
-      <source>Más información</source>
-      <translation>Más información</translation>
     </message>
   </context>
   <context>
@@ -7171,77 +7006,6 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
-    <name>LockScreen</name>
-    <message>
-      <source>La importación no devolvió ninguna clave.</source>
-      <translation>La importación no devolvió ninguna clave.</translation>
-    </message>
-    <message>
-      <source>%1 está bloqueado</source>
-      <translation>%1 está bloqueado</translation>
-    </message>
-    <message>
-      <source>Importando clave</source>
-      <translation>Importando clave</translation>
-    </message>
-    <message>
-      <source>Importando clave…</source>
-      <translation>Importando clave…</translation>
-    </message>
-    <message>
-      <source>Desbloquear</source>
-      <translation>Desbloquear</translation>
-    </message>
-    <message>
-      <source>Desbloqueando…</source>
-      <translation>Desbloqueando…</translation>
-    </message>
-    <message>
-      <source>Revisar clave…</source>
-      <translation>Revisar clave…</translation>
-    </message>
-    <message>
-      <source>Importar clave privada…</source>
-      <translation>Importar clave privada…</translation>
-    </message>
-    <message>
-      <source>Restaurar copia de seguridad…</source>
-      <translation>Restaurar copia de seguridad…</translation>
-    </message>
-    <message>
-      <source>Salir</source>
-      <translation>Salir</translation>
-    </message>
-    <message>
-      <source>Revisa la clave importada</source>
-      <translation>Revisa la clave importada</translation>
-    </message>
-    <message>
-      <source>Revisa la clave de la bóveda</source>
-      <translation>Revisa la clave de la bóveda</translation>
-    </message>
-    <message>
-      <source>Verifica la huella digital y marca la clave como propia para desbloquear la bóveda.</source>
-      <translation>Verifica la huella digital y marca la clave como propia para desbloquear la bóveda.</translation>
-    </message>
-    <message>
-      <source>Marca la clave como propia para desbloquear la bóveda.</source>
-      <translation>Marca la clave como propia para desbloquear la bóveda.</translation>
-    </message>
-    <message>
-      <source>Seleccionar clave OpenPGP para importar</source>
-      <translation>Seleccionar clave OpenPGP para importar</translation>
-    </message>
-    <message>
-      <source>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</source>
-      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</translation>
-    </message>
-    <message>
-      <source>Todos los archivos (*)</source>
-      <translation>Todos los archivos (*)</translation>
-    </message>
-  </context>
-  <context>
     <name>LoginFields</name>
     <message>
       <source>Datos de acceso</source>
@@ -7843,120 +7607,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Notas</source>
       <translation>Notas</translation>
-    </message>
-  </context>
-  <context>
-    <name>OnlineServicesDialog</name>
-    <message>
-      <source>Servicios online de OpenPGP</source>
-      <translation>Servicios online de OpenPGP</translation>
-    </message>
-    <message>
-      <source>Activar consultas online</source>
-      <translation>Activar consultas online</translation>
-    </message>
-    <message>
-      <source>Las consultas se realizan cuando las solicitas. El servicio recibe la huella o el ID de la clave.</source>
-      <translation>Las consultas se realizan cuando las solicitas. El servicio recibe la huella o el ID de la clave.</translation>
-    </message>
-    <message>
-      <source>Servicios de consulta en el navegador</source>
-      <translation>Servicios de consulta en el navegador</translation>
-    </message>
-    <message>
-      <source>URLs de servicios online, una por línea</source>
-      <translation>URLs de servicios online, una por línea</translation>
-    </message>
-    <message>
-      <source>Una URL HTTP o HTTPS por línea. Añade, edita, elimina o mueve las líneas; la primera es la predeterminada. Marcadores de KGpg: $$FPR$$, $$ID16$$ y $$ID8$$; en minúsculas: $$fpr$$, $$id16$$ y $$id8$$.</source>
-      <translation>Una URL HTTP o HTTPS por línea. Añade, edita, elimina o mueve las líneas; la primera es la predeterminada. Marcadores de KGpg: $$FPR$$, $$ID16$$ y $$ID8$$; en minúsculas: $$fpr$$, $$id16$$ y $$id8$$.</translation>
-    </message>
-    <message>
-      <source>Servidores para obtener y actualizar claves</source>
-      <translation>Servidores para obtener y actualizar claves</translation>
-    </message>
-    <message>
-      <source>Servidores de claves, uno por línea</source>
-      <translation>Servidores de claves, uno por línea</translation>
-    </message>
-    <message>
-      <source>Una dirección HKP, HKPS, HTTP o HTTPS por línea. El primer servidor es el predeterminado. Si la lista está vacía, se usa la configuración de GnuPG.</source>
-      <translation>Una dirección HKP, HKPS, HTTP o HTTPS por línea. El primer servidor es el predeterminado. Si la lista está vacía, se usa la configuración de GnuPG.</translation>
-    </message>
-    <message>
-      <source>Cancelar</source>
-      <translation>Cancelar</translation>
-    </message>
-    <message>
-      <source>Guardar configuración</source>
-      <translation>Guardar configuración</translation>
-    </message>
-  </context>
-  <context>
-    <name>PasswordGenerator</name>
-    <message>
-      <source>Generar contraseña</source>
-      <translation>Generar contraseña</translation>
-    </message>
-    <message>
-      <source>No se pudo generar la contraseña. Revisa las opciones e inténtalo de nuevo.</source>
-      <translation>No se pudo generar la contraseña. Revisa las opciones e inténtalo de nuevo.</translation>
-    </message>
-    <message>
-      <source>Elige la longitud y las clases de caracteres. Se incluirá al menos un carácter de cada clase seleccionada.</source>
-      <translation>Elige la longitud y las clases de caracteres. Se incluirá al menos un carácter de cada clase seleccionada.</translation>
-    </message>
-    <message>
-      <source>Longitud</source>
-      <translation>Longitud</translation>
-    </message>
-    <message>
-      <source>Longitud de la contraseña</source>
-      <translation>Longitud de la contraseña</translation>
-    </message>
-    <message>
-      <source>Minúsculas</source>
-      <translation>Minúsculas</translation>
-    </message>
-    <message>
-      <source>Mayúsculas</source>
-      <translation>Mayúsculas</translation>
-    </message>
-    <message>
-      <source>Números</source>
-      <translation>Números</translation>
-    </message>
-    <message>
-      <source>Símbolos</source>
-      <translation>Símbolos</translation>
-    </message>
-    <message>
-      <source>Caracteres que quieres excluir</source>
-      <translation>Caracteres que quieres excluir</translation>
-    </message>
-    <message>
-      <source>Caracteres excluidos</source>
-      <translation>Caracteres excluidos</translation>
-    </message>
-    <message>
-      <source>Ej. 0O1l</source>
-      <translation>Ej. 0O1l</translation>
-    </message>
-    <message>
-      <source>Generando con el generador criptográfico del sistema…</source>
-      <translation>Generando con el generador criptográfico del sistema…</translation>
-    </message>
-    <message>
-      <source>Cancelar</source>
-      <translation>Cancelar</translation>
-    </message>
-    <message>
-      <source>Generando…</source>
-      <translation>Generando…</translation>
-    </message>
-    <message>
-      <source>Generar</source>
-      <translation>Generar</translation>
     </message>
   </context>
   <context>
@@ -8673,69 +8323,6 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
-    <name>SettingsDialog</name>
-    <message>
-      <source>Desactivado</source>
-      <translation>Desactivado</translation>
-    </message>
-    <message>
-      <source>1 minuto</source>
-      <translation>1 minuto</translation>
-    </message>
-    <message>
-      <source>5 minutos</source>
-      <translation>5 minutos</translation>
-    </message>
-    <message>
-      <source>15 minutos</source>
-      <translation>15 minutos</translation>
-    </message>
-    <message>
-      <source>Desactivada</source>
-      <translation>Desactivada</translation>
-    </message>
-    <message>
-      <source>15 segundos</source>
-      <translation>15 segundos</translation>
-    </message>
-    <message>
-      <source>30 segundos</source>
-      <translation>30 segundos</translation>
-    </message>
-    <message>
-      <source>60 segundos</source>
-      <translation>60 segundos</translation>
-    </message>
-    <message>
-      <source>Configurar %1</source>
-      <translation>Configurar %1</translation>
-    </message>
-    <message>
-      <source>Bloquear la bóveda tras inactividad:</source>
-      <translation>Bloquear la bóveda tras inactividad:</translation>
-    </message>
-    <message>
-      <source>Bloquear la bóveda tras inactividad</source>
-      <translation>Bloquear la bóveda tras inactividad</translation>
-    </message>
-    <message>
-      <source>Borrar del portapapeles tras:</source>
-      <translation>Borrar del portapapeles tras:</translation>
-    </message>
-    <message>
-      <source>Borrar del portapapeles tras</source>
-      <translation>Borrar del portapapeles tras</translation>
-    </message>
-    <message>
-      <source>Los cambios se guardan al elegirlos.</source>
-      <translation>Los cambios se guardan al elegirlos.</translation>
-    </message>
-    <message>
-      <source>Cerrar</source>
-      <translation>Cerrar</translation>
-    </message>
-  </context>
-  <context>
     <name>Shortcuts</name>
     <message>
       <source>Nuevo elemento…</source>
@@ -9270,13 +8857,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Actualizar</source>
       <translation>Actualizar</translation>
-    </message>
-  </context>
-  <context>
-    <name>ToastHost</name>
-    <message>
-      <source>Cerrar notificación</source>
-      <translation>Cerrar notificación</translation>
     </message>
   </context>
   <context>

@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // First run of this installation: choose or create the vault key, then back it up.
 Rectangle {
@@ -99,7 +100,7 @@ Rectangle {
                     });
                     root.step = 2;
                 } else {
-                    root.errorText = qsTr("La importación no devolvió ninguna clave.");
+                    root.errorText = KI18n.i18n("The import returned no key.");
                 }
                 return;
             }
@@ -166,14 +167,14 @@ Rectangle {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 1
-                    text: qsTr("Te damos la bienvenida a %1").arg(Application.displayName)
+                    text: KI18n.i18nc("@title", "Welcome to %1", Application.displayName)
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                 }
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     Controls.Label {
-                        text: qsTr("Contraseñas y notas cifradas con OpenPGP, solo en tu equipo.")
+                        text: KI18n.i18n("Passwords and notes encrypted with OpenPGP, only on your computer.")
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
@@ -181,14 +182,14 @@ Rectangle {
                 Controls.Button {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: Kirigami.Units.largeSpacing
-                    text: qsTr("Crear nueva bóveda")
+                    text: KI18n.i18nc("@action:button", "Create New Vault")
                     icon.name: "document-new"
                     highlighted: true
                     onClicked: root.step = 1
                 }
                 Controls.ToolButton {
                     Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("Restaurar una copia de seguridad…")
+                    text: KI18n.i18nc("@action:button", "Restore a Backup…")
                     icon.name: "document-revert"
                     onClicked: root.restoreRequested()
                 }
@@ -207,10 +208,10 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Kirigami.Heading {
                         level: 1
-                        text: qsTr("Clave de la bóveda")
+                        text: KI18n.i18nc("@title", "Vault key")
                     }
                     HelpButton {
-                        help: qsTr("Todo lo que guardes se cifra con esta clave. Solo quien tiene su parte privada y conoce su frase puede abrir la bóveda.")
+                        help: KI18n.i18n("Everything you save is encrypted with this key. Only someone who holds its private part and knows its passphrase can open the vault.")
                     }
                 }
                 Kirigami.InlineMessage {
@@ -231,7 +232,7 @@ Rectangle {
                     checked: true
                     enabled: !root.busy
                     Controls.ButtonGroup.group: keyChoice
-                    Accessible.name: qsTr("Crear una clave para %1").arg(Application.displayName)
+                    Accessible.name: KI18n.i18nc("@option:radio", "Create a key for %1", Application.displayName)
                     background: Rectangle {
                         radius: Kirigami.Units.cornerRadius
                         color: createChoice.checked ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.10) : createChoice.hovered ? Kirigami.Theme.alternateBackgroundColor : "transparent"
@@ -259,19 +260,19 @@ Rectangle {
                             RowLayout {
                                 // A custom contentItem does not inherit the highlighted text color.
                                 Controls.Label {
-                                    text: qsTr("Crear una clave para %1").arg(Application.displayName)
+                                    text: KI18n.i18nc("@option:radio", "Create a key for %1", Application.displayName)
                                     font.weight: Font.DemiBold
                                     color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                                 }
                                 Controls.Label {
-                                    text: qsTr("Recomendada")
+                                    text: KI18n.i18nc("@label key option", "Recommended")
                                     color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
                                     font: Kirigami.Theme.smallFont
                                 }
                             }
                             Controls.Label {
                                 Layout.fillWidth: true
-                                text: qsTr("Una clave solo para tus contraseñas. Al bloquear, %1 la cierra por completo sin afectar a nada más.").arg(Application.displayName)
+                                text: KI18n.i18n("A key only for your passwords. When locking, %1 closes it completely without affecting anything else.", Application.displayName)
                                 wrapMode: Text.Wrap
                                 color: createChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
                                 opacity: createChoice.highlighted ? 0.85 : 1
@@ -285,7 +286,7 @@ Rectangle {
                     checkable: true
                     enabled: !root.busy
                     Controls.ButtonGroup.group: keyChoice
-                    Accessible.name: qsTr("Usar una de mis claves")
+                    Accessible.name: KI18n.i18nc("@option:radio", "Use one of my keys")
                     background: Rectangle {
                         radius: Kirigami.Units.cornerRadius
                         color: existingChoice.checked ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.10) : existingChoice.hovered ? Kirigami.Theme.alternateBackgroundColor : "transparent"
@@ -311,14 +312,14 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: Kirigami.Units.smallSpacing
                             Controls.Label {
-                                text: qsTr("Usar una de mis claves")
+                                text: KI18n.i18nc("@option:radio", "Use one of my keys")
                                 font.weight: Font.DemiBold
                                 color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                             }
                             Controls.Label {
                                 Layout.fillWidth: true
                                 visible: root.ownKeys.length === 0
-                                text: qsTr("No hay claves privadas en este equipo.")
+                                text: KI18n.i18n("There are no private keys on this computer.")
                                 wrapMode: Text.Wrap
                                 color: existingChoice.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor
                                 opacity: existingChoice.highlighted ? 0.85 : 1
@@ -329,11 +330,11 @@ Rectangle {
                                 visible: root.ownKeys.length > 0
                                 enabled: existingChoice.checked && !root.busy
                                 model: root.ownKeys.map(key => (key.title || key.email) + " · " + key.id.slice(-8))
-                                Accessible.name: qsTr("Clave existente")
+                                Accessible.name: KI18n.i18nc("@label:listbox", "Existing key")
                             }
                             Controls.Button {
                                 Layout.alignment: Qt.AlignLeft
-                                text: qsTr("Importar una clave privada…")
+                                text: KI18n.i18nc("@action:button", "Import a Private Key…")
                                 icon.name: "document-import"
                                 enabled: !root.busy
                                 onClicked: {
@@ -349,7 +350,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: Kirigami.Units.largeSpacing
                     Controls.Button {
-                        text: qsTr("Atrás")
+                        text: KI18n.i18nc("@action:button", "Back")
                         icon.name: "go-previous"
                         enabled: !root.busy
                         onClicked: root.step = 0
@@ -358,7 +359,7 @@ Rectangle {
                         Layout.fillWidth: true
                     }
                     Controls.Button {
-                        text: root.creating ? qsTr("Creando la clave…") : qsTr("Continuar")
+                        text: root.creating ? KI18n.i18n("Creating the key…") : KI18n.i18nc("@action:button", "Continue")
                         icon.name: "go-next"
                         highlighted: true
                         enabled: !root.busy && (createChoice.checked || (existingChoice.checked && existingKeys.currentIndex >= 0 && root.ownKeys.length > 0))
@@ -374,8 +375,8 @@ Rectangle {
 
             // 2 — review an imported or selected key before it becomes the vault key.
             KeyReviewPage {
-                title: root.reviewSource === "import" ? qsTr("Revisa la clave importada") : qsTr("Revisa la clave seleccionada")
-                subtitle: qsTr("Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.")
+                title: root.reviewSource === "import" ? KI18n.i18nc("@title", "Review the imported key") : KI18n.i18nc("@title", "Review the selected key")
+                subtitle: KI18n.i18n("Verify your key's fingerprint and mark it as your own to use it in your vault.")
                 selectedKey: root.importedKey
                 keyStore: root.keyStore
                 importedFromFile: root.reviewSource === "import"
@@ -398,7 +399,7 @@ Rectangle {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 1
-                    text: root.backedUp ? qsTr("Copia guardada") : qsTr("Guarda una copia de tu clave")
+                    text: root.backedUp ? KI18n.i18nc("@title", "Backup saved") : KI18n.i18nc("@title", "Save a backup of your key")
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                 }
@@ -406,7 +407,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     visible: !root.backedUp
                     Controls.Label {
-                        text: qsTr("Sin ella no podrás abrir la bóveda si pierdes este equipo.")
+                        text: KI18n.i18n("Without it you will not be able to open the vault if you lose this computer.")
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
@@ -415,7 +416,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: Kirigami.Units.largeSpacing
                     visible: !root.backedUp
-                    text: qsTr("Guardar copia de la clave…")
+                    text: KI18n.i18nc("@action:button", "Save Key Backup…")
                     icon.name: "document-save-as"
                     highlighted: true
                     enabled: !root.busy
@@ -424,7 +425,7 @@ Rectangle {
                 Controls.Button {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: root.backedUp ? Kirigami.Units.largeSpacing : 0
-                    text: root.backedUp ? qsTr("Abrir la bóveda") : qsTr("Más tarde")
+                    text: root.backedUp ? KI18n.i18nc("@action:button", "Open the Vault") : KI18n.i18nc("@action:button", "Later")
                     icon.name: root.backedUp ? "go-next" : ""
                     highlighted: root.backedUp
                     flat: !root.backedUp
@@ -458,16 +459,16 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Kirigami.Units.largeSpacing * 2
-        text: qsTr("¿Necesitas ayuda?")
+        text: KI18n.i18nc("@action:button", "Need help?")
         icon.name: "help-contents"
         onClicked: root.handbookRequested("first-run")
     }
 
     Dialogs.FileDialog {
         id: importDialog
-        title: qsTr("Seleccionar clave OpenPGP para importar")
+        title: KI18n.i18nc("@title:window", "Select OpenPGP Key to Import")
         fileMode: Dialogs.FileDialog.OpenFile
-        nameFilters: [qsTr("Archivos OpenPGP (*.asc *.gpg *.pgp *.key)"), qsTr("Todos los archivos (*)")]
+        nameFilters: [KI18n.i18n("OpenPGP files (*.asc *.gpg *.pgp *.key)"), KI18n.i18n("All files (*)")]
         onAccepted: root.importKey(selectedFile)
     }
 

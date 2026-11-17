@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // Discreet "?" next to a title: explains on hover; the handbook lives in "¿Necesitas ayuda?".
 Controls.ToolButton {
@@ -11,7 +12,7 @@ Controls.ToolButton {
     icon.name: "help-contextual"
     display: Controls.AbstractButton.IconOnly
     focusPolicy: Qt.NoFocus
-    text: qsTr("Más información")
+    text: KI18n.i18nc("@action:button", "More Information")
     implicitWidth: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
     implicitHeight: implicitWidth
     flat: true

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Item {
     id: root
@@ -133,7 +134,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 icon.name: "window-close"
                 display: Controls.AbstractButton.IconOnly
-                Accessible.name: qsTr("Cerrar notificación")
+                Accessible.name: KI18n.i18nc("@action:button", "Close notification")
                 onClicked: root.close()
             }
         }
