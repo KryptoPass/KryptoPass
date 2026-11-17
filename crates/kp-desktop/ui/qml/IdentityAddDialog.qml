@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: root
@@ -17,7 +18,7 @@ Controls.Dialog {
     anchors.centerIn: parent
     width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 32)
     modal: true
-    title: step === 0 ? qsTr("Añadir identidad") : qsTr("Configuración en KryptoPass")
+    title: step === 0 ? KI18n.i18nc("@action", "Add Identity") : KI18n.i18nc("@title", "KryptoPass Settings")
     standardButtons: Controls.Dialog.Close
     closePolicy: Controls.Popup.NoAutoClose
     function start() {
@@ -78,12 +79,12 @@ Controls.Dialog {
             visible: root.step === 0
             Layout.fillWidth: true
             Controls.Button {
-                text: qsTr("Crear clave OpenPGP…")
+                text: KI18n.i18nc("@action:button", "Create OpenPGP Key…")
                 enabled: !root.keyStore.controller.busy
                 onClicked: root.perform("create")
             }
             Controls.Button {
-                text: qsTr("Importar clave OpenPGP…")
+                text: KI18n.i18nc("@action:button", "Import OpenPGP Key…")
                 enabled: !root.keyStore.controller.busy
                 onClicked: root.perform("import")
             }
@@ -92,10 +93,10 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 model: root.keyStore.entries
                 textRole: "title"
-                Accessible.name: qsTr("Identidad existente en el llavero")
+                Accessible.name: KI18n.i18n("Existing identity in the keyring")
             }
             Controls.Button {
-                text: qsTr("Usar clave existente")
+                text: KI18n.i18nc("@action:button", "Use Existing Key")
                 enabled: existing.currentIndex >= 0 && !root.keyStore.controller.busy
                 onClicked: root.prepare(root.keyStore.entries[existing.currentIndex].id)
             }
@@ -113,20 +114,20 @@ Controls.Dialog {
                 id: label
                 Layout.fillWidth: true
                 maximumLength: 160
-                placeholderText: qsTr("Alias en KryptoPass")
+                placeholderText: KI18n.i18nc("@label:textbox", "Alias in KryptoPass")
                 Accessible.name: placeholderText
             }
             Controls.CheckBox {
                 id: dedicated
-                text: qsTr("Olvidar contraseña al bloquear la bóveda (gpg-agent)")
+                text: KI18n.i18n("Forget passphrase when the vault locks (gpg-agent)")
             }
             Controls.CheckBox {
                 id: useDefault
-                text: qsTr("Usar como clave de bóveda")
+                text: KI18n.i18nc("@action:button", "Use as Vault Key")
                 enabled: !!root.identity?.canEncrypt && !!root.identity?.hasSecret
             }
             Controls.Button {
-                text: qsTr("Guardar")
+                text: KI18n.i18nc("@action:button", "Save")
                 enabled: !!label.text.trim() && !root.keyStore.controller.busy && !root.saving
                 onClicked: {
                     root.saving = true;

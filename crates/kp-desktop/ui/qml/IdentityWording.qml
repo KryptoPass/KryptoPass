@@ -1,4 +1,5 @@
 import QtQuick
+import org.kde.ki18n
 
 /// The one place where identity state codes become text. Rust decides the code; this file
 /// words it, so the list, the header and the checklists say the same thing.
@@ -16,61 +17,61 @@ QtObject {
         return groupedFingerprint((value || "").slice(-8));
     }
     function expiry(seconds) {
-        return seconds ? qsTr("Caduca el %1").arg(dateText(seconds)) : qsTr("Sin caducidad");
+        return seconds ? KI18n.i18n("Expires on %1", dateText(seconds)) : KI18n.i18nc("@item:inlistbox key expiry", "Never expires");
     }
 
     /// State of a health item: `{code, days, date}`.
     function health(item) {
         switch (item?.code) {
         case "revoked":
-            return qsTr("Revocada");
+            return KI18n.i18nc("@info key status", "Revoked");
         case "expired":
-            return qsTr("Caducada");
+            return KI18n.i18nc("@info key status", "Expired");
         case "disabled":
-            return qsTr("Deshabilitada");
+            return KI18n.i18nc("@info key status", "Disabled");
         case "invalid":
-            return qsTr("Inválida");
+            return KI18n.i18nc("@info key status", "Invalid");
         case "noExpiry":
-            return qsTr("Sin caducidad");
+            return KI18n.i18nc("@item:inlistbox key expiry", "Never expires");
         case "expires":
-            return qsTr("Caduca el %1").arg(dateText(item.date));
+            return KI18n.i18n("Expires on %1", dateText(item.date));
         case "expiresSoon":
-            return item.days > 0 ? qsTr("Caduca en %n día", "", item.days) : qsTr("Caduca hoy");
+            return item.days > 0 ? KI18n.i18np("Expires in %1 day", "Expires in %1 days", item.days) : KI18n.i18n("Expires today");
         case "partExpiresSoon":
-            return item.days > 0 ? qsTr("Una subclave caduca en %n día", "", item.days) : qsTr("Una subclave caduca hoy");
+            return item.days > 0 ? KI18n.i18np("A subkey expires in %1 day", "A subkey expires in %1 days", item.days) : KI18n.i18n("A subkey expires today");
         case "cannotEncrypt":
         case "cannotEncryptTo":
-            return qsTr("Sin subclave de cifrado vigente");
+            return KI18n.i18nc("@info review status", "No valid encryption subkey");
         case "privateElsewhere":
-            return qsTr("Clave privada fuera de este equipo");
+            return KI18n.i18n("Private key not on this computer");
         case "notTrustedAsOwn":
-            return qsTr("Sin confianza absoluta en GnuPG");
+            return KI18n.i18n("No ultimate trust in GnuPG");
         case "backupSaved":
-            return qsTr("Respaldo guardado el %1").arg(dateText(item.date));
+            return KI18n.i18n("Backup saved on %1", dateText(item.date));
         case "noBackup":
-            return qsTr("Pendiente de exportar");
+            return KI18n.i18n("Not exported yet");
         case "emergencySaved":
-            return qsTr("Generado el %1").arg(dateText(item.date));
+            return KI18n.i18n("Created on %1", dateText(item.date));
         case "noEmergency":
-            return qsTr("Pendiente de generar");
+            return KI18n.i18n("Not created yet");
         case "verified":
-            return qsTr("Verificada el %1").arg(dateText(item.date));
+            return KI18n.i18n("Verified on %1", dateText(item.date));
         case "verificationChanged":
-            return qsTr("Sus UID cambiaron desde la verificación");
+            return KI18n.i18n("Its UIDs changed since verification");
         case "unverified":
-            return qsTr("Sin verificar");
+            return KI18n.i18n("Not verified");
         }
         return "";
     }
     function validity(code) {
         return ({
-                ultimate: qsTr("Total"),
-                full: qsTr("Plena"),
-                marginal: qsTr("Marginal"),
-                never: qsTr("No válida"),
-                revoked: qsTr("Revocada"),
-                invalid: qsTr("Inválida")
-            })[code] || qsTr("Sin verificar");
+                ultimate: KI18n.i18nc("@info GnuPG validity or trust", "Ultimate"),
+                full: KI18n.i18nc("@info GnuPG validity or trust", "Full"),
+                marginal: KI18n.i18nc("@info GnuPG validity or trust", "Marginal"),
+                never: KI18n.i18nc("@info GnuPG validity or trust", "Never"),
+                revoked: KI18n.i18nc("@info key status", "Revoked"),
+                invalid: KI18n.i18nc("@info key status", "Invalid")
+            })[code] || KI18n.i18n("Not verified");
     }
     /// Whether the list should flag this identity: only expiry and unusable keys do.
     function needsAttention(entry) {
@@ -81,17 +82,17 @@ QtObject {
     }
 
     readonly property var tips: ({
-            fingerprint: qsTr("La huella es el código de verificación de la clave: compárala completa con su propietario por un canal de confianza."),
-            forgetOnLock: qsTr("Al bloquear la bóveda, gpg-agent olvida la contraseña de esta clave y la pedirá al desbloquear. También la pedirán otras aplicaciones que la usen."),
-            vaultKey: qsTr("Los elementos nuevos de la bóveda se cifran con esta clave. Los existentes no se vuelven a cifrar."),
-            revocation: qsTr("Archivo que revoca la clave si pierdes el acceso o te la roban. Generarlo no la revoca; guárdalo fuera de este equipo."),
-            backup: qsTr("La fecha indica cuándo se exportó desde KryptoPass; no comprueba que el archivo siga existiendo."),
-            ownerTrust: qsTr("GnuPG no cifra para una clave propia hasta que confirmas su confianza absoluta."),
-            verification: qsTr("Verificación local de KryptoPass: no firma una certificación OpenPGP ni cambia la confianza de GnuPG."),
-            label: qsTr("Etiqueta local de KryptoPass. No modifica la clave ni configura ningún servicio."),
-            keyservers: qsTr("Un servidor puede filtrar datos o exigir verificar el correo en su web. Lo publicado no siempre se puede retirar."),
-            validity: qsTr("Validez del UID calculada por GnuPG. No indica el estado de la clave ni la confianza en su propietario como certificador."),
-            certifications: qsTr("Firmas de terceros en el anillo local. Una firma no implica que hayas verificado a su propietario.")
+            fingerprint: KI18n.i18n("The fingerprint is the key's verification code: compare all of it with its owner over a trusted channel."),
+            forgetOnLock: KI18n.i18n("When the vault locks, gpg-agent forgets this key's passphrase and asks for it again on unlock. Other applications that use it will ask for it too."),
+            vaultKey: KI18n.i18n("New vault items are encrypted with this key. Existing ones are not re-encrypted."),
+            revocation: KI18n.i18n("A file that revokes the key if you lose access to it or it is stolen. Creating it does not revoke the key; keep it outside this computer."),
+            backup: KI18n.i18n("The date shows when it was exported from KryptoPass; it does not check that the file still exists."),
+            ownerTrust: KI18n.i18n("GnuPG does not encrypt to a key of yours until you confirm its ultimate trust."),
+            verification: KI18n.i18n("Local KryptoPass verification: it does not sign an OpenPGP certification or change GnuPG's trust."),
+            label: KI18n.i18n("Local KryptoPass label. It does not change the key or configure any service."),
+            keyservers: KI18n.i18n("A server may leak data or require verifying the email on its website. What is published cannot always be withdrawn."),
+            validity: KI18n.i18n("UID validity computed by GnuPG. It does not show the key's status or the trust in its owner as a certifier."),
+            certifications: KI18n.i18n("Third-party signatures in the local keyring. A signature does not mean you verified its owner.")
         })
 
     /// Usage chips for one key or subkey, from its GnuPG flags.
@@ -99,50 +100,50 @@ QtObject {
         const chips = [];
         if (component.canCertify)
             chips.push({
-                text: qsTr("Certificar"),
+                text: KI18n.i18nc("@label key capability", "Certify"),
                 role: "certify"
             });
         if (component.canSign)
             chips.push({
-                text: qsTr("Firmar"),
+                text: KI18n.i18nc("@label key capability", "Sign"),
                 role: "sign"
             });
         if (component.canEncrypt)
             chips.push({
-                text: qsTr("Cifrar"),
+                text: KI18n.i18nc("@label key capability", "Encrypt"),
                 role: "encrypt"
             });
         if (component.canAuthenticate)
             chips.push({
-                text: qsTr("SSH / Autenticar"),
+                text: KI18n.i18nc("@label key capability", "SSH / Authenticate"),
                 role: "authenticate"
             });
         return chips;
     }
     function location(code) {
         return ({
-                card: qsTr("En tarjeta"),
-                public: qsTr("Solo pública")
+                card: KI18n.i18nc("@label key storage", "On card"),
+                public: KI18n.i18nc("@item:inlistbox key material", "Public only")
             })[code] || "";
     }
 
     function publication(record) {
         if (record?.uploadedDigest && record.uploadedDigest !== record.currentDigest)
-            return qsTr("Desactualizada");
+            return KI18n.i18nc("@info key server status", "Outdated");
         if (record?.state === "present")
-            return qsTr("Publicada");
+            return KI18n.i18nc("@info key server status", "Published");
         if (record?.state === "missing")
-            return qsTr("No encontrada");
+            return KI18n.i18nc("@info key server status", "Not found");
         if (record?.state === "error")
-            return qsTr("Error de consulta");
-        return record?.uploadedAt ? qsTr("Enviada, sin confirmar") : qsTr("No comprobado");
+            return KI18n.i18nc("@info key server status", "Lookup error");
+        return record?.uploadedAt ? KI18n.i18nc("@info key server status", "Sent, not confirmed") : KI18n.i18nc("@info key server status", "Not checked");
     }
     function publicationDetail(record) {
         const parts = [];
         if (record?.uploadedAt)
-            parts.push(qsTr("Último envío: %1").arg(dateText(record.uploadedAt)));
+            parts.push(KI18n.i18n("Last upload: %1", dateText(record.uploadedAt)));
         if (record?.checkedAt)
-            parts.push(qsTr("Última comprobación: %1").arg(dateText(record.checkedAt)));
+            parts.push(KI18n.i18n("Last check: %1", dateText(record.checkedAt)));
         return parts.join("\n");
     }
 }

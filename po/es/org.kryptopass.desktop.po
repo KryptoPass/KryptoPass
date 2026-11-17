@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:36-0400\n"
+"POT-Creation-Date: 2026-11-17 15:38-0400\n"
 "PO-Revision-Date: 2026-11-17 15:19-0400\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -685,6 +685,7 @@ msgid "View the address book"
 msgstr "Ver la agenda de contactos"
 
 #: crates/kp-desktop/ui/qml/EntryDetailPane.qml:143
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:423
 #, kde-format
 msgctxt "@action:button"
 msgid "Add Identity…"
@@ -1505,6 +1506,7 @@ msgid "Saving…"
 msgstr "Guardando…"
 
 #: crates/kp-desktop/ui/qml/FolderEditor.qml:339
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:130
 #, kde-format
 msgctxt "@action:button"
 msgid "Save"
@@ -1630,6 +1632,98 @@ msgctxt "@action:button"
 msgid "More Information"
 msgstr "Más información"
 
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:21
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:202
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:226
+#, kde-format
+msgctxt "@action"
+msgid "Add Identity"
+msgstr "Añadir identidad"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:21
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:197
+#, kde-format
+msgctxt "@title"
+msgid "KryptoPass Settings"
+msgstr "Configuración en KryptoPass"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:82
+#, kde-format
+msgctxt "@action:button"
+msgid "Create OpenPGP Key…"
+msgstr "Crear clave OpenPGP…"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:87
+#, kde-format
+msgctxt "@action:button"
+msgid "Import OpenPGP Key…"
+msgstr "Importar clave OpenPGP…"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:96
+#, kde-format
+msgid "Existing identity in the keyring"
+msgstr "Identidad existente en el llavero"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:99
+#, kde-format
+msgctxt "@action:button"
+msgid "Use Existing Key"
+msgstr "Usar clave existente"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:117
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:61
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Alias in KryptoPass"
+msgstr "Alias en KryptoPass"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:122
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:219
+#, kde-format
+msgid "Forget passphrase when the vault locks (gpg-agent)"
+msgstr "Olvidar contraseña al bloquear la bóveda (gpg-agent)"
+
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:126
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:211
+#, kde-format
+msgctxt "@action:button"
+msgid "Use as Vault Key"
+msgstr "Usar como clave de bóveda"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:17
+#, kde-format
+msgctxt "@title:window"
+msgid "Alias and Organization"
+msgstr "Alias y organización"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:67
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "For example: Personal, Work"
+msgstr "Por ejemplo: Personal, Trabajo"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:68
+#, kde-format
+msgid "Name in KryptoPass"
+msgstr "Nombre en KryptoPass"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:72
+#, kde-format
+msgctxt "@option:check"
+msgid "This is one of my identities"
+msgstr "Es una de mis identidades"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:78
+#, kde-format
+msgctxt "@item:inlistbox"
+msgid "No person assigned"
+msgstr "Sin persona asignada"
+
+#: crates/kp-desktop/ui/qml/IdentityEditor.qml:79
+#, kde-format
+msgid "Person it belongs to"
+msgstr "Persona a la que pertenece"
+
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:172
 #, kde-format
 msgctxt "@label:textbox"
@@ -1731,6 +1825,706 @@ msgstr "Agregar teléfono"
 msgctxt "@label:textbox postal address"
 msgid "Address"
 msgstr "Dirección"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:81
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:33
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:367
+#: crates/kp-desktop/ui/qml/Main.qml:455
+#, kde-format
+msgid "Copied to clipboard"
+msgstr "Copiado al portapapeles"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:96
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:123
+#, kde-format
+msgctxt "@title:window"
+msgid "Key Label"
+msgstr "Etiqueta de la clave"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:122
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "For example: GitHub SSH"
+msgstr "Por ejemplo: GitHub SSH"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:141
+#, kde-format
+msgctxt "@title:window"
+msgid "Verify Fingerprint"
+msgstr "Verificar huella"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:158
+#, kde-format
+msgid "Accept only if it fully matches the one its owner gives you."
+msgstr "Acepta solo si coincide completa con la que te da su propietario."
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:202
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:206
+#, kde-format
+msgctxt "@title review check"
+msgid "Vault's main key"
+msgstr "Clave principal de la bóveda"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:206
+#, kde-format
+msgid "Active as vault key"
+msgstr "Activa como clave de bóveda"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:222
+#, kde-format
+msgid "Forget passphrase when the vault locks"
+msgstr "Olvidar contraseña al bloquear la bóveda"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:239
+#, kde-format
+msgctxt "@title"
+msgid "Person"
+msgstr "Persona"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:240
+#, kde-format
+msgid "Unassigned"
+msgstr "Sin asignar"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:242
+#, kde-format
+msgctxt "@action:button"
+msgid "Organize…"
+msgstr "Organizar…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:251
+#, kde-format
+msgctxt "@title"
+msgid "Fingerprint verification"
+msgstr "Verificación de huella"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:255
+#, kde-format
+msgctxt "@action:button"
+msgid "Verify…"
+msgstr "Verificar…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:264
+#, kde-format
+msgctxt "@action:button"
+msgid "Remove Verification"
+msgstr "Quitar verificación"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:285
+#, kde-format
+msgctxt "@title:group"
+msgid "Keys and subkeys"
+msgstr "Claves y subclaves"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:290
+#, kde-format
+msgctxt "@action:button"
+msgid "Add Subkey…"
+msgstr "Añadir subclave…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:324
+#, kde-format
+msgid "Primary key"
+msgstr "Clave primaria"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:324
+#, kde-format
+msgid "Subkey #%1"
+msgstr "Subclave #%1"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:357
+#, kde-format
+msgctxt "@action:button"
+msgid "Key Actions"
+msgstr "Acciones de la clave"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:368
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Copy SSH Public Key"
+msgstr "Copiar clave pública SSH"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:374
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:134
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:115
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Fingerprint"
+msgstr "Copiar huella"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:374
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Copy Subkey Fingerprint"
+msgstr "Copiar huella de subclave"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:379
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Change Label…"
+msgstr "Cambiar etiqueta…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:386
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Change Expiry…"
+msgstr "Cambiar caducidad…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:398
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Revoke Subkey…"
+msgstr "Revocar subclave…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:418
+#, kde-format
+msgctxt "@title:group"
+msgid "Identities (UID)"
+msgstr "Identidades (UID)"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:475
+#, kde-format
+msgctxt "@label badge identity"
+msgid "Primary"
+msgstr "Principal"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:486
+#, kde-format
+msgid "Validity and trust: Ultimate (own key)"
+msgstr "Validez y confianza: Total (clave propia)"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:486
+#, kde-format
+msgid "GnuPG validity: %1"
+msgstr "Validez GnuPG: %1"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:503
+#, kde-format
+msgctxt "@action:button"
+msgid "Identity Actions"
+msgstr "Acciones de la identidad"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:514
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Use as Primary Identity"
+msgstr "Usar como identidad principal"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:522
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Certify…"
+msgstr "Certificar…"
+
+#: crates/kp-desktop/ui/qml/IdentityKeys.qml:529
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Revoke Identity…"
+msgstr "Revocar identidad…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:36
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:158
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:173
+#, kde-format
+msgctxt "@title review check"
+msgid "Trust in GnuPG"
+msgstr "Confianza en GnuPG"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:38
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:160
+#, kde-format
+msgctxt "@info review status"
+msgid "No ultimate trust"
+msgstr "Sin confianza absoluta"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:41
+#, kde-format
+msgctxt "@action:button"
+msgid "Confirm Trust…"
+msgstr "Confirmar confianza…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:50
+#, kde-format
+msgctxt "@title"
+msgid "Private key backup"
+msgstr "Respaldo de clave privada"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:55
+#, kde-format
+msgctxt "@action:button"
+msgid "Export Private Copy…"
+msgstr "Exportar copia privada…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:63
+#, kde-format
+msgctxt "@title"
+msgid "Key passphrase"
+msgstr "Contraseña de la clave (passphrase)"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:66
+#, kde-format
+msgctxt "@action:button"
+msgid "Change Passphrase…"
+msgstr "Cambiar contraseña…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:74
+#, kde-format
+msgctxt "@title"
+msgid "Revocation certificate (emergency plan)"
+msgstr "Certificado de revocación (plan de emergencia)"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:80
+#, kde-format
+msgctxt "@action:button"
+msgid "Create…"
+msgstr "Generar…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:86
+#, kde-format
+msgctxt "@action:button"
+msgid "Apply Existing…"
+msgstr "Aplicar existente…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:98
+#, kde-format
+msgctxt "@title:group"
+msgid "Danger zone"
+msgstr "Zona de peligro"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:103
+#, kde-format
+msgctxt "@title"
+msgid "Revoke this key permanently"
+msgstr "Revocar esta clave permanentemente"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:106
+#, kde-format
+msgctxt "@action:button"
+msgid "Revoke Key…"
+msgstr "Revocar clave…"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:113
+#, kde-format
+msgctxt "@title"
+msgid "Delete key from this computer"
+msgstr "Eliminar clave de este equipo"
+
+#: crates/kp-desktop/ui/qml/IdentitySecurity.qml:116
+#, kde-format
+msgctxt "@action:button"
+msgid "Delete from Keyring…"
+msgstr "Eliminar del llavero…"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:34
+#, kde-format
+msgctxt "@title:window"
+msgid "Publish Public Key"
+msgstr "Publicar clave pública"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:40
+#, kde-format
+msgid ""
+"The public key, with its UIDs and certifications, will be sent to %1. What "
+"is published cannot always be withdrawn."
+msgstr ""
+"Se enviará la clave pública, con sus UID y certificaciones, a %1. Lo "
+"publicado no siempre se puede retirar."
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:69
+#, kde-format
+msgctxt "@title:group"
+msgid "Key servers"
+msgstr "Servidores de claves"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:77
+#, kde-format
+msgid "Online services disabled"
+msgstr "Servicios online desactivados"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:83
+#, kde-format
+msgctxt "@action:button"
+msgid "View on the Web"
+msgstr "Ver en la web"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:90
+#, kde-format
+msgctxt "@action:button"
+msgid "Refresh from Server…"
+msgstr "Actualizar desde servidor…"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:96
+#, kde-format
+msgctxt "@action:button"
+msgid "Configure Servers…"
+msgstr "Configurar servidores…"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:115
+#, kde-format
+msgctxt "@action:button"
+msgid "Check"
+msgstr "Comprobar"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:121
+#, kde-format
+msgctxt "@action:button"
+msgid "Update…"
+msgstr "Actualizar…"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:121
+#, kde-format
+msgctxt "@action:button"
+msgid "Publish…"
+msgstr "Publicar…"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:133
+#, kde-format
+msgid "No servers configured."
+msgstr "No hay servidores configurados."
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:145
+#, kde-format
+msgctxt "@title:group"
+msgid "Third-party certifications (%1)"
+msgstr "Certificaciones de terceros (%1)"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:164
+#, kde-format
+msgid "Unknown signer"
+msgstr "Firmante desconocido"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:169
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Signed UID: %1"
+msgstr "UID firmado: %1"
+
+#: crates/kp-desktop/ui/qml/IdentityServers.qml:189
+#, kde-format
+msgid "No third-party certifications."
+msgstr "Sin certificaciones de terceros."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:20
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:37
+#, kde-format
+msgid "Expires on %1"
+msgstr "Caduca el %1"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:20
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:35
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:55
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "Never expires"
+msgstr "Sin caducidad"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:27
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:72
+#, kde-format
+msgctxt "@info key status"
+msgid "Revoked"
+msgstr "Revocada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:29
+#, kde-format
+msgctxt "@info key status"
+msgid "Expired"
+msgstr "Caducada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:31
+#, kde-format
+msgctxt "@info key status"
+msgid "Disabled"
+msgstr "Deshabilitada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:33
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:73
+#, kde-format
+msgctxt "@info key status"
+msgid "Invalid"
+msgstr "Inválida"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:39
+#, kde-format
+msgid "Expires in %1 day"
+msgid_plural "Expires in %1 days"
+msgstr[0] "Caduca en %1 día"
+msgstr[1] "Caduca en %1 días"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:39
+#, kde-format
+msgid "Expires today"
+msgstr "Caduca hoy"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:41
+#, kde-format
+msgid "A subkey expires in %1 day"
+msgid_plural "A subkey expires in %1 days"
+msgstr[0] "Una subclave caduca en %1 día"
+msgstr[1] "Una subclave caduca en %1 días"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:41
+#, kde-format
+msgid "A subkey expires today"
+msgstr "Una subclave caduca hoy"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:44
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:191
+#, kde-format
+msgctxt "@info review status"
+msgid "No valid encryption subkey"
+msgstr "Sin subclave de cifrado vigente"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:46
+#, kde-format
+msgid "Private key not on this computer"
+msgstr "Clave privada fuera de este equipo"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:48
+#, kde-format
+msgid "No ultimate trust in GnuPG"
+msgstr "Sin confianza absoluta en GnuPG"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:50
+#, kde-format
+msgid "Backup saved on %1"
+msgstr "Respaldo guardado el %1"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:52
+#, kde-format
+msgid "Not exported yet"
+msgstr "Pendiente de exportar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:54
+#, kde-format
+msgid "Created on %1"
+msgstr "Generado el %1"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:56
+#, kde-format
+msgid "Not created yet"
+msgstr "Pendiente de generar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:58
+#, kde-format
+msgid "Verified on %1"
+msgstr "Verificada el %1"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:60
+#, kde-format
+msgid "Its UIDs changed since verification"
+msgstr "Sus UID cambiaron desde la verificación"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:62
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:74
+#, kde-format
+msgid "Not verified"
+msgstr "Sin verificar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:68
+#, kde-format
+msgctxt "@info GnuPG validity or trust"
+msgid "Ultimate"
+msgstr "Total"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:69
+#, kde-format
+msgctxt "@info GnuPG validity or trust"
+msgid "Full"
+msgstr "Plena"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:70
+#, kde-format
+msgctxt "@info GnuPG validity or trust"
+msgid "Marginal"
+msgstr "Marginal"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:71
+#, kde-format
+msgctxt "@info GnuPG validity or trust"
+msgid "Never"
+msgstr "No válida"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:85
+#, kde-format
+msgid ""
+"The fingerprint is the key's verification code: compare all of it with its "
+"owner over a trusted channel."
+msgstr ""
+"La huella es el código de verificación de la clave: compárala completa con "
+"su propietario por un canal de confianza."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:86
+#, kde-format
+msgid ""
+"When the vault locks, gpg-agent forgets this key's passphrase and asks for "
+"it again on unlock. Other applications that use it will ask for it too."
+msgstr ""
+"Al bloquear la bóveda, gpg-agent olvida la contraseña de esta clave y la "
+"pedirá al desbloquear. También la pedirán otras aplicaciones que la usen."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:87
+#, kde-format
+msgid ""
+"New vault items are encrypted with this key. Existing ones are not re-"
+"encrypted."
+msgstr ""
+"Los elementos nuevos de la bóveda se cifran con esta clave. Los existentes "
+"no se vuelven a cifrar."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:88
+#, kde-format
+msgid ""
+"A file that revokes the key if you lose access to it or it is stolen. "
+"Creating it does not revoke the key; keep it outside this computer."
+msgstr ""
+"Archivo que revoca la clave si pierdes el acceso o te la roban. Generarlo no "
+"la revoca; guárdalo fuera de este equipo."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:89
+#, kde-format
+msgid ""
+"The date shows when it was exported from KryptoPass; it does not check that "
+"the file still exists."
+msgstr ""
+"La fecha indica cuándo se exportó desde KryptoPass; no comprueba que el "
+"archivo siga existiendo."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:90
+#, kde-format
+msgid ""
+"GnuPG does not encrypt to a key of yours until you confirm its ultimate "
+"trust."
+msgstr ""
+"GnuPG no cifra para una clave propia hasta que confirmas su confianza "
+"absoluta."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:91
+#, kde-format
+msgid ""
+"Local KryptoPass verification: it does not sign an OpenPGP certification or "
+"change GnuPG's trust."
+msgstr ""
+"Verificación local de KryptoPass: no firma una certificación OpenPGP ni "
+"cambia la confianza de GnuPG."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:92
+#, kde-format
+msgid ""
+"Local KryptoPass label. It does not change the key or configure any service."
+msgstr ""
+"Etiqueta local de KryptoPass. No modifica la clave ni configura ningún "
+"servicio."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:93
+#, kde-format
+msgid ""
+"A server may leak data or require verifying the email on its website. What "
+"is published cannot always be withdrawn."
+msgstr ""
+"Un servidor puede filtrar datos o exigir verificar el correo en su web. Lo "
+"publicado no siempre se puede retirar."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:94
+#, kde-format
+msgid ""
+"UID validity computed by GnuPG. It does not show the key's status or the "
+"trust in its owner as a certifier."
+msgstr ""
+"Validez del UID calculada por GnuPG. No indica el estado de la clave ni la "
+"confianza en su propietario como certificador."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:95
+#, kde-format
+msgid ""
+"Third-party signatures in the local keyring. A signature does not mean you "
+"verified its owner."
+msgstr ""
+"Firmas de terceros en el anillo local. Una firma no implica que hayas "
+"verificado a su propietario."
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:103
+#, kde-format
+msgctxt "@label key capability"
+msgid "Certify"
+msgstr "Certificar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:108
+#, kde-format
+msgctxt "@label key capability"
+msgid "Sign"
+msgstr "Firmar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:113
+#, kde-format
+msgctxt "@label key capability"
+msgid "Encrypt"
+msgstr "Cifrar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:118
+#, kde-format
+msgctxt "@label key capability"
+msgid "SSH / Authenticate"
+msgstr "SSH / Autenticar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:125
+#, kde-format
+msgctxt "@label key storage"
+msgid "On card"
+msgstr "En tarjeta"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:126
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:84
+#, kde-format
+msgctxt "@item:inlistbox key material"
+msgid "Public only"
+msgstr "Solo pública"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:132
+#, kde-format
+msgctxt "@info key server status"
+msgid "Outdated"
+msgstr "Desactualizada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:134
+#, kde-format
+msgctxt "@info key server status"
+msgid "Published"
+msgstr "Publicada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:136
+#, kde-format
+msgctxt "@info key server status"
+msgid "Not found"
+msgstr "No encontrada"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:138
+#, kde-format
+msgctxt "@info key server status"
+msgid "Lookup error"
+msgstr "Error de consulta"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:139
+#, kde-format
+msgctxt "@info key server status"
+msgid "Sent, not confirmed"
+msgstr "Enviada, sin confirmar"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:139
+#, kde-format
+msgctxt "@info key server status"
+msgid "Not checked"
+msgstr "No comprobado"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:144
+#, kde-format
+msgid "Last upload: %1"
+msgstr "Último envío: %1"
+
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:146
+#, kde-format
+msgid "Last check: %1"
+msgstr "Última comprobación: %1"
 
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:36
 #, kde-format
@@ -2122,13 +2916,6 @@ msgctxt "@title:tab"
 msgid "KDE Contacts"
 msgstr "Contactos KDE"
 
-#: crates/kp-desktop/ui/qml/KeyDetail.qml:33
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:367
-#: crates/kp-desktop/ui/qml/Main.qml:455
-#, kde-format
-msgid "Copied to clipboard"
-msgstr "Copiado al portapapeles"
-
 #: crates/kp-desktop/ui/qml/KeyDetail.qml:76
 #, kde-format
 msgctxt "@action:button"
@@ -2145,13 +2932,6 @@ msgstr "Cambiar"
 #, kde-format
 msgid "Key fingerprint"
 msgstr "Huella de la clave"
-
-#: crates/kp-desktop/ui/qml/KeyDetail.qml:134
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:115
-#, kde-format
-msgctxt "@action:button"
-msgid "Copy Fingerprint"
-msgstr "Copiar huella"
 
 #: crates/kp-desktop/ui/qml/KeyDetail.qml:151
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:198
@@ -2211,19 +2991,6 @@ msgstr "Clave OpenPGP"
 msgid "No identity"
 msgstr "Sin identidad"
 
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:158
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:173
-#, kde-format
-msgctxt "@title review check"
-msgid "Trust in GnuPG"
-msgstr "Confianza en GnuPG"
-
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:160
-#, kde-format
-msgctxt "@info review status"
-msgid "No ultimate trust"
-msgstr "Sin confianza absoluta"
-
 #: crates/kp-desktop/ui/qml/KeyImportReview.qml:162
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:236
 #, kde-format
@@ -2271,23 +3038,11 @@ msgctxt "@title review check"
 msgid "Encryption"
 msgstr "Cifrado"
 
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:191
-#, kde-format
-msgctxt "@info review status"
-msgid "No valid encryption subkey"
-msgstr "Sin subclave de cifrado vigente"
-
 #: crates/kp-desktop/ui/qml/KeyImportReview.qml:193
 #, kde-format
 msgctxt "@action:button"
 msgid "Add Encryption Subkey"
 msgstr "Añadir subclave de cifrado"
-
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:206
-#, kde-format
-msgctxt "@title review check"
-msgid "Vault's main key"
-msgstr "Clave principal de la bóveda"
 
 #: crates/kp-desktop/ui/qml/KeyImportReview.qml:207
 #, kde-format
@@ -2355,12 +3110,6 @@ msgctxt "@item:inlistbox key expiry"
 msgid "5 years"
 msgstr "5 años"
 
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:55
-#, kde-format
-msgctxt "@item:inlistbox key expiry"
-msgid "Never expires"
-msgstr "Sin caducidad"
-
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:61
 #, kde-format
 msgctxt "@item:inlistbox subkey usage"
@@ -2390,12 +3139,6 @@ msgstr "Pública y privada"
 msgctxt "@item:inlistbox key material"
 msgid "Private only"
 msgstr "Solo privada"
-
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:84
-#, kde-format
-msgctxt "@item:inlistbox key material"
-msgid "Public only"
-msgstr "Solo pública"
 
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:89
 #: crates/kp-desktop/ui/qml/VersionDialog.qml:102
@@ -2438,13 +3181,6 @@ msgstr "Cambiar contraseña (passphrase)"
 msgctxt "@title:window"
 msgid "Change Expiry"
 msgstr "Cambiar caducidad"
-
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:202
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:226
-#, kde-format
-msgctxt "@action"
-msgid "Add Identity"
-msgstr "Añadir identidad"
 
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:203
 #, kde-format

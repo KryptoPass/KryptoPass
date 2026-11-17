@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: root
@@ -13,7 +14,7 @@ Controls.Dialog {
     anchors.centerIn: parent
     width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 30)
     modal: true
-    title: qsTr("Alias y organización")
+    title: KI18n.i18nc("@title:window", "Alias and Organization")
     standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
     footer: Controls.DialogButtonBox {
         standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
@@ -57,25 +58,25 @@ Controls.Dialog {
     contentItem: ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
         Controls.Label {
-            text: qsTr("Alias en KryptoPass")
+            text: KI18n.i18nc("@label:textbox", "Alias in KryptoPass")
         }
         Controls.TextField {
             id: label
             Layout.fillWidth: true
             maximumLength: 160
-            placeholderText: qsTr("Por ejemplo: Personal, Trabajo")
-            Accessible.name: qsTr("Nombre en KryptoPass")
+            placeholderText: KI18n.i18nc("@info:placeholder", "For example: Personal, Work")
+            Accessible.name: KI18n.i18n("Name in KryptoPass")
         }
         Controls.CheckBox {
             id: own
-            text: qsTr("Es una de mis identidades")
+            text: KI18n.i18nc("@option:check", "This is one of my identities")
         }
         Controls.ComboBox {
             id: person
             visible: !own.checked
             Layout.fillWidth: true
-            model: [qsTr("Sin persona asignada"), ...root.keyStore.people.map(item => item.name)]
-            Accessible.name: qsTr("Persona a la que pertenece")
+            model: [KI18n.i18nc("@item:inlistbox", "No person assigned"), ...root.keyStore.people.map(item => item.name)]
+            Accessible.name: KI18n.i18n("Person it belongs to")
         }
         Kirigami.InlineMessage {
             Layout.fillWidth: true

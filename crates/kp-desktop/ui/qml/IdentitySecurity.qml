@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 /// Backup, passphrase and revocation as a one-line checklist, then the destructive actions.
 Controls.ScrollView {
@@ -32,12 +33,12 @@ Controls.ScrollView {
             visible: !!root.selectedKey?.needsOwnTrust
             level: "warning"
             indicator: "security-low"
-            title: qsTr("Confianza en GnuPG")
+            title: KI18n.i18nc("@title review check", "Trust in GnuPG")
             help: root.wording.tips.ownerTrust
-            status: qsTr("Sin confianza absoluta")
+            status: KI18n.i18nc("@info review status", "No ultimate trust")
             Controls.Button {
                 Layout.preferredWidth: root.buttonWidth
-                text: qsTr("Confirmar confianza…")
+                text: KI18n.i18nc("@action:button", "Confirm Trust…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("markAsOwn", root.selectedKey.id)
             }
@@ -46,12 +47,12 @@ Controls.ScrollView {
             visible: root.hasSecret
             level: root.backup?.level || "pending"
             indicator: "document-export"
-            title: qsTr("Respaldo de clave privada")
+            title: KI18n.i18nc("@title", "Private key backup")
             help: root.wording.tips.backup
             status: root.wording.health(root.backup)
             Controls.Button {
                 Layout.preferredWidth: root.buttonWidth
-                text: qsTr("Exportar copia privada…")
+                text: KI18n.i18nc("@action:button", "Export Private Copy…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("backupPrivate", root.selectedKey.id)
             }
@@ -59,10 +60,10 @@ Controls.ScrollView {
         IdentityRow {
             visible: root.hasSecret
             indicator: "object-locked"
-            title: qsTr("Contraseña de la clave (passphrase)")
+            title: KI18n.i18nc("@title", "Key passphrase")
             Controls.Button {
                 Layout.preferredWidth: root.buttonWidth
-                text: qsTr("Cambiar contraseña…")
+                text: KI18n.i18nc("@action:button", "Change Passphrase…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("passphrase", root.selectedKey.id)
             }
@@ -70,19 +71,19 @@ Controls.ScrollView {
         IdentityRow {
             level: root.hasSecret ? root.revocation?.level || "pending" : ""
             indicator: "security-medium"
-            title: qsTr("Certificado de revocación (plan de emergencia)")
+            title: KI18n.i18nc("@title", "Revocation certificate (emergency plan)")
             help: root.wording.tips.revocation
             status: root.hasSecret ? root.wording.health(root.revocation) : ""
             Controls.Button {
                 Layout.preferredWidth: (root.buttonWidth - Kirigami.Units.smallSpacing) / 2
                 visible: root.hasSecret && root.selectedKey?.statusCode !== "revoked"
-                text: qsTr("Generar…")
+                text: KI18n.i18nc("@action:button", "Create…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("prepareRevocation", root.selectedKey.id)
             }
             Controls.Button {
                 Layout.preferredWidth: root.hasSecret && root.selectedKey?.statusCode !== "revoked" ? (root.buttonWidth - Kirigami.Units.smallSpacing) / 2 : root.buttonWidth
-                text: qsTr("Aplicar existente…")
+                text: KI18n.i18nc("@action:button", "Apply Existing…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("import")
             }
@@ -94,25 +95,25 @@ Controls.ScrollView {
         }
         Kirigami.Heading {
             level: 4
-            text: qsTr("Zona de peligro")
+            text: KI18n.i18nc("@title:group", "Danger zone")
         }
         IdentityRow {
             visible: root.hasSecret && root.selectedKey?.statusCode !== "revoked"
             indicator: "dialog-cancel"
-            title: qsTr("Revocar esta clave permanentemente")
+            title: KI18n.i18nc("@title", "Revoke this key permanently")
             Controls.Button {
                 Layout.preferredWidth: root.buttonWidth
-                text: qsTr("Revocar clave…")
+                text: KI18n.i18nc("@action:button", "Revoke Key…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("revokeKey", root.selectedKey.id)
             }
         }
         IdentityRow {
             indicator: "edit-delete"
-            title: qsTr("Eliminar clave de este equipo")
+            title: KI18n.i18nc("@title", "Delete key from this computer")
             Controls.Button {
                 Layout.preferredWidth: root.buttonWidth
-                text: qsTr("Eliminar del llavero…")
+                text: KI18n.i18nc("@action:button", "Delete from Keyring…")
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("delete", root.selectedKey.id)
             }

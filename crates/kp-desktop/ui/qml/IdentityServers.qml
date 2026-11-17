@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 /// Where the public key is published, and the third-party certifications it carries.
 Controls.ScrollView {
@@ -30,13 +31,13 @@ Controls.ScrollView {
         anchors.centerIn: parent
         width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 28)
         modal: true
-        title: qsTr("Publicar clave pública")
+        title: KI18n.i18nc("@title:window", "Publish Public Key")
         standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
         onAccepted: root.keyStore.controller.publishIdentity(fingerprint, server, true)
         contentItem: Controls.Label {
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
-            text: qsTr("Se enviará la clave pública, con sus UID y certificaciones, a %1. Lo publicado no siempre se puede retirar.").arg(publishConfirm.server)
+            text: KI18n.i18n("The public key, with its UIDs and certifications, will be sent to %1. What is published cannot always be withdrawn.", publishConfirm.server)
         }
     }
     Controls.Menu {
@@ -65,7 +66,7 @@ Controls.ScrollView {
             Layout.fillWidth: true
             Kirigami.Heading {
                 level: 4
-                text: qsTr("Servidores de claves")
+                text: KI18n.i18nc("@title:group", "Key servers")
             }
             HelpButton {
                 help: root.wording.tips.keyservers
@@ -73,26 +74,26 @@ Controls.ScrollView {
             Controls.Label {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignRight
-                text: root.online ? "" : qsTr("Servicios online desactivados")
+                text: root.online ? "" : KI18n.i18n("Online services disabled")
                 color: Kirigami.Theme.disabledTextColor
                 elide: Text.ElideRight
             }
             Controls.Button {
                 id: webButton
-                text: qsTr("Ver en la web")
+                text: KI18n.i18nc("@action:button", "View on the Web")
                 icon.name: "internet-services"
                 visible: (root.keyStore.onlineSettings.services || []).length > 0
                 enabled: root.online
                 onClicked: webMenu.popup(webButton, 0, webButton.height)
             }
             Controls.Button {
-                text: qsTr("Actualizar desde servidor…")
+                text: KI18n.i18nc("@action:button", "Refresh from Server…")
                 icon.name: "view-refresh"
                 enabled: root.available && root.online
                 onClicked: root.operationDialog.openFor("refreshExternal", root.selectedKey.id)
             }
             Controls.Button {
-                text: qsTr("Configurar servidores…")
+                text: KI18n.i18nc("@action:button", "Configure Servers…")
                 icon.name: "configure"
                 enabled: root.available
                 onClicked: settings.edit()
@@ -111,13 +112,13 @@ Controls.ScrollView {
                 status: root.wording.publication(publication)
                 help: root.wording.publicationDetail(publication)
                 Controls.Button {
-                    text: qsTr("Comprobar")
+                    text: KI18n.i18nc("@action:button", "Check")
                     enabled: serverRow.usable
                     onClicked: root.keyStore.controller.publishIdentity(root.selectedKey.id, serverRow.modelData, false)
                 }
                 Controls.Button {
                     visible: !!root.selectedKey?.own
-                    text: serverRow.publication.uploadedAt ? qsTr("Actualizar…") : qsTr("Publicar…")
+                    text: serverRow.publication.uploadedAt ? KI18n.i18nc("@action:button", "Update…") : KI18n.i18nc("@action:button", "Publish…")
                     enabled: serverRow.usable
                     onClicked: {
                         publishConfirm.server = serverRow.modelData;
@@ -129,7 +130,7 @@ Controls.ScrollView {
         }
         Controls.Label {
             visible: !root.servers.length
-            text: qsTr("No hay servidores configurados.")
+            text: KI18n.i18n("No servers configured.")
             color: Kirigami.Theme.disabledTextColor
         }
         Kirigami.Separator {
@@ -141,7 +142,7 @@ Controls.ScrollView {
             Layout.fillWidth: true
             Kirigami.Heading {
                 level: 4
-                text: qsTr("Certificaciones de terceros (%1)").arg(root.signatures.length)
+                text: KI18n.i18nc("@title:group", "Third-party certifications (%1)", root.signatures.length)
             }
             HelpButton {
                 help: root.wording.tips.certifications
@@ -160,12 +161,12 @@ Controls.ScrollView {
                 Controls.Label {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    text: signatureRow.modelData.signer || qsTr("Firmante desconocido")
+                    text: signatureRow.modelData.signer || KI18n.i18n("Unknown signer")
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     Controls.ToolTip.visible: signerHover.hovered
                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                    Controls.ToolTip.text: qsTr("UID firmado: %1").arg(signatureRow.modelData.identity)
+                    Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "Signed UID: %1", signatureRow.modelData.identity)
                     HoverHandler {
                         id: signerHover
                     }
@@ -185,7 +186,7 @@ Controls.ScrollView {
         }
         Controls.Label {
             visible: !root.signatures.length
-            text: qsTr("Sin certificaciones de terceros.")
+            text: KI18n.i18n("No third-party certifications.")
             color: Kirigami.Theme.disabledTextColor
         }
         Item {

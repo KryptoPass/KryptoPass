@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 /// KryptoPass settings of the identity, its real keys (primary and subkeys, once each)
 /// and its user IDs.
@@ -77,7 +78,7 @@ Controls.ScrollView {
         clipboard.copy();
         clipboard.deselect();
         clipboard.text = "";
-        notificationRequested(qsTr("Copiado al portapapeles"));
+        notificationRequested(KI18n.i18n("Copied to clipboard"));
     }
     TextEdit {
         id: clipboard
@@ -92,7 +93,7 @@ Controls.ScrollView {
         anchors.centerIn: parent
         width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 24)
         modal: true
-        title: qsTr("Etiqueta de la clave")
+        title: KI18n.i18nc("@title:window", "Key Label")
         closePolicy: Controls.Popup.NoAutoClose
         footer: Controls.DialogButtonBox {
             standardButtons: Controls.Dialog.Save | Controls.Dialog.Cancel
@@ -118,8 +119,8 @@ Controls.ScrollView {
                 id: labelField
                 Layout.fillWidth: true
                 maximumLength: 160
-                placeholderText: qsTr("Por ejemplo: GitHub SSH")
-                Accessible.name: qsTr("Etiqueta de la clave")
+                placeholderText: KI18n.i18nc("@info:placeholder", "For example: GitHub SSH")
+                Accessible.name: KI18n.i18nc("@title:window", "Key Label")
                 onAccepted: labelDialog.save()
             }
             Kirigami.InlineMessage {
@@ -137,7 +138,7 @@ Controls.ScrollView {
         anchors.centerIn: parent
         width: Math.min(parent.width - Kirigami.Units.largeSpacing * 2, Kirigami.Units.gridUnit * 26)
         modal: true
-        title: qsTr("Verificar huella")
+        title: KI18n.i18nc("@title:window", "Verify Fingerprint")
         standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
         onAccepted: root.keyStore.editCatalog({
             action: "verify",
@@ -154,7 +155,7 @@ Controls.ScrollView {
             Controls.Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: qsTr("Acepta solo si coincide completa con la que te da su propietario.")
+                text: KI18n.i18n("Accept only if it fully matches the one its owner gives you.")
             }
         }
     }
@@ -193,21 +194,21 @@ Controls.ScrollView {
         }
         Kirigami.Heading {
             level: 4
-            text: qsTr("Configuración en KryptoPass")
+            text: KI18n.i18nc("@title", "KryptoPass Settings")
         }
         IdentityRow {
             visible: root.own
             indicator: "folder-locked"
-            title: qsTr("Clave principal de la bóveda")
+            title: KI18n.i18nc("@title review check", "Vault's main key")
             help: root.wording.tips.vaultKey
             Chip {
                 visible: root.isVaultKey
-                text: qsTr("Activa como clave de bóveda")
+                text: KI18n.i18n("Active as vault key")
                 role: "sign"
             }
             Controls.Button {
                 visible: !root.isVaultKey
-                text: qsTr("Usar como clave de bóveda")
+                text: KI18n.i18nc("@action:button", "Use as Vault Key")
                 enabled: root.available && root.hasSecret && !!root.selectedKey?.canEncrypt
                 onClicked: root.keyStore.primaryKeyRequested(root.selectedKey.id)
             }
@@ -215,10 +216,10 @@ Controls.ScrollView {
         IdentityRow {
             visible: root.own
             indicator: "dialog-password"
-            title: qsTr("Olvidar contraseña al bloquear la bóveda (gpg-agent)")
+            title: KI18n.i18n("Forget passphrase when the vault locks (gpg-agent)")
             help: root.wording.tips.forgetOnLock
             Controls.Switch {
-                Accessible.name: qsTr("Olvidar contraseña al bloquear la bóveda")
+                Accessible.name: KI18n.i18n("Forget passphrase when the vault locks")
                 checked: !!root.selectedKey?.meta.forgetOnLock || (root.isVaultKey && root.keyStore.forgetOnLock)
                 enabled: root.available && root.hasSecret
                 onToggled: {
@@ -235,10 +236,10 @@ Controls.ScrollView {
         IdentityRow {
             visible: !root.own
             indicator: "user-identity"
-            title: qsTr("Persona")
-            status: root.selectedKey?.personName || qsTr("Sin asignar")
+            title: KI18n.i18nc("@title", "Person")
+            status: root.selectedKey?.personName || KI18n.i18n("Unassigned")
             Controls.Button {
-                text: qsTr("Organizar…")
+                text: KI18n.i18nc("@action:button", "Organize…")
                 enabled: root.available
                 onClicked: root.organizeRequested()
             }
@@ -247,11 +248,11 @@ Controls.ScrollView {
             visible: !root.own
             indicator: root.verification?.code === "verified" ? "security-high" : "security-medium"
             level: root.verification?.level || "pending"
-            title: qsTr("Verificación de huella")
+            title: KI18n.i18nc("@title", "Fingerprint verification")
             help: root.wording.tips.verification
             status: root.wording.health(root.verification)
             Controls.Button {
-                text: qsTr("Verificar…")
+                text: KI18n.i18nc("@action:button", "Verify…")
                 visible: root.verification?.code !== "verified"
                 enabled: root.available && root.selectedKey?.statusCode === "valid"
                 onClicked: {
@@ -260,7 +261,7 @@ Controls.ScrollView {
                 }
             }
             Controls.Button {
-                text: qsTr("Quitar verificación")
+                text: KI18n.i18nc("@action:button", "Remove Verification")
                 visible: !!root.selectedKey?.meta.verifiedAt
                 enabled: root.available
                 onClicked: root.keyStore.editCatalog({
@@ -281,12 +282,12 @@ Controls.ScrollView {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: qsTr("Claves y subclaves")
+                text: KI18n.i18nc("@title:group", "Keys and subkeys")
             }
             Controls.Button {
                 visible: root.hasSecret
                 Layout.preferredWidth: root.addButtonWidth
-                text: qsTr("Añadir subclave…")
+                text: KI18n.i18nc("@action:button", "Add Subkey…")
                 icon.name: "list-add"
                 enabled: root.available && root.selectedKey?.statusCode === "valid"
                 onClicked: root.addSubkey()
@@ -320,7 +321,7 @@ Controls.ScrollView {
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
                         Controls.Label {
-                            text: keyRow.modelData.label || (keyRow.primary ? qsTr("Clave primaria") : qsTr("Subclave #%1").arg(keyRow.index))
+                            text: keyRow.modelData.label || (keyRow.primary ? KI18n.i18n("Primary key") : KI18n.i18n("Subkey #%1", keyRow.index))
                             textFormat: Text.PlainText
                             elide: Text.ElideRight
                             font.weight: Font.DemiBold
@@ -353,7 +354,7 @@ Controls.ScrollView {
                     Layout.alignment: Qt.AlignVCenter
                     icon.name: "overflow-menu"
                     display: Controls.AbstractButton.IconOnly
-                    text: qsTr("Acciones de la clave")
+                    text: KI18n.i18nc("@action:button", "Key Actions")
                     enabled: root.available && !!keyRow.modelData.fingerprint
                     onClicked: moreMenu.popup(moreButton, 0, moreButton.height)
                     Controls.ToolTip.visible: hovered || visualFocus
@@ -364,25 +365,25 @@ Controls.ScrollView {
                         Controls.MenuItem {
                             visible: !!keyRow.modelData.canAuthenticate
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Copiar clave pública SSH")
+                            text: KI18n.i18nc("@action:inmenu", "Copy SSH Public Key")
                             icon.name: "edit-copy"
                             enabled: keyRow.usable
                             onTriggered: root.keyStore.controller.copySshPublicKey(root.selectedKey.id, keyRow.modelData.fingerprint)
                         }
                         Controls.MenuItem {
-                            text: keyRow.primary ? qsTr("Copiar huella") : qsTr("Copiar huella de subclave")
+                            text: keyRow.primary ? KI18n.i18nc("@action:button", "Copy Fingerprint") : KI18n.i18nc("@action:inmenu", "Copy Subkey Fingerprint")
                             icon.name: "edit-copy"
                             onTriggered: root.copyText(keyRow.modelData.fingerprint)
                         }
                         Controls.MenuItem {
-                            text: qsTr("Cambiar etiqueta…")
+                            text: KI18n.i18nc("@action:inmenu", "Change Label…")
                             icon.name: "tag"
                             onTriggered: labelDialog.edit(keyRow.modelData)
                         }
                         Controls.MenuItem {
                             visible: root.hasSecret
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Cambiar caducidad…")
+                            text: KI18n.i18nc("@action:inmenu", "Change Expiry…")
                             icon.name: "appointment-new"
                             onTriggered: root.operationDialog.openFor("expiry", root.selectedKey.id, "", keyRow.primary ? "" : keyRow.modelData.fingerprint)
                         }
@@ -394,7 +395,7 @@ Controls.ScrollView {
                             id: revokeItem
                             visible: root.hasSecret && !keyRow.primary
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Revocar subclave…")
+                            text: KI18n.i18nc("@action:inmenu", "Revoke Subkey…")
                             icon.name: "dialog-cancel"
                             enabled: keyRow.modelData.statusCode !== "revoked"
                             onTriggered: root.operationDialog.openFor("revokeSubkey", root.selectedKey.id, "", keyRow.modelData.fingerprint)
@@ -414,12 +415,12 @@ Controls.ScrollView {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: qsTr("Identidades (UID)")
+                text: KI18n.i18nc("@title:group", "Identities (UID)")
             }
             Controls.Button {
                 visible: root.hasSecret
                 Layout.preferredWidth: root.addButtonWidth
-                text: qsTr("Añadir identidad…")
+                text: KI18n.i18nc("@action:button", "Add Identity…")
                 icon.name: "list-add"
                 enabled: root.available
                 onClicked: root.operationDialog.openFor("addIdentity", root.selectedKey.id)
@@ -471,7 +472,7 @@ Controls.ScrollView {
                         }
                         Chip {
                             visible: !!uidRow.modelData.primary
-                            text: qsTr("Principal")
+                            text: KI18n.i18nc("@label badge identity", "Primary")
                             role: "primary"
                         }
                         Item {
@@ -482,7 +483,7 @@ Controls.ScrollView {
                         Layout.fillWidth: true
                         spacing: Kirigami.Units.smallSpacing
                         Chip {
-                            text: "● " + (uidRow.modelData.validityCode === "ultimate" && root.selectedKey?.ownerTrust === "ultimate" ? qsTr("Validez y confianza: Total (clave propia)") : qsTr("Validez GnuPG: %1").arg(root.wording.validity(uidRow.modelData.validityCode)))
+                            text: "● " + (uidRow.modelData.validityCode === "ultimate" && root.selectedKey?.ownerTrust === "ultimate" ? KI18n.i18n("Validity and trust: Ultimate (own key)") : KI18n.i18n("GnuPG validity: %1", root.wording.validity(uidRow.modelData.validityCode)))
                             role: uidRow.trusted ? "sign" : uidRow.modelData.validityCode === "marginal" ? "certify" : "muted"
                         }
                         HelpButton {
@@ -499,7 +500,7 @@ Controls.ScrollView {
                     visible: uidRow.canPromote || uidRow.canRevoke || uidRow.canCertify
                     icon.name: "overflow-menu"
                     display: Controls.AbstractButton.IconOnly
-                    text: qsTr("Acciones de la identidad")
+                    text: KI18n.i18nc("@action:button", "Identity Actions")
                     enabled: root.available
                     onClicked: uidMenu.popup(uidButton, 0, uidButton.height)
                     Controls.ToolTip.visible: hovered || visualFocus
@@ -510,7 +511,7 @@ Controls.ScrollView {
                         Controls.MenuItem {
                             visible: root.hasSecret
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Usar como identidad principal")
+                            text: KI18n.i18nc("@action:inmenu", "Use as Primary Identity")
                             icon.name: "favorite"
                             enabled: uidRow.canPromote
                             onTriggered: root.operationDialog.openFor("primaryIdentity", root.selectedKey.id, uidRow.modelData.id)
@@ -518,14 +519,14 @@ Controls.ScrollView {
                         Controls.MenuItem {
                             visible: uidRow.canCertify
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Certificar…")
+                            text: KI18n.i18nc("@action:inmenu", "Certify…")
                             icon.name: "dialog-ok"
                             onTriggered: root.operationDialog.openFor("certify", root.selectedKey.id, uidRow.modelData.id, "", [uidRow.modelData.id])
                         }
                         Controls.MenuItem {
                             visible: root.hasSecret
                             height: visible ? implicitHeight : 0
-                            text: qsTr("Revocar identidad…")
+                            text: KI18n.i18nc("@action:inmenu", "Revoke Identity…")
                             icon.name: "dialog-cancel"
                             enabled: uidRow.canRevoke
                             onTriggered: root.operationDialog.openFor("revokeIdentity", root.selectedKey.id, uidRow.modelData.id)
