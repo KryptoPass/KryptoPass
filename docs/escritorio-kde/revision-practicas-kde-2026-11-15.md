@@ -200,6 +200,28 @@ los errores de uso se comportan como en el resto de KDE.
 
 La migración a KI18n merece un cambio aparte.
 
+### Estado al 17 de noviembre de 2026
+
+- **1. Hecho.** `kde_compiler_settings` en `build.rs` aplica los warnings y
+  defines de ECM a todo el C++ (también al generado); en debug, `-Werror`.
+  Solo se silencia `-Wc++20-extensions`, que dispara `Q_GLOBAL_STATIC` de
+  qmlcachegen en C++17. `just cxx-tidy` (`.clang-tidy`) captura el build con
+  `intercept-build` y revisa `src/native`; job en `bacon.toml`. Falta CI y
+  `cppcheck`/`clazy`, que no están instalados.
+- **2. Hecho.** `src/native/command_line.cpp` declara todas las opciones en
+  `QCommandLineParser` con `KAboutData::setupCommandLine()`, antes de
+  `KDBusService`; la segunda ejecución reenvía y se parsea igual. `launch.rs`
+  es lo único que lee el resultado. La identidad se fija solo en
+  `initialize_desktop` (KAboutData más el nombre de organización). El préstamo
+  temporal de `KAboutData` para el nombre del bus sigue en
+  `register_unique_application`, sin prueba de integración.
+- **3. Hecho.** Los tres ajustes nativos usan KConfig en
+  `org.kryptopass.desktoprc`, con las claves en `src/native/settings.h`.
+  `just dev-reset` también aparta ese archivo. Los valores antiguos de
+  `QSettings` no se migran.
+- **4. Hecho.** `build.rs` descubre los `.qml`, los `.cpp` y los `.h` con
+  `Q_OBJECT`; los singletons se detectan por `pragma Singleton`.
+
 ## Decisiones
 
 Tomadas el 16 de noviembre de 2026.

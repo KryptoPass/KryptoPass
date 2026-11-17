@@ -1,5 +1,9 @@
 use cxx_qt_build::{CxxQtBuilder, QmlFile, QmlModule};
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../Cargo.toml");
@@ -55,104 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rustc-env=KP_SYNTHETIC_FIXTURE_MANIFEST={fixture_manifest_text}");
     let kde_includes = kde_dependencies()?;
     let qml_module = QmlModule::new(fs::read_to_string(generated.join("app_id"))?.trim())
-        .qml_file("ui/qml/Main.qml")
-        .qml_file("ui/qml/LockScreen.qml")
-        .qml_file("ui/qml/ConflictDialog.qml")
-        .qml_file("ui/qml/FirstRunScreen.qml")
-        .qml_file("ui/qml/SettingsDialog.qml")
-        .qml_file("ui/qml/HelpButton.qml")
-        .qml_file("ui/qml/DesktopAction.qml")
-        .qml_file("ui/qml/RadioMenuItem.qml")
-        .qml_file("ui/qml/AdaptivePanes.qml")
-        .qml_file("ui/qml/BrowserPairingDialog.qml")
-        .qml_file("ui/qml/DevicesWindow.qml")
-        .qml_file("ui/qml/DeviceDetailsPage.qml")
-        .qml_file("ui/qml/DeviceKeyPicker.qml")
-        .qml_file("ui/qml/SyncKeysPicker.qml")
-        .qml_file("ui/qml/SyncKeyList.qml")
-        .qml_file("ui/qml/SyncStatusBadge.qml")
-        .qml_file("ui/qml/SyncStatusModel.qml")
-        .qml_file("ui/qml/SyncStatusPopover.qml")
-        .qml_file("ui/qml/LockGuard.qml")
-        .qml_file("ui/qml/BrowserAccessDialog.qml")
-        .qml_file("ui/qml/BrowserAccessWindow.qml")
-        .qml_file("ui/qml/AppListView.qml")
-        .qml_file("ui/qml/PanelHeader.qml")
-        .qml_file("ui/qml/PanelFooter.qml")
-        .qml_file("ui/qml/SplitterHandle.qml")
-        .qml_file("ui/qml/NavigationItem.qml")
-        .qml_file("ui/qml/SidebarPane.qml")
-        .qml_file("ui/qml/EntryListPane.qml")
-        .qml_file("ui/qml/EntryDetailPane.qml")
-        .qml_file("ui/qml/DetailActionBar.qml")
-        .qml_file("ui/qml/EntryPickerDialog.qml")
-        .qml_file("ui/qml/RelatedEntryPicker.qml")
-        .qml_file("ui/qml/SecretEditor.qml")
-        .qml_file("ui/qml/DraftBaseline.qml")
-        .qml_file("ui/qml/SecretStore.qml")
-        .qml_file("ui/qml/LoginFields.qml")
-        .qml_file("ui/qml/NoteFields.qml")
-        .qml_file("ui/qml/CustomFields.qml")
-        .qml_file("ui/qml/CardFields.qml")
-        .qml_file("ui/qml/TotpFields.qml")
-        .qml_file("ui/qml/IdentityFields.qml")
-        .qml_file("ui/qml/WifiFields.qml")
-        .qml_file("ui/qml/LicenseFields.qml")
-        .qml_file("ui/qml/SshKeyFields.qml")
-        .qml_file("ui/qml/SecretInput.qml")
-        .qml_file("ui/qml/StringListEditor.qml")
-        .qml_file("ui/qml/SecretFields.qml")
-        .qml_file("ui/qml/SecretFieldsHost.qml")
-        .qml_file(QmlFile::from("ui/qml/EntryTypes.qml").singleton(true))
-        .qml_file("ui/qml/SecretContentView.qml")
-        .qml_file("ui/qml/LoginDetail.qml")
-        .qml_file("ui/qml/NoteDetail.qml")
-        .qml_file("ui/qml/StructuredSecretDetail.qml")
-        .qml_file("ui/qml/SecretTextSection.qml")
-        .qml_file("ui/qml/RecipientsChooser.qml")
-        .qml_file("ui/qml/BackupWindow.qml")
-        .qml_file("ui/qml/ImportWindow.qml")
-        .qml_file("ui/qml/PasswordGenerator.qml")
-        .qml_file("ui/qml/FolderEditor.qml")
-        .qml_file("ui/qml/FolderAppearancePicker.qml")
-        .qml_file("ui/qml/FolderIcon.qml")
-        .qml_file("ui/qml/EntryIcon.qml")
-        .qml_file("ui/qml/EntryIconWindow.qml")
-        .qml_file(QmlFile::from("ui/qml/FolderPalette.qml").singleton(true))
-        .qml_file("ui/qml/FolderPicker.qml")
-        .qml_file("ui/qml/MoveEntryDialog.qml")
-        .qml_file("ui/qml/MoveFolderDialog.qml")
-        .qml_file("ui/qml/DeleteFolderDialog.qml")
-        .qml_file("ui/qml/DeleteEntryDialog.qml")
-        .qml_file("ui/qml/KeyErrorDialog.qml")
-        .qml_file("ui/qml/KeyStore.qml")
-        .qml_file("ui/qml/KeyDetail.qml")
-        .qml_file("ui/qml/KeyAddressBook.qml")
-        .qml_file("ui/qml/IdentityWording.qml")
-        .qml_file("ui/qml/IdentityEditor.qml")
-        .qml_file("ui/qml/IdentityKeys.qml")
-        .qml_file("ui/qml/IdentitySecurity.qml")
-        .qml_file("ui/qml/IdentityServers.qml")
-        .qml_file("ui/qml/IdentityRow.qml")
-        .qml_file("ui/qml/IdentityAddDialog.qml")
-        .qml_file("ui/qml/KeyOperationDialog.qml")
-        .qml_file("ui/qml/KeyImportReview.qml")
-        .qml_file("ui/qml/KeyReviewPage.qml")
-        .qml_file("ui/qml/OnlineServicesDialog.qml")
-        .qml_file("ui/qml/ToastHost.qml")
-        .qml_file("ui/qml/KeyContactPanel.qml")
-        .qml_file("ui/qml/KeyContactsOverview.qml")
-        .qml_file("ui/qml/KeyListDelegate.qml")
-        .qml_file("ui/qml/KeyStatus.qml")
-        .qml_file("ui/qml/KeyAvatar.qml")
-        .qml_file("ui/qml/SecretDetail.qml")
-        .qml_file("ui/qml/DetailField.qml")
-        .qml_file("ui/qml/FieldBadge.qml")
-        .qml_file("ui/qml/WebsiteListCard.qml")
-        .qml_file("ui/qml/VersionDialog.qml")
-        .qml_file("ui/qml/MarkdownView.qml")
-        .qml_file("ui/qml/MarkdownEditor.qml")
-        .qml_file("ui/qml/NotesEditor.qml")
+        .qml_files(qml_files()?)
         .depends([
             "QtQuick",
             "QtQuick.Controls",
@@ -182,20 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .qrc(generated.join("translations.qrc"))
         .qrc(generated.join("app_resources.qrc"))
-        .cpp_file("src/native/application.cpp")
-        .cpp_file("src/native/desktop_bus.h")
-        .cpp_file("src/native/desktop_bus.cpp")
-        .cpp_file("src/native/desktop_integration.cpp")
-        .cpp_file("src/native/session_lock.h")
-        .cpp_file("src/native/session_lock.cpp")
-        .cpp_file("src/native/file_manager.cpp")
-        .cpp_file("src/native/command_line.cpp")
-        .cpp_file("src/native/entry_icons.cpp")
-        .cpp_file("src/native/entry_icon_image.cpp")
-        .cpp_file("src/native/favicon_service.cpp")
-        .cpp_file("src/native/sensitive_clipboard.cpp")
-        .cpp_file("src/native/kde_contacts.cpp")
-        .cpp_file("src/native/online_services.cpp");
+        .cpp_files(native_cpp_files()?);
     // Adds include paths and KDE compiler settings; generated CXX-Qt settings remain intact.
     unsafe {
         builder.cc_builder(|cc| {
@@ -263,6 +157,49 @@ fn kde_compiler_settings(cc: &mut cc::Build) {
     if env::var("PROFILE").as_deref() == Ok("debug") {
         cc.warnings_into_errors(true);
     }
+}
+
+/// Every component in `ui/qml`, sorted. A file declaring `pragma Singleton` is
+/// registered as a singleton.
+fn qml_files() -> Result<Vec<QmlFile>, Box<dyn std::error::Error>> {
+    // Rebuilds the module when a component is added or removed.
+    println!("cargo:rerun-if-changed=ui/qml");
+    sources("ui/qml", "qml")?
+        .into_iter()
+        .map(|path| {
+            let singleton = fs::read_to_string(&path)?
+                .lines()
+                .any(|line| line.trim() == "pragma Singleton");
+            Ok(QmlFile::from(path).singleton(singleton))
+        })
+        .collect()
+}
+
+/// Every `.cpp` in `src/native`, plus the headers that declare a `Q_OBJECT`, which moc
+/// must process.
+fn native_cpp_files() -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    println!("cargo:rerun-if-changed=src/native");
+    let mut files = sources("src/native", "cpp")?;
+    for header in sources("src/native", "h")? {
+        if fs::read_to_string(&header)?.contains("Q_OBJECT") {
+            files.push(header);
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+/// Files with `extension` directly in `directory`, sorted, as paths relative to the crate.
+fn sources(directory: &str, extension: &str) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(directory)? {
+        let path = entry?.path();
+        if path.extension().is_some_and(|found| found == extension) {
+            files.push(Path::new(directory).join(path.file_name().ok_or("unnamed source")?));
+        }
+    }
+    files.sort();
+    Ok(files)
 }
 
 fn synthetic_fixture_directory() -> Result<PathBuf, Box<dyn std::error::Error>> {

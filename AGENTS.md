@@ -57,8 +57,8 @@ algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
 
 ## Bridge Rust/QML
 
-- Cada `.qml` debe estar en `build.rs` (`QmlModule::qml_file`); si falta, el
-  build muere con `Could not canonicalize path`.
+- `build.rs` registra solo cada `.qml` de `ui/qml` (singleton si declara
+  `pragma Singleton`), cada `.cpp` de `src/native` y los `.h` con `Q_OBJECT`.
 - El C++ nativo compila con los warnings y defines de KDE; en debug, con
   `-Werror`. `just cxx-tidy` pasa clang-tidy con `.clang-tidy`.
 - Las opciones de línea de comandos se declaran solo en
