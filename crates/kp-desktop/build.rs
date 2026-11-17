@@ -58,7 +58,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rustc-env=KP_SYNTHETIC_FIXTURE_DIR={fixture_directory_text}");
     println!("cargo:rustc-env=KP_SYNTHETIC_FIXTURE_MANIFEST={fixture_manifest_text}");
     let kde_includes = kde_dependencies()?;
-    let qml_module = QmlModule::new(fs::read_to_string(generated.join("app_id"))?.trim())
+    let app_id = fs::read_to_string(generated.join("app_id"))?
+        .trim()
+        .to_owned();
+    let locale_directory = compile_catalogs(&generated, &app_id)?;
+    let locale_directory_text = locale_directory
+        .to_str()
+        .ok_or("catalog path is not valid UTF-8")?;
+    println!("cargo:rustc-env=KP_LOCALE_DIR={locale_directory_text}");
+    let qml_module = QmlModule::new(app_id.as_str())
         .qml_files(qml_files()?)
         .depends([
             "QtQuick",
@@ -99,6 +107,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cc.include(include);
             }
             kde_compiler_settings(cc);
+            // The catalog that i18n() reads in C++, as KDE's CMake sets it.
+            cc.define("TRANSLATION_DOMAIN", Some(format!("\"{app_id}\"").as_str()));
         })
     }
     .build();
@@ -157,6 +167,43 @@ fn kde_compiler_settings(cc: &mut cc::Build) {
     if env::var("PROFILE").as_deref() == Ok("debug") {
         cc.warnings_into_errors(true);
     }
+}
+
+/// Compiles `po/<language>/<app id>.po` into `<out>/locale`, the layout KI18n reads,
+/// so development builds find catalogs that are not installed. Installs use
+/// `ki18n_install(po)` instead.
+fn compile_catalogs(generated: &Path, app_id: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    println!("cargo:rerun-if-changed=../../po");
+    let locale = generated.join("locale");
+    if locale.exists() {
+        fs::remove_dir_all(&locale)?;
+    }
+    fs::create_dir_all(&locale)?;
+    for entry in fs::read_dir("../../po")? {
+        let entry = entry?;
+        let catalog = entry.path().join(format!("{app_id}.po"));
+        if !entry.file_type()?.is_dir() || !catalog.is_file() {
+            continue;
+        }
+        let messages = locale.join(entry.file_name()).join("LC_MESSAGES");
+        fs::create_dir_all(&messages)?;
+        let status = Command::new("msgfmt")
+            .arg("--check")
+            .arg("-o")
+            .arg(messages.join(format!("{app_id}.mo")))
+            .arg(&catalog)
+            .status()
+            .map_err(|error| {
+                format!(
+                    "msgfmt (gettext) is required for {}: {error}",
+                    catalog.display()
+                )
+            })?;
+        if !status.success() {
+            return Err(format!("msgfmt rejected {}", catalog.display()).into());
+        }
+    }
+    Ok(locale)
 }
 
 /// Every component in `ui/qml`, sorted. A file declaring `pragma Singleton` is

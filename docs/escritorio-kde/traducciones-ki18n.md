@@ -1,9 +1,10 @@
 # Traducciones con KI18n
 
-Estado al 17 de noviembre de 2026: la infraestructura gettext está lista; el
-código todavía usa el sistema Qt (`qsTr`, `QCoreApplication::translate`,
-`po/es.ts`). Este documento describe el flujo de destino, el mismo que siguen
-las aplicaciones KDE.
+Estado al 17 de noviembre de 2026: la infraestructura gettext y el enlace en
+tiempo de ejecución están listos y probados (Rust, `i18n()` en QML y
+`KI18n.i18nc()` traducen, con plurales y `%1`). Las cadenas todavía usan el
+sistema Qt (`qsTr`, `QCoreApplication::translate`, `po/es.ts`). Este documento
+describe el flujo de destino, el mismo que siguen las aplicaciones KDE.
 
 ## Cómo lo hace KDE
 
@@ -35,19 +36,46 @@ las aplicaciones KDE.
 La lengua fuente es el español (decisión del 16 de noviembre): no hace falta
 catálogo `es`, y el inglés necesita `po/en/`.
 
+## En tiempo de ejecución
+
+- `i18n::set_up_catalogs()` fija el dominio antes de `KAboutData` y, en builds
+  debug, registra con `addDomainLocaleDir` los `.mo` que `build.rs` compila
+  desde `po/` en `OUT_DIR/locale`. Las instalaciones usan `share/locale`.
+- `main.rs` instala `KLocalizedQmlContext` antes de cargar `Main.qml`: da
+  `i18n()`/`i18nc()` en QML. `KI18n.i18n()` exige además
+  `import org.kde.ki18n` en el archivo.
+- El C++ nativo compila con `TRANSLATION_DOMAIN`, como en el CMake de KDE.
+- `cxx-kde-frameworks` vive en `third_party/` con parches propios (`subs`,
+  plurales con cantidad, `addDomainLocaleDir`, enlace con `cmake-package`);
+  ver `third_party/cxx-kde-frameworks/KRYPTOPASS.md`.
+
+## Reglas para marcar cadenas
+
+- Nunca `i18n()` dentro de una macro invocada con ruta (`tracing::info!`,
+  `anyhow::anyhow!`): el analizador de Rust de xgettext 1.0 no la ve. Guarda
+  el texto en una variable o importa la macro (`info!`, `format!` y `vec!`
+  sí funcionan).
+- Plurales con `i18np(singular, plural, cantidad)`; `%1` es la cantidad.
+- Para probar un idioma, el locale del sistema tiene que existir (`locale -a`)
+  y `LC_ALL`/`LC_MESSAGES` no pueden ser `C`: gettext ignora los catálogos en
+  el locale C. Ejemplo: `LANG=es_ES.UTF-8 LANGUAGE=en_GB`.
+
+## Limitación: `en_US` es el idioma del código para KI18n
+
+KI18n da por hecho que el texto fuente está en `en_US`: nunca carga catálogos
+para `en_US` y convierte `LANGUAGE=en` en `en_US`. Con la fuente en español,
+un usuario con el sistema en `en_US` verá siempre español; solo `en_GB` u
+otras variantes reciben la traducción inglesa. Comprobado el 17 de noviembre
+con KI18n 6.31. Mientras la fuente siga en español no hay arreglo limpio.
+
 ## Fases pendientes
 
-1. **Enlace en tiempo de ejecución.** Añadir `cxx-kde-frameworks` (no está en
-   crates.io; se usa por git desde invent.kde.org) y adaptarlo a CXX-Qt 0.10
-   si hace falta. Fijar el dominio, instalar el contexto QML y, en desarrollo,
-   compilar los `.mo` en `build.rs` y registrarlos con
-   `KLocalizedString::addDomainLocaleDir`.
-2. **QML y C++.** `qsTr` → `i18n`/`i18nc`; `QCoreApplication::translate` →
+1. **QML y C++.** `qsTr` → `i18n`/`i18nc`; `QCoreApplication::translate` →
    `i18n` con `TRANSLATION_DOMAIN`. Plurales con `i18np` y `%1`.
-3. **Rust.** Marcar cada cadena donde nace con `i18n`/`i18nc`. Unas 900 del
+2. **Rust.** Marcar cada cadena donde nace con `i18n`/`i18nc`. Unas 900 del
    catálogo actual solo las encuentra la regex de `packaging/translations.py`
    (errores que se traducen lejos de donde se escriben).
-4. **Retirar el sistema Qt.** Borrar `po/es.ts`, `packaging/translations.py`,
+3. **Retirar el sistema Qt.** Borrar `po/es.ts`, `packaging/translations.py`,
    las recetas `translations*` y el `QTranslator` de `initialize_desktop`.
 
 Fuera de alcance por ahora: las traducciones del `.desktop` y del metainfo,

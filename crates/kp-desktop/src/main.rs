@@ -33,6 +33,7 @@ fn main() {
         return;
     };
 
+    i18n::set_up_catalogs();
     // Registers KAboutData, which sets the application identity in one place.
     ui_adapters::native_ffi::ffi::initialize_desktop();
     let options = launch::process();
@@ -74,6 +75,9 @@ fn main() {
         engine.as_mut().upcast_pin(),
         &QString::from(APP.desktop_file_id),
     );
+
+    // Gives QML i18n() and i18nc(); `import org.kde.ki18n` adds the KI18n singleton.
+    cxx_kde_frameworks::ki18n::setup_localized_context(engine.as_mut().upcast_pin());
 
     let base_engine: Pin<&mut QQmlEngine> = engine.as_mut().upcast_pin();
     base_engine

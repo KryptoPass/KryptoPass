@@ -110,7 +110,7 @@ def check() -> int:
 
 
 def new_language(language: str) -> int:
-    require("msginit")
+    require("msginit", "msgfilter")
     if not template().exists():
         sys.exit("i18n: falta la plantilla; corre `just i18n-extract`")
     catalog = PO_DIR / language / f"{domain()}.po"
@@ -119,6 +119,12 @@ def new_language(language: str) -> int:
     catalog.parent.mkdir(parents=True)
     subprocess.run(
         ["msginit", "--no-translator", f"--locale={language}", "-i", str(template()), "-o", str(catalog)],
+        check=True,
+    )
+    # msginit copies each msgid as the English translation, which assumes an English
+    # source; ours is Spanish, so every language starts untranslated.
+    subprocess.run(
+        ["msgfilter", "--keep-header", "-i", str(catalog), "-o", str(catalog), "true"],
         check=True,
     )
     return 0

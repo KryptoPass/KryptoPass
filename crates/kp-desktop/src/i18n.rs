@@ -1,5 +1,18 @@
 //! Translation at the boundary between backend messages and Qt presentation.
-use cxx_qt_lib::QString;
+use cxx_kde_frameworks::ki18n::KLocalizedString;
+use cxx_qt_lib::{QByteArray, QString};
+
+/// Selects this application's gettext catalog. Call it once, before KAboutData is
+/// registered, so its texts are translated too.
+pub fn set_up_catalogs() {
+    let domain = QByteArray::from(crate::app_info::APP.desktop_file_id);
+    KLocalizedString::set_application_domain(&domain);
+    // Development builds read the catalogs build.rs compiled; installed builds use the
+    // standard locale directories that `ki18n_install(po)` fills.
+    if cfg!(debug_assertions) {
+        KLocalizedString::add_domain_locale_dir(&domain, &QString::from(env!("KP_LOCALE_DIR")));
+    }
+}
 
 pub fn translate(source: &QString) -> QString {
     crate::ui_adapters::native_ffi::ffi::translate_ui(source)

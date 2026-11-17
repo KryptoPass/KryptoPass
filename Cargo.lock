@@ -586,6 +586,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
+name = "cmake-package"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee270e2c8f3518a345df5ec8c30c3e544bd1f149b5c97dc16a697495ce1d164c"
+dependencies = [
+ "itertools",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "which",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -893,6 +908,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cxx-kde-frameworks"
+version = "0.1.0"
+dependencies = [
+ "cmake-package",
+ "cxx",
+ "cxx-qt",
+ "cxx-qt-build",
+ "cxx-qt-lib",
+ "cxx-qt-lib-extras",
+]
+
+[[package]]
 name = "cxx-qt"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -948,6 +975,18 @@ dependencies = [
  "cxx-qt",
  "cxx-qt-build",
  "qt-build-utils",
+]
+
+[[package]]
+name = "cxx-qt-lib-extras"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1760564c2d3afbb98961ac76f5606ef1b5324ce3b214dad7cdcffddf5ea021f"
+dependencies = [
+ "cxx",
+ "cxx-qt",
+ "cxx-qt-build",
+ "cxx-qt-lib",
 ]
 
 [[package]]
@@ -2052,6 +2091,7 @@ dependencies = [
  "cc",
  "comrak",
  "cxx",
+ "cxx-kde-frameworks",
  "cxx-qt",
  "cxx-qt-build",
  "cxx-qt-lib",
