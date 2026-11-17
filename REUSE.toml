@@ -13,6 +13,18 @@ SPDX-FileCopyrightText = "2026 KryptoPass contributors"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
+path = "third_party/cxx-kde-frameworks/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2024 Darshan Phaldesai <dev.darshanphaldesai@gmail.com>"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "third_party/cxx-kde-frameworks/KRYPTOPASS.md"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 KryptoPass contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
 path = ".agents/skills/qt-ui-design/**"
 precedence = "override"
 SPDX-FileCopyrightText = "Qt AI Skills contributors"
