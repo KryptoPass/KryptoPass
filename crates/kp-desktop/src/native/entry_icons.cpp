@@ -53,7 +53,7 @@ public:
             image = image.scaled(requestedSize_.boundedTo(image.size()), Qt::KeepAspectRatio, Qt::SmoothTransformation);
         image_ = std::move(image);
         // Qt may destroy the response after this signal; it must be the last action.
-        emit finished();
+        Q_EMIT finished();
     }
 
 private:
@@ -105,7 +105,7 @@ public:
 
 private:
     FaviconService *favicons_;
-    QCache<QString, QImage> images_{8 * 1024 * 1024};
+    QCache<QString, QImage> images_{qsizetype(8) * 1024 * 1024};
 };
 
 QMutex providerMutex;

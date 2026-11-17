@@ -59,6 +59,8 @@ algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
 
 - Cada `.qml` debe estar en `build.rs` (`QmlModule::qml_file`); si falta, el
   build muere con `Could not canonicalize path`.
+- El C++ nativo compila con los warnings y defines de KDE; en debug, con
+  `-Werror`. `just cxx-tidy` pasa clang-tidy con `.clang-tidy`.
 - `lint` corre tras `check`/`clippy` para que los `.qmltypes` estén frescos; con
   tipos viejos salen errores fantasma (`bridgeStatus not found`).
 - Nombres QML explícitos con `cxx_name`, sin conversión snake→camel. Lo que QML

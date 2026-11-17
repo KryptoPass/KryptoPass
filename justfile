@@ -68,6 +68,11 @@ format:
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
 
+# clang-tidy sobre el C++ nativo con los flags del build (`--reuse` evita recompilar).
+[group('Desarrollo')]
+cxx-tidy *args:
+    python3 tools/cxx_tidy.py {{ args }}
+
 # Lint QML (tras check: tipos frescos, sin fantasmas de .qmltypes viejos).
 [group('Desarrollo')]
 lint: check

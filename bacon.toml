@@ -48,6 +48,12 @@ need_stdout = true
 allow_warnings = false
 watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
 
+[jobs.cxx-tidy]
+command = ["just", "cxx-tidy"]
+need_stdout = true
+default_watch = false
+watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/build.rs", ".clang-tidy", "tools/cxx_tidy.py"]
+
 [jobs.test-icons]
 command = ["just", "test-icons"]
 need_stdout = true

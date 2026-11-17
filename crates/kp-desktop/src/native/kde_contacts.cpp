@@ -445,7 +445,7 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
             return;
         }
 
-        const Akonadi::Item selectedItem = item.value();
+        const Akonadi::Item &selectedItem = item.value();
         const QString contactName = namesByUid.value(uid, uid);
         QTimer::singleShot(0, receiverGuard.data(), [receiverGuard, selectedItem, fingerprint, contactName] {
             if (receiverGuard) {

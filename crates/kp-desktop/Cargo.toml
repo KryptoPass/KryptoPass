@@ -64,6 +64,8 @@ ssh-key = { version = "0.6.7", features = ["crypto", "encryption"] }
 
 [build-dependencies]
 cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+# Same version CXX-Qt uses; build.rs configures the `cc::Build` CXX-Qt hands it.
+cc = "1"
 
 [lints]
 workspace = true

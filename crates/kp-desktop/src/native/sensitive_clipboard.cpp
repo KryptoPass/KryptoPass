@@ -18,8 +18,8 @@ namespace
 constexpr int kDefaultAutoClearSeconds = 30;
 constexpr int kMaximumAutoClearSeconds = 24 * 60 * 60;
 constexpr auto kAutoClearSettingsKey = "security/clipboardAutoClearSeconds";
-constexpr auto kOwnedTokenMimeType = "application/x-kryptopass-owned-clipboard-token";
-constexpr auto kPasswordManagerHintMimeType = "x-kde-passwordManagerHint";
+constexpr QLatin1StringView kOwnedTokenMimeType("application/x-kryptopass-owned-clipboard-token");
+constexpr QLatin1StringView kPasswordManagerHintMimeType("x-kde-passwordManagerHint");
 
 int boundedSeconds(int seconds)
 {
@@ -150,7 +150,7 @@ private:
         }
 
         const QMimeData *mimeData = clipboard_->mimeData(QClipboard::Clipboard);
-        return mimeData && mimeData->hasText() && mimeData->data(QLatin1String(kOwnedTokenMimeType)) == ownedToken_ && mimeData->text() == ownedText_;
+        return mimeData && mimeData->hasText() && mimeData->data(kOwnedTokenMimeType) == ownedToken_ && mimeData->text() == ownedText_;
     }
 
     void clearIfStillOwned()

@@ -22,7 +22,7 @@ bool validHost(const QString &host)
     static const QRegularExpression pattern(QStringLiteral("^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"));
     if (host.size() > 253 || !pattern.match(host).hasMatch())
         return false;
-    const auto suffix = host.section(QChar('.'), -1);
+    const auto suffix = host.section(QLatin1Char('.'), -1);
     const QStringList reserved{QStringLiteral("localhost"),
                                QStringLiteral("local"),
                                QStringLiteral("internal"),
@@ -163,13 +163,16 @@ void FaviconService::pump()
             complete(host, cached, false);
             continue;
         }
-        download(host, QUrl(QStringLiteral("https://") + host + QStringLiteral("/favicon.ico")), 1024 * 1024, [this, host](QByteArray bytes, QUrl) {
-            const auto image = normalizeEntryIcon(decodeFavicon(bytes));
-            if (image.isNull())
-                discover(host);
-            else
-                complete(host, image);
-        });
+        download(host,
+                 QUrl(QStringLiteral("https://") + host + QStringLiteral("/favicon.ico")),
+                 1024 * 1024,
+                 [this, host](const QByteArray &bytes, const QUrl &) {
+                     const auto image = normalizeEntryIcon(decodeFavicon(bytes));
+                     if (image.isNull())
+                         discover(host);
+                     else
+                         complete(host, image);
+                 });
     }
 }
 
@@ -231,13 +234,13 @@ void FaviconService::download(const QString &host, const QUrl &url, int maxBytes
 
 void FaviconService::discover(const QString &host)
 {
-    download(host, QUrl(QStringLiteral("https://") + host + QStringLiteral("/")), 256 * 1024, [this, host](QByteArray html, QUrl page) {
+    download(host, QUrl(QStringLiteral("https://") + host + QStringLiteral("/")), 256 * 1024, [this, host](const QByteArray &html, const QUrl &page) {
         const auto icon = siteIcon(html, page);
         if (icon.isEmpty()) {
             complete(host, {});
             return;
         }
-        download(host, icon, 1024 * 1024, [this, host](QByteArray bytes, QUrl) {
+        download(host, icon, 1024 * 1024, [this, host](const QByteArray &bytes, const QUrl &) {
             complete(host, normalizeEntryIcon(decodeFavicon(bytes)));
         });
     });
@@ -275,7 +278,7 @@ QString FaviconService::cacheFile(const QString &host) const
     hash.addData(cacheNamespace_.toUtf8());
     hash.addData(QByteArray(1, '\0'));
     hash.addData(host.toUtf8());
-    return cacheDirectory_ + QChar('/') + QString::fromLatin1(hash.result().toHex()) + QStringLiteral(".png");
+    return cacheDirectory_ + QLatin1Char('/') + QString::fromLatin1(hash.result().toHex()) + QStringLiteral(".png");
 }
 
 QImage FaviconService::readCache(const QString &host)

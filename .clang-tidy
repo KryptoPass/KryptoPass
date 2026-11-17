@@ -1,0 +1,24 @@
+# Checks para el C++ nativo de kp-desktop (`just cxx-tidy`). Solo bugs reales,
+# rendimiento y C++ moderno que un revisor de KDE pediría; sin checks de estilo
+# que choquen con .clang-format o con las convenciones de Qt.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  -clang-analyzer-optin.cplusplus.UninitializedObject,
+  performance-*,
+  modernize-use-override,
+  modernize-use-nullptr,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-make-unique,
+  modernize-loop-convert,
+  readability-container-size-empty,
+  readability-redundant-smartptr-get,
+  readability-inconsistent-declaration-parameter-name,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-virtual-class-destructor
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/crates/kp-desktop/src/native/.*'
+SystemHeaders: false

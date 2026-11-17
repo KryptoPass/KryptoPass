@@ -9,6 +9,12 @@ namespace kryptopass::desktop::native
 {
 namespace
 {
+constexpr qsizetype kMaxEntryIconBytes = qsizetype(512) * 1024;
+constexpr qsizetype kMaxSourceImageBytes = qsizetype(4) * 1024 * 1024;
+constexpr qsizetype kMaxFaviconBytes = qsizetype(1024) * 1024;
+constexpr int kMaxFaviconDimension = 512;
+constexpr qint64 kMaxFaviconPixels = qint64(kMaxFaviconDimension) * kMaxFaviconDimension;
+
 bool boundedSize(const QSize &size, int dimension, qint64 pixels)
 {
     return size.isValid() && size.width() > 0 && size.height() > 0 && size.width() <= dimension && size.height() <= dimension
@@ -18,7 +24,7 @@ bool boundedSize(const QSize &size, int dimension, qint64 pixels)
 
 QImage decodeEntryIcon(const QByteArray &bytes, bool normalized)
 {
-    if (bytes.isEmpty() || bytes.size() > (normalized ? 512 * 1024 : 4 * 1024 * 1024))
+    if (bytes.isEmpty() || bytes.size() > (normalized ? kMaxEntryIconBytes : kMaxSourceImageBytes))
         return {};
     QBuffer buffer;
     buffer.setData(bytes);
@@ -36,7 +42,7 @@ QImage decodeEntryIcon(const QByteArray &bytes, bool normalized)
 
 QImage decodeFavicon(const QByteArray &bytes)
 {
-    if (bytes.isEmpty() || bytes.size() > 1024 * 1024)
+    if (bytes.isEmpty() || bytes.size() > kMaxFaviconBytes)
         return {};
     QBuffer buffer;
     buffer.setData(bytes);
@@ -47,10 +53,10 @@ QImage decodeFavicon(const QByteArray &bytes)
     if (format != "png" && format != "jpeg" && format != "webp" && format != "ico")
         return {};
     if (format != "ico") {
-        if (!boundedSize(reader.size(), 512, 512 * 512) || reader.imageCount() > 1)
+        if (!boundedSize(reader.size(), kMaxFaviconDimension, kMaxFaviconPixels) || reader.imageCount() > 1)
             return {};
-        const auto image = reader.read();
-        if (!boundedSize(image.size(), 512, 512 * 512) || reader.jumpToNextImage())
+        auto image = reader.read();
+        if (!boundedSize(image.size(), kMaxFaviconDimension, kMaxFaviconPixels) || reader.jumpToNextImage())
             return {};
         return image;
     }
@@ -61,10 +67,10 @@ QImage decodeFavicon(const QByteArray &bytes)
             break;
         // Some ICO handlers expose dimensions only after reading an entry.
         const auto size = reader.size();
-        if (size.isValid() && !boundedSize(size, 512, 512 * 512))
+        if (size.isValid() && !boundedSize(size, kMaxFaviconDimension, kMaxFaviconPixels))
             continue;
         const auto candidate = reader.read();
-        if (!boundedSize(candidate.size(), 512, 512 * 512))
+        if (!boundedSize(candidate.size(), kMaxFaviconDimension, kMaxFaviconPixels))
             continue;
         if (best.isNull() || candidate.width() * candidate.height() > best.width() * best.height())
             best = candidate;
@@ -95,7 +101,7 @@ QByteArray encodeEntryIcon(const QImage &image)
     QByteArray bytes;
     QBuffer buffer(&bytes);
     buffer.open(QIODevice::WriteOnly);
-    if (!image.save(&buffer, "PNG") || bytes.size() > 512 * 1024)
+    if (!image.save(&buffer, "PNG") || bytes.size() > kMaxEntryIconBytes)
         return {};
     return bytes;
 }
