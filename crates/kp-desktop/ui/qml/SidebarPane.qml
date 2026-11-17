@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Pane {
     id: root
@@ -42,7 +43,7 @@ Controls.Pane {
             contentItem: RowLayout {
                 Controls.ToolButton {
                     visible: root.showBackButton
-                    text: qsTr("Volver a la lista")
+                    text: KI18n.i18nc("@action:button", "Back to List")
                     icon.name: "go-previous"
                     display: Controls.AbstractButton.IconOnly
                     onClicked: root.backRequested()
@@ -58,8 +59,8 @@ Controls.Pane {
                     rightPadding: Kirigami.Units.largeSpacing
                     topPadding: Kirigami.Units.smallSpacing
                     bottomPadding: Kirigami.Units.smallSpacing
-                    readonly property string sectionTitle: root.keysMode ? qsTranslate("Main", "Claves") : qsTranslate("Main", "Carpetas")
-                    Accessible.name: qsTranslate("Main", "Cambiar sección: %1").arg(sectionTitle)
+                    readonly property string sectionTitle: root.keysMode ? KI18n.i18nc("@title sidebar section", "Keys") : KI18n.i18nc("@title sidebar section", "Folders")
+                    Accessible.name: KI18n.i18n("Switch section: %1", sectionTitle)
                     onClicked: {
                         sectionToolTipTimer.stop();
                         sectionToolTip.close();
@@ -90,12 +91,12 @@ Controls.Pane {
                     Controls.Menu {
                         id: sectionMenu
                         Controls.MenuItem {
-                            text: qsTranslate("Main", "Carpetas")
+                            text: KI18n.i18nc("@title sidebar section", "Folders")
                             icon.name: "folder"
                             onTriggered: root.sectionSelectionRequested(false)
                         }
                         Controls.MenuItem {
-                            text: qsTranslate("Main", "Claves")
+                            text: KI18n.i18nc("@title sidebar section", "Keys")
                             icon.name: "view-certificate"
                             onTriggered: root.sectionSelectionRequested(true)
                         }
@@ -115,33 +116,33 @@ Controls.Pane {
             model: root.keysMode ? [
                 {
                     id: "own",
-                    name: qsTranslate("Main", "Mis identidades"),
+                    name: KI18n.i18nc("@title key scope", "My Identities"),
                     icon: "user-identity"
                 },
                 {
                     id: "contacts",
-                    name: qsTranslate("Main", "Personas"),
+                    name: KI18n.i18nc("@title key scope", "People"),
                     icon: "view-pim-contacts"
                 },
                 {
                     id: "all",
-                    name: qsTranslate("Main", "Todas las claves"),
+                    name: KI18n.i18nc("@title key scope", "All Keys"),
                     icon: "view-certificate"
                 }
             ] : [
                 {
                     id: "all",
-                    name: qsTranslate("Main", "Todos los elementos"),
+                    name: KI18n.i18nc("@title vault scope", "All Items"),
                     icon: "view-list-details"
                 },
                 {
                     id: "favorites",
-                    name: qsTranslate("Main", "Favoritos"),
+                    name: KI18n.i18nc("@title vault scope", "Favorites"),
                     icon: "rating"
                 },
                 {
                     id: "trash",
-                    name: qsTranslate("Main", "Papelera"),
+                    name: KI18n.i18nc("@title vault scope", "Trash"),
                     icon: "user-trash"
                 }
             ]
@@ -165,7 +166,7 @@ Controls.Pane {
             Kirigami.ListSectionHeader {
                 id: folderSectionHeader
                 anchors.fill: parent
-                text: rootFolderDrop.containsDrag ? qsTr("Mover al nivel principal") : qsTranslate("Main", "Mis carpetas")
+                text: rootFolderDrop.containsDrag ? KI18n.i18nc("@label drop target", "Move to top level") : KI18n.i18nc("@title", "My Folders")
             }
             DropArea {
                 id: rootFolderDrop
@@ -249,7 +250,7 @@ Controls.Pane {
             contentItem: RowLayout {
                 Controls.ToolButton {
                     visible: !root.keysMode
-                    text: qsTranslate("Main", "Editar carpeta")
+                    text: KI18n.i18nc("@action:inmenu", "Edit Folder")
                     icon.name: "edit-rename"
                     display: Controls.AbstractButton.IconOnly
                     enabled: !root.storeAdapter.controller.busy && !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
@@ -260,7 +261,7 @@ Controls.Pane {
                 }
                 Controls.ToolButton {
                     visible: !root.keysMode
-                    text: qsTranslate("Main", "Eliminar carpeta")
+                    text: KI18n.i18nc("@action:inmenu", "Delete Folder")
                     icon.name: "edit-delete"
                     display: Controls.AbstractButton.IconOnly
                     enabled: !root.storeAdapter.controller.busy && !["all", "favorites", "trash"].includes(root.storeAdapter.scope)
@@ -279,18 +280,18 @@ Controls.Pane {
         id: folderMenu
         property string folderId: ""
         Controls.MenuItem {
-            text: qsTr("Subir carpeta")
+            text: KI18n.i18nc("@action:inmenu", "Move Folder Up")
             icon.name: "go-up"
             onTriggered: root.folderStepRequested(folderMenu.folderId, -1)
         }
         Controls.MenuItem {
-            text: qsTr("Bajar carpeta")
+            text: KI18n.i18nc("@action:inmenu", "Move Folder Down")
             icon.name: "go-down"
             onTriggered: root.folderStepRequested(folderMenu.folderId, 1)
         }
         Controls.MenuSeparator {}
         Controls.MenuItem {
-            text: qsTr("Mover carpeta…")
+            text: KI18n.i18nc("@action:inmenu", "Move Folder…")
             icon.name: "folder-move"
             onTriggered: root.folderMoveDialogRequested(folderMenu.folderId)
         }
@@ -300,7 +301,7 @@ Controls.Pane {
         parent: sectionPicker
         x: Math.round((sectionPicker.width - width) / 2)
         y: sectionPicker.height + Kirigami.Units.smallSpacing
-        text: qsTranslate("Main", "Cambiar entre carpetas y claves")
+        text: KI18n.i18nc("@info:tooltip", "Switch between folders and keys")
         closePolicy: Controls.Popup.NoAutoClose
         background: Rectangle {
             color: Kirigami.Theme.backgroundColor

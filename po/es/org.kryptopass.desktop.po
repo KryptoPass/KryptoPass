@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:19-0400\n"
+"POT-Creation-Date: 2026-11-17 15:24-0400\n"
 "PO-Revision-Date: 2026-11-17 15:19-0400\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -66,6 +66,399 @@ msgstr "Otro dispositivo"
 msgctxt "@label field value"
 msgid "(empty)"
 msgstr "(vacío)"
+
+#: crates/kp-desktop/ui/qml/DetailActionBar.qml:27
+#, kde-format
+msgid "Item actions"
+msgstr "Acciones del elemento"
+
+#: crates/kp-desktop/ui/qml/DetailActionBar.qml:58
+#, kde-format
+msgctxt "@action:button"
+msgid "Create Linked Item"
+msgstr "Crear elemento vinculado"
+
+#: crates/kp-desktop/ui/qml/DetailActionBar.qml:63
+#, kde-format
+msgid "Create an item linked to this one"
+msgstr "Crear un elemento vinculado a este"
+
+#: crates/kp-desktop/ui/qml/DetailField.qml:16
+#, kde-format
+msgctxt "@action:button %1 is a field name"
+msgid "Copy %1"
+msgstr "Copiar %1"
+
+#: crates/kp-desktop/ui/qml/DetailField.qml:21
+#, kde-format
+msgctxt "@action:button %1 is a field name"
+msgid "Show %1"
+msgstr "Mostrar %1"
+
+#: crates/kp-desktop/ui/qml/DetailField.qml:22
+#, kde-format
+msgctxt "@action:button %1 is a field name"
+msgid "Hide %1"
+msgstr "Ocultar %1"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:48
+#, kde-format
+msgctxt "@title"
+msgid "Identity"
+msgstr "Identidad"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:124
+#, kde-format
+msgctxt "@title key scope"
+msgid "People"
+msgstr "Personas"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
+#, kde-format
+msgctxt "@title"
+msgid "Identities"
+msgstr "Identidades"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
+#, kde-format
+msgctxt "@title"
+msgid "Details"
+msgstr "Detalle"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:84
+#, kde-format
+msgctxt "@action:button"
+msgid "Back to Key"
+msgstr "Volver a la clave"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:84
+#, kde-format
+msgctxt "@action:button"
+msgid "Manage People"
+msgstr "Administrar personas"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:86
+#, kde-format
+msgid "Back to the key details"
+msgstr "Volver a los detalles de la clave"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:86
+#, kde-format
+msgid "View the address book"
+msgstr "Ver la agenda de contactos"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:143
+#, kde-format
+msgctxt "@action:button"
+msgid "Add Identity…"
+msgstr "Añadir identidad…"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:220
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:277
+#, kde-format
+msgctxt "@label two parts of a subtitle"
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:233
+#, kde-format
+msgid "The vault is locked. Unlock it to open this item."
+msgstr "La bóveda está bloqueada. Desbloquéala para abrir este elemento."
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:241
+#, kde-format
+msgid "Decrypting the item's content…"
+msgstr "Descifrando el contenido del elemento…"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:249
+#, kde-format
+msgid ""
+"This item was edited on two devices at the same time. Until you choose what "
+"to keep, this computer's version is shown."
+msgstr ""
+"Este elemento se editó en dos dispositivos a la vez. Hasta que elijas qué "
+"conservar se muestra la versión de este equipo."
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:252
+#, kde-format
+msgctxt "@action:button"
+msgid "Review Differences…"
+msgstr "Revisar diferencias…"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:267
+#, kde-format
+msgid ""
+"This item is encrypted for a key you do not have on this device. It is still "
+"stored and synced, and you can open it if you import that key."
+msgstr ""
+"Este elemento está cifrado para una clave que no tienes en este dispositivo. "
+"Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave."
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:267
+#, kde-format
+msgid ""
+"This item is encrypted for a key on this device, but it could not be opened "
+"yet. It is retried when the key is unlocked; if it stays like this, it is a "
+"bug and is recorded in the log."
+msgstr ""
+"Este elemento está cifrado para una clave de este dispositivo, pero todavía "
+"no se pudo abrir. Se reintenta solo al desbloquear la clave; si sigue así, "
+"es un fallo y queda en el registro."
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:327
+#, kde-format
+msgid "Linked item %1, in the trash"
+msgstr "Elemento vinculado %1, en la papelera"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:327
+#, kde-format
+msgid "Open linked item %1"
+msgstr "Abrir elemento vinculado %1"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:328
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:347
+#, kde-format
+msgctxt "@label %1 is the item type"
+msgid "Linked item · %1"
+msgstr "Elemento vinculado · %1"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:347
+#, kde-format
+msgctxt "@label %1 is the item type"
+msgid "Linked item · %1 · In the trash"
+msgstr "Elemento vinculado · %1 · En la papelera"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:365
+#, kde-format
+msgctxt "@action:button"
+msgid "View in Trash"
+msgstr "Ver en la papelera"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:374
+#, kde-format
+msgid ""
+"The linked item is not available. You can change or remove the link when you "
+"edit this item."
+msgstr ""
+"El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo "
+"al editar este elemento."
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:389
+#, kde-format
+msgctxt "@title placeholder"
+msgid "No item selected"
+msgstr "Ningún elemento seleccionado"
+
+#: crates/kp-desktop/ui/qml/EntryDetailPane.qml:390
+#, kde-format
+msgid "Select an item from the list to see its content."
+msgstr "Selecciona un elemento de la lista para ver su contenido."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:182
+#, kde-format
+msgid "Results: %1"
+msgstr "Resultados: %1"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:189
+#, kde-format
+msgctxt "@action:button sort order"
+msgid "Z to A"
+msgstr "Z a A"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:189
+#, kde-format
+msgctxt "@action:button sort order"
+msgid "A to Z"
+msgstr "A a Z"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:191
+#, kde-format
+msgid "Descending order"
+msgstr "Orden descendente"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:191
+#, kde-format
+msgid "Ascending order"
+msgstr "Orden ascendente"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:194
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Change sort order by name"
+msgstr "Cambiar orden por nombre"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:202
+#, kde-format
+msgid "Search is not available for this query."
+msgstr "La búsqueda no está disponible para esta consulta."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:202
+#, kde-format
+msgid "Preparing the user search…"
+msgstr "Preparando la búsqueda de usuarios…"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:202
+#, kde-format
+msgid "The user search is incomplete."
+msgstr "La búsqueda de usuarios está incompleta."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:277
+#, kde-format
+msgctxt "@label suffix of an item subtitle"
+msgid " · Linked to %1"
+msgstr " · Vinculado con %1"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:277
+#, kde-format
+msgctxt "@label suffix of an item subtitle"
+msgid " · Linked"
+msgstr " · Vinculado"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgid "Loading keys…"
+msgstr "Cargando claves…"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgctxt "@title placeholder"
+msgid "Keys unavailable"
+msgstr "Claves no disponibles"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgctxt "@title placeholder"
+msgid "No matches"
+msgstr "Sin coincidencias"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgctxt "@title placeholder"
+msgid "No keys in this view"
+msgstr "No hay claves en esta vista"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgid "Updating items…"
+msgstr "Actualizando elementos…"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgctxt "@title placeholder"
+msgid "The vault could not be loaded"
+msgstr "No se pudo cargar la bóveda"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:413
+#, kde-format
+msgctxt "@title placeholder"
+msgid "Empty folder"
+msgstr "Carpeta vacía"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Retry loading or check the error details."
+msgstr "Reintenta la carga o consulta los detalles del error."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Reading the local GnuPG keyring."
+msgstr "Consultando el llavero local de GnuPG."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Try another name, email or fingerprint."
+msgstr "Prueba con otro nombre, correo o huella."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Keys from the local GnuPG keyring will appear here."
+msgstr "Las claves del llavero local de GnuPG aparecerán aquí."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Reading the encrypted local storage."
+msgstr "Consultando el almacenamiento local cifrado."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Try another title, folder or type."
+msgstr "Prueba con otro título, carpeta o tipo."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:414
+#, kde-format
+msgid "Create an item to get started."
+msgstr "Crea un elemento para empezar."
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:419
+#: crates/kp-desktop/ui/qml/Main.qml:1178
+#: crates/kp-desktop/ui/qml/Main.qml:1205
+#, kde-format
+msgctxt "@action:button"
+msgid "Retry"
+msgstr "Reintentar"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:419
+#, kde-format
+msgctxt "@action:button"
+msgid "Clear Search"
+msgstr "Limpiar búsqueda"
+
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:431
+#, kde-format
+msgctxt "@action:button"
+msgid "Create Item…"
+msgstr "Crear elemento…"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:13
+#, kde-format
+msgctxt "@item item type"
+msgid "Login"
+msgstr "Inicio de sesión"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:20
+#, kde-format
+msgctxt "@item item type"
+msgid "Note"
+msgstr "Nota"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:27
+#, kde-format
+msgctxt "@item item type"
+msgid "Custom Secret"
+msgstr "Secreto personalizado"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:34
+#, kde-format
+msgctxt "@item item type"
+msgid "Payment Card"
+msgstr "Tarjeta de pago"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:41
+#, kde-format
+msgctxt "@item item type"
+msgid "TOTP Authenticator"
+msgstr "Autenticador TOTP"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:55
+#, kde-format
+msgctxt "@item item type"
+msgid "Wi-Fi Network"
+msgstr "Red Wi-Fi"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:62
+#, kde-format
+msgctxt "@item item type"
+msgid "Software License"
+msgstr "Licencia de software"
+
+#: crates/kp-desktop/ui/qml/EntryTypes.qml:69
+#, kde-format
+msgctxt "@item item type"
+msgid "SSH Key"
+msgstr "Clave SSH"
 
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:103
 #: crates/kp-desktop/ui/qml/LockScreen.qml:67
@@ -332,6 +725,235 @@ msgstr ""
 msgid "Mark the key as your own to unlock the vault."
 msgstr "Marca la clave como propia para desbloquear la bóveda."
 
+#: crates/kp-desktop/ui/qml/Main.qml:237
+#, kde-format
+msgid "Wait for the current operation to finish before locking the vault."
+msgstr "Espera a que termine la operación actual antes de bloquear la bóveda."
+
+#: crates/kp-desktop/ui/qml/Main.qml:246
+#, kde-format
+msgid "Wait for the current operation to finish before switching vaults."
+msgstr "Espera a que termine la operación actual antes de cambiar de bóveda."
+
+#: crates/kp-desktop/ui/qml/Main.qml:293
+#, kde-format
+msgid "Wait for the current operation to finish before continuing."
+msgstr "Espera a que termine la operación actual antes de continuar."
+
+#: crates/kp-desktop/ui/qml/Main.qml:342 crates/kp-desktop/ui/qml/Main.qml:379
+#, kde-format
+msgid "Wait for the current operation to finish before quitting."
+msgstr "Espera a que termine la operación actual antes de salir."
+
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:119
+#, kde-format
+msgctxt "@title key scope"
+msgid "My Identities"
+msgstr "Mis identidades"
+
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:129
+#, kde-format
+msgctxt "@title key scope"
+msgid "All Keys"
+msgstr "Todas las claves"
+
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:135
+#, kde-format
+msgctxt "@title vault scope"
+msgid "All Items"
+msgstr "Todos los elementos"
+
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:140
+#, kde-format
+msgctxt "@title vault scope"
+msgid "Favorites"
+msgstr "Favoritos"
+
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:145
+#, kde-format
+msgctxt "@title vault scope"
+msgid "Trash"
+msgstr "Papelera"
+
+#: crates/kp-desktop/ui/qml/Main.qml:384
+#, kde-format
+msgid "Save or discard the folder changes before quitting."
+msgstr "Guarda o descarta los cambios de carpeta antes de salir."
+
+#: crates/kp-desktop/ui/qml/Main.qml:438
+#, kde-format
+msgid "The backup folder could not be opened."
+msgstr "No se pudo abrir la carpeta del respaldo."
+
+#: crates/kp-desktop/ui/qml/Main.qml:455
+#, kde-format
+msgid "Copied to clipboard"
+msgstr "Copiado al portapapeles"
+
+#: crates/kp-desktop/ui/qml/Main.qml:459
+#, kde-format
+msgid "The activity file was created, but the text editor could not be opened."
+msgstr ""
+"El archivo de actividad se generó, pero no se pudo abrir el editor de texto."
+
+#: crates/kp-desktop/ui/qml/Main.qml:583
+#, kde-format
+msgctxt "@action"
+msgid "Reload Keyring"
+msgstr "Recargar llavero"
+
+#: crates/kp-desktop/ui/qml/Main.qml:583
+#, kde-format
+msgctxt "@action"
+msgid "Reload Vault"
+msgstr "Recargar bóveda"
+
+#: crates/kp-desktop/ui/qml/Main.qml:716
+#, kde-format
+msgctxt "@action"
+msgid "Unlock Vault"
+msgstr "Desbloquear bóveda"
+
+#: crates/kp-desktop/ui/qml/Main.qml:716
+#, kde-format
+msgctxt "@action"
+msgid "Lock Vault"
+msgstr "Bloquear bóveda"
+
+#: crates/kp-desktop/ui/qml/Main.qml:866
+#, kde-format
+msgid "The bug tracker could not be opened."
+msgstr "No se pudo abrir el gestor de incidencias."
+
+#: crates/kp-desktop/ui/qml/Main.qml:885
+#, kde-format
+msgctxt "@title:menu"
+msgid "&File"
+msgstr "&Archivo"
+
+#: crates/kp-desktop/ui/qml/Main.qml:923
+#, kde-format
+msgctxt "@title:menu"
+msgid "&Edit"
+msgstr "&Editar"
+
+#: crates/kp-desktop/ui/qml/Main.qml:961
+#, kde-format
+msgctxt "@title:menu"
+msgid "&View"
+msgstr "&Ver"
+
+#: crates/kp-desktop/ui/qml/Main.qml:980
+#, kde-format
+msgctxt "@title:menu"
+msgid "&Settings"
+msgstr "&Preferencias"
+
+#: crates/kp-desktop/ui/qml/Main.qml:992
+#, kde-format
+msgctxt "@title:menu"
+msgid "&Help"
+msgstr "A&yuda"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1088
+#, kde-format
+msgctxt "@action:button"
+msgid "Show Navigation"
+msgstr "Mostrar navegación"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1097
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:46
+#, kde-format
+msgctxt "@action:button"
+msgid "Back to List"
+msgstr "Volver a la lista"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1110
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Search name, email or fingerprint…"
+msgstr "Buscar nombre, email o huella…"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1110
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Search this view…"
+msgstr "Buscar en esta vista…"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1114
+#, kde-format
+msgctxt "@action:button"
+msgid "Show Details"
+msgstr "Mostrar detalle"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1166
+#, kde-format
+msgid "Processing OpenPGP operation"
+msgstr "Procesando operación OpenPGP"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1166
+#, kde-format
+msgid "Updating GnuPG keys"
+msgstr "Actualizando claves de GnuPG"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1175
+#, kde-format
+msgid "The GnuPG keys could not be loaded."
+msgstr "No se pudieron cargar las claves de GnuPG."
+
+#: crates/kp-desktop/ui/qml/Main.qml:1184
+#, kde-format
+msgctxt "@action:button"
+msgid "View Details…"
+msgstr "Ver detalles…"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1340
+#, kde-format
+msgid "%1 key"
+msgid_plural "%1 keys"
+msgstr[0] "%1 clave"
+msgstr[1] "%1 claves"
+
+#: crates/kp-desktop/ui/qml/Main.qml:1340
+#, kde-format
+msgid "%1 item"
+msgid_plural "%1 items"
+msgstr[0] "%1 elemento"
+msgstr[1] "%1 elementos"
+
+#: crates/kp-desktop/ui/qml/NavigationItem.qml:200
+#, kde-format
+msgctxt "@info:tooltip drop target"
+msgid "Move into “%1”"
+msgstr "Mover dentro de «%1»"
+
+#: crates/kp-desktop/ui/qml/NavigationItem.qml:200
+#, kde-format
+msgctxt "@info:tooltip drop target"
+msgid "Place before “%1”"
+msgstr "Colocar antes de «%1»"
+
+#: crates/kp-desktop/ui/qml/NavigationItem.qml:200
+#, kde-format
+msgctxt "@info:tooltip drop target"
+msgid "Place after “%1” and its subfolders"
+msgstr "Colocar después de «%1» y sus subcarpetas"
+
+#: crates/kp-desktop/ui/qml/NavigationItem.qml:200
+#, kde-format
+msgctxt "@info:tooltip"
+msgid ""
+"Drag to move this folder with its children. Drop in the middle to nest it, "
+"or on an edge to reorder."
+msgstr ""
+"Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para "
+"anidar, o en un borde para ordenar."
+
 #: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:17
 #, kde-format
 msgctxt "@title:window"
@@ -490,6 +1112,18 @@ msgctxt "@action:button"
 msgid "Generate"
 msgstr "Generar"
 
+#: crates/kp-desktop/ui/qml/SecretStore.qml:147
+#, kde-format
+msgctxt "@label folder name"
+msgid "No folder"
+msgstr "Sin carpeta"
+
+#: crates/kp-desktop/ui/qml/SecretStore.qml:162
+#, kde-format
+msgctxt "@label item type"
+msgid "Unknown type"
+msgstr "Tipo desconocido"
+
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:21
 #, kde-format
 msgctxt "@item:inlistbox idle lock"
@@ -578,6 +1212,73 @@ msgstr "Los cambios se guardan al elegirlos."
 msgctxt "@action:button"
 msgid "Close"
 msgstr "Cerrar"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:62
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:99
+#, kde-format
+msgctxt "@title sidebar section"
+msgid "Keys"
+msgstr "Claves"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:62
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:94
+#, kde-format
+msgctxt "@title sidebar section"
+msgid "Folders"
+msgstr "Carpetas"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:63
+#, kde-format
+msgid "Switch section: %1"
+msgstr "Cambiar sección: %1"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:169
+#, kde-format
+msgctxt "@label drop target"
+msgid "Move to top level"
+msgstr "Mover al nivel principal"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:169
+#, kde-format
+msgctxt "@title"
+msgid "My Folders"
+msgstr "Mis carpetas"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:253
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Edit Folder"
+msgstr "Editar carpeta"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:264
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Delete Folder"
+msgstr "Eliminar carpeta"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:283
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Move Folder Up"
+msgstr "Subir carpeta"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:288
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Move Folder Down"
+msgstr "Bajar carpeta"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:294
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Move Folder…"
+msgstr "Mover carpeta…"
+
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:304
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Switch between folders and keys"
+msgstr "Cambiar entre carpetas y claves"
 
 #: crates/kp-desktop/ui/qml/ToastHost.qml:137
 #, kde-format

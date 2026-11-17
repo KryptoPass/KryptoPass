@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop as Backend
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: root
@@ -233,7 +234,7 @@ Controls.ApplicationWindow {
             return;
         }
         if (sensitiveTransitionBlocked || passwordGenerator.generating) {
-            showCloseMessage(qsTr("Espera a que termine la operación actual antes de bloquear la bóveda."));
+            showCloseMessage(KI18n.i18n("Wait for the current operation to finish before locking the vault."));
             return;
         }
         pendingSensitiveAction = "lock";
@@ -242,7 +243,7 @@ Controls.ApplicationWindow {
     }
     function requestActiveVault(path) {
         if (sensitiveTransitionBlocked || passwordGenerator.generating) {
-            showCloseMessage(qsTr("Espera a que termine la operación actual antes de cambiar de bóveda."));
+            showCloseMessage(KI18n.i18n("Wait for the current operation to finish before switching vaults."));
             return;
         }
         pendingSensitiveAction = "switch";
@@ -289,7 +290,7 @@ Controls.ApplicationWindow {
     function completeSensitiveTransition() {
         if (sensitiveTransitionBlocked || passwordGenerator.generating) {
             cancelSensitiveTransition();
-            showCloseMessage(qsTr("Espera a que termine la operación actual antes de continuar."));
+            showCloseMessage(KI18n.i18n("Wait for the current operation to finish before continuing."));
             return;
         }
         const action = pendingSensitiveAction;
@@ -338,7 +339,7 @@ Controls.ApplicationWindow {
     }
     function approveWindowClose() {
         if (sensitiveTransitionBlocked) {
-            showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
+            showCloseMessage(KI18n.i18n("Wait for the current operation to finish before quitting."));
             return;
         }
         editor.closeAndClear();
@@ -355,7 +356,7 @@ Controls.ApplicationWindow {
     readonly property bool selectedEntryActionsEnabled: !root.keysMode && !store.controller.locked && !editor.opened && !editor.waitingForEditor && !root.mutationsBlocked && !store.controller.detailBusy && !!store.selected
     readonly property var selectedDetailForActions: store.selected && store.detail && store.detail.id === store.selected.id && !store.controller.detailBusy ? store.detail : null
     readonly property bool selectedDetailCopyActionsEnabled: root.selectedEntryActionsEnabled && !store.controller.detailBusy && !!root.selectedDetailForActions && !store.selected.trashed
-    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? qsTr("Mis identidades") : keys.scope === "contacts" ? qsTr("Personas") : qsTr("Todas las claves")) : store.scope === "all" ? qsTr("Todos los elementos") : store.scope === "favorites" ? qsTr("Favoritos") : store.scope === "trash" ? qsTr("Papelera") : store.folderName(store.scope)
+    readonly property string scopeTitle: keysMode ? (keys.scope === "own" ? KI18n.i18nc("@title key scope", "My Identities") : keys.scope === "contacts" ? KI18n.i18nc("@title key scope", "People") : KI18n.i18nc("@title key scope", "All Keys")) : store.scope === "all" ? KI18n.i18nc("@title vault scope", "All Items") : store.scope === "favorites" ? KI18n.i18nc("@title vault scope", "Favorites") : store.scope === "trash" ? KI18n.i18nc("@title vault scope", "Trash") : store.folderName(store.scope)
     Component.onCompleted: {
         deviceController.startResumeOwner();
         store.controller.loadStore();
@@ -375,12 +376,12 @@ Controls.ApplicationWindow {
         }
         if (root.sensitiveTransitionBlocked || passwordGenerator.generating) {
             close.accepted = false;
-            root.showCloseMessage(qsTr("Espera a que termine la operación actual antes de salir."));
+            root.showCloseMessage(KI18n.i18n("Wait for the current operation to finish before quitting."));
             return;
         }
         if (folderEditor.opened && folderEditor.dirty) {
             close.accepted = false;
-            root.showCloseMessage(qsTr("Guarda o descarta los cambios de carpeta antes de salir."));
+            root.showCloseMessage(KI18n.i18n("Save or discard the folder changes before quitting."));
             return;
         }
         if (editor.waitingForEditor) {
@@ -434,7 +435,7 @@ Controls.ApplicationWindow {
     Connections {
         target: shell
         function onFileManagerFailed() {
-            root.notify(qsTr("No se pudo abrir la carpeta del respaldo."), "error");
+            root.notify(KI18n.i18n("The backup folder could not be opened."), "error");
         }
     }
     Connections {
@@ -451,11 +452,11 @@ Controls.ApplicationWindow {
             const copied = secureClipboard.copySensitive(value);
             store.controller.confirmCopy(copied);
             if (copied)
-                root.notify(qsTr("Copiado al portapapeles"), "success");
+                root.notify(KI18n.i18n("Copied to clipboard"), "success");
         }
         function onActivityExported(path) {
             if (!Qt.openUrlExternally(path))
-                root.notify(qsTr("El archivo de actividad se generó, pero no se pudo abrir el editor de texto."), "warning");
+                root.notify(KI18n.i18n("The activity file was created, but the text editor could not be opened."), "warning");
         }
         function onPasswordGenerated(value) {
             if (root.pendingOperation !== "generate")
@@ -579,7 +580,7 @@ Controls.ApplicationWindow {
         id: refreshView
         controller: shell
         actionId: "refreshKeys"
-        text: root.keysMode ? qsTr("Recargar llavero") : qsTr("Recargar bóveda")
+        text: root.keysMode ? KI18n.i18nc("@action", "Reload Keyring") : KI18n.i18nc("@action", "Reload Vault")
         enabled: root.keysMode ? (!keys.controller.busy && !keys.controller.operationBusy) : (!store.controller.locked && !store.controller.busy && !root.mutationsBlocked)
         onTriggered: {
             if (root.keysMode)
@@ -712,7 +713,7 @@ Controls.ApplicationWindow {
         id: lockVaultAction
         controller: shell
         actionId: "lockVault"
-        text: store.controller.locked ? qsTr("Desbloquear bóveda") : qsTr("Bloquear bóveda")
+        text: store.controller.locked ? KI18n.i18nc("@action", "Unlock Vault") : KI18n.i18nc("@action", "Lock Vault")
         icon.name: store.controller.locked ? "object-unlocked" : "object-locked"
         enabled: !root.sensitiveTransitionBlocked && !passwordGenerator.generating
         onTriggered: root.requestLock()
@@ -862,7 +863,7 @@ Controls.ApplicationWindow {
         actionId: "reportBug"
         onTriggered: {
             if (!shell.openBugReport())
-                root.notify(qsTr("No se pudo abrir el gestor de incidencias."), "error");
+                root.notify(KI18n.i18n("The bug tracker could not be opened."), "error");
         }
     }
     DesktopAction {
@@ -881,7 +882,7 @@ Controls.ApplicationWindow {
         // Onboarding is a single guided flow; the menus belong to the vault.
         visible: !store.controller.setupRequired
         Controls.Menu {
-            title: qsTr("&Archivo")
+            title: KI18n.i18nc("@title:menu", "&File")
             Controls.MenuItem {
                 action: newEntry
             }
@@ -919,7 +920,7 @@ Controls.ApplicationWindow {
             }
         }
         Controls.Menu {
-            title: qsTr("&Editar")
+            title: KI18n.i18nc("@title:menu", "&Edit")
             Controls.MenuItem {
                 action: findAction
             }
@@ -957,7 +958,7 @@ Controls.ApplicationWindow {
             }
         }
         Controls.Menu {
-            title: qsTr("&Ver")
+            title: KI18n.i18nc("@title:menu", "&View")
             RadioMenuItem {
                 action: showVaultAction
             }
@@ -976,7 +977,7 @@ Controls.ApplicationWindow {
             }
         }
         Controls.Menu {
-            title: qsTr("&Preferencias")
+            title: KI18n.i18nc("@title:menu", "&Settings")
             Controls.MenuItem {
                 action: configureAppAction
             }
@@ -988,7 +989,7 @@ Controls.ApplicationWindow {
             }
         }
         Controls.Menu {
-            title: qsTr("A&yuda")
+            title: KI18n.i18nc("@title:menu", "&Help")
             Controls.MenuItem {
                 action: helpAction
             }
@@ -1084,7 +1085,7 @@ Controls.ApplicationWindow {
                 contentItem: RowLayout {
                     spacing: Kirigami.Units.smallSpacing
                     Controls.ToolButton {
-                        text: qsTr("Mostrar navegación")
+                        text: KI18n.i18nc("@action:button", "Show Navigation")
                         icon.name: "sidebar-expand"
                         onClicked: panes.showPane(0)
                         visible: panes.compact && panes.currentPane === 1
@@ -1093,7 +1094,7 @@ Controls.ApplicationWindow {
                         Controls.ToolTip.text: text
                     }
                     Controls.ToolButton {
-                        text: qsTr("Volver a la lista")
+                        text: KI18n.i18nc("@action:button", "Back to List")
                         icon.name: "go-previous"
                         onClicked: panes.showPane(1)
                         visible: panes.compact && panes.currentPane === 2
@@ -1106,11 +1107,11 @@ Controls.ApplicationWindow {
                         enabled: !editor.opened
                         Layout.fillWidth: true
                         Layout.maximumWidth: Kirigami.Units.gridUnit * 22
-                        placeholderText: root.keysMode ? qsTr("Buscar nombre, email o huella…") : qsTr("Buscar en esta vista…")
+                        placeholderText: root.keysMode ? KI18n.i18nc("@info:placeholder", "Search name, email or fingerprint…") : KI18n.i18nc("@info:placeholder", "Search this view…")
                         onTextChanged: root.activeStore.query = text
                     }
                     Controls.ToolButton {
-                        text: qsTr("Mostrar detalle")
+                        text: KI18n.i18nc("@action:button", "Show Details")
                         icon.name: "view-preview"
                         onClicked: panes.showPane(2)
                         visible: panes.compact && panes.currentPane === 1
@@ -1162,7 +1163,7 @@ Controls.ApplicationWindow {
                         running: visible
                         Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                         Layout.preferredHeight: width
-                        Accessible.name: keys.controller.operationBusy ? qsTr("Procesando operación OpenPGP") : qsTr("Actualizando claves de GnuPG")
+                        Accessible.name: keys.controller.operationBusy ? KI18n.i18n("Processing OpenPGP operation") : KI18n.i18n("Updating GnuPG keys")
                     }
                 }
             }
@@ -1171,16 +1172,16 @@ Controls.ApplicationWindow {
                 visible: root.keysMode && !!keys.controller.loadError && !keyErrorDialog.opened
                 position: Kirigami.InlineMessage.Position.Header
                 type: Kirigami.MessageType.Error
-                text: qsTr("No se pudieron cargar las claves de GnuPG.")
+                text: KI18n.i18n("The GnuPG keys could not be loaded.")
                 actions: [
                     Kirigami.Action {
-                        text: qsTr("Reintentar")
+                        text: KI18n.i18nc("@action:button", "Retry")
                         icon.name: "view-refresh"
                         enabled: refreshView.enabled
                         onTriggered: keys.controller.refreshKeys()
                     },
                     Kirigami.Action {
-                        text: qsTr("Ver detalles…")
+                        text: KI18n.i18nc("@action:button", "View Details…")
                         icon.name: "dialog-information"
                         onTriggered: keyErrorDialog.open()
                     }
@@ -1201,7 +1202,7 @@ Controls.ApplicationWindow {
                 text: store.controller.errorMessage
                 actions: [
                     Kirigami.Action {
-                        text: qsTr("Reintentar")
+                        text: KI18n.i18nc("@action:button", "Retry")
                         icon.name: "view-refresh"
                         enabled: !root.storeOperationBusy
                         onTriggered: {
@@ -1336,7 +1337,7 @@ Controls.ApplicationWindow {
                     Layout.maximumWidth: parent.width * 0.6
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode ? qsTr("%n clave", "", keys.visibleEntries.length) + " · " + root.scopeTitle : qsTr("%n elemento", "", store.visibleEntries.length) + " · " + root.scopeTitle
+                    text: root.keysMode ? KI18n.i18np("%1 key", "%1 keys", keys.visibleEntries.length) + " · " + root.scopeTitle : KI18n.i18np("%1 item", "%1 items", store.visibleEntries.length) + " · " + root.scopeTitle
                 }
                 Item {
                     Layout.fillWidth: true

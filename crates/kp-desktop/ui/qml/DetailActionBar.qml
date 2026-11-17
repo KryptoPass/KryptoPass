@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 RowLayout {
     id: root
@@ -23,7 +24,7 @@ RowLayout {
 
     spacing: Kirigami.Units.smallSpacing
     Accessible.role: Accessible.ToolBar
-    Accessible.name: qsTr("Acciones del elemento")
+    Accessible.name: KI18n.i18n("Item actions")
 
     Controls.ToolButton {
         action: root.editAction
@@ -54,12 +55,12 @@ RowLayout {
     }
     Controls.ToolButton {
         objectName: "createRelatedEntryButton"
-        text: qsTr("Crear elemento vinculado")
+        text: KI18n.i18nc("@action:button", "Create Linked Item")
         icon.name: "link"
         display: Controls.AbstractButton.TextBesideIcon
         visible: !root.trashed && !root.hasRelatedEntry
         enabled: !root.locked && !root.busy && !root.editorBusy
-        Accessible.name: qsTr("Crear un elemento vinculado a este")
+        Accessible.name: KI18n.i18n("Create an item linked to this one")
         onClicked: root.createRelatedEntryRequested()
         Controls.ToolTip.visible: hovered || visualFocus
         Controls.ToolTip.text: text

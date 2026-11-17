@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import org.kryptopass.desktop
+import org.kde.ki18n
 
 QtObject {
     id: store
@@ -143,7 +144,7 @@ QtObject {
 
     function folderName(id) {
         const folder = folders.find(candidate => candidate.id === id);
-        return folder ? folder.name : qsTr("Sin carpeta");
+        return folder ? folder.name : KI18n.i18nc("@label folder name", "No folder");
     }
 
     function folderIcon(id) {
@@ -158,7 +159,7 @@ QtObject {
 
     function kindName(kind) {
         const option = kindOptions.find(candidate => candidate.id === kind);
-        return option ? option.name : qsTr("Tipo desconocido");
+        return option ? option.name : KI18n.i18nc("@label item type", "Unknown type");
     }
 
     function kindIcon(kind) {

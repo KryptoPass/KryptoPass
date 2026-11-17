@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Pane {
     id: root
@@ -178,19 +179,19 @@ Controls.Pane {
                 }
                 Controls.Label {
                     visible: root.hasSearchQuery && !root.loading && !root.loadFailed
-                    text: qsTr("Resultados: %1").arg(root.activeStore.visibleEntries.length)
+                    text: KI18n.i18n("Results: %1", root.activeStore.visibleEntries.length)
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.ToolButton {
                     visible: !root.keysMode
                     checkable: true
                     checked: root.storeAdapter.sortDescending
-                    text: checked ? qsTr("Z a A") : qsTr("A a Z")
+                    text: checked ? KI18n.i18nc("@action:button sort order", "Z to A") : KI18n.i18nc("@action:button sort order", "A to Z")
                     icon.name: checked ? "view-sort-descending" : "view-sort-ascending"
-                    Accessible.name: checked ? qsTr("Orden descendente") : qsTr("Orden ascendente")
+                    Accessible.name: checked ? KI18n.i18n("Descending order") : KI18n.i18n("Ascending order")
                     onToggled: root.storeAdapter.sortDescending = checked
                     Controls.ToolTip.visible: hovered || visualFocus
-                    Controls.ToolTip.text: qsTr("Cambiar orden por nombre")
+                    Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "Change sort order by name")
                 }
             }
         }
@@ -198,7 +199,7 @@ Controls.Pane {
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.smallSpacing
             visible: !root.keysMode && root.hasSearchQuery && !root.storeAdapter.controller.locked && (root.storeAdapter.searchController.queryRejected || root.storeAdapter.searchController.building || root.storeAdapter.searchController.incomplete)
-            text: root.storeAdapter.searchController.queryRejected ? qsTr("La búsqueda no está disponible para esta consulta.") : root.storeAdapter.searchController.building ? qsTr("Preparando la búsqueda de usuarios…") : qsTr("La búsqueda de usuarios está incompleta.")
+            text: root.storeAdapter.searchController.queryRejected ? KI18n.i18n("Search is not available for this query.") : root.storeAdapter.searchController.building ? KI18n.i18n("Preparing the user search…") : KI18n.i18n("The user search is incomplete.")
             textFormat: Text.PlainText
             wrapMode: Text.WordWrap
             color: Kirigami.Theme.disabledTextColor
@@ -273,7 +274,7 @@ Controls.Pane {
                             focus: true
                             readonly property var modelData: rowLoader.modelData
                             readonly property var relatedEntry: root.storeAdapter.relatedEntryFor(modelData)
-                            readonly property string subtitleText: qsTranslate("Main", "%1 · %2").arg(root.storeAdapter.folderName(modelData.folder)).arg(root.storeAdapter.kindName(modelData.kind)) + (relatedEntry ? qsTr(" · Vinculado con %1").arg(relatedEntry.title) : modelData.relatedEntryId ? qsTr(" · Vinculado") : "")
+                            readonly property string subtitleText: KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", root.storeAdapter.folderName(modelData.folder), root.storeAdapter.kindName(modelData.kind)) + (relatedEntry ? KI18n.i18nc("@label suffix of an item subtitle", " · Linked to %1", relatedEntry.title) : modelData.relatedEntryId ? KI18n.i18nc("@label suffix of an item subtitle", " · Linked") : "")
                             text: modelData.title
                             Accessible.name: modelData.title
                             Accessible.description: subtitleText
@@ -409,13 +410,13 @@ Controls.Pane {
         visible: entryList.count === 0
         helpfulAction: root.loadFailed || (root.hasSearchQuery && !root.loading) ? emptyListAction : !root.keysMode && !root.loading && !root.storeAdapter.controller.locked ? emptyCreateAction : null
         icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.hasSearchQuery ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.loadError ? "dialog-error" : "document-new"
-        text: root.keysMode ? (root.keyStore.controller.busy ? qsTranslate("Main", "Cargando claves…") : root.keyStore.controller.loadError ? qsTranslate("Main", "Claves no disponibles") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "No hay claves en esta vista")) : root.storeAdapter.controller.busy ? qsTranslate("Main", "Actualizando elementos…") : root.storeAdapter.controller.loadError ? qsTranslate("Main", "No se pudo cargar la bóveda") : root.hasSearchQuery ? qsTranslate("Main", "Sin coincidencias") : qsTranslate("Main", "Carpeta vacía")
-        explanation: root.keysMode ? (root.keyStore.controller.loadError ? qsTranslate("Main", "Reintenta la carga o consulta los detalles del error.") : root.keyStore.controller.busy ? qsTranslate("Main", "Consultando el llavero local de GnuPG.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro nombre, correo o huella.") : qsTranslate("Main", "Las claves del llavero local de GnuPG aparecerán aquí.")) : root.storeAdapter.controller.loadError ? root.storeAdapter.controller.loadError : root.storeAdapter.controller.busy ? qsTranslate("Main", "Consultando el almacenamiento local cifrado.") : root.hasSearchQuery ? qsTranslate("Main", "Prueba con otro título, carpeta o tipo.") : qsTranslate("Main", "Crea un elemento para empezar.")
+        text: root.keysMode ? (root.keyStore.controller.busy ? KI18n.i18n("Loading keys…") : root.keyStore.controller.loadError ? KI18n.i18nc("@title placeholder", "Keys unavailable") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "No keys in this view")) : root.storeAdapter.controller.busy ? KI18n.i18n("Updating items…") : root.storeAdapter.controller.loadError ? KI18n.i18nc("@title placeholder", "The vault could not be loaded") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "Empty folder")
+        explanation: root.keysMode ? (root.keyStore.controller.loadError ? KI18n.i18n("Retry loading or check the error details.") : root.keyStore.controller.busy ? KI18n.i18n("Reading the local GnuPG keyring.") : root.hasSearchQuery ? KI18n.i18n("Try another name, email or fingerprint.") : KI18n.i18n("Keys from the local GnuPG keyring will appear here.")) : root.storeAdapter.controller.loadError ? root.storeAdapter.controller.loadError : root.storeAdapter.controller.busy ? KI18n.i18n("Reading the encrypted local storage.") : root.hasSearchQuery ? KI18n.i18n("Try another title, folder or type.") : KI18n.i18n("Create an item to get started.")
     }
     // Part of the placeholder, so it always sits below its text however long that is.
     Kirigami.Action {
         id: emptyListAction
-        text: root.loadFailed ? qsTr("Reintentar") : qsTr("Limpiar búsqueda")
+        text: root.loadFailed ? KI18n.i18nc("@action:button", "Retry") : KI18n.i18nc("@action:button", "Clear Search")
         icon.name: root.loadFailed ? "view-refresh" : "edit-clear"
         enabled: !root.loading && (root.loadFailed || root.searchEnabled)
         onTriggered: {
@@ -427,7 +428,7 @@ Controls.Pane {
     }
     Kirigami.Action {
         id: emptyCreateAction
-        text: qsTranslate("Main", "Crear elemento…")
+        text: KI18n.i18nc("@action:button", "Create Item…")
         icon.name: "document-new"
         enabled: !root.loading && !root.storeAdapter.controller.locked && !!root.newEntryAction
         onTriggered: {

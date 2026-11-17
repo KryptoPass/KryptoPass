@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Pane {
     id: root
@@ -76,13 +77,13 @@ Controls.Pane {
                     level: 3
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: root.keysMode ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible) ? qsTr("Identidad") : root.keyStore.scope === "contacts" ? qsTr("Personas") : qsTr("Identidades")) : qsTr("Detalle")
+                    text: root.keysMode ? (root.keyStore.selected && !(root.keyStore.scope === "contacts" && root.keyStore.contactsOverviewVisible) ? KI18n.i18nc("@title", "Identity") : root.keyStore.scope === "contacts" ? KI18n.i18nc("@title key scope", "People") : KI18n.i18nc("@title", "Identities")) : KI18n.i18nc("@title", "Details")
                 }
                 Controls.ToolButton {
                     visible: root.keysMode && root.keyStore.scope === "contacts"
-                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a la clave") : qsTr("Administrar personas")
+                    text: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? KI18n.i18nc("@action:button", "Back to Key") : KI18n.i18nc("@action:button", "Manage People")
                     icon.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? "view-certificate" : "view-pim-contacts"
-                    Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? qsTr("Volver a los detalles de la clave") : qsTr("Ver la agenda de contactos")
+                    Accessible.name: root.keyStore.selected && root.keyStore.contactsOverviewVisible ? KI18n.i18n("Back to the key details") : KI18n.i18n("View the address book")
                     onClicked: root.keyStore.contactsOverviewVisible = root.keyStore.selected ? !root.keyStore.contactsOverviewVisible : true
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: text
@@ -139,7 +140,7 @@ Controls.Pane {
             Layout.fillHeight: true
             Controls.Button {
                 Layout.margins: Kirigami.Units.largeSpacing
-                text: qsTr("Añadir identidad…")
+                text: KI18n.i18nc("@action:button", "Add Identity…")
                 enabled: !root.keyStore.controller.busy
                 onClicked: emptyIdentityDialog.start()
             }
@@ -216,7 +217,7 @@ Controls.Pane {
                             }
                             Controls.Label {
                                 Layout.fillWidth: true
-                                text: qsTr("%1 · %2").arg(root.storeAdapter.folderName(root.selected?.folder || "")).arg(root.storeAdapter.kindName(root.selected?.kind || "note"))
+                                text: KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", root.storeAdapter.folderName(root.selected?.folder || ""), root.storeAdapter.kindName(root.selected?.kind || "note"))
                                 textFormat: Text.PlainText
                                 color: Kirigami.Theme.disabledTextColor
                                 elide: Text.ElideRight
@@ -229,7 +230,7 @@ Controls.Pane {
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !!root.selected && root.storeAdapter.controller.locked
                         type: Kirigami.MessageType.Information
-                        text: qsTr("La bóveda está bloqueada. Desbloquéala para abrir este elemento.")
+                        text: KI18n.i18n("The vault is locked. Unlock it to open this item.")
                     }
 
                     Kirigami.InlineMessage {
@@ -237,7 +238,7 @@ Controls.Pane {
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
                         type: Kirigami.MessageType.Information
-                        text: qsTr("Descifrando el contenido del elemento…")
+                        text: KI18n.i18n("Decrypting the item's content…")
                     }
 
                     Kirigami.InlineMessage {
@@ -245,10 +246,10 @@ Controls.Pane {
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !!root.selected && root.selected.conflicted === true
                         type: Kirigami.MessageType.Warning
-                        text: qsTr("Este elemento se editó en dos dispositivos a la vez. Hasta que elijas qué conservar se muestra la versión de este equipo.")
+                        text: KI18n.i18n("This item was edited on two devices at the same time. Until you choose what to keep, this computer's version is shown.")
                         actions: [
                             Kirigami.Action {
-                                text: qsTr("Revisar diferencias…")
+                                text: KI18n.i18nc("@action:button", "Review Differences…")
                                 icon.name: "vcs-merge"
                                 enabled: !root.storeAdapter.controller.busy && !root.storeAdapter.controller.locked
                                 onTriggered: root.storeAdapter.controller.openConflict(root.selected.id)
@@ -263,7 +264,7 @@ Controls.Pane {
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !!root.selected && root.selected.readable === false
                         type: root.selected?.unreadableReason === "foreign" ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
-                        text: root.selected?.unreadableReason === "foreign" ? qsTr("Este elemento está cifrado para una clave que no tienes en este dispositivo. Se guarda y se sincroniza igual, y podrás abrirlo si importas esa clave.") : qsTr("Este elemento está cifrado para una clave de este dispositivo, pero todavía no se pudo abrir. Se reintenta solo al desbloquear la clave; si sigue así, es un fallo y queda en el registro.")
+                        text: root.selected?.unreadableReason === "foreign" ? KI18n.i18n("This item is encrypted for a key you do not have on this device. It is still stored and synced, and you can open it if you import that key.") : KI18n.i18n("This item is encrypted for a key on this device, but it could not be opened yet. It is retried when the key is unlocked; if it stays like this, it is a bug and is recorded in the log.")
                     }
 
                     ConflictDialog {
@@ -323,8 +324,8 @@ Controls.Pane {
                                 visible: !!root.relatedEntry
                                 enabled: !root.relatedEntry?.trashed && !root.storeAdapter.controller.busy
                                 text: ""
-                                Accessible.name: root.relatedEntry?.trashed ? qsTr("Elemento vinculado %1, en la papelera").arg(root.relatedEntry.title) : qsTr("Abrir elemento vinculado %1").arg(root.relatedEntry?.title || "")
-                                Accessible.description: root.relatedEntry ? qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry.kind)) : ""
+                                Accessible.name: root.relatedEntry?.trashed ? KI18n.i18n("Linked item %1, in the trash", root.relatedEntry.title) : KI18n.i18n("Open linked item %1", root.relatedEntry?.title || "")
+                                Accessible.description: root.relatedEntry ? KI18n.i18nc("@label %1 is the item type", "Linked item · %1", root.storeAdapter.kindName(root.relatedEntry.kind)) : ""
                                 contentItem: RowLayout {
                                     spacing: Kirigami.Units.largeSpacing
                                     EntryIcon {
@@ -343,7 +344,7 @@ Controls.Pane {
                                         selected: relatedEntryCard.highlighted || relatedEntryCard.down
                                         font: relatedEntryCard.font
                                         subtitleFont: relatedEntryCard.font
-                                        subtitle: root.relatedEntry?.trashed ? qsTr("Elemento vinculado · %1 · En la papelera").arg(root.storeAdapter.kindName(root.relatedEntry.kind)) : qsTr("Elemento vinculado · %1").arg(root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
+                                        subtitle: root.relatedEntry?.trashed ? KI18n.i18nc("@label %1 is the item type", "Linked item · %1 · In the trash", root.storeAdapter.kindName(root.relatedEntry.kind)) : KI18n.i18nc("@label %1 is the item type", "Linked item · %1", root.storeAdapter.kindName(root.relatedEntry?.kind || "custom"))
                                     }
                                     Kirigami.Icon {
                                         visible: !root.relatedEntry?.trashed
@@ -361,7 +362,7 @@ Controls.Pane {
                             Controls.Button {
                                 Layout.alignment: Qt.AlignRight
                                 visible: !!root.relatedEntry?.trashed
-                                text: qsTr("Ver en la papelera")
+                                text: KI18n.i18nc("@action:button", "View in Trash")
                                 icon.name: "user-trash"
                                 onClicked: root.relatedEntryTrashRequested(root.relatedEntry)
                             }
@@ -370,7 +371,7 @@ Controls.Pane {
                                 Layout.fillWidth: true
                                 visible: root.hasRelatedEntryReference && !root.relatedEntry
                                 type: Kirigami.MessageType.Warning
-                                text: qsTr("El elemento vinculado no está disponible. Puedes cambiar o quitar el vínculo al editar este elemento.")
+                                text: KI18n.i18n("The linked item is not available. You can change or remove the link when you edit this item.")
                             }
                         }
                     }
@@ -385,7 +386,7 @@ Controls.Pane {
         anchors.verticalCenterOffset: root.headerHeight / 2
         visible: !root.editing && !root.keysMode && !root.selected && !root.listEmpty
         icon.name: "view-list-details"
-        text: qsTr("Ningún elemento seleccionado")
-        explanation: qsTr("Selecciona un elemento de la lista para ver su contenido.")
+        text: KI18n.i18nc("@title placeholder", "No item selected")
+        explanation: KI18n.i18n("Select an item from the list to see its content.")
     }
 }

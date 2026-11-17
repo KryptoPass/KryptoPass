@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ItemDelegate {
     id: root
@@ -196,7 +197,7 @@ Controls.ItemDelegate {
     }
     Controls.ToolTip.visible: (folderDrop.containsDrag && folderDrop.validTarget) || (folderDraggingEnabled && hovered && !folderDrag.active && !hoverToolTipSuppressed)
     Controls.ToolTip.delay: folderDrop.containsDrag ? 0 : Kirigami.Units.toolTipDelay
-    Controls.ToolTip.text: folderDrop.containsDrag ? folderDrop.edge === "inside" ? qsTr("Mover dentro de «%1»").arg(text) : folderDrop.edge === "before" ? qsTr("Colocar antes de «%1»").arg(text) : qsTr("Colocar después de «%1» y sus subcarpetas").arg(text) : qsTr("Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para anidar, o en un borde para ordenar.")
+    Controls.ToolTip.text: folderDrop.containsDrag ? folderDrop.edge === "inside" ? KI18n.i18nc("@info:tooltip drop target", "Move into “%1”", text) : folderDrop.edge === "before" ? KI18n.i18nc("@info:tooltip drop target", "Place before “%1”", text) : KI18n.i18nc("@info:tooltip drop target", "Place after “%1” and its subfolders", text) : KI18n.i18nc("@info:tooltip", "Drag to move this folder with its children. Drop in the middle to nest it, or on an edge to reorder.")
 
     contentItem: RowLayout {
         FolderIcon {

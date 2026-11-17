@@ -2,6 +2,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 import QtQuick
 import org.kryptopass.desktop
+import org.kde.ki18n
 
 QtObject {
     id: types
@@ -9,63 +10,63 @@ QtObject {
     readonly property var options: [
         {
             id: "login",
-            name: qsTranslate("SecretStore", "Inicio de sesión"),
+            name: KI18n.i18nc("@item item type", "Login"),
             icon: "user-identity",
             editor: loginEditor,
             detail: loginDetail
         },
         {
             id: "note",
-            name: qsTranslate("SecretStore", "Nota"),
+            name: KI18n.i18nc("@item item type", "Note"),
             icon: "document-edit",
             editor: noteEditor,
             detail: noteDetail
         },
         {
             id: "custom",
-            name: qsTranslate("SecretStore", "Secreto personalizado"),
+            name: KI18n.i18nc("@item item type", "Custom Secret"),
             icon: "view-list-details",
             editor: customEditor,
             detail: customDetail
         },
         {
             id: "card",
-            name: qsTranslate("SecretStore", "Tarjeta de pago"),
+            name: KI18n.i18nc("@item item type", "Payment Card"),
             icon: "wallet-open",
             editor: cardEditor,
             detail: cardDetail
         },
         {
             id: "totp",
-            name: qsTranslate("SecretStore", "Autenticador TOTP"),
+            name: KI18n.i18nc("@item item type", "TOTP Authenticator"),
             icon: "view-barcode-qr",
             editor: totpEditor,
             detail: totpDetail
         },
         {
             id: "identity",
-            name: qsTranslate("SecretStore", "Identidad"),
+            name: KI18n.i18nc("@title", "Identity"),
             icon: "user-identity",
             editor: identityEditor,
             detail: identityDetail
         },
         {
             id: "wifi",
-            name: qsTranslate("SecretStore", "Red Wi-Fi"),
+            name: KI18n.i18nc("@item item type", "Wi-Fi Network"),
             icon: "network-wireless",
             editor: wifiEditor,
             detail: wifiDetail
         },
         {
             id: "license",
-            name: qsTranslate("SecretStore", "Licencia de software"),
+            name: KI18n.i18nc("@item item type", "Software License"),
             icon: "license",
             editor: licenseEditor,
             detail: licenseDetail
         },
         {
             id: "ssh-key",
-            name: qsTranslate("SecretStore", "Clave SSH"),
+            name: KI18n.i18nc("@item item type", "SSH Key"),
             icon: "dialog-password",
             editor: sshKeyEditor,
             detail: sshKeyDetail

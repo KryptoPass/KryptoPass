@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Frame {
     id: root
@@ -12,13 +13,13 @@ Controls.Frame {
     property string hint: ""
     property string accessibleDescription: ""
     property string badge: ""
-    property string copyLabel: qsTr("Copiar %1").arg(label)
+    property string copyLabel: KI18n.i18nc("@action:button %1 is a field name", "Copy %1", label)
     property bool copyEnabled: value.length > 0
     property bool multiline: false
     property bool revealable: false
     property bool revealed: false
-    property string revealLabel: qsTr("Mostrar %1").arg(label)
-    property string hideLabel: qsTr("Ocultar %1").arg(label)
+    property string revealLabel: KI18n.i18nc("@action:button %1 is a field name", "Show %1", label)
+    property string hideLabel: KI18n.i18nc("@action:button %1 is a field name", "Hide %1", label)
     property bool prominent: false
     property real progress: -1
     property color progressColor: Kirigami.Theme.highlightColor
