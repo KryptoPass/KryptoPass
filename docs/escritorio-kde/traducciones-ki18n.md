@@ -1,10 +1,10 @@
 # Traducciones con KI18n
 
-Estado al 17 de noviembre de 2026: la infraestructura gettext y el enlace en
-tiempo de ejecución están listos y probados (Rust, `i18n()` en QML y
-`KI18n.i18nc()` traducen, con plurales y `%1`). Las cadenas todavía usan el
-sistema Qt (`qsTr`, `QCoreApplication::translate`, `po/es.ts`). Este documento
-describe el flujo de destino, el mismo que siguen las aplicaciones KDE.
+Estado al 17 de noviembre de 2026: todo el QML y el C++ nativo usan KI18n con
+la fuente en inglés, y `po/es/` tiene sus 1212 mensajes traducidos. Solo las
+cadenas que Rust manda a la interfaz siguen pasando por el catálogo Qt
+(`translate_ui`, `translate_plural`, `po/es.ts`). Este documento describe el
+flujo, el mismo que siguen las aplicaciones KDE.
 
 ## Cómo lo hace KDE
 
@@ -53,6 +53,15 @@ cambie.
 
 ## Reglas para marcar cadenas
 
+- QML: `KI18n.i18n()`/`i18nc()`/`i18np()` con `import org.kde.ki18n`; qmllint
+  no reconoce el `i18n()` suelto del contexto. Los argumentos van dentro de la
+  llamada (`KI18n.i18n("Copy %1", label)`), nunca con `.arg()` aplicado a un
+  paréntesis.
+- C++: `i18n()`/`i18nc()`; en tablas estáticas, `kli18nc()` y `toString()` al
+  usarlo. Los marcadores de contexto siguen las convenciones de KDE
+  (`@action:button`, `@title:window`, `@info:placeholder`…).
+- KI18n formatea los números según el idioma: un año, un puerto o un
+  identificador se pasan como texto.
 - Nunca `i18n()` dentro de una macro invocada con ruta (`tracing::info!`,
   `anyhow::anyhow!`): el analizador de Rust de xgettext 1.0 no la ve. Guarda
   el texto en una variable o importa la macro (`info!`, `format!` y `vec!`
@@ -71,16 +80,14 @@ de noviembre con KI18n 6.31; por eso la fuente pasa a inglés.
 
 ## Fases pendientes
 
-En cada fase, cada cadena se escribe en inglés y su texto en español actual
-entra en `po/es/` en el mismo cambio, así la interfaz en español nunca queda a
-medias.
+Cada cadena se escribe en inglés y su texto en español actual entra en `po/es/`
+en el mismo cambio, así la interfaz en español nunca queda a medias. QML y C++
+quedaron hechos el 17 de noviembre.
 
-1. **QML y C++.** `qsTr` → `i18n`/`i18nc`; `QCoreApplication::translate` →
-   `i18n` con `TRANSLATION_DOMAIN`. Plurales con `i18np` y `%1`.
-2. **Rust.** Marcar cada cadena donde nace con `i18n`/`i18nc`. Unas 900 del
+1. **Rust.** Marcar cada cadena donde nace con `i18n`/`i18nc`. Unas 900 del
    catálogo actual solo las encuentra la regex de `packaging/translations.py`
    (errores que se traducen lejos de donde se escriben).
-3. **Retirar el sistema Qt.** Borrar `po/es.ts`, `packaging/translations.py`,
+2. **Retirar el sistema Qt.** Borrar `po/es.ts`, `packaging/translations.py`,
    las recetas `translations*` y el `QTranslator` de `initialize_desktop`.
 
 Fuera de alcance por ahora: las traducciones del `.desktop` y del metainfo,
