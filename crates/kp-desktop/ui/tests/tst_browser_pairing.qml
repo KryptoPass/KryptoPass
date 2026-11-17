@@ -73,7 +73,7 @@ TestCase {
     function test_incoming_token_opens_with_rejection_focused_and_enter_denies(row) {
         const dialog = createDialog(false);
         const decision = decisionSpy(dialog);
-        const reject = footerButton(dialog, "Rechazar conexión");
+        const reject = footerButton(dialog, "Reject Connection");
         verify(reject !== null);
         const token = "browser-request-41";
 
@@ -91,12 +91,12 @@ TestCase {
         return [
             {
                 tag: "reject",
-                label: "Rechazar conexión",
+                label: "Reject Connection",
                 approve: false
             },
             {
                 tag: "approve",
-                label: "Vincular navegador",
+                label: "Pair Browser",
                 approve: true
             }
         ];
@@ -146,7 +146,7 @@ TestCase {
     function test_locked_vault_cannot_approve() {
         const dialog = createDialog(true);
         const decision = decisionSpy(dialog);
-        const approve = footerButton(dialog, "Vincular navegador");
+        const approve = footerButton(dialog, "Pair Browser");
         verify(approve !== null);
 
         openFor(dialog, "browser-request-locked");

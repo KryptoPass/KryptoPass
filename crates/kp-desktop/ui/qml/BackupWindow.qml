@@ -6,6 +6,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop as Backend
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: dialog
@@ -37,7 +38,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 18
-    title: exportMode ? qsTr("Exportar copia de seguridad") : qsTr("Restaurar copia de seguridad")
+    title: exportMode ? KI18n.i18nc("@title:window", "Export Backup") : KI18n.i18nc("@title:window", "Restore Backup")
 
     function prepare(exporting) {
         if (busy)
@@ -90,7 +91,7 @@ Controls.ApplicationWindow {
     }
 
     function keyName(key) {
-        return (key.title || key.email) + (key.hasSecret ? qsTr(" (tu clave)") : "");
+        return (key.title || key.email) + (key.hasSecret ? KI18n.i18nc("@label suffix after a key name", " (your key)") : "");
     }
 
     function chooseRestoreFile(url) {
@@ -188,7 +189,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.exportMode && !dialog.completed
-                text: qsTr("Destino")
+                text: KI18n.i18nc("@title:group", "Destination")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -206,14 +207,14 @@ Controls.ApplicationWindow {
                     spacing: 0
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: dialog.outputPath.toString() ? dialog.fileName(dialog.outputPath) : qsTr("Sin destino")
+                        text: dialog.outputPath.toString() ? dialog.fileName(dialog.outputPath) : KI18n.i18n("No destination")
                         textFormat: Text.PlainText
                         font.weight: Font.DemiBold
                         elide: Text.ElideMiddle
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: dialog.outputPath.toString() ? dialog.displayPath(dialog.outputPath) : qsTr("Elige una carpeta fuera de este equipo si puedes")
+                        text: dialog.outputPath.toString() ? dialog.displayPath(dialog.outputPath) : KI18n.i18n("Choose a folder outside this computer if you can")
                         textFormat: Text.PlainText
                         color: Kirigami.Theme.disabledTextColor
                         elide: Text.ElideMiddle
@@ -221,14 +222,14 @@ Controls.ApplicationWindow {
                 }
                 Controls.Button {
                     visible: !dialog.outputPath.toString()
-                    text: qsTr("Elegir…")
+                    text: KI18n.i18nc("@action:button", "Choose…")
                     icon.name: "document-save-as"
                     enabled: !dialog.busy
                     onClicked: destinationDialog.open()
                 }
                 Controls.ToolButton {
                     visible: !!dialog.outputPath.toString()
-                    text: qsTr("Cambiar…")
+                    text: KI18n.i18nc("@action:button", "Change…")
                     icon.name: "document-save-as"
                     enabled: !dialog.busy
                     onClicked: destinationDialog.open()
@@ -238,7 +239,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.exportMode && !dialog.completed
-                text: qsTr("Cifrar con")
+                text: KI18n.i18nc("@title:group", "Encrypt with")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -258,7 +259,7 @@ Controls.ApplicationWindow {
                     elide: Text.ElideRight
                 }
                 Controls.ToolButton {
-                    text: qsTr("Cambiar…")
+                    text: KI18n.i18nc("@action:button", "Change…")
                     icon.name: "document-edit"
                     enabled: !dialog.busy
                     onClicked: dialog.keysExpanded = true
@@ -287,7 +288,7 @@ Controls.ApplicationWindow {
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.exportMode && !dialog.completed && dialog.availableKeys.length === 0
-                text: dialog.keyStore.controller.busy ? qsTr("Buscando tus claves…") : qsTr("No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.")
+                text: dialog.keyStore.controller.busy ? KI18n.i18n("Looking for your keys…") : KI18n.i18n("There are no valid keys to encrypt with. Create or import a key from Keys and try again.")
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -298,11 +299,11 @@ Controls.ApplicationWindow {
                 Layout.topMargin: Kirigami.Units.largeSpacing
                 visible: dialog.exportMode && !dialog.completed && dialog.eligibleSelection
                 type: dialog.selectedPrivateKeys.length > 0 ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
-                text: dialog.selectedPrivateKeys.length > 0 ? qsTr("La copia no incluye tus claves privadas. Guárdalas aparte para poder restaurarla en otro equipo.") : qsTr("No tienes aquí la clave privada de las claves elegidas. Para restaurar necesitarás importarla o usar el equipo donde está.")
+                text: dialog.selectedPrivateKeys.length > 0 ? KI18n.i18n("The backup does not include your private keys. Keep them separately so you can restore it on another computer.") : KI18n.i18n("You do not have the private key of the chosen keys here. To restore, you will need to import it or use the computer where it is.")
                 actions: [
                     Kirigami.Action {
                         visible: dialog.selectedPrivateKeys.length > 0
-                        text: qsTr("Respaldar clave privada…")
+                        text: KI18n.i18nc("@action:button", "Back Up Private Key…")
                         icon.name: "document-save-as"
                         enabled: !dialog.busy && !dialog.keyStore.controller.busy
                         onTriggered: keyRecovery.openFor("backupPrivate", dialog.selectedPrivateKeys[0].id)
@@ -322,10 +323,10 @@ Controls.ApplicationWindow {
                 type: dialog.hasPrivateKeys ? Kirigami.MessageType.Information : Kirigami.MessageType.Warning
                 icon.name: dialog.hasPrivateKeys ? "dialog-information" : "dialog-warning"
                 showCloseButton: dialog.hasPrivateKeys
-                text: qsTr("¿Cambiaste de equipo? Importa primero la clave privada que protege la copia; sin ella no se puede recuperar.")
+                text: KI18n.i18n("Did you change computers? First import the private key that protects the backup; without it, the backup cannot be recovered.")
                 actions: [
                     Kirigami.Action {
-                        text: qsTr("Importar clave privada…")
+                        text: KI18n.i18nc("@action:button", "Import Private Key…")
                         icon.name: "view-certificate-import"
                         enabled: !dialog.busy && !dialog.keyStore.controller.busy
                         onTriggered: keyRecovery.openFor("import")
@@ -381,20 +382,20 @@ Controls.ApplicationWindow {
                     Controls.Label {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Suelta aquí una copia de KryptoPass")
+                        text: KI18n.i18n("Drop a KryptoPass backup here")
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Archivos admitidos: .kpb, .gpg, .pgp")
+                        text: KI18n.i18n("Supported files: .kpb, .gpg, .pgp")
                         wrapMode: Text.Wrap
                         color: Kirigami.Theme.disabledTextColor
                     }
                     Controls.Button {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: Kirigami.Units.smallSpacing
-                        text: qsTr("Examinar…")
+                        text: KI18n.i18nc("@action:button", "Browse…")
                         icon.name: "document-open"
                         enabled: drop.enabled
                         onClicked: sourceDialog.open()
@@ -430,7 +431,7 @@ Controls.ApplicationWindow {
                         }
                     }
                     Controls.Button {
-                        text: qsTr("Cambiar…")
+                        text: KI18n.i18nc("@action:button", "Change…")
                         icon.name: "document-open"
                         enabled: !dialog.busy
                         onClicked: sourceDialog.open()
@@ -444,7 +445,7 @@ Controls.ApplicationWindow {
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 Layout.topMargin: Kirigami.Units.smallSpacing
                 visible: !dialog.exportMode
-                text: dialog.hasVault ? qsTr("La copia se restaura sin sobrescribir la bóveda actual.") : qsTr("Se creará una bóveda nueva a partir de esta copia y GnuPG te pedirá la contraseña de tu clave privada.")
+                text: dialog.hasVault ? KI18n.i18n("The backup is restored without overwriting the current vault.") : KI18n.i18n("A new vault will be created from this backup, and GnuPG will ask for your private key's passphrase.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
@@ -453,7 +454,7 @@ Controls.ApplicationWindow {
                 Layout.topMargin: Kirigami.Units.gridUnit * 3
                 visible: dialog.exportMode && dialog.completed
                 icon.name: "dialog-ok-apply"
-                text: qsTr("Copia guardada")
+                text: KI18n.i18nc("@title", "Backup saved")
                 explanation: dialog.displayPath(dialog.completedExportPath)
                 helpfulAction: dialog.showInFolderAction
             }
@@ -487,14 +488,14 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
             }
             Controls.Button {
-                text: dialog.completed ? qsTr("Cerrar") : qsTr("Cancelar")
+                text: dialog.completed ? KI18n.i18nc("@action:button", "Close") : KI18n.i18nc("@action:button", "Cancel")
                 icon.name: dialog.completed ? "dialog-close" : "dialog-cancel"
                 enabled: !dialog.busy
                 onClicked: dialog.close()
             }
             Controls.Button {
                 visible: !dialog.completed
-                text: dialog.exportMode ? qsTr("Crear copia") : qsTr("Restaurar y abrir")
+                text: dialog.exportMode ? KI18n.i18nc("@action:button", "Create Backup") : KI18n.i18nc("@action:button", "Restore and Open")
                 icon.name: dialog.exportMode ? "document-save" : "document-revert"
                 enabled: dialog.ready && !dialog.busy
                 onClicked: dialog.submit()
@@ -504,19 +505,19 @@ Controls.ApplicationWindow {
 
     Dialogs.FileDialog {
         id: sourceDialog
-        title: qsTr("Seleccionar copia de seguridad")
+        title: KI18n.i18nc("@title:window", "Select Backup")
         fileMode: Dialogs.FileDialog.OpenFile
         currentFolder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
-        nameFilters: [qsTr("Copia cifrada de KryptoPass (*.kpb *.gpg *.pgp)"), qsTr("Todos los archivos (*)")]
+        nameFilters: [KI18n.i18n("Encrypted KryptoPass backup (*.kpb *.gpg *.pgp)"), KI18n.i18n("All files (*)")]
         onAccepted: dialog.chooseRestoreFile(selectedFile)
     }
     Dialogs.FileDialog {
         id: destinationDialog
-        title: qsTr("Guardar copia de seguridad")
+        title: KI18n.i18nc("@title:window", "Save Backup")
         fileMode: Dialogs.FileDialog.SaveFile
         currentFolder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
         defaultSuffix: "kpb"
-        nameFilters: [qsTr("Copia cifrada de KryptoPass (*.kpb)")]
+        nameFilters: [KI18n.i18n("Encrypted KryptoPass backup (*.kpb)")]
         onAccepted: {
             dialog.outputPath = selectedFile;
             backend.clearError();

@@ -240,7 +240,7 @@ TestCase {
         verify(dialog.introduction !== null);
         const originLabel = findText(dialog, "https://accounts.example.invalid");
         verify(originLabel !== null, "The introduction loader should show the requested origin");
-        const instructionLabel = findText(dialog, "Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.");
+        const instructionLabel = findText(dialog, "Choose a login. It is sent only if it has this same site saved. The authorization covers this request.");
         verify(instructionLabel !== null, "The introduction should contain its explanatory text");
         const introductionLoader = findLoaderForItem(dialog, originLabel.parent);
         verify(introductionLoader !== null, "The introduction should be loaded into the shared picker");
@@ -404,8 +404,8 @@ TestCase {
         compare(usernameRequest.count, 0, "Opening the request must not fetch usernames for every candidate");
         waitForRendering(list);
         const workChoice = list.itemAtIndex(0);
-        compare(workChoice.modelData.subtitle, "Selecciona para ver el usuario");
-        verify(findText(workChoice.contentItem, "Selecciona para ver el usuario") !== null, "The unloaded candidate should show its username prompt immediately");
+        compare(workChoice.modelData.subtitle, "Select to see the username");
+        verify(findText(workChoice.contentItem, "Select to see the username") !== null, "The unloaded candidate should show its username prompt immediately");
         verify(!confirm.enabled, "An unloaded username cannot be approved");
 
         folderPicker.folderSelected("work");
@@ -426,8 +426,8 @@ TestCase {
         tryCompare(list, "count", 1);
         waitForRendering(list);
         const loadingChoice = list.itemAtIndex(0);
-        compare(loadingChoice.modelData.subtitle, "Cargando usuario…");
-        verify(findText(loadingChoice.contentItem, "Cargando usuario…") !== null, "A loading update should render its progress subtitle");
+        compare(loadingChoice.modelData.subtitle, "Loading username…");
+        verify(findText(loadingChoice.contentItem, "Loading username…") !== null, "A loading update should render its progress subtitle");
         compare(usernameRequest.count, 1, "A same-token loading update must not request the username again");
         verify(!confirm.enabled, "A username still loading cannot be approved");
 
@@ -438,8 +438,8 @@ TestCase {
         tryCompare(list, "count", 1);
         waitForRendering(list);
         const errorChoice = list.itemAtIndex(0);
-        compare(errorChoice.modelData.subtitle, "No se pudo leer el usuario");
-        verify(findText(errorChoice.contentItem, "No se pudo leer el usuario") !== null, "An error update should render its recovery subtitle");
+        compare(errorChoice.modelData.subtitle, "The username could not be read");
+        verify(findText(errorChoice.contentItem, "The username could not be read") !== null, "An error update should render its recovery subtitle");
         compare(usernameRequest.count, 1);
         verify(!confirm.enabled, "A failed username cannot be approved");
 

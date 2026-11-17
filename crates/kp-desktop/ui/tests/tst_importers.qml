@@ -142,7 +142,7 @@ TestCase {
         tryCompare(visibleTiles(window), "length", 3);
         verify(!one(window, "chooseImportFile").visible);
         verify(!one(window, "confirmImportWindow").enabled);
-        compare(window.hint, "Elige un gestor para continuar");
+        compare(window.hint, "Choose a manager to continue");
     }
 
     function test_single_provider_is_still_chosen_explicitly() {
@@ -160,7 +160,7 @@ TestCase {
         compare(fixture.controller.resets, resetsBefore + 1);
         tryVerify(() => visibleTiles(window).length === 0);
         tryVerify(() => one(window, "chooseImportFile").visible);
-        compare(window.hint, "Elige el archivo exportado para continuar");
+        compare(window.hint, "Choose the exported file to continue");
 
         window.selectImporter("");
         compare(window.selectedImporter, null);
@@ -246,7 +246,7 @@ TestCase {
         fixture.controller.reviewed = true;
         verify(window.keysExpanded);
         verify(!one(window, "confirmImportWindow").enabled);
-        compare(window.hint, "Elige al menos una clave");
+        compare(window.hint, "Choose at least one key");
     }
 
     function test_completion_shows_close_only() {

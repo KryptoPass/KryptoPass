@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import org.kde.ki18n
 
 EntryPickerDialog {
     id: dialog
@@ -19,12 +20,12 @@ EntryPickerDialog {
     signal decisionRequested(string token, string entryId, bool approve)
     signal usernameRequested(string token, string entryId)
 
-    title: qsTr("Rellenar en el navegador")
-    confirmText: qsTr("Permitir relleno")
-    cancelText: qsTr("Rechazar")
-    listAccessibleName: qsTr("Credenciales disponibles")
-    emptyText: qsTr("No hay credenciales disponibles.")
-    noMatchesText: qsTr("No hay coincidencias. Prueba con otro nombre o carpeta.")
+    title: KI18n.i18nc("@title:window", "Fill in the Browser")
+    confirmText: KI18n.i18nc("@action:button", "Allow Filling")
+    cancelText: KI18n.i18nc("@action:button", "Reject")
+    listAccessibleName: KI18n.i18n("Available logins")
+    emptyText: KI18n.i18n("No logins are available.")
+    noMatchesText: KI18n.i18n("No matches. Try another name or folder.")
     initialFocusReject: true
     preserveSelectionOnModelChange: true
     selectionAllowed: !!selectedCandidate && (!selectedCandidate.usernameState || selectedCandidate.usernameState === "ready")
@@ -38,7 +39,7 @@ EntryPickerDialog {
             folder: folder,
             icon: metadata ? metadata.icon || null : null,
             iconSource: metadata ? metadata.iconSource || "" : "",
-            subtitle: candidate.usernameState === "unloaded" ? qsTr("Selecciona para ver el usuario") : candidate.usernameState === "loading" ? qsTr("Cargando usuario…") : candidate.usernameState === "error" ? qsTr("No se pudo leer el usuario") : candidate.username || qsTr("Sin usuario")
+            subtitle: candidate.usernameState === "unloaded" ? KI18n.i18n("Select to see the username") : candidate.usernameState === "loading" ? KI18n.i18n("Loading username…") : candidate.usernameState === "error" ? KI18n.i18n("The username could not be read") : candidate.username || KI18n.i18n("No username")
         };
     })
 
@@ -80,7 +81,7 @@ EntryPickerDialog {
             spacing: 8
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("El navegador solicita usuario y contraseña para:")
+                text: KI18n.i18n("The browser is requesting a username and password for:")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
@@ -89,11 +90,11 @@ EntryPickerDialog {
                 textFormat: Text.PlainText
                 wrapMode: Text.WrapAnywhere
                 font.bold: true
-                Accessible.name: qsTr("Sitio solicitado: %1").arg(text)
+                Accessible.name: KI18n.i18n("Requested site: %1", text)
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Elige una credencial. Solo se enviará si tiene guardado este mismo sitio. La autorización sirve para esta solicitud.")
+                text: KI18n.i18n("Choose a login. It is sent only if it has this same site saved. The authorization covers this request.")
                 wrapMode: Text.Wrap
             }
         }

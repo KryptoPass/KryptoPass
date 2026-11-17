@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: dialog
@@ -32,7 +33,7 @@ Controls.ApplicationWindow {
     readonly property var availableKeys: keyStore.entries.filter(key => key.statusCode === "valid" && key.canEncrypt)
     readonly property var selectedKeys: availableKeys.filter(key => selectedFingerprints.includes(key.id))
     readonly property bool eligibleSelection: selectedFingerprints.length > 0 && selectedFingerprints.every(fingerprint => availableKeys.some(key => key.id === fingerprint))
-    readonly property string hint: completed ? "" : !selectedImporter ? qsTr("Elige un gestor para continuar") : !hasFile ? qsTr("Elige el archivo exportado para continuar") : !reviewed ? "" : !eligibleSelection ? qsTr("Elige al menos una clave") : qsTr("%n elemento", "", summary.items || 0)
+    readonly property string hint: completed ? "" : !selectedImporter ? KI18n.i18n("Choose a manager to continue") : !hasFile ? KI18n.i18n("Choose the exported file to continue") : !reviewed ? "" : !eligibleSelection ? KI18n.i18n("Choose at least one key") : KI18n.i18np("%1 item", "%1 items", summary.items || 0)
     signal imported
 
     flags: Qt.Dialog | Qt.WindowTitleHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint
@@ -41,7 +42,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 30
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 20
-    title: qsTr("Importar desde otro gestor de contraseñas")
+    title: KI18n.i18nc("@title:window", "Import from Another Password Manager")
 
     function prepare() {
         if (busy)
@@ -90,7 +91,7 @@ Controls.ApplicationWindow {
         if (!selectedImporter || busy)
             return;
         sourceDialog.importerId = selectedImporter.id;
-        sourceDialog.title = qsTr("Seleccionar exportación de %1").arg(selectedImporter.name);
+        sourceDialog.title = KI18n.i18nc("@title:window", "Select %1 Export", selectedImporter.name);
         sourceDialog.nameFilters = selectedImporter.fileFilters;
         sourceDialog.open();
     }
@@ -113,7 +114,7 @@ Controls.ApplicationWindow {
     }
 
     function keyName(key) {
-        return (key.title || key.email) + (key.hasSecret ? qsTr(" (tu clave)") : "");
+        return (key.title || key.email) + (key.hasSecret ? KI18n.i18nc("@label suffix after a key name", " (your key)") : "");
     }
 
     onClosing: function (event) {
@@ -161,14 +162,14 @@ Controls.ApplicationWindow {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: dialog.selectedImporter ? qsTr("Desde %1").arg(dialog.selectedImporter.name) : qsTr("¿Desde qué gestor importas?")
+                text: dialog.selectedImporter ? KI18n.i18nc("@title %1 is a password manager", "From %1", dialog.selectedImporter.name) : KI18n.i18nc("@title", "Which manager are you importing from?")
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
             }
             Controls.ToolButton {
                 visible: !!dialog.selectedImporter && !dialog.completed
                 enabled: !dialog.busy
-                text: qsTr("Cambiar gestor")
+                text: KI18n.i18nc("@action:button", "Change Manager")
                 icon.name: "go-previous"
                 onClicked: dialog.selectImporter("")
             }
@@ -191,13 +192,13 @@ Controls.ApplicationWindow {
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.vaultLocked && !dialog.completed
                 type: Kirigami.MessageType.Warning
-                text: qsTr("Desbloquea la bóveda para importar los elementos.")
+                text: KI18n.i18n("Unlock the vault to import the items.")
             }
 
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: !dialog.selectedImporter
-                text: qsTr("Gestores disponibles")
+                text: KI18n.i18n("Available managers")
             }
             Flow {
                 objectName: "importerChoice"
@@ -248,7 +249,7 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.largeSpacing
                 visible: !dialog.selectedImporter && dialog.importers.length === 0
-                text: qsTr("No hay integraciones de importación disponibles.")
+                text: KI18n.i18n("No import integrations are available.")
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -256,7 +257,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: !dialog.completed && !!dialog.selectedImporter
-                text: qsTr("Archivo")
+                text: KI18n.i18nc("@title:group", "File")
             }
 
             // Empty state, sized by its own content so nothing spills over the frame.
@@ -296,7 +297,7 @@ Controls.ApplicationWindow {
                     Controls.Label {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: dialog.selectedImporter ? qsTr("Suelta aquí la exportación de %1").arg(dialog.selectedImporter.name) : qsTr("Suelta aquí la exportación")
+                        text: dialog.selectedImporter ? KI18n.i18n("Drop the %1 export here", dialog.selectedImporter.name) : KI18n.i18n("Drop the export here")
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
@@ -304,7 +305,7 @@ Controls.ApplicationWindow {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                         visible: !!dialog.selectedImporter
-                        text: dialog.selectedImporter ? qsTr("Archivos admitidos: %1").arg(dialog.selectedImporter.formats.map(extension => "." + extension).join(", ")) : ""
+                        text: dialog.selectedImporter ? KI18n.i18n("Supported files: %1", dialog.selectedImporter.formats.map(extension => "." + extension).join(", ")) : ""
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                         color: Kirigami.Theme.disabledTextColor
@@ -313,7 +314,7 @@ Controls.ApplicationWindow {
                         objectName: "chooseImportFile"
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: Kirigami.Units.smallSpacing
-                        text: qsTr("Examinar…")
+                        text: KI18n.i18nc("@action:button", "Browse…")
                         icon.name: "document-open"
                         enabled: drop.enabled
                         onClicked: dialog.browse()
@@ -351,7 +352,7 @@ Controls.ApplicationWindow {
                     }
                 }
                 Controls.ToolButton {
-                    text: qsTr("Cambiar…")
+                    text: KI18n.i18nc("@action:button", "Change…")
                     icon.name: "document-open"
                     enabled: !dialog.busy
                     onClicked: dialog.browse()
@@ -370,13 +371,13 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.reviewed
-                text: qsTr("Se importará")
+                text: KI18n.i18nc("@title:group", "Will be imported")
             }
             Repeater {
                 model: dialog.reviewed ? (dialog.summary.types || []).concat([
                     {
                         kind: "folder",
-                        label: qsTr("Carpetas"),
+                        label: KI18n.i18nc("@title sidebar section", "Folders"),
                         count: dialog.summary.folders || 0
                     }
                 ]).filter(row => row.count > 0) : []
@@ -411,7 +412,7 @@ Controls.ApplicationWindow {
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.reviewed && ((dialog.summary.trashed || 0) > 0 || (dialog.summary.skipped || 0) > 0)
-                text: qsTr("Incluye %1 en la papelera · %2 omitidos").arg(dialog.summary.trashed || 0).arg(dialog.summary.skipped || 0)
+                text: KI18n.i18n("Includes %1 in the trash · %2 skipped", dialog.summary.trashed || 0, dialog.summary.skipped || 0)
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
@@ -428,7 +429,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.reviewed
-                text: qsTr("Cifrar con")
+                text: KI18n.i18nc("@title:group", "Encrypt with")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -448,7 +449,7 @@ Controls.ApplicationWindow {
                     elide: Text.ElideRight
                 }
                 Controls.ToolButton {
-                    text: qsTr("Cambiar…")
+                    text: KI18n.i18nc("@action:button", "Change…")
                     icon.name: "document-edit"
                     enabled: !dialog.busy
                     onClicked: dialog.keysExpanded = true
@@ -476,7 +477,7 @@ Controls.ApplicationWindow {
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.reviewed && dialog.availableKeys.length === 0
-                text: qsTr("No hay claves válidas para cifrar. Crea o importa una clave desde Claves y vuelve a intentarlo.")
+                text: KI18n.i18n("There are no valid keys to encrypt with. Create or import a key from Keys and try again.")
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -486,14 +487,14 @@ Controls.ApplicationWindow {
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.reviewed && dialog.eligibleSelection && !dialog.selectedKeys.some(key => key.hasSecret)
                 type: Kirigami.MessageType.Warning
-                text: qsTr("Para leer los datos necesitarás la clave privada de alguien con acceso.")
+                text: KI18n.i18n("To read the data you will need the private key of someone with access.")
             }
 
             // Informational conversions stay folded; they need no decision.
             Controls.ToolButton {
                 Layout.leftMargin: Kirigami.Units.smallSpacing
                 visible: dialog.reviewed && dialog.conversions.length > 0
-                text: qsTr("Detalles de la conversión (%1)").arg(dialog.conversions.length)
+                text: KI18n.i18nc("@title:group", "Conversion details (%1)", dialog.conversions.length)
                 icon.name: dialog.detailsExpanded ? "arrow-down" : "arrow-right"
                 onClicked: dialog.detailsExpanded = !dialog.detailsExpanded
             }
@@ -516,8 +517,8 @@ Controls.ApplicationWindow {
                 Layout.topMargin: Kirigami.Units.gridUnit * 4
                 visible: dialog.completed
                 icon.name: "dialog-ok-apply"
-                text: qsTr("Importación completada")
-                explanation: qsTr("Los elementos ya están en la bóveda actual.")
+                text: KI18n.i18nc("@title", "Import complete")
+                explanation: KI18n.i18n("The items are now in the current vault.")
             }
 
             Item {
@@ -547,7 +548,7 @@ Controls.ApplicationWindow {
             }
             Controls.Button {
                 objectName: "closeImportWindow"
-                text: dialog.completed ? qsTr("Cerrar") : qsTr("Cancelar")
+                text: dialog.completed ? KI18n.i18nc("@action:button", "Close") : KI18n.i18nc("@action:button", "Cancel")
                 icon.name: dialog.completed ? "dialog-close" : "dialog-cancel"
                 enabled: !dialog.busy
                 onClicked: dialog.close()
@@ -555,7 +556,7 @@ Controls.ApplicationWindow {
             Controls.Button {
                 objectName: "confirmImportWindow"
                 visible: !dialog.completed
-                text: qsTr("Importar")
+                text: KI18n.i18nc("@action:button", "Import")
                 icon.name: "document-import"
                 enabled: dialog.reviewed && dialog.eligibleSelection && !dialog.busy && !dialog.vaultLocked
                 onClicked: dialog.controller.importReviewed(JSON.stringify(dialog.selectedFingerprints))

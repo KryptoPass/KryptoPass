@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:31-0400\n"
+"POT-Creation-Date: 2026-11-17 15:33-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,318 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:41
+#, kde-format
+msgctxt "@title:window"
+msgid "Export Backup"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:41
+#, kde-format
+msgctxt "@title:window"
+msgid "Restore Backup"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:94
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:117
+#, kde-format
+msgctxt "@label suffix after a key name"
+msgid " (your key)"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:192
+#, kde-format
+msgctxt "@title:group"
+msgid "Destination"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:210
+#, kde-format
+msgid "No destination"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:217
+#, kde-format
+msgid "Choose a folder outside this computer if you can"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:225
+#, kde-format
+msgctxt "@action:button"
+msgid "Choose…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:232
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:262
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:434
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:355
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:452
+#, kde-format
+msgctxt "@action:button"
+msgid "Change…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:242
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:432
+#, kde-format
+msgctxt "@title:group"
+msgid "Encrypt with"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:291
+#, kde-format
+msgid "Looking for your keys…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:291
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:480
+#, kde-format
+msgid ""
+"There are no valid keys to encrypt with. Create or import a key from Keys "
+"and try again."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:302
+#, kde-format
+msgid ""
+"The backup does not include your private keys. Keep them separately so you "
+"can restore it on another computer."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:302
+#, kde-format
+msgid ""
+"You do not have the private key of the chosen keys here. To restore, you "
+"will need to import it or use the computer where it is."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:306
+#, kde-format
+msgctxt "@action:button"
+msgid "Back Up Private Key…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:326
+#, kde-format
+msgid ""
+"Did you change computers? First import the private key that protects the "
+"backup; without it, the backup cannot be recovered."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:329
+#: crates/kp-desktop/ui/qml/LockScreen.qml:172
+#, kde-format
+msgctxt "@action:button"
+msgid "Import Private Key…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:385
+#, kde-format
+msgid "Drop a KryptoPass backup here"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:391
+#, kde-format
+msgid "Supported files: .kpb, .gpg, .pgp"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:398
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:317
+#, kde-format
+msgctxt "@action:button"
+msgid "Browse…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:448
+#, kde-format
+msgid "The backup is restored without overwriting the current vault."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:448
+#, kde-format
+msgid ""
+"A new vault will be created from this backup, and GnuPG will ask for your "
+"private key's passphrase."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:457
+#: crates/kp-desktop/ui/qml/FirstRunScreen.qml:402
+#, kde-format
+msgctxt "@title"
+msgid "Backup saved"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:491
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:551
+#: crates/kp-desktop/ui/qml/SettingsDialog.qml:108
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:213
+#, kde-format
+msgctxt "@action:button"
+msgid "Close"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:491
+#: crates/kp-desktop/ui/qml/ConflictDialog.qml:52
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:87
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:99
+#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:149
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:333
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:551
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:100
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:59
+#: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:90
+#: crates/kp-desktop/ui/qml/PasswordGenerator.qml:133
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:198
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:707
+#, kde-format
+msgctxt "@action:button"
+msgid "Cancel"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:498
+#, kde-format
+msgctxt "@action:button"
+msgid "Create Backup"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:498
+#, kde-format
+msgctxt "@action:button"
+msgid "Restore and Open"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:508
+#, kde-format
+msgctxt "@title:window"
+msgid "Select Backup"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:511
+#, kde-format
+msgid "Encrypted KryptoPass backup (*.kpb *.gpg *.pgp)"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:511
+#: crates/kp-desktop/ui/qml/FirstRunScreen.qml:471
+#: crates/kp-desktop/ui/qml/LockScreen.qml:214
+#: crates/kp-desktop/ui/qml/SshKeyFields.qml:76
+#: crates/kp-desktop/ui/qml/TotpFields.qml:57
+#, kde-format
+msgid "All files (*)"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:516
+#, kde-format
+msgctxt "@title:window"
+msgid "Save Backup"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BackupWindow.qml:520
+#, kde-format
+msgid "Encrypted KryptoPass backup (*.kpb)"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:23
+#, kde-format
+msgctxt "@title:window"
+msgid "Fill in the Browser"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:24
+#, kde-format
+msgctxt "@action:button"
+msgid "Allow Filling"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:25
+#, kde-format
+msgctxt "@action:button"
+msgid "Reject"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:26
+#, kde-format
+msgid "Available logins"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:27
+#, kde-format
+msgid "No logins are available."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:28
+#, kde-format
+msgid "No matches. Try another name or folder."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:42
+#, kde-format
+msgid "Select to see the username"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:42
+#, kde-format
+msgid "Loading username…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:42
+#, kde-format
+msgid "The username could not be read"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:42
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:39
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:119
+#, kde-format
+msgid "No username"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:84
+#, kde-format
+msgid "The browser is requesting a username and password for:"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:93
+#, kde-format
+msgid "Requested site: %1"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:97
+#, kde-format
+msgid ""
+"Choose a login. It is sent only if it has this same site saved. The "
+"authorization covers this request."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserPairingDialog.qml:16
+#, kde-format
+msgctxt "@title:window"
+msgid "Connect the Browser"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserPairingDialog.qml:35
+#, kde-format
+msgid ""
+"The extension is asking to pair with this vault. Accept only if you just "
+"started the connection from your browser.\n"
+"\n"
+"The pairing is kept when KryptoPass restarts. Every fill request will "
+"require your authorization."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserPairingDialog.qml:45
+#, kde-format
+msgctxt "@action:button"
+msgid "Reject Connection"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/BrowserPairingDialog.qml:51
+#, kde-format
+msgctxt "@action:button"
+msgid "Pair Browser"
+msgstr ""
 
 #: crates/kp-desktop/ui/qml/CardFields.qml:61
 #: crates/kp-desktop/ui/qml/LicenseFields.qml:87
@@ -81,23 +393,6 @@ msgstr ""
 #, kde-format
 msgctxt "@title:window"
 msgid "Choose What to Keep"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/ConflictDialog.qml:52
-#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:87
-#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:99
-#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:149
-#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
-#: crates/kp-desktop/ui/qml/FolderEditor.qml:333
-#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:100
-#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:59
-#: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:90
-#: crates/kp-desktop/ui/qml/PasswordGenerator.qml:133
-#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:198
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:707
-#, kde-format
-msgctxt "@action:button"
-msgid "Cancel"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/ConflictDialog.qml:56
@@ -880,12 +1175,6 @@ msgstr ""
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:402
 #, kde-format
 msgctxt "@title"
-msgid "Backup saved"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/FirstRunScreen.qml:402
-#, kde-format
-msgctxt "@title"
 msgid "Save a backup of your key"
 msgstr ""
 
@@ -930,14 +1219,6 @@ msgstr ""
 #: crates/kp-desktop/ui/qml/LockScreen.qml:214
 #, kde-format
 msgid "OpenPGP files (*.asc *.gpg *.pgp *.key)"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/FirstRunScreen.qml:471
-#: crates/kp-desktop/ui/qml/LockScreen.qml:214
-#: crates/kp-desktop/ui/qml/SshKeyFields.qml:76
-#: crates/kp-desktop/ui/qml/TotpFields.qml:57
-#, kde-format
-msgid "All files (*)"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:40
@@ -1402,6 +1683,142 @@ msgctxt "@label:textbox postal address"
 msgid "Address"
 msgstr ""
 
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:36
+#, kde-format
+msgid "Choose a manager to continue"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:36
+#, kde-format
+msgid "Choose the exported file to continue"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:36
+#, kde-format
+msgid "Choose at least one key"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:36
+#: crates/kp-desktop/ui/qml/Main.qml:1340
+#, kde-format
+msgid "%1 item"
+msgid_plural "%1 items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:45
+#, kde-format
+msgctxt "@title:window"
+msgid "Import from Another Password Manager"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:94
+#, kde-format
+msgctxt "@title:window"
+msgid "Select %1 Export"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:165
+#, kde-format
+msgctxt "@title %1 is a password manager"
+msgid "From %1"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:165
+#, kde-format
+msgctxt "@title"
+msgid "Which manager are you importing from?"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:172
+#, kde-format
+msgctxt "@action:button"
+msgid "Change Manager"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:195
+#, kde-format
+msgid "Unlock the vault to import the items."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:201
+#, kde-format
+msgid "Available managers"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:252
+#, kde-format
+msgid "No import integrations are available."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:260
+#, kde-format
+msgctxt "@title:group"
+msgid "File"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:300
+#, kde-format
+msgid "Drop the %1 export here"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:300
+#, kde-format
+msgid "Drop the export here"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:308
+#, kde-format
+msgid "Supported files: %1"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:374
+#, kde-format
+msgctxt "@title:group"
+msgid "Will be imported"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:380
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:62
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:94
+#, kde-format
+msgctxt "@title sidebar section"
+msgid "Folders"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:415
+#, kde-format
+msgid "Includes %1 in the trash · %2 skipped"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:490
+#, kde-format
+msgid "To read the data you will need the private key of someone with access."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:497
+#, kde-format
+msgctxt "@title:group"
+msgid "Conversion details (%1)"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:520
+#, kde-format
+msgctxt "@title"
+msgid "Import complete"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:521
+#, kde-format
+msgid "The items are now in the current vault."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/ImportWindow.qml:559
+#, kde-format
+msgctxt "@action:button"
+msgid "Import"
+msgstr ""
+
 #: crates/kp-desktop/ui/qml/LicenseFields.qml:65
 #, kde-format
 msgctxt "@label:textbox"
@@ -1458,12 +1875,6 @@ msgctxt "@action:button"
 msgid "Review Key…"
 msgstr ""
 
-#: crates/kp-desktop/ui/qml/LockScreen.qml:172
-#, kde-format
-msgctxt "@action:button"
-msgid "Import Private Key…"
-msgstr ""
-
 #: crates/kp-desktop/ui/qml/LockScreen.qml:178
 #, kde-format
 msgctxt "@action:button"
@@ -1500,12 +1911,6 @@ msgstr ""
 #, kde-format
 msgctxt "@label:textbox"
 msgid "Email or username"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/LoginDetail.qml:39
-#: crates/kp-desktop/ui/qml/VersionDialog.qml:119
-#, kde-format
-msgid "No username"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/LoginDetail.qml:40
@@ -1912,13 +2317,6 @@ msgstr ""
 #, kde-format
 msgid "%1 key"
 msgid_plural "%1 keys"
-msgstr[0] ""
-msgstr[1] ""
-
-#: crates/kp-desktop/ui/qml/Main.qml:1340
-#, kde-format
-msgid "%1 item"
-msgid_plural "%1 items"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -2847,25 +3245,11 @@ msgstr ""
 msgid "Changes are saved as you choose them."
 msgstr ""
 
-#: crates/kp-desktop/ui/qml/SettingsDialog.qml:108
-#: crates/kp-desktop/ui/qml/VersionDialog.qml:213
-#, kde-format
-msgctxt "@action:button"
-msgid "Close"
-msgstr ""
-
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:62
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:99
 #, kde-format
 msgctxt "@title sidebar section"
 msgid "Keys"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SidebarPane.qml:62
-#: crates/kp-desktop/ui/qml/SidebarPane.qml:94
-#, kde-format
-msgctxt "@title sidebar section"
-msgid "Folders"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:63
