@@ -189,6 +189,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cpp_file("src/native/session_lock.h")
         .cpp_file("src/native/session_lock.cpp")
         .cpp_file("src/native/file_manager.cpp")
+        .cpp_file("src/native/command_line.cpp")
         .cpp_file("src/native/entry_icons.cpp")
         .cpp_file("src/native/entry_icon_image.cpp")
         .cpp_file("src/native/favicon_service.cpp")

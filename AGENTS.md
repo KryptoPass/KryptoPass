@@ -61,6 +61,9 @@ algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
   build muere con `Could not canonicalize path`.
 - El C++ nativo compila con los warnings y defines de KDE; en debug, con
   `-Werror`. `just cxx-tidy` pasa clang-tidy con `.clang-tidy`.
+- Las opciones de línea de comandos se declaran solo en
+  `src/native/command_line.cpp` (`QCommandLineParser`); Rust las lee con
+  `launch.rs`.
 - `lint` corre tras `check`/`clippy` para que los `.qmltypes` estén frescos; con
   tipos viejos salen errores fantasma (`bridgeStatus not found`).
 - Nombres QML explícitos con `cxx_name`, sin conversión snake→camel. Lo que QML

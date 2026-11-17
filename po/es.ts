@@ -1639,6 +1639,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>Could not initialize importer catalog</translation>
     </message>
     <message>
+      <source>Could not read the parsed command line</source>
+      <translation>Could not read the parsed command line</translation>
+    </message>
+    <message>
       <source>Could not register the single-instance D-Bus service</source>
       <translation>Could not register the single-instance D-Bus service</translation>
     </message>
@@ -3828,6 +3832,45 @@ La vinculación se conservará al reiniciar KryptoPass. Cada solicitud de rellen
     </message>
   </context>
   <context>
+    <name>CommandLine</name>
+    <message>
+      <source>Crea una entrada en cuanto la bóveda esté abierta.</source>
+      <translation>Crea una entrada en cuanto la bóveda esté abierta.</translation>
+    </message>
+    <message>
+      <source>Abre la búsqueda en cuanto la bóveda esté abierta.</source>
+      <translation>Abre la búsqueda en cuanto la bóveda esté abierta.</translation>
+    </message>
+    <message>
+      <source>Abre la ventana de dispositivos.</source>
+      <translation>Abre la ventana de dispositivos.</translation>
+    </message>
+    <message>
+      <source>Arranca aparte de la instancia que ya esté abierta.</source>
+      <translation>Arranca aparte de la instancia que ya esté abierta.</translation>
+    </message>
+    <message>
+      <source>Atiende la integración con el navegador.</source>
+      <translation>Atiende la integración con el navegador.</translation>
+    </message>
+    <message>
+      <source>Guarda una captura de la ventana en el archivo y sale.</source>
+      <translation>Guarda una captura de la ventana en el archivo y sale.</translation>
+    </message>
+    <message>
+      <source>archivo</source>
+      <translation>archivo</translation>
+    </message>
+    <message>
+      <source>Copia de seguridad .kpb que se preselecciona para restaurar.</source>
+      <translation>Copia de seguridad .kpb que se preselecciona para restaurar.</translation>
+    </message>
+    <message>
+      <source>[archivo]</source>
+      <translation>[archivo]</translation>
+    </message>
+  </context>
+  <context>
     <name>ConflictDialog</name>
     <message>
       <source>Elegir qué conservar</source>
@@ -5174,6 +5217,10 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Crear una clave para %1</translation>
     </message>
     <message>
+      <source>La importación no devolvió ninguna clave.</source>
+      <translation>La importación no devolvió ninguna clave.</translation>
+    </message>
+    <message>
       <source>Crear nueva bóveda</source>
       <translation>Crear nueva bóveda</translation>
     </message>
@@ -5194,6 +5241,18 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Atrás</translation>
     </message>
     <message>
+      <source>Revisa la clave importada</source>
+      <translation>Revisa la clave importada</translation>
+    </message>
+    <message>
+      <source>Revisa la clave seleccionada</source>
+      <translation>Revisa la clave seleccionada</translation>
+    </message>
+    <message>
+      <source>Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.</source>
+      <translation>Verifica la huella digital de tu clave y márcala como propia para usarla en tu bóveda.</translation>
+    </message>
+    <message>
       <source>Copia guardada</source>
       <translation>Copia guardada</translation>
     </message>
@@ -5208,6 +5267,18 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>¿Necesitas ayuda?</source>
       <translation>¿Necesitas ayuda?</translation>
+    </message>
+    <message>
+      <source>Seleccionar clave OpenPGP para importar</source>
+      <translation>Seleccionar clave OpenPGP para importar</translation>
+    </message>
+    <message>
+      <source>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</source>
+      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
     </message>
     <message>
       <source>Guardar copia de la clave…</source>
@@ -6517,18 +6588,6 @@ Huella completa; compárala con el teléfono:</translation>
   <context>
     <name>KeyImportReview</name>
     <message>
-      <source>Guardar copia de la clave privada</source>
-      <translation>Guardar copia de la clave privada</translation>
-    </message>
-    <message>
-      <source>Archivos OpenPGP (*.asc *.gpg *.pgp)</source>
-      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp)</translation>
-    </message>
-    <message>
-      <source>Todos los archivos (*)</source>
-      <translation>Todos los archivos (*)</translation>
-    </message>
-    <message>
       <source>Clave OpenPGP</source>
       <translation>Clave OpenPGP</translation>
     </message>
@@ -6549,20 +6608,36 @@ Huella completa; compárala con el teléfono:</translation>
       <translation>Sin confianza absoluta</translation>
     </message>
     <message>
-      <source>Marcar como mía…</source>
-      <translation>Marcar como mía…</translation>
+      <source>Marcar como mía</source>
+      <translation>Marcar como mía</translation>
     </message>
     <message>
-      <source>Respaldo de clave privada</source>
-      <translation>Respaldo de clave privada</translation>
+      <source>Confianza absoluta</source>
+      <translation>Confianza absoluta</translation>
     </message>
     <message>
-      <source>Exportar copia privada…</source>
-      <translation>Exportar copia privada…</translation>
+      <source>Origen de la clave</source>
+      <translation>Origen de la clave</translation>
     </message>
     <message>
-      <source>Caducidad</source>
-      <translation>Caducidad</translation>
+      <source>La clave se importó desde un archivo local. Conserva ese archivo.</source>
+      <translation>La clave se importó desde un archivo local. Conserva ese archivo.</translation>
+    </message>
+    <message>
+      <source>La clave ya estaba en tu llavero GnuPG local.</source>
+      <translation>La clave ya estaba en tu llavero GnuPG local.</translation>
+    </message>
+    <message>
+      <source>Importada desde archivo</source>
+      <translation>Importada desde archivo</translation>
+    </message>
+    <message>
+      <source>Detectada en tu llavero GnuPG</source>
+      <translation>Detectada en tu llavero GnuPG</translation>
+    </message>
+    <message>
+      <source>Añadir subclave de cifrado</source>
+      <translation>Añadir subclave de cifrado</translation>
     </message>
     <message>
       <source>Cifrado</source>
@@ -6571,10 +6646,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Sin subclave de cifrado vigente</source>
       <translation>Sin subclave de cifrado vigente</translation>
-    </message>
-    <message>
-      <source>Añadir subclave de cifrado…</source>
-      <translation>Añadir subclave de cifrado…</translation>
     </message>
     <message>
       <source>Clave principal de la bóveda</source>
@@ -6587,10 +6658,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Esta clave no es válida para usarla con la bóveda.</source>
       <translation>Esta clave no es válida para usarla con la bóveda.</translation>
-    </message>
-    <message>
-      <source>Marca la clave como propia para poder cifrar con ella.</source>
-      <translation>Marca la clave como propia para poder cifrar con ella.</translation>
     </message>
   </context>
   <context>
@@ -6793,14 +6860,6 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Continuar</source>
       <translation>Continuar</translation>
-    </message>
-    <message>
-      <source>Revisa la clave antes de usarla.</source>
-      <translation>Revisa la clave antes de usarla.</translation>
-    </message>
-    <message>
-      <source>Revisar clave OpenPGP</source>
-      <translation>Revisar clave OpenPGP</translation>
     </message>
     <message>
       <source>Operación completada.</source>
@@ -7048,6 +7107,25 @@ Huella completa; compárala con el teléfono:</translation>
     </message>
   </context>
   <context>
+    <name>KeyReviewPage</name>
+    <message>
+      <source>Revisa la clave</source>
+      <translation>Revisa la clave</translation>
+    </message>
+    <message>
+      <source>Verifica la huella digital y marca la clave como propia para usarla.</source>
+      <translation>Verifica la huella digital y marca la clave como propia para usarla.</translation>
+    </message>
+    <message>
+      <source>Atrás</source>
+      <translation>Atrás</translation>
+    </message>
+    <message>
+      <source>Continuar</source>
+      <translation>Continuar</translation>
+    </message>
+  </context>
+  <context>
     <name>KeyStore</name>
     <message>
       <source>Sin registro</source>
@@ -7095,8 +7173,20 @@ Huella completa; compárala con el teléfono:</translation>
   <context>
     <name>LockScreen</name>
     <message>
+      <source>La importación no devolvió ninguna clave.</source>
+      <translation>La importación no devolvió ninguna clave.</translation>
+    </message>
+    <message>
       <source>%1 está bloqueado</source>
       <translation>%1 está bloqueado</translation>
+    </message>
+    <message>
+      <source>Importando clave</source>
+      <translation>Importando clave</translation>
+    </message>
+    <message>
+      <source>Importando clave…</source>
+      <translation>Importando clave…</translation>
     </message>
     <message>
       <source>Desbloquear</source>
@@ -7121,6 +7211,34 @@ Huella completa; compárala con el teléfono:</translation>
     <message>
       <source>Salir</source>
       <translation>Salir</translation>
+    </message>
+    <message>
+      <source>Revisa la clave importada</source>
+      <translation>Revisa la clave importada</translation>
+    </message>
+    <message>
+      <source>Revisa la clave de la bóveda</source>
+      <translation>Revisa la clave de la bóveda</translation>
+    </message>
+    <message>
+      <source>Verifica la huella digital y marca la clave como propia para desbloquear la bóveda.</source>
+      <translation>Verifica la huella digital y marca la clave como propia para desbloquear la bóveda.</translation>
+    </message>
+    <message>
+      <source>Marca la clave como propia para desbloquear la bóveda.</source>
+      <translation>Marca la clave como propia para desbloquear la bóveda.</translation>
+    </message>
+    <message>
+      <source>Seleccionar clave OpenPGP para importar</source>
+      <translation>Seleccionar clave OpenPGP para importar</translation>
+    </message>
+    <message>
+      <source>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</source>
+      <translation>Archivos OpenPGP (*.asc *.gpg *.pgp *.key)</translation>
+    </message>
+    <message>
+      <source>Todos los archivos (*)</source>
+      <translation>Todos los archivos (*)</translation>
     </message>
   </context>
   <context>

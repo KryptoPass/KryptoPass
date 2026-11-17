@@ -34,6 +34,8 @@ pub mod qobject {
         #[qproperty(QUrl, launch_backup, cxx_name = "launchBackup", READ, CONSTANT)]
         /// Launcher action requested at startup (`newEntry` or `find`); empty when none.
         #[qproperty(QString, launch_action, cxx_name = "launchAction", READ, CONSTANT)]
+        /// Whether the launch asked for the devices window (`--devices`).
+        #[qproperty(bool, launch_devices, cxx_name = "launchDevices", READ, CONSTANT)]
         type ShellController = super::ShellControllerRust;
 
         #[qinvokable]
@@ -107,6 +109,7 @@ pub struct ShellControllerRust {
     idle_lock_seconds: i32,
     launch_backup: QUrl,
     launch_action: QString,
+    launch_devices: bool,
 }
 
 impl Default for ShellControllerRust {
@@ -128,47 +131,18 @@ impl Default for ShellControllerRust {
             ),
             actions_json: crate::ui_adapters::native_ffi::ffi::desktop_actions(),
             idle_lock_seconds: crate::ui_adapters::native_ffi::ffi::idle_lock_seconds(),
-            launch_backup: launch_backup_url(std::env::args().skip(1)),
-            launch_action: QString::from(launch_action_id(std::env::args().skip(1))),
+            launch_backup: launch_backup_url(&crate::launch::startup().files),
+            launch_action: QString::from(crate::launch::startup().action_id()),
+            launch_devices: crate::launch::startup().devices,
         }
     }
 }
 
-/// Maps the desktop-entry action flags to the shared `DesktopAction` ids.
-fn launch_action_id(args: impl Iterator<Item = String>) -> &'static str {
-    for argument in args {
-        match argument.as_str() {
-            "--new-entry" => return "newEntry",
-            "--search" => return "find",
-            _ => {}
-        }
-    }
-    ""
-}
-
-/// Resolves relative arguments against the directory the later launch ran from.
-fn activation_arguments(arguments: &QStringList, working_directory: &QString) -> Vec<String> {
-    let base = std::path::PathBuf::from(working_directory.to_string());
-    arguments
-        .iter()
-        .skip(1)
-        .map(|argument| {
-            let argument = argument.to_string();
-            let path = std::path::Path::new(&argument);
-            if argument.starts_with('-') || path.is_absolute() || base.as_os_str().is_empty() {
-                argument
-            } else {
-                base.join(path).to_string_lossy().into_owned()
-            }
-        })
-        .collect()
-}
-
-/// Picks the first argument naming an existing `.kpb` file; the path is only
+/// Picks the first file naming an existing `.kpb` backup; the path is only
 /// preselected for restore, never opened or executed.
-fn launch_backup_url(args: impl Iterator<Item = String>) -> QUrl {
-    for argument in args {
-        let path = std::path::Path::new(&argument);
+fn launch_backup_url(files: &[String]) -> QUrl {
+    for file in files {
+        let path = std::path::Path::new(file);
         let is_backup = path
             .extension()
             .is_some_and(|extension| extension.eq_ignore_ascii_case("kpb"));
@@ -202,9 +176,9 @@ impl qobject::ShellController {
         arguments: &QStringList,
         working_directory: &QString,
     ) {
-        let arguments = activation_arguments(arguments, working_directory);
-        let action = launch_action_id(arguments.iter().cloned());
-        let backup = launch_backup_url(arguments.into_iter());
+        let options = crate::launch::forwarded(arguments, working_directory);
+        let action = options.action_id();
+        let backup = launch_backup_url(&options.files);
         if !action.is_empty() || backup.is_valid() {
             self.activation_requested(QString::from(action), backup);
         }

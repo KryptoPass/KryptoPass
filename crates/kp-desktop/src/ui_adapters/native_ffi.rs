@@ -21,6 +21,7 @@ pub(crate) mod ffi {
         include!("native/session_lock.h");
         include!("native/desktop_bus.h");
         include!("native/file_manager.h");
+        include!("native/command_line.h");
         include!("cxx-qt-lib/qqmlengine.h");
         type QQmlEngine = cxx_qt_lib::QQmlEngine;
 
@@ -35,7 +36,7 @@ pub(crate) mod ffi {
         #[namespace = "kryptopass::desktop::native"]
         fn initialize_desktop();
         #[namespace = "kryptopass::desktop::native"]
-        fn capture_screenshot(path: &QString);
+        fn capture_screenshot(path: &QString, devices_window: bool);
         #[namespace = "kryptopass::desktop::native"]
         fn translate_ui(source: &QString) -> QString;
         #[namespace = "kryptopass::desktop::native"]
@@ -63,6 +64,13 @@ pub(crate) mod ffi {
 
         #[namespace = "kryptopass::desktop::native"]
         unsafe fn install_session_lock_monitor(receiver: QObjectMutPtr);
+        #[namespace = "kryptopass::desktop::native"]
+        fn process_command_line() -> QString;
+        #[namespace = "kryptopass::desktop::native"]
+        fn parse_forwarded_command_line(
+            arguments: &QStringList,
+            working_directory: &QString,
+        ) -> QString;
         #[namespace = "kryptopass::desktop::native"]
         fn register_unique_application() -> bool;
         #[namespace = "kryptopass::desktop::native"]

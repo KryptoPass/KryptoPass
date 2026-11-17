@@ -100,7 +100,7 @@ Controls.ApplicationWindow {
         keyStore: keys
         vaultLocked: store.controller.locked
         Component.onCompleted: {
-            if (Qt.application.arguments.indexOf("--devices") !== -1)
+            if (shell.launchDevices)
                 open();
         }
         onCopyRequested: function (code) {

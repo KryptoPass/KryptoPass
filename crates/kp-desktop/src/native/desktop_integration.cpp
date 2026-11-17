@@ -125,7 +125,10 @@ void initialize_desktop()
         QString::fromUtf8(desktop_file_id),
         QIcon(QStringLiteral(":/") + QString::fromUtf8(desktop_file_id).replace(QLatin1Char('.'), QLatin1Char('/')) + QStringLiteral("/icon.svg")));
     about.setProgramLogo(icon);
+    // Sets the application name, version, display name, organization domain and desktop
+    // file name. KAboutData has no organization name, which QSettings needs.
     KAboutData::setApplicationData(about);
+    QCoreApplication::setOrganizationName(QString::fromUtf8(organization));
     QApplication::setWindowIcon(icon);
 }
 
@@ -205,13 +208,12 @@ QString configure_shortcuts()
 
 namespace kryptopass::desktop::native
 {
-void capture_screenshot(const QString &path)
+void capture_screenshot(const QString &path, bool devicesWindow)
 {
-    QTimer::singleShot(2000, qApp, [path] {
-        const bool devicesRequested = QCoreApplication::arguments().contains(QStringLiteral("--devices"));
+    QTimer::singleShot(2000, qApp, [path, devicesWindow] {
         for (auto *window : QGuiApplication::topLevelWindows()) {
             if (auto *quick = qobject_cast<QQuickWindow *>(window);
-                quick && quick->isVisible() && (!devicesRequested || quick->objectName() == QStringLiteral("devicesWindow"))) {
+                quick && quick->isVisible() && (!devicesWindow || quick->objectName() == QStringLiteral("devicesWindow"))) {
                 QCoreApplication::exit(quick->grabWindow().save(path) ? 0 : 1);
                 return;
             }

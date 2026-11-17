@@ -12,5 +12,6 @@ void show_handbook(const QString &anchor);
 void show_about_kde_dialog();
 bool open_bug_report();
 QString configure_shortcuts();
-void capture_screenshot(const QString &path);
+// Captures the devices window instead of the main one when `devicesWindow` is set.
+void capture_screenshot(const QString &path, bool devicesWindow);
 }

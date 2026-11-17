@@ -3,7 +3,10 @@
 pub struct AppInfo {
     pub display_name: &'static str,
     pub version: &'static str,
+    // Only the native side reads these (KAboutData and the Qt organization name).
+    #[allow(dead_code)]
     pub organization: &'static str,
+    #[allow(dead_code)]
     pub organization_domain: &'static str,
     pub desktop_file_id: &'static str,
     pub description: &'static str,
