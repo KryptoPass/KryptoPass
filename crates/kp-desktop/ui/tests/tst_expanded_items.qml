@@ -495,7 +495,7 @@ TestCase {
         verify(qrSpy.valid);
         mouseClick(qrButton, qrButton.width / 2, qrButton.height / 2);
         compare(qrSpy.count, 1);
-        compare(qrButton.text, qsTr("Mostrar código QR"));
+        compare(qrButton.text, "Show QR Code");
 
         wifi.fields = {
             rows: [],
@@ -503,7 +503,7 @@ TestCase {
             hasQr: true,
             qrSource: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyIiBoZWlnaHQ9IjIiPjxyZWN0IHdpZHRoPSIyIiBoZWlnaHQ9IjIiIGZpbGw9ImJsYWNrIi8+PC9zdmc+"
         };
-        tryVerify(() => qrButton.text === qsTr("Ocultar código QR"));
+        tryVerify(() => qrButton.text === "Hide QR Code");
         mouseClick(qrButton, qrButton.width / 2, qrButton.height / 2);
         compare(qrSpy.count, 2);
         wifi.entryId = "another-wifi-entry";
@@ -512,6 +512,6 @@ TestCase {
             notes: "",
             hasQr: true
         };
-        tryVerify(() => qrButton.text === qsTr("Mostrar código QR"));
+        tryVerify(() => qrButton.text === "Show QR Code");
     }
 }

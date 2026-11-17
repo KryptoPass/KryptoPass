@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: iconWindow
@@ -30,7 +31,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 26
     minimumWidth: Kirigami.Units.gridUnit * 18
     minimumHeight: Kirigami.Units.gridUnit * 16
-    title: qsTr("Icono del tema")
+    title: KI18n.i18nc("@title:window", "Theme Icon")
 
     function openWith(iconName: string, titleText: string, kindText: string, kindIcon: string) {
         initialIcon = iconName;
@@ -83,7 +84,7 @@ Controls.ApplicationWindow {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 4
-                    text: iconWindow.entryTitle || qsTr("Elemento sin nombre")
+                    text: iconWindow.entryTitle || KI18n.i18n("Unnamed item")
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                 }
@@ -145,12 +146,12 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
             }
             Controls.Button {
-                text: qsTr("Cancelar")
+                text: KI18n.i18nc("@action:button", "Cancel")
                 icon.name: "dialog-cancel"
                 onClicked: iconWindow.close()
             }
             Controls.Button {
-                text: qsTr("Aceptar")
+                text: KI18n.i18nc("@action:button", "OK")
                 icon.name: "dialog-ok-apply"
                 enabled: iconWindow.canAccept
                 onClicked: iconWindow.accept()

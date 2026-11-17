@@ -204,7 +204,7 @@ TestCase {
         const folderPicker = child("relatedEntryFolderPicker");
         const list = child("relatedEntryList");
         tryCompare(dialog, "opened", true);
-        compare(folderPicker.selectedName, "Todas las carpetas");
+        compare(folderPicker.selectedName, "All folders");
         compare(folderPicker.options.map(option => option.id), ["", "unfiled", "root", "work", "personal"]);
         compare(list.count, 2);
 

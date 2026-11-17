@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretContentView {
     id: root
@@ -14,26 +15,26 @@ SecretContentView {
 
         SecretTextSection {
             Layout.fillWidth: true
-            heading: qsTranslate("SecretDetail", "Contenido")
+            heading: KI18n.i18nc("@title:group", "Content")
             value: root.fields?.value || ""
             documentKey: root.entryId
             documentObjectName: "markdownDetailDocument"
             viewObjectName: "markdownDetailView"
             emptyObjectName: "markdownEmptyState"
-            emptyText: qsTranslate("SecretDetail", "Esta nota no tiene contenido.")
-            accessibleLabel: qsTranslate("SecretDetail", "Contenido Markdown de la nota segura")
+            emptyText: KI18n.i18n("This note has no content.")
+            accessibleLabel: KI18n.i18n("Markdown content of the secure note")
         }
 
         SecretTextSection {
             objectName: "markdownNotesSection"
             Layout.fillWidth: true
             visible: value.length > 0
-            heading: qsTranslate("SecretDetail", "Notas adicionales")
+            heading: KI18n.i18nc("@title:group", "Additional notes")
             value: root.fields?.notes || ""
             documentKey: root.entryId
             documentObjectName: "markdownNotesDetailDocument"
             viewObjectName: "markdownNotesDetailView"
-            accessibleLabel: qsTranslate("SecretDetail", "Markdown de las notas adicionales de la nota segura")
+            accessibleLabel: KI18n.i18n("Markdown of the secure note's additional notes")
         }
     }
 }

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: root
@@ -16,11 +17,11 @@ Controls.Dialog {
     property bool preserveSelectionOnModelChange: false
     property bool selectionAllowed: true
     property string retainedSelectionId: ""
-    property string listAccessibleName: qsTr("Elementos disponibles para vincular")
-    property string emptyText: qsTr("No hay elementos disponibles. Los que ya tienen un vínculo no aparecen aquí.")
-    property string noMatchesText: qsTr("No hay coincidencias. Prueba con otro nombre, tipo o carpeta.")
-    property string confirmText: qsTr("Vincular")
-    property string cancelText: qsTr("Cancelar")
+    property string listAccessibleName: KI18n.i18n("Items available to link")
+    property string emptyText: KI18n.i18n("No items available. Items that already have a link do not appear here.")
+    property string noMatchesText: KI18n.i18n("No matches. Try another name, type or folder.")
+    property string confirmText: KI18n.i18nc("@action:button", "Link")
+    property string cancelText: KI18n.i18nc("@action:button", "Cancel")
     property Component introduction: null
 
     property string searchObjectName: "entryPickerSearch"
@@ -79,7 +80,7 @@ Controls.Dialog {
     height: Math.min(520, Math.max(0, parent.height - Kirigami.Units.largeSpacing * 2))
     modal: true
     closePolicy: Controls.Popup.CloseOnEscape
-    title: qsTr("Vincular elemento")
+    title: KI18n.i18nc("@title:window", "Link Item")
 
     onOpened: {
         relatedEntryList.currentIndex = filteredOptions.findIndex(option => option.id === selectedId);
@@ -115,14 +116,14 @@ Controls.Dialog {
                 Layout.minimumWidth: 0
                 spacing: 6
                 Controls.Label {
-                    text: qsTr("Buscar elemento")
+                    text: KI18n.i18nc("@label:textbox", "Search item")
                 }
                 Kirigami.SearchField {
                     id: relatedEntrySearch
                     objectName: root.searchObjectName
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    Accessible.name: qsTr("Buscar por nombre, tipo o carpeta")
+                    Accessible.name: KI18n.i18n("Search by name, type or folder")
                     onTextChanged: {
                         root.retainedSelectionId = "";
                         relatedEntryList.currentIndex = -1;
@@ -150,7 +151,7 @@ Controls.Dialog {
                 Layout.minimumWidth: 0
                 spacing: 6
                 Controls.Label {
-                    text: qsTr("Carpeta")
+                    text: KI18n.i18nc("@label", "Folder")
                 }
                 FolderPicker {
                     objectName: root.folderPickerObjectName
@@ -159,13 +160,13 @@ Controls.Dialog {
                     folderRows: [
                         {
                             id: "unfiled",
-                            name: qsTr("Sin carpeta"),
+                            name: KI18n.i18nc("@label folder name", "No folder"),
                             depth: 0
                         }
                     ].concat(root.folderRows)
                     selectedId: root.folderFilterId
-                    emptyLabel: qsTr("Todas las carpetas")
-                    accessibleLabel: qsTr("Filtrar por carpeta")
+                    emptyLabel: KI18n.i18nc("@item:inlistbox", "All folders")
+                    accessibleLabel: KI18n.i18n("Filter by folder")
                     onFolderSelected: function (folderId) {
                         root.retainedSelectionId = "";
                         root.folderFilterId = folderId;

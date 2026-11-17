@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretContentView {
     id: root
@@ -34,17 +35,17 @@ SecretContentView {
 
             DetailField {
                 Layout.fillHeight: true
-                label: qsTranslate("SecretDetail", "Correo o usuario")
-                value: root.detail?.username || qsTranslate("SecretDetail", "Sin usuario")
-                copyLabel: qsTranslate("SecretDetail", "Copiar usuario")
+                label: KI18n.i18nc("@label:textbox", "Email or username")
+                value: root.detail?.username || KI18n.i18n("No username")
+                copyLabel: KI18n.i18nc("@action:button", "Copy Username")
                 copyEnabled: !!root.detail?.username
                 onCopyRequested: root.copyUsernameRequested()
             }
             DetailField {
                 Layout.fillHeight: true
-                label: qsTranslate("SecretDetail", "Contraseña")
-                value: root.revealed ? root.detail?.password || qsTranslate("SecretDetail", "Sin contraseña") : "••••••••••••"
-                copyLabel: qsTranslate("SecretDetail", "Copiar contraseña")
+                label: KI18n.i18nc("@label", "Password")
+                value: root.revealed ? root.detail?.password || KI18n.i18n("No password") : "••••••••••••"
+                copyLabel: KI18n.i18nc("@action:button", "Copy Password")
                 copyEnabled: !!root.detail
                 revealable: true
                 revealed: root.revealed
@@ -55,20 +56,20 @@ SecretContentView {
                 Layout.fillHeight: true
                 Layout.columnSpan: root.totpInRow ? 1 : Math.min(2, credentialFields.columns)
                 visible: !!root.totp
-                label: qsTranslate("SecretDetail", "Código de verificación")
+                label: KI18n.i18nc("@label", "Verification code")
                 value: root.formatTotpCode(root.totp?.currentCode || "")
-                copyLabel: qsTranslate("SecretDetail", "Copiar código de verificación")
+                copyLabel: KI18n.i18nc("@action:button", "Copy Verification Code")
                 copyEnabled: !!root.totp?.currentCode
                 prominent: true
-                hint: qsTranslate("SecretDetail", "Se renueva en %1 s").arg(root.totpRemaining)
+                hint: KI18n.i18n("Renews in %1 s", root.totpRemaining)
                 progress: root.totpProgress
                 progressColor: root.totpRemaining < 5 ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.highlightColor
-                accessibleDescription: qsTranslate("SecretDetail", "Código temporal que se renueva automáticamente.")
+                accessibleDescription: KI18n.i18n("Temporary code that renews automatically.")
                 onCopyRequested: root.copyTotpRequested(false)
 
                 Controls.ToolButton {
                     id: totpOptions
-                    text: qsTranslate("SecretDetail", "Más opciones del código de verificación")
+                    text: KI18n.i18n("More verification code options")
                     icon.name: "view-more-symbolic"
                     display: Controls.AbstractButton.IconOnly
                     onClicked: totpMenu.popup()
@@ -78,7 +79,7 @@ SecretContentView {
                     Controls.Menu {
                         id: totpMenu
                         Controls.MenuItem {
-                            text: qsTranslate("SecretDetail", "Copiar próximo código")
+                            text: KI18n.i18nc("@action:inmenu", "Copy Next Code")
                             icon.name: "edit-copy"
                             enabled: !!root.totp?.nextCode
                             onTriggered: root.copyTotpRequested(true)
@@ -101,10 +102,10 @@ SecretContentView {
             objectName: "markdownNotesSection"
             Layout.fillWidth: true
             visible: !!value
-            heading: qsTranslate("SecretDetail", "Notas")
+            heading: KI18n.i18nc("@title:group", "Notes")
             value: root.detail?.notes || ""
             documentKey: root.entryId
-            accessibleLabel: qsTranslate("SecretDetail", "Notas del elemento")
+            accessibleLabel: KI18n.i18n("Item notes")
         }
     }
 }

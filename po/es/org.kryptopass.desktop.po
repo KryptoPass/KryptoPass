@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:27-0400\n"
+"POT-Creation-Date: 2026-11-17 15:29-0400\n"
 "PO-Revision-Date: 2026-11-17 15:19-0400\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -83,8 +83,11 @@ msgid "Choose What to Keep"
 msgstr "Elegir qué conservar"
 
 #: crates/kp-desktop/ui/qml/ConflictDialog.qml:52
+#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:149
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
 #: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:90
 #: crates/kp-desktop/ui/qml/PasswordGenerator.qml:133
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:198
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:707
 #, kde-format
 msgctxt "@action:button"
@@ -226,6 +229,7 @@ msgid "Create an item linked to this one"
 msgstr "Crear un elemento vinculado a este"
 
 #: crates/kp-desktop/ui/qml/DetailField.qml:16
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:153
 #: crates/kp-desktop/ui/qml/WebsiteListCard.qml:96
 #, kde-format
 msgctxt "@action:button %1 is a field name"
@@ -303,6 +307,9 @@ msgstr "Añadir identidad…"
 
 #: crates/kp-desktop/ui/qml/EntryDetailPane.qml:220
 #: crates/kp-desktop/ui/qml/EntryListPane.qml:277
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:43
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:44
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:317
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:575
 #, kde-format
 msgctxt "@label two parts of a subtitle"
@@ -402,6 +409,23 @@ msgstr "Ningún elemento seleccionado"
 #, kde-format
 msgid "Select an item from the list to see its content."
 msgstr "Selecciona un elemento de la lista para ver su contenido."
+
+#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:34
+#, kde-format
+msgctxt "@title:window"
+msgid "Theme Icon"
+msgstr "Icono del tema"
+
+#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:87
+#, kde-format
+msgid "Unnamed item"
+msgstr "Elemento sin nombre"
+
+#: crates/kp-desktop/ui/qml/EntryIconWindow.qml:154
+#, kde-format
+msgctxt "@action:button"
+msgid "OK"
+msgstr "Aceptar"
 
 #: crates/kp-desktop/ui/qml/EntryListPane.qml:182
 #, kde-format
@@ -557,6 +581,73 @@ msgstr "Limpiar búsqueda"
 msgctxt "@action:button"
 msgid "Create Item…"
 msgstr "Crear elemento…"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:20
+#, kde-format
+msgid "Items available to link"
+msgstr "Elementos disponibles para vincular"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:21
+#, kde-format
+msgid "No items available. Items that already have a link do not appear here."
+msgstr ""
+"No hay elementos disponibles. Los que ya tienen un vínculo no aparecen aquí."
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:22
+#, kde-format
+msgid "No matches. Try another name, type or folder."
+msgstr "No hay coincidencias. Prueba con otro nombre, tipo o carpeta."
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:23
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:197
+#, kde-format
+msgctxt "@action:button"
+msgid "Link"
+msgstr "Vincular"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:83
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:196
+#, kde-format
+msgctxt "@title:window"
+msgid "Link Item"
+msgstr "Vincular elemento"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:119
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Search item"
+msgstr "Buscar elemento"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:126
+#, kde-format
+msgid "Search by name, type or folder"
+msgstr "Buscar por nombre, tipo o carpeta"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:154
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:542
+#, kde-format
+msgctxt "@label"
+msgid "Folder"
+msgstr "Carpeta"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:163
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:87
+#: crates/kp-desktop/ui/qml/SecretStore.qml:147
+#, kde-format
+msgctxt "@label folder name"
+msgid "No folder"
+msgstr "Sin carpeta"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:168
+#, kde-format
+msgctxt "@item:inlistbox"
+msgid "All folders"
+msgstr "Todas las carpetas"
+
+#: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:169
+#, kde-format
+msgid "Filter by folder"
+msgstr "Filtrar por carpeta"
 
 #: crates/kp-desktop/ui/qml/EntryTypes.qml:13
 #, kde-format
@@ -807,6 +898,7 @@ msgstr "Más información"
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:154
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:164
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:52
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:101
 #, kde-format
 msgctxt "@label"
 msgid "Name"
@@ -1026,12 +1118,104 @@ msgstr ""
 msgid "Mark the key as your own to unlock the vault."
 msgstr "Marca la clave como propia para desbloquear la bóveda."
 
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:38
+#: crates/kp-desktop/ui/qml/LoginFields.qml:101
+#: crates/kp-desktop/ui/qml/LoginFields.qml:108
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:118
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Email or username"
+msgstr "Correo o usuario"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:39
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:119
+#, kde-format
+msgid "No username"
+msgstr "Sin usuario"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:40
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:120
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Username"
+msgstr "Copiar usuario"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:46
 #: crates/kp-desktop/ui/qml/LoginFields.qml:81
 #: crates/kp-desktop/ui/qml/LoginFields.qml:141
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:128
 #, kde-format
 msgctxt "@label"
 msgid "Password"
 msgstr "Contraseña"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:47
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:129
+#, kde-format
+msgid "No password"
+msgstr "Sin contraseña"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:48
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:130
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Password"
+msgstr "Copiar contraseña"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:59
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:33
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:155
+#, kde-format
+msgctxt "@label"
+msgid "Verification code"
+msgstr "Código de verificación"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:61
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:35
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Verification Code"
+msgstr "Copiar código de verificación"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:64
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:38
+#, kde-format
+msgid "Renews in %1 s"
+msgstr "Se renueva en %1 s"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:67
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:41
+#, kde-format
+msgid "Temporary code that renews automatically."
+msgstr "Código temporal que se renueva automáticamente."
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:72
+#, kde-format
+msgid "More verification code options"
+msgstr "Más opciones del código de verificación"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:82
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:45
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Copy Next Code"
+msgstr "Copiar próximo código"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:105
+#: crates/kp-desktop/ui/qml/NotesEditor.qml:14
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:168
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:166
+#, kde-format
+msgctxt "@title:group"
+msgid "Notes"
+msgstr "Notas"
+
+#: crates/kp-desktop/ui/qml/LoginDetail.qml:108
+#: crates/kp-desktop/ui/qml/NotesEditor.qml:45
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:171
+#, kde-format
+msgid "Item notes"
+msgstr "Notas del elemento"
 
 #: crates/kp-desktop/ui/qml/LoginFields.qml:92
 #: crates/kp-desktop/ui/qml/LoginFields.qml:94
@@ -1039,13 +1223,6 @@ msgstr "Contraseña"
 msgctxt "@title:group"
 msgid "Sign-in details"
 msgstr "Datos de acceso"
-
-#: crates/kp-desktop/ui/qml/LoginFields.qml:101
-#: crates/kp-desktop/ui/qml/LoginFields.qml:108
-#, kde-format
-msgctxt "@label:textbox"
-msgid "Email or username"
-msgstr "Correo o usuario"
 
 #: crates/kp-desktop/ui/qml/LoginFields.qml:109
 #, kde-format
@@ -1591,16 +1768,36 @@ msgstr ""
 "Arrastra para mover esta carpeta con sus hijos. Suelta en el centro para "
 "anidar, o en un borde para ordenar."
 
+#: crates/kp-desktop/ui/qml/NoteDetail.qml:18
 #: crates/kp-desktop/ui/qml/NoteFields.qml:43
 #, kde-format
 msgctxt "@title:group"
 msgid "Content"
 msgstr "Contenido"
 
+#: crates/kp-desktop/ui/qml/NoteDetail.qml:24
+#, kde-format
+msgid "This note has no content."
+msgstr "Esta nota no tiene contenido."
+
+#: crates/kp-desktop/ui/qml/NoteDetail.qml:25
 #: crates/kp-desktop/ui/qml/NoteFields.qml:52
 #, kde-format
 msgid "Markdown content of the secure note"
 msgstr "Contenido Markdown de la nota segura"
+
+#: crates/kp-desktop/ui/qml/NoteDetail.qml:32
+#: crates/kp-desktop/ui/qml/NoteFields.qml:61
+#, kde-format
+msgctxt "@title:group"
+msgid "Additional notes"
+msgstr "Notas adicionales"
+
+#: crates/kp-desktop/ui/qml/NoteDetail.qml:37
+#: crates/kp-desktop/ui/qml/NoteFields.qml:62
+#, kde-format
+msgid "Markdown of the secure note's additional notes"
+msgstr "Markdown de las notas adicionales de la nota segura"
 
 #: crates/kp-desktop/ui/qml/NoteFields.qml:53
 #, kde-format
@@ -1608,34 +1805,12 @@ msgctxt "@info:placeholder"
 msgid "Write the content you want to store encrypted."
 msgstr "Escribe el contenido que quieres guardar cifrado."
 
-#: crates/kp-desktop/ui/qml/NoteFields.qml:61
-#, kde-format
-msgctxt "@title:group"
-msgid "Additional notes"
-msgstr "Notas adicionales"
-
-#: crates/kp-desktop/ui/qml/NoteFields.qml:62
-#, kde-format
-msgid "Markdown of the secure note's additional notes"
-msgstr "Markdown de las notas adicionales de la nota segura"
-
 #: crates/kp-desktop/ui/qml/NoteFields.qml:63
 #: crates/kp-desktop/ui/qml/NotesEditor.qml:46
 #, kde-format
 msgctxt "@info:placeholder"
 msgid "Add optional context."
 msgstr "Añade contexto opcional."
-
-#: crates/kp-desktop/ui/qml/NotesEditor.qml:14
-#, kde-format
-msgctxt "@title:group"
-msgid "Notes"
-msgstr "Notas"
-
-#: crates/kp-desktop/ui/qml/NotesEditor.qml:45
-#, kde-format
-msgid "Item notes"
-msgstr "Notas del elemento"
 
 #: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:17
 #, kde-format
@@ -1783,6 +1958,251 @@ msgstr "Generando con el generador criptográfico del sistema…"
 msgid "Generating…"
 msgstr "Generando…"
 
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:12
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:122
+#, kde-format
+msgctxt "@title"
+msgid "Linked item"
+msgstr "Elemento vinculado"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:26
+#, kde-format
+msgctxt "@item:inlistbox"
+msgid "No link"
+msgstr "Sin vínculo"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:53
+#, kde-format
+msgid "Linked item unavailable"
+msgstr "Elemento vinculado no disponible"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:53
+#, kde-format
+msgctxt "@item:inlistbox %1 title, %2 item type"
+msgid "%1 · %2 — In the trash"
+msgstr "%1 · %2 — En la papelera"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:53
+#, kde-format
+msgctxt "@item:inlistbox %1 title, %2 item type"
+msgid "%1 · %2 — Unavailable"
+msgstr "%1 · %2 — No disponible"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:67
+#: crates/kp-desktop/ui/qml/SecretStore.qml:162
+#, kde-format
+msgctxt "@label item type"
+msgid "Unknown type"
+msgstr "Tipo desconocido"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:164
+#, kde-format
+msgctxt "@action:button"
+msgid "Change Link…"
+msgstr "Cambiar vínculo…"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:164
+#, kde-format
+msgctxt "@action:button"
+msgid "Link Item…"
+msgstr "Vincular elemento…"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:171
+#, kde-format
+msgctxt "@action:button"
+msgid "Unlink"
+msgstr "Desvincular"
+
+#: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:181
+#, kde-format
+msgid "Link a related item. Both items will show this relationship."
+msgstr ""
+"Vincula un elemento complementario. Ambos elementos mostrarán esta relación."
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:49
+#, kde-format
+msgctxt "@item activity event"
+msgid "Login created"
+msgstr "Credencial creada"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:51
+#, kde-format
+msgctxt "@item activity event"
+msgid "Login used"
+msgstr "Credencial utilizada"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:53
+#, kde-format
+msgctxt "@item activity event"
+msgid "Password updated"
+msgstr "Contraseña actualizada"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:55
+#, kde-format
+msgctxt "@item activity event"
+msgid "Data edited"
+msgstr "Datos editados"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:57
+#, kde-format
+msgctxt "@item activity event"
+msgid "Username copied"
+msgstr "Usuario copiado"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:59
+#, kde-format
+msgctxt "@item activity event"
+msgid "Password copied"
+msgstr "Contraseña copiada"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:61
+#, kde-format
+msgctxt "@item activity event"
+msgid "Verification code copied"
+msgstr "Código de verificación copiado"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:63
+#, kde-format
+msgctxt "@item activity event"
+msgid "Next verification code copied"
+msgstr "Próximo código de verificación copiado"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:65
+#, kde-format
+msgctxt "@item activity event"
+msgid "Activity recorded"
+msgstr "Actividad registrada"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:96
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:24
+#, kde-format
+msgid "Date unavailable"
+msgstr "Fecha no disponible"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:188
+#, kde-format
+msgid "This item type cannot be shown."
+msgstr "No se puede mostrar este tipo de elemento."
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:207
+#, kde-format
+msgctxt "@title:group"
+msgid "Who has access"
+msgstr "Quién tiene acceso"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:216
+#, kde-format
+msgctxt "@label recipient"
+msgid "Key unavailable"
+msgstr "Clave no disponible"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
+#, kde-format
+msgctxt "@action:button"
+msgid "Hide Key Details"
+msgstr "Ocultar detalles de la clave"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
+#, kde-format
+msgctxt "@action:button"
+msgid "View Key Details"
+msgstr "Ver detalles de la clave"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:249
+#, kde-format
+msgctxt "@label label and value"
+msgid "%1: %2"
+msgstr "%1: %2"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:257
+#, kde-format
+msgid "OpenPGP fingerprint: %1"
+msgstr "Huella OpenPGP: %1"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:286
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:292
+#, kde-format
+msgctxt "@title:group"
+msgid "Activity"
+msgstr "Actividad"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:293
+#, kde-format
+msgid "Hide the %1 events"
+msgstr "Ocultar los %1 eventos"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:293
+#, kde-format
+msgid "Show the %1 events"
+msgstr "Mostrar los %1 eventos"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:304
+#, kde-format
+msgid "1 event"
+msgstr "1 evento"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:304
+#, kde-format
+msgid "%1 events"
+msgstr "%1 eventos"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:378
+#, kde-format
+msgctxt "@action:button"
+msgid "Show Only the Last 5"
+msgstr "Ver solo los últimos 5"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:378
+#, kde-format
+msgctxt "@action:button"
+msgid "Show the Last %1"
+msgstr "Ver los últimos %1"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:383
+#, kde-format
+msgctxt "@action:button"
+msgid "Show All Events…"
+msgstr "Mostrar todos los eventos…"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:387
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Create and open a text file with the kept events"
+msgstr "Generar y abrir un archivo de texto con los eventos conservados"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:403
+#, kde-format
+msgctxt "@title:group"
+msgid "Previous versions"
+msgstr "Versiones anteriores"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:410
+#, kde-format
+msgid ""
+"There are no previous versions yet. They are kept when you update this "
+"login's data."
+msgstr ""
+"Aún no hay versiones anteriores. Se guardan cuando actualizas los datos de "
+"esta credencial."
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:426
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:48
+#, kde-format
+msgctxt "@title"
+msgid "Previous Version"
+msgstr "Versión anterior"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:438
+#, kde-format
+msgctxt "@action:button previous version"
+msgid "View"
+msgstr "Consultar"
+
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:439
+#, kde-format
+msgid "View the previous version from %1"
+msgstr "Consultar versión anterior del %1"
+
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:42
 #, kde-format
 msgctxt "@title"
@@ -1887,12 +2307,6 @@ msgid "Change the type to pick another form before entering the data."
 msgstr ""
 "Cambia el tipo para elegir otro formulario antes de escribir los datos."
 
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:542
-#, kde-format
-msgctxt "@label"
-msgid "Folder"
-msgstr "Carpeta"
-
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:550
 #, kde-format
 msgid "Item folder"
@@ -1976,18 +2390,6 @@ msgstr "Descartar cambios"
 #, kde-format
 msgid "There are unsaved changes. If you continue, they will be discarded."
 msgstr "Hay cambios sin guardar. Si continúas, se descartarán."
-
-#: crates/kp-desktop/ui/qml/SecretStore.qml:147
-#, kde-format
-msgctxt "@label folder name"
-msgid "No folder"
-msgstr "Sin carpeta"
-
-#: crates/kp-desktop/ui/qml/SecretStore.qml:162
-#, kde-format
-msgctxt "@label item type"
-msgid "Unknown type"
-msgstr "Tipo desconocido"
 
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:21
 #, kde-format
@@ -2073,6 +2475,7 @@ msgid "Changes are saved as you choose them."
 msgstr "Los cambios se guardan al elegirlos."
 
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:108
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:213
 #, kde-format
 msgctxt "@action:button"
 msgid "Close"
@@ -2194,6 +2597,7 @@ msgid "Public key data"
 msgstr "Datos públicos de la clave"
 
 #: crates/kp-desktop/ui/qml/SshKeyFields.qml:136
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:80
 #, kde-format
 msgid "Algorithm: %1"
 msgstr "Algoritmo: %1"
@@ -2261,6 +2665,54 @@ msgctxt "@action:button %1 is the entry label, %2 its position"
 msgid "Remove %1 %2"
 msgstr "Quitar %1 %2"
 
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:66
+#, kde-format
+msgid "Issuer: %1"
+msgstr "Emisor: %1"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:73
+#, kde-format
+msgid "Account: %1"
+msgstr "Cuenta: %1"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:87
+#, kde-format
+msgid "Digits: %1"
+msgstr "Dígitos: %1"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:94
+#, kde-format
+msgid "Period: %1 s"
+msgstr "Periodo: %1 s"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:109
+#, kde-format
+msgctxt "@action:button"
+msgid "Hide QR Code"
+msgstr "Ocultar código QR"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:109
+#, kde-format
+msgctxt "@action:button"
+msgid "Show QR Code"
+msgstr "Mostrar código QR"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:124
+#, kde-format
+msgid "QR code"
+msgstr "Código QR"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:149
+#, kde-format
+msgctxt "@label fallback field name"
+msgid "Field"
+msgstr "Campo"
+
+#: crates/kp-desktop/ui/qml/StructuredSecretDetail.qml:150
+#, kde-format
+msgid "No value"
+msgstr "Sin valor"
+
 #: crates/kp-desktop/ui/qml/ToastHost.qml:137
 #, kde-format
 msgctxt "@action:button"
@@ -2309,6 +2761,90 @@ msgstr ""
 msgctxt "@action:button"
 msgid "Read QR Code from Image…"
 msgstr "Leer código QR de una imagen…"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:69
+#, kde-format
+msgid "%1 · Version %2 of %3"
+msgstr "%1 · Versión %2 de %3"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:77
+#, kde-format
+msgid ""
+"Read only. Viewing or copying this data does not change the current one."
+msgstr "Solo lectura. Consultar o copiar estos datos no modifica el actual."
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:102
+#, kde-format
+msgid "No name"
+msgstr "Sin nombre"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:103
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Name"
+msgstr "Copiar nombre"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:105
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:122
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:136
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:146
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:159
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:170
+#, kde-format
+msgctxt "@label badge"
+msgid "Changed"
+msgstr "Modificado"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:134
+#, kde-format
+msgctxt "@action:button"
+msgid "Show Previous Password"
+msgstr "Mostrar contraseña anterior"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:135
+#, kde-format
+msgctxt "@action:button"
+msgid "Hide Previous Password"
+msgstr "Ocultar contraseña anterior"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:156
+#, kde-format
+msgid "Verification settings saved"
+msgstr "Configuración de verificación guardada"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:157
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Previous Settings"
+msgstr "Copiar configuración anterior"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:169
+#, kde-format
+msgid "Notes of the previous version"
+msgstr "Notas de la versión anterior"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:171
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Previous Notes"
+msgstr "Copiar notas anteriores"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:189
+#, kde-format
+msgctxt "@action:button"
+msgid "Previous"
+msgstr "Anterior"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:196
+#, kde-format
+msgid "Version %1 of %2"
+msgstr "Versión %1 de %2"
+
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:200
+#, kde-format
+msgctxt "@action:button"
+msgid "Next"
+msgstr "Siguiente"
 
 #: crates/kp-desktop/ui/qml/WebsiteListCard.qml:81
 #, kde-format

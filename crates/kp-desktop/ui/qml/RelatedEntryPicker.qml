@@ -3,12 +3,13 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
 
     Accessible.role: Accessible.Grouping
-    Accessible.name: qsTr("Elemento vinculado")
+    Accessible.name: KI18n.i18nc("@title", "Linked item")
 
     property var entries: []
     property var kindOptions: []
@@ -22,7 +23,7 @@ ColumnLayout {
         const choices = [
             {
                 id: "",
-                label: qsTr("Sin vínculo"),
+                label: KI18n.i18nc("@item:inlistbox", "No link"),
                 unavailable: false
             }
         ];
@@ -39,8 +40,8 @@ ColumnLayout {
                 folder: candidate.folder || "",
                 icon: candidate.icon || null,
                 iconSource: candidate.iconSource || "",
-                subtitle: qsTr("%1 · %2").arg(kindName(candidate.kind)).arg(folderPath(candidate.folder)),
-                label: qsTr("%1 · %2").arg(candidate.title).arg(kindName(candidate.kind)),
+                subtitle: KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", kindName(candidate.kind), folderPath(candidate.folder)),
+                label: KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", candidate.title, kindName(candidate.kind)),
                 unavailable: false
             });
         }
@@ -49,7 +50,7 @@ ColumnLayout {
         if (relatedEntryId && (!current || current.trashed || !eligible.some(candidate => candidate.id === relatedEntryId))) {
             choices.push({
                 id: relatedEntryId,
-                label: !current ? qsTr("Elemento vinculado no disponible") : current.trashed ? qsTr("%1 · %2 — En la papelera").arg(current.title).arg(kindName(current.kind)) : qsTr("%1 · %2 — No disponible").arg(current.title).arg(kindName(current.kind)),
+                label: !current ? KI18n.i18n("Linked item unavailable") : current.trashed ? KI18n.i18nc("@item:inlistbox %1 title, %2 item type", "%1 · %2 — In the trash", current.title, kindName(current.kind)) : KI18n.i18nc("@item:inlistbox %1 title, %2 item type", "%1 · %2 — Unavailable", current.title, kindName(current.kind)),
                 unavailable: true
             });
         }
@@ -63,7 +64,7 @@ ColumnLayout {
 
     function kindName(kind) {
         const option = kindOptions.find(candidate => candidate.id === kind);
-        return option ? option.name : qsTr("Tipo desconocido");
+        return option ? option.name : KI18n.i18nc("@label item type", "Unknown type");
     }
 
     function kindIcon(kind) {
@@ -83,7 +84,7 @@ ColumnLayout {
             names.unshift(folder.name);
             id = folder.parent || "";
         }
-        return names.length ? names.join(" / ") : qsTr("Sin carpeta");
+        return names.length ? names.join(" / ") : KI18n.i18nc("@label folder name", "No folder");
     }
 
     function selectRelatedEntry(id) {
@@ -118,7 +119,7 @@ ColumnLayout {
 
     Controls.Label {
         Layout.fillWidth: true
-        text: qsTr("Elemento vinculado")
+        text: KI18n.i18nc("@title", "Linked item")
         font.weight: Font.DemiBold
     }
 
@@ -160,14 +161,14 @@ ColumnLayout {
         Controls.Button {
             id: relatedEntryButton
             objectName: "relatedEntryButton"
-            text: root.relatedEntryId ? qsTr("Cambiar vínculo…") : qsTr("Vincular elemento…")
+            text: root.relatedEntryId ? KI18n.i18nc("@action:button", "Change Link…") : KI18n.i18nc("@action:button", "Link Item…")
             icon.name: "link"
             onClicked: root.openPicker()
         }
         Controls.Button {
             objectName: "unlinkRelatedEntryButton"
             visible: !!root.relatedEntryId
-            text: qsTr("Desvincular")
+            text: KI18n.i18nc("@action:button", "Unlink")
             onClicked: root.selectRelatedEntry("")
         }
         Item {
@@ -177,7 +178,7 @@ ColumnLayout {
 
     Controls.Label {
         Layout.fillWidth: true
-        text: qsTr("Vincula un elemento complementario. Ambos elementos mostrarán esta relación.")
+        text: KI18n.i18n("Link a related item. Both items will show this relationship.")
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         color: Kirigami.Theme.disabledTextColor
@@ -192,9 +193,9 @@ ColumnLayout {
         candidateIconObjectName: "relatedEntryCandidateIcon"
         cancelButtonObjectName: "cancelRelatedEntryButton"
         confirmButtonObjectName: "confirmRelatedEntryButton"
-        title: qsTr("Vincular elemento")
-        confirmText: qsTr("Vincular")
-        cancelText: qsTr("Cancelar")
+        title: KI18n.i18nc("@title:window", "Link Item")
+        confirmText: KI18n.i18nc("@action:button", "Link")
+        cancelText: KI18n.i18nc("@action:button", "Cancel")
         options: root.options
         kindOptions: root.kindOptions
         folderRows: root.folderRows

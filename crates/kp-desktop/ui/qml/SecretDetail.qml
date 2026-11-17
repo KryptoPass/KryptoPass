@@ -4,6 +4,7 @@ import org.kryptopass.desktop
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -45,23 +46,23 @@ ColumnLayout {
     function eventText(kind) {
         switch (kind) {
         case "create":
-            return qsTranslate("SecretDetail", "Credencial creada");
+            return KI18n.i18nc("@item activity event", "Login created");
         case "loginUse":
-            return qsTranslate("SecretDetail", "Credencial utilizada");
+            return KI18n.i18nc("@item activity event", "Login used");
         case "passwordRotated":
-            return qsTranslate("SecretDetail", "Contraseña actualizada");
+            return KI18n.i18nc("@item activity event", "Password updated");
         case "edited":
-            return qsTranslate("SecretDetail", "Datos editados");
+            return KI18n.i18nc("@item activity event", "Data edited");
         case "copyUsername":
-            return qsTranslate("SecretDetail", "Usuario copiado");
+            return KI18n.i18nc("@item activity event", "Username copied");
         case "copyPassword":
-            return qsTranslate("SecretDetail", "Contraseña copiada");
+            return KI18n.i18nc("@item activity event", "Password copied");
         case "copyTotp":
-            return qsTranslate("SecretDetail", "Código de verificación copiado");
+            return KI18n.i18nc("@item activity event", "Verification code copied");
         case "copyNextTotp":
-            return qsTranslate("SecretDetail", "Próximo código de verificación copiado");
+            return KI18n.i18nc("@item activity event", "Next verification code copied");
         default:
-            return qsTranslate("SecretDetail", "Actividad registrada");
+            return KI18n.i18nc("@item activity event", "Activity recorded");
         }
     }
 
@@ -92,7 +93,7 @@ ColumnLayout {
 
     function eventDate(timestamp) {
         const date = new Date(Number(timestamp) * 1000);
-        return isNaN(date.getTime()) ? qsTranslate("SecretDetail", "Fecha no disponible") : date.toLocaleDateString(Qt.locale(), Locale.LongFormat);
+        return isNaN(date.getTime()) ? KI18n.i18n("Date unavailable") : date.toLocaleDateString(Qt.locale(), Locale.LongFormat);
     }
 
     function eventTime(timestamp) {
@@ -184,7 +185,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: !!root.detail && !EntryTypes.find(root.detail.content?.kind)
         type: Kirigami.MessageType.Error
-        text: qsTr("No se puede mostrar este tipo de elemento.")
+        text: KI18n.i18n("This item type cannot be shown.")
     }
 
     GridLayout {
@@ -203,7 +204,7 @@ ColumnLayout {
                 Controls.Label {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: qsTr("Quién tiene acceso")
+                    text: KI18n.i18nc("@title:group", "Who has access")
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Repeater {
@@ -212,7 +213,7 @@ ColumnLayout {
                         id: recipientRow
                         required property string modelData
                         readonly property var recipientKey: root.recipientKeys.find(key => key.id.toUpperCase() === recipientRow.modelData.toUpperCase()) || null
-                        readonly property string recipientName: recipientKey?.contactName || recipientKey?.title || recipientKey?.email || qsTr("Clave no disponible")
+                        readonly property string recipientName: recipientKey?.contactName || recipientKey?.title || recipientKey?.email || KI18n.i18nc("@label recipient", "Key unavailable")
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         spacing: Kirigami.Units.smallSpacing
@@ -241,11 +242,11 @@ ColumnLayout {
                             }
                             Controls.ToolButton {
                                 id: recipientDetails
-                                text: checked ? qsTr("Ocultar detalles de la clave") : qsTr("Ver detalles de la clave")
+                                text: checked ? KI18n.i18nc("@action:button", "Hide Key Details") : KI18n.i18nc("@action:button", "View Key Details")
                                 icon.name: checked ? "arrow-up" : "arrow-down"
                                 display: Controls.AbstractButton.IconOnly
                                 checkable: true
-                                Accessible.name: qsTr("%1: %2").arg(text).arg(recipientRow.recipientName)
+                                Accessible.name: KI18n.i18nc("@label label and value", "%1: %2", text, recipientRow.recipientName)
                                 Controls.ToolTip.visible: hovered || visualFocus
                                 Controls.ToolTip.text: text
                             }
@@ -253,7 +254,7 @@ ColumnLayout {
                         Controls.Label {
                             Layout.fillWidth: true
                             visible: recipientDetails.checked
-                            text: qsTr("Huella OpenPGP: %1").arg(recipientRow.modelData)
+                            text: KI18n.i18n("OpenPGP fingerprint: %1", recipientRow.modelData)
                             textFormat: Text.PlainText
                             font.family: Kirigami.Theme.fixedWidthFont.family
                             wrapMode: Text.WrapAnywhere
@@ -282,14 +283,14 @@ ColumnLayout {
                         Layout.fillWidth: true
                         leftPadding: 0
                         rightPadding: 0
-                        readonly property string sectionTitle: qsTranslate("SecretDetail", "Actividad")
+                        readonly property string sectionTitle: KI18n.i18nc("@title:group", "Activity")
                         text: ""
                         display: Controls.AbstractButton.IconOnly
                         focusPolicy: Qt.StrongFocus
                         checkable: true
                         checked: root.historyOpen
-                        Accessible.name: qsTranslate("SecretDetail", "Actividad")
-                        Accessible.description: root.historyOpen ? qsTranslate("SecretDetail", "Ocultar los %1 eventos").arg(root.historyItems.length) : qsTranslate("SecretDetail", "Mostrar los %1 eventos").arg(root.historyItems.length)
+                        Accessible.name: KI18n.i18nc("@title:group", "Activity")
+                        Accessible.description: root.historyOpen ? KI18n.i18n("Hide the %1 events", root.historyItems.length) : KI18n.i18n("Show the %1 events", root.historyItems.length)
                         onToggled: root.historyOpen = checked
                         contentItem: RowLayout {
                             spacing: Kirigami.Units.largeSpacing
@@ -300,7 +301,7 @@ ColumnLayout {
                                 wrapMode: Text.Wrap
                             }
                             Controls.Label {
-                                text: root.historyItems.length === 1 ? qsTranslate("SecretDetail", "1 evento") : qsTranslate("SecretDetail", "%1 eventos").arg(root.historyItems.length)
+                                text: root.historyItems.length === 1 ? KI18n.i18n("1 event") : KI18n.i18n("%1 events", root.historyItems.length)
                                 color: Kirigami.Theme.disabledTextColor
                             }
                             Kirigami.Icon {
@@ -313,7 +314,7 @@ ColumnLayout {
                     Controls.Label {
                         Layout.fillWidth: true
                         visible: !root.historyOpen
-                        text: root.historyItems.length ? qsTranslate("SecretDetail", "%1 · %2").arg(root.eventText(root.historyItems[0].kind)).arg(root.formatEventTime(root.historyItems[0].at)) : ""
+                        text: root.historyItems.length ? KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", root.eventText(root.historyItems[0].kind), root.formatEventTime(root.historyItems[0].at)) : ""
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
@@ -374,16 +375,16 @@ ColumnLayout {
                         }
                         Controls.Button {
                             visible: root.historyItems.length > 5
-                            text: root.historyExpanded ? qsTranslate("SecretDetail", "Ver solo los últimos 5") : qsTranslate("SecretDetail", "Ver los últimos %1").arg(Math.min(20, root.historyItems.length))
+                            text: root.historyExpanded ? KI18n.i18nc("@action:button", "Show Only the Last 5") : KI18n.i18nc("@action:button", "Show the Last %1", Math.min(20, root.historyItems.length))
                             flat: true
                             onClicked: root.historyExpanded = !root.historyExpanded
                         }
                         Controls.Button {
-                            text: qsTranslate("SecretDetail", "Mostrar todos los eventos…")
+                            text: KI18n.i18nc("@action:button", "Show All Events…")
                             icon.name: "document-open"
                             flat: true
                             Controls.ToolTip.visible: hovered || visualFocus
-                            Controls.ToolTip.text: qsTranslate("SecretDetail", "Generar y abrir un archivo de texto con los eventos conservados")
+                            Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "Create and open a text file with the kept events")
                             onClicked: root.activityExportRequested()
                         }
                     }
@@ -399,14 +400,14 @@ ColumnLayout {
                     spacing: Kirigami.Units.smallSpacing
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: qsTranslate("SecretDetail", "Versiones anteriores")
+                        text: KI18n.i18nc("@title:group", "Previous versions")
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
                         Layout.fillWidth: true
                         visible: root.versions.length === 0
-                        text: qsTranslate("SecretDetail", "Aún no hay versiones anteriores. Se guardan cuando actualizas los datos de esta credencial.")
+                        text: KI18n.i18n("There are no previous versions yet. They are kept when you update this login's data.")
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
@@ -422,7 +423,7 @@ ColumnLayout {
                                 spacing: 0
                                 Controls.Label {
                                     Layout.fillWidth: true
-                                    text: qsTranslate("SecretDetail", "Versión anterior")
+                                    text: KI18n.i18nc("@title", "Previous Version")
                                     wrapMode: Text.Wrap
                                 }
                                 Controls.Label {
@@ -434,8 +435,8 @@ ColumnLayout {
                             }
                             Controls.Button {
                                 id: versionOpenButton
-                                text: qsTranslate("SecretDetail", "Consultar")
-                                Accessible.name: qsTranslate("SecretDetail", "Consultar versión anterior del %1").arg(root.formatEventTime(versionRow.modelData.at))
+                                text: KI18n.i18nc("@action:button previous version", "View")
+                                Accessible.name: KI18n.i18n("View the previous version from %1", root.formatEventTime(versionRow.modelData.at))
                                 onClicked: {
                                     root.versionReturnItem = versionOpenButton;
                                     root.versionOpenRequested(versionRow.modelData.index);

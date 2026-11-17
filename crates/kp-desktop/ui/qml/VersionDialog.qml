@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: root
@@ -20,7 +21,7 @@ Controls.Dialog {
     readonly property var olderVersion: root.versionPosition >= 0 && root.versionPosition < root.versionCount - 1 ? root.versions[root.versionPosition + 1] : null
     readonly property var newerVersion: root.versionPosition > 0 ? root.versions[root.versionPosition - 1] : null
     readonly property bool titleChanged: !!root.versionDetail && root.versionDetail.title !== root.currentTitle
-    readonly property string dateText: root.formatTimestamp(root.versionDetail?.at) || qsTranslate("SecretDetail", "Fecha no disponible")
+    readonly property string dateText: root.formatTimestamp(root.versionDetail?.at) || KI18n.i18n("Date unavailable")
 
     signal revealRequested
     signal copyRequested(string field)
@@ -44,7 +45,7 @@ Controls.Dialog {
     height: Math.min(implicitHeight, parent ? parent.height * 0.85 : 720)
     modal: true
     closePolicy: Controls.Popup.CloseOnEscape
-    title: qsTranslate("SecretDetail", "Versión anterior")
+    title: KI18n.i18nc("@title", "Previous Version")
     onVersionDetailChanged: {
         if (versionDetail) {
             if (!root.opened)
@@ -65,7 +66,7 @@ Controls.Dialog {
             Layout.leftMargin: Kirigami.Units.largeSpacing
             Layout.rightMargin: Kirigami.Units.largeSpacing
             Layout.topMargin: Kirigami.Units.smallSpacing
-            text: qsTranslate("SecretDetail", "%1 · Versión %2 de %3").arg(root.dateText).arg(root.versionPosition + 1).arg(root.versionCount)
+            text: KI18n.i18n("%1 · Version %2 of %3", root.dateText, root.versionPosition + 1, root.versionCount)
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -73,7 +74,7 @@ Controls.Dialog {
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.largeSpacing
             Layout.rightMargin: Kirigami.Units.largeSpacing
-            text: qsTranslate("SecretDetail", "Solo lectura. Consultar o copiar estos datos no modifica el actual.")
+            text: KI18n.i18n("Read only. Viewing or copying this data does not change the current one.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -97,11 +98,11 @@ Controls.Dialog {
 
                 DetailField {
                     Layout.fillWidth: true
-                    label: qsTranslate("SecretDetail", "Nombre")
-                    value: root.versionDetail?.title || qsTranslate("SecretDetail", "Sin nombre")
-                    copyLabel: qsTranslate("SecretDetail", "Copiar nombre")
+                    label: KI18n.i18nc("@label", "Name")
+                    value: root.versionDetail?.title || KI18n.i18n("No name")
+                    copyLabel: KI18n.i18nc("@action:button", "Copy Name")
                     copyEnabled: !!root.versionDetail?.title
-                    badge: root.titleChanged ? qsTranslate("SecretDetail", "Modificado") : ""
+                    badge: root.titleChanged ? KI18n.i18nc("@label badge", "Changed") : ""
                     onCopyRequested: root.copyRequested("title")
                 }
 
@@ -114,25 +115,25 @@ Controls.Dialog {
                     DetailField {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        label: qsTranslate("SecretDetail", "Correo o usuario")
-                        value: root.versionDetail?.username || qsTranslate("SecretDetail", "Sin usuario")
-                        copyLabel: qsTranslate("SecretDetail", "Copiar usuario")
+                        label: KI18n.i18nc("@label:textbox", "Email or username")
+                        value: root.versionDetail?.username || KI18n.i18n("No username")
+                        copyLabel: KI18n.i18nc("@action:button", "Copy Username")
                         copyEnabled: !!root.versionDetail?.username
-                        badge: root.changed("username") ? qsTranslate("SecretDetail", "Modificado") : ""
+                        badge: root.changed("username") ? KI18n.i18nc("@label badge", "Changed") : ""
                         onCopyRequested: root.copyRequested("username")
                     }
                     DetailField {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        label: qsTranslate("SecretDetail", "Contraseña")
-                        value: !root.versionDetail?.hasPassword ? qsTranslate("SecretDetail", "Sin contraseña") : root.versionDetail?.passwordRevealed ? root.versionDetail?.password || "••••••••••••" : "••••••••••••"
-                        copyLabel: qsTranslate("SecretDetail", "Copiar contraseña")
+                        label: KI18n.i18nc("@label", "Password")
+                        value: !root.versionDetail?.hasPassword ? KI18n.i18n("No password") : root.versionDetail?.passwordRevealed ? root.versionDetail?.password || "••••••••••••" : "••••••••••••"
+                        copyLabel: KI18n.i18nc("@action:button", "Copy Password")
                         copyEnabled: !!root.versionDetail?.hasPassword
                         revealable: !!root.versionDetail?.hasPassword
                         revealed: !!root.versionDetail?.passwordRevealed
-                        revealLabel: qsTranslate("SecretDetail", "Mostrar contraseña anterior")
-                        hideLabel: qsTranslate("SecretDetail", "Ocultar contraseña anterior")
-                        badge: root.changed("password") ? qsTranslate("SecretDetail", "Modificado") : ""
+                        revealLabel: KI18n.i18nc("@action:button", "Show Previous Password")
+                        hideLabel: KI18n.i18nc("@action:button", "Hide Previous Password")
+                        badge: root.changed("password") ? KI18n.i18nc("@label badge", "Changed") : ""
                         onRevealRequested: root.revealRequested()
                         onCopyRequested: root.copyRequested("password")
                     }
@@ -142,7 +143,7 @@ Controls.Dialog {
                     Layout.fillWidth: true
                     visible: (root.versionDetail?.urls || []).length > 0
                     urls: root.versionDetail?.urls || []
-                    badge: root.changed("urls") ? qsTranslate("SecretDetail", "Modificado") : ""
+                    badge: root.changed("urls") ? KI18n.i18nc("@label badge", "Changed") : ""
                     onCopyUrlRequested: function (index) {
                         root.copyUrlRequested(index);
                     }
@@ -151,23 +152,23 @@ Controls.Dialog {
                 DetailField {
                     Layout.fillWidth: true
                     visible: !!root.versionDetail?.hasTotp
-                    label: qsTranslate("SecretDetail", "Código de verificación")
-                    value: qsTranslate("SecretDetail", "Configuración de verificación guardada")
-                    copyLabel: qsTranslate("SecretDetail", "Copiar configuración anterior")
+                    label: KI18n.i18nc("@label", "Verification code")
+                    value: KI18n.i18n("Verification settings saved")
+                    copyLabel: KI18n.i18nc("@action:button", "Copy Previous Settings")
                     copyEnabled: !!root.versionDetail?.hasTotp
-                    badge: root.changed("totp") ? qsTranslate("SecretDetail", "Modificado") : ""
+                    badge: root.changed("totp") ? KI18n.i18nc("@label badge", "Changed") : ""
                     onCopyRequested: root.copyRequested("totp")
                 }
 
                 SecretTextSection {
                     Layout.fillWidth: true
                     visible: !!root.versionDetail?.notes
-                    heading: qsTranslate("SecretDetail", "Notas")
+                    heading: KI18n.i18nc("@title:group", "Notes")
                     value: root.versionDetail?.notes || ""
                     documentKey: "version:" + (root.versionDetail?.index ?? -1)
-                    accessibleLabel: qsTranslate("SecretDetail", "Notas de la versión anterior")
-                    badge: root.changed("notes") ? qsTranslate("SecretDetail", "Modificado") : ""
-                    copyLabel: qsTranslate("SecretDetail", "Copiar notas anteriores")
+                    accessibleLabel: KI18n.i18n("Notes of the previous version")
+                    badge: root.changed("notes") ? KI18n.i18nc("@label badge", "Changed") : ""
+                    copyLabel: KI18n.i18nc("@action:button", "Copy Previous Notes")
                     onCopyRequested: root.copyRequested("notes")
                 }
             }
@@ -185,18 +186,18 @@ Controls.Dialog {
                 spacing: Kirigami.Units.smallSpacing
 
                 Controls.Button {
-                    text: qsTranslate("SecretDetail", "Anterior")
+                    text: KI18n.i18nc("@action:button", "Previous")
                     icon.name: "go-previous"
                     flat: true
                     enabled: !!root.olderVersion
                     onClicked: root.openVersionRequested(root.olderVersion.index)
                 }
                 Controls.Label {
-                    text: qsTranslate("SecretDetail", "Versión %1 de %2").arg(root.versionPosition + 1).arg(root.versionCount)
+                    text: KI18n.i18n("Version %1 of %2", root.versionPosition + 1, root.versionCount)
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.Button {
-                    text: qsTranslate("SecretDetail", "Siguiente")
+                    text: KI18n.i18nc("@action:button", "Next")
                     icon.name: "go-next"
                     flat: true
                     enabled: !!root.newerVersion
@@ -209,7 +210,7 @@ Controls.Dialog {
             }
 
             Controls.Button {
-                text: qsTranslate("SecretDetail", "Cerrar")
+                text: KI18n.i18nc("@action:button", "Close")
                 onClicked: root.close()
             }
         }
