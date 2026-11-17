@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ScrollView {
     id: deviceRow
@@ -14,7 +15,7 @@ Controls.ScrollView {
     readonly property string syntheticTransferPhase: String(modelData.syntheticTransferPhase || "unsupported")
     readonly property int keyTransferVersion: Number(modelData.keyTransferVersion || 0)
     readonly property int keyTransferUnavailableReason: Number(modelData.keyTransferUnavailableReason || 0)
-    readonly property string keyTransferUnavailableText: keyTransferUnavailableReason === 1 ? qsTr("El teléfono no tiene una huella registrada. Regístrala en sus ajustes para recibir la clave.") : keyTransferUnavailableReason === 2 ? qsTr("El teléfono ya guarda el máximo de claves.") : keyTransferUnavailableReason === 3 ? qsTr("El teléfono no puede recibir claves en este momento.") : qsTr("Actualiza KryptoPass en el teléfono para recibir la clave.")
+    readonly property string keyTransferUnavailableText: keyTransferUnavailableReason === 1 ? KI18n.i18n("The phone has no fingerprint registered. Register it in its settings to receive the key.") : keyTransferUnavailableReason === 2 ? KI18n.i18n("The phone already stores the maximum number of keys.") : keyTransferUnavailableReason === 3 ? KI18n.i18n("The phone cannot receive keys right now.") : KI18n.i18n("Update KryptoPass on the phone to receive the key.")
     readonly property var syncedKeys: host.vaultSyncKeyIds(deviceId)
     readonly property var syncKeyRows: keyList.syncKeyRows
     readonly property bool vaultSyncOn: host.controller.vaultSyncPeers.indexOf(deviceId) >= 0
@@ -83,7 +84,7 @@ Controls.ScrollView {
                             textFormat: Text.PlainText
                         }
                         Controls.Label {
-                            text: qsTr("· Vinculado")
+                            text: KI18n.i18nc("@label device status suffix", "· Paired")
                             color: Kirigami.Theme.disabledTextColor
                         }
                     }
@@ -98,7 +99,7 @@ Controls.ScrollView {
                 }
                 Controls.ToolButton {
                     icon.name: "edit-rename"
-                    text: qsTr("Cambiar nombre")
+                    text: KI18n.i18nc("@action:button", "Rename")
                     display: Controls.AbstractButton.IconOnly
                     enabled: !deviceRow.host.controller.aliasBusy && !deviceRow.host.controller.busy
                     Controls.ToolTip.visible: hovered
@@ -126,13 +127,13 @@ Controls.ScrollView {
                     Kirigami.Heading {
                         Layout.fillWidth: true
                         level: 4
-                        text: qsTr("Sincronización de la bóveda")
+                        text: KI18n.i18nc("@title:group", "Vault sync")
                         wrapMode: Text.Wrap
                     }
                     Controls.Switch {
                         checked: deviceRow.vaultSyncOn
                         enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.maintenanceBusy
-                        Accessible.name: qsTr("Sincronizar la bóveda con este dispositivo")
+                        Accessible.name: KI18n.i18n("Sync the vault with this device")
                         onToggled: {
                             deviceRow.host.setVaultSync(deviceRow.deviceId, checked);
                             checked = Qt.binding(() => deviceRow.vaultSyncOn);
@@ -141,7 +142,7 @@ Controls.ScrollView {
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: deviceRow.vaultSyncOn ? (deviceRow.connection === "connected" ? qsTr("Activada · se sincroniza mientras la bóveda está desbloqueada.") : qsTr("Activada · esperando que el dispositivo se conecte.")) : qsTr("Comparte los elementos de esta bóveda. El teléfono necesita su clave OpenPGP y tener Sync activado.")
+                    text: deviceRow.vaultSyncOn ? (deviceRow.connection === "connected" ? KI18n.i18n("On · syncs while the vault is unlocked.") : KI18n.i18n("On · waiting for the device to connect.")) : KI18n.i18n("Shares this vault's items. The phone needs its OpenPGP key and Sync turned on.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -160,10 +161,10 @@ Controls.ScrollView {
                     Layout.fillWidth: true
                     visible: deviceRow.vaultSyncOn && offered.length > 0
                     type: Kirigami.MessageType.Information
-                    text: offered.length > 0 ? qsTr("El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la añadas, allí solo se abren los elementos con las claves que sí se sincronizan, aunque esa clave tenga permiso sobre ellos.").arg(offered.map(row => row.title).join(", ")) : ""
+                    text: offered.length > 0 ? KI18n.i18n("The phone has %1's key, but it does not sync. Until you add it, only items with keys that do sync open there, even if that key has access to them.", offered.map(row => row.title).join(", ")) : ""
                     actions: [
                         Kirigami.Action {
-                            text: newPhoneKeyMessage.offered.length > 0 ? qsTr("Sincronizar la clave de %1").arg(newPhoneKeyMessage.offered[0].title) : ""
+                            text: newPhoneKeyMessage.offered.length > 0 ? KI18n.i18nc("@action:button", "Sync %1's Key", newPhoneKeyMessage.offered[0].title) : ""
                             icon.name: "list-add"
                             enabled: !deviceRow.host.controller.busy && newPhoneKeyMessage.offered.length > 0
                             onTriggered: deviceRow.host.controller.enableVaultSync(deviceRow.deviceId, deviceRow.syncedKeys.concat([newPhoneKeyMessage.offered[0].id]).join(","))
@@ -174,16 +175,16 @@ Controls.ScrollView {
                     Layout.fillWidth: true
                     visible: deviceRow.vaultSyncOn && deviceRow.host.vaultLocked
                     type: Kirigami.MessageType.Information
-                    text: qsTr("La bóveda de Desktop está bloqueada. Los cambios siguen llegando cifrados y se podrán ver al desbloquearla.")
+                    text: KI18n.i18n("The Desktop vault is locked. Changes keep arriving encrypted and can be seen once you unlock it.")
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     visible: deviceRow.vaultSyncOn && deviceRow.host.controller.vaultSyncLockedKey.length > 0
                     type: Kirigami.MessageType.Information
-                    text: qsTr("La sincronización sigue, pero Desktop no puede abrir lo que llega cifrado para la clave de %1 hasta que la desbloquees.").arg(deviceRow.host.keyTitle(deviceRow.host.controller.vaultSyncLockedKey))
+                    text: KI18n.i18n("Sync continues, but Desktop cannot open what arrives encrypted for %1's key until you unlock it.", deviceRow.host.keyTitle(deviceRow.host.controller.vaultSyncLockedKey))
                     actions: [
                         Kirigami.Action {
-                            text: qsTr("Desbloquear clave…")
+                            text: KI18n.i18nc("@action:button", "Unlock Key…")
                             icon.name: "dialog-password"
                             onTriggered: deviceRow.host.controller.unlockSyncKey(deviceRow.host.controller.vaultSyncLockedKey)
                         }
@@ -208,17 +209,17 @@ Controls.ScrollView {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 4
-                    text: qsTr("Clave OpenPGP")
+                    text: KI18n.i18nc("@title", "OpenPGP key")
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Elige una de tus claves privadas y revisa el destinatario antes de enviarla. Se conserva protegida con su contraseña.")
+                    text: KI18n.i18n("Choose one of your private keys and review the recipient before sending it. It stays protected by its passphrase.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.Button {
-                    text: deviceRow.connection === "disconnected" || deviceRow.connection === "failed" ? qsTr("Reconectar para enviar") : deviceRow.transferEnded ? qsTr("Desconectar para reintentar") : qsTr("Elegir clave para enviar…")
+                    text: deviceRow.connection === "disconnected" || deviceRow.connection === "failed" ? KI18n.i18nc("@action:button", "Reconnect to Send") : deviceRow.transferEnded ? KI18n.i18nc("@action:button", "Disconnect to Retry") : KI18n.i18nc("@action:button", "Choose Key to Send…")
                     icon.name: deviceRow.canSend ? "document-send" : deviceRow.connection === "connected" && deviceRow.transferEnded ? "network-disconnect" : "network-connect"
                     enabled: deviceRow.canSend || deviceRow.canRecoverTransfer
                     onClicked: {
@@ -233,7 +234,7 @@ Controls.ScrollView {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !deviceRow.canSend && !deviceRow.transferPending
-                    text: deviceRow.connection !== "connected" ? qsTr("Conecta este dispositivo para enviar la clave.") : deviceRow.transferEnded ? qsTr("Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. La vinculación se conserva.") : deviceRow.keyTransferVersion < 2 ? deviceRow.keyTransferUnavailableText : deviceRow.syntheticTransferPhase === "ready" ? qsTr("Espera a que termine la operación actual.") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
+                    text: deviceRow.connection !== "connected" ? KI18n.i18n("Connect this device to send the key.") : deviceRow.transferEnded ? KI18n.i18n("To prepare another transfer, disconnect and reconnect this device. The pairing is kept.") : deviceRow.keyTransferVersion < 2 ? deviceRow.keyTransferUnavailableText : deviceRow.syntheticTransferPhase === "ready" ? KI18n.i18n("Wait for the current operation to finish.") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -248,12 +249,12 @@ Controls.ScrollView {
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: deviceRow.host.controller.syntheticTransferPreparing ? qsTr("Preparando la clave…") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
+                        text: deviceRow.host.controller.syntheticTransferPreparing ? KI18n.i18n("Preparing the key…") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
                     Controls.Button {
-                        text: qsTr("Cancelar envío")
+                        text: KI18n.i18nc("@action:button", "Cancel Sending")
                         icon.name: "dialog-cancel"
                         onClicked: deviceRow.host.controller.cancelSyntheticKeyTransfer()
                     }
@@ -269,7 +270,7 @@ Controls.ScrollView {
 
         Controls.ToolButton {
             Layout.leftMargin: Kirigami.Units.largeSpacing
-            text: qsTr("Detalles de conexión")
+            text: KI18n.i18nc("@title:group", "Connection details")
             icon.name: deviceRow.technicalOpen ? "arrow-down" : "arrow-right"
             checkable: true
             checked: deviceRow.technicalOpen
@@ -282,7 +283,7 @@ Controls.ScrollView {
             visible: deviceRow.technicalOpen
             spacing: Kirigami.Units.smallSpacing
             Controls.Label {
-                text: qsTr("Identificador del dispositivo")
+                text: KI18n.i18nc("@label", "Device identifier")
                 color: Kirigami.Theme.disabledTextColor
             }
             Controls.Label {
@@ -293,7 +294,7 @@ Controls.ScrollView {
                 wrapMode: Text.WrapAnywhere
             }
             Controls.ToolButton {
-                text: qsTr("Copiar identificador")
+                text: KI18n.i18nc("@action:button", "Copy Identifier")
                 icon.name: "edit-copy"
                 onClicked: deviceRow.host.copyRequested(deviceRow.deviceId)
             }
@@ -308,7 +309,7 @@ Controls.ScrollView {
                 spacing: Kirigami.Units.largeSpacing
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Desconectar conserva la vinculación. Olvidar retira el permiso de este dispositivo en este equipo.")
+                    text: KI18n.i18n("Disconnecting keeps the pairing. Forgetting removes this device's permission on this computer.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -318,7 +319,7 @@ Controls.ScrollView {
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.largeSpacing
                     Controls.Button {
-                        text: deviceRow.modelData.isActive ? qsTr("Desconectar") : qsTr("Reconectar")
+                        text: deviceRow.modelData.isActive ? KI18n.i18nc("@action", "Disconnect") : KI18n.i18nc("@action", "Reconnect")
                         icon.name: deviceRow.modelData.isActive ? "network-disconnect" : "network-connect"
                         Kirigami.Theme.textColor: deviceRow.modelData.isActive ? deviceActions.Kirigami.Theme.negativeTextColor : deviceActions.Kirigami.Theme.linkColor
                         enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.syncBusy && !deviceRow.host.controller.maintenanceBusy && deviceRow.host.controller.statusCode !== "closing"
@@ -330,7 +331,7 @@ Controls.ScrollView {
                         }
                     }
                     Controls.Button {
-                        text: qsTr("Olvidar dispositivo…")
+                        text: KI18n.i18nc("@action", "Forget Device…")
                         icon.name: "edit-delete"
                         Kirigami.Theme.textColor: deviceActions.Kirigami.Theme.negativeTextColor
                         enabled: !deviceRow.host.controller.busy && !deviceRow.host.controller.aliasBusy
@@ -342,7 +343,7 @@ Controls.ScrollView {
 
         Controls.ToolButton {
             Layout.leftMargin: Kirigami.Units.largeSpacing
-            text: qsTr("Desarrollo")
+            text: KI18n.i18nc("@item folder icon", "Development")
             icon.name: deviceRow.peersExpanded ? "arrow-down" : "arrow-right"
             checkable: true
             checked: deviceRow.peersExpanded
@@ -362,7 +363,7 @@ Controls.ScrollView {
 
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Prueba debug con una clave sintética protegida. Nunca usa ni envía claves OpenPGP reales.")
+                    text: KI18n.i18n("Debug test with a protected synthetic key. It never uses or sends real OpenPGP keys.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -372,7 +373,7 @@ Controls.ScrollView {
                     spacing: Kirigami.Units.smallSpacing
                     Controls.Button {
                         visible: deviceRow.connection === "connected" && deviceRow.syntheticTransferPhase === "ready"
-                        text: qsTr("Enviar clave de prueba")
+                        text: KI18n.i18nc("@action:button", "Send Test Key")
                         icon.name: "mail-send"
                         enabled: !deviceRow.host.controller.syntheticTransferPreparing && !deviceRow.host.controller.syncBusy && !deviceRow.host.controller.busy && !deviceRow.host.controller.maintenanceBusy
                         onClicked: {
@@ -381,7 +382,7 @@ Controls.ScrollView {
                     }
                     Controls.Button {
                         visible: deviceRow.host.keyTransferDeviceId === deviceRow.deviceId && !deviceRow.host.keyTransferVault && ["waiting_acceptance", "sending", "waiting_receipt"].includes(deviceRow.syntheticTransferPhase)
-                        text: qsTr("Cancelar transferencia")
+                        text: KI18n.i18nc("@action:button", "Cancel Transfer")
                         icon.name: "dialog-cancel"
                         onClicked: {
                             console.info("Key transfer cancel from device details cancel button");

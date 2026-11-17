@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: picker
@@ -16,7 +17,7 @@ Controls.Dialog {
     readonly property var localKeys: host.keyStore.entries.filter(key => key.hasSecret && key.statusCode === "valid" && /^[A-Fa-f0-9]{40}$/.test(String(key.id)))
     readonly property var keys: phoneKeys === null ? localKeys : localKeys.filter(key => phoneKeys.indexOf(String(key.id).toUpperCase()) >= 0)
     signal keysChosen(string deviceId, string fingerprints)
-    title: qsTr("Claves para sincronizar")
+    title: KI18n.i18nc("@title:window", "Keys to Sync")
     modal: true
     padding: Kirigami.Units.largeSpacing
     width: Math.min(Kirigami.Units.gridUnit * 28, host.width - Kirigami.Units.gridUnit * 2)
@@ -47,14 +48,14 @@ Controls.Dialog {
             spacing: Kirigami.Units.smallSpacing
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Para: %1").arg(picker.recipient)
+                text: KI18n.i18n("To: %1", picker.recipient)
                 textFormat: Text.PlainText
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: picker.phoneKeys === null ? qsTr("Se sincronizan los elementos cifrados solo con una de las claves marcadas. No se pudo comprobar qué claves tiene el teléfono (desconectado o versión anterior): marca únicamente las que tiene, o no podrá abrir esos elementos.") : qsTr("Se sincronizan los elementos cifrados solo con una de las claves marcadas. Solo se muestran las claves que tienen este equipo y el teléfono.")
+                text: picker.phoneKeys === null ? KI18n.i18n("Items encrypted only with one of the checked keys are synced. Which keys the phone has could not be checked (disconnected or an older version): check only the ones it has, or it will not be able to open those items.") : KI18n.i18n("Items encrypted only with one of the checked keys are synced. Only keys that both this computer and the phone have are shown.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
@@ -75,7 +76,7 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: picker.keys.length === 0
-                text: picker.phoneKeys === null ? qsTr("No hay claves con clave privada válida en este equipo.") : qsTr("El teléfono no tiene ninguna de las claves de este equipo. Envíale una clave desde Dispositivos primero.")
+                text: picker.phoneKeys === null ? KI18n.i18n("There are no keys with a valid private key on this computer.") : KI18n.i18n("The phone has none of this computer's keys. Send it a key from Devices first.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor

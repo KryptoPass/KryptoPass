@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:38-0400\n"
+"POT-Creation-Date: 2026-11-17 15:42-0400\n"
 "PO-Revision-Date: 2026-11-17 15:19-0400\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -171,6 +171,9 @@ msgid "Backup saved"
 msgstr "Copia guardada"
 
 #: crates/kp-desktop/ui/qml/BackupWindow.qml:491
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1102
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1303
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1438
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:551
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:834
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:108
@@ -184,6 +187,11 @@ msgstr "Cerrar"
 #: crates/kp-desktop/ui/qml/ConflictDialog.qml:52
 #: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:87
 #: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:99
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:151
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1102
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1129
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1303
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1499
 #: crates/kp-desktop/ui/qml/EntryIconWindow.qml:149
 #: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
 #: crates/kp-desktop/ui/qml/FolderEditor.qml:333
@@ -257,6 +265,7 @@ msgid "Allow Filling"
 msgstr "Permitir relleno"
 
 #: crates/kp-desktop/ui/qml/BrowserAccessDialog.qml:25
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1424
 #, kde-format
 msgctxt "@action:button"
 msgid "Reject"
@@ -634,6 +643,1268 @@ msgctxt "@action:button %1 is a field name"
 msgid "Hide %1"
 msgstr "Ocultar %1"
 
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:18
+#, kde-format
+msgid ""
+"The phone has no fingerprint registered. Register it in its settings to "
+"receive the key."
+msgstr ""
+"El teléfono no tiene una huella registrada. Regístrala en sus ajustes para "
+"recibir la clave."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:18
+#, kde-format
+msgid "The phone already stores the maximum number of keys."
+msgstr "El teléfono ya guarda el máximo de claves."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:18
+#, kde-format
+msgid "The phone cannot receive keys right now."
+msgstr "El teléfono no puede recibir claves en este momento."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:18
+#, kde-format
+msgid "Update KryptoPass on the phone to receive the key."
+msgstr "Actualiza KryptoPass en el teléfono para recibir la clave."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:87
+#, kde-format
+msgctxt "@label device status suffix"
+msgid "· Paired"
+msgstr "· Vinculado"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:102
+#, kde-format
+msgctxt "@action:button"
+msgid "Rename"
+msgstr "Cambiar nombre"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:130
+#, kde-format
+msgctxt "@title:group"
+msgid "Vault sync"
+msgstr "Sincronización de la bóveda"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:136
+#, kde-format
+msgid "Sync the vault with this device"
+msgstr "Sincronizar la bóveda con este dispositivo"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:145
+#, kde-format
+msgid "On · syncs while the vault is unlocked."
+msgstr "Activada · se sincroniza mientras la bóveda está desbloqueada."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:145
+#, kde-format
+msgid "On · waiting for the device to connect."
+msgstr "Activada · esperando que el dispositivo se conecte."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:145
+#, kde-format
+msgid ""
+"Shares this vault's items. The phone needs its OpenPGP key and Sync turned "
+"on."
+msgstr ""
+"Comparte los elementos de esta bóveda. El teléfono necesita su clave OpenPGP "
+"y tener Sync activado."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:164
+#, kde-format
+msgid ""
+"The phone has %1's key, but it does not sync. Until you add it, only items "
+"with keys that do sync open there, even if that key has access to them."
+msgstr ""
+"El teléfono tiene la clave de %1, pero no se sincroniza. Hasta que la "
+"añadas, allí solo se abren los elementos con las claves que sí se "
+"sincronizan, aunque esa clave tenga permiso sobre ellos."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:167
+#, kde-format
+msgctxt "@action:button"
+msgid "Sync %1's Key"
+msgstr "Sincronizar la clave de %1"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:178
+#, kde-format
+msgid ""
+"The Desktop vault is locked. Changes keep arriving encrypted and can be seen "
+"once you unlock it."
+msgstr ""
+"La bóveda de Desktop está bloqueada. Los cambios siguen llegando cifrados y "
+"se podrán ver al desbloquearla."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:184
+#, kde-format
+msgid ""
+"Sync continues, but Desktop cannot open what arrives encrypted for %1's key "
+"until you unlock it."
+msgstr ""
+"La sincronización sigue, pero Desktop no puede abrir lo que llega cifrado "
+"para la clave de %1 hasta que la desbloquees."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:187
+#, kde-format
+msgctxt "@action:button"
+msgid "Unlock Key…"
+msgstr "Desbloquear clave…"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:212
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:96
+#, kde-format
+msgctxt "@title"
+msgid "OpenPGP key"
+msgstr "Clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:216
+#, kde-format
+msgid ""
+"Choose one of your private keys and review the recipient before sending it. "
+"It stays protected by its passphrase."
+msgstr ""
+"Elige una de tus claves privadas y revisa el destinatario antes de enviarla. "
+"Se conserva protegida con su contraseña."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:222
+#, kde-format
+msgctxt "@action:button"
+msgid "Reconnect to Send"
+msgstr "Reconectar para enviar"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:222
+#, kde-format
+msgctxt "@action:button"
+msgid "Disconnect to Retry"
+msgstr "Desconectar para reintentar"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:222
+#, kde-format
+msgctxt "@action:button"
+msgid "Choose Key to Send…"
+msgstr "Elegir clave para enviar…"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:237
+#, kde-format
+msgid "Connect this device to send the key."
+msgstr "Conecta este dispositivo para enviar la clave."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:237
+#, kde-format
+msgid ""
+"To prepare another transfer, disconnect and reconnect this device. The "
+"pairing is kept."
+msgstr ""
+"Para preparar otro envío, desconecta y vuelve a conectar este dispositivo. "
+"La vinculación se conserva."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:237
+#, kde-format
+msgid "Wait for the current operation to finish."
+msgstr "Espera a que termine la operación actual."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:252
+#, kde-format
+msgid "Preparing the key…"
+msgstr "Preparando la clave…"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:257
+#, kde-format
+msgctxt "@action:button"
+msgid "Cancel Sending"
+msgstr "Cancelar envío"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:273
+#, kde-format
+msgctxt "@title:group"
+msgid "Connection details"
+msgstr "Detalles de conexión"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:286
+#, kde-format
+msgctxt "@label"
+msgid "Device identifier"
+msgstr "Identificador del dispositivo"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:297
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Identifier"
+msgstr "Copiar identificador"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:312
+#, kde-format
+msgid ""
+"Disconnecting keeps the pairing. Forgetting removes this device's permission "
+"on this computer."
+msgstr ""
+"Desconectar conserva la vinculación. Olvidar retira el permiso de este "
+"dispositivo en este equipo."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:322
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1012
+#, kde-format
+msgctxt "@action"
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:322
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1012
+#, kde-format
+msgctxt "@action"
+msgid "Reconnect"
+msgstr "Reconectar"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:334
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1030
+#, kde-format
+msgctxt "@action"
+msgid "Forget Device…"
+msgstr "Olvidar dispositivo…"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:346
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:108
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Development"
+msgstr "Desarrollo"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:366
+#, kde-format
+msgid ""
+"Debug test with a protected synthetic key. It never uses or sends real "
+"OpenPGP keys."
+msgstr ""
+"Prueba debug con una clave sintética protegida. Nunca usa ni envía claves "
+"OpenPGP reales."
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:376
+#, kde-format
+msgctxt "@action:button"
+msgid "Send Test Key"
+msgstr "Enviar clave de prueba"
+
+#: crates/kp-desktop/ui/qml/DeviceDetailsPage.qml:385
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1303
+#, kde-format
+msgctxt "@action:button"
+msgid "Cancel Transfer"
+msgstr "Cancelar transferencia"
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:22
+#, kde-format
+msgctxt "@title:window"
+msgid "Choose Key to Send"
+msgstr "Elegir clave para enviar"
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:46
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:51
+#, kde-format
+msgid "To: %1"
+msgstr "Para: %1"
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:53
+#, kde-format
+msgid "Choose which of your private keys to send to the phone."
+msgstr "Elige cuál de tus claves privadas quieres enviar al teléfono."
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:87
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:444
+#, kde-format
+msgid "Full fingerprint: %1"
+msgstr "Huella completa: %1"
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:96
+#, kde-format
+msgid ""
+"This key is not the active vault's main key. Sending it does not change the "
+"main key or give access to items encrypted only with it."
+msgstr ""
+"Esta clave no es la principal de la bóveda activa. Enviarla no cambia la "
+"principal ni da acceso a los elementos cifrados solo con ella."
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:103
+#, kde-format
+msgid ""
+"For now, the phone accepts a single imported key. It does not replace an "
+"existing one."
+msgstr ""
+"Por ahora, el teléfono admite una sola clave importada. No reemplaza una "
+"existente."
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:123
+#, kde-format
+msgid ""
+"The connection or the chosen key is no longer available. Close and choose "
+"again before sending it."
+msgstr ""
+"La conexión o la clave elegida ya no está disponible. Cierra y vuelve a "
+"elegir antes de enviarla."
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:134
+#, kde-format
+msgid ""
+"No private keys are available in GnuPG. Check your keys before sending them."
+msgstr ""
+"No hay claves privadas disponibles en GnuPG. Revisa tus claves antes de "
+"enviarlas."
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:140
+#, kde-format
+msgctxt "@action:button"
+msgid "Refresh Keys"
+msgstr "Actualizar claves"
+
+#: crates/kp-desktop/ui/qml/DeviceKeyPicker.qml:155
+#, kde-format
+msgctxt "@action:button"
+msgid "Review Transfer"
+msgstr "Revisar envío"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:26
+#, kde-format
+msgid "another device"
+msgstr "otro dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:64
+#, kde-format
+msgctxt "@title:window"
+msgid "Devices"
+msgstr "Dispositivos"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:95
+#, kde-format
+msgid "Reviewing the offered key…"
+msgstr "Revisando la clave ofrecida…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:97
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Waiting for your decision"
+msgstr "Esperando tu decisión"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:99
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Receiving (%1 of %2 bytes)"
+msgstr "Recibiendo (%1 de %2 bytes)"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:101
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Importing into GnuPG"
+msgstr "Importando en GnuPG"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:103
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Checking the challenge"
+msgstr "Comprobando el desafío"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:105
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Complete"
+msgstr "Completado"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:107
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Rejected"
+msgstr "Rechazada"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:109
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Cancelled by the phone"
+msgstr "Cancelada por el teléfono"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:111
+#: crates/kp-desktop/ui/qml/IdentityWording.qml:29
+#, kde-format
+msgctxt "@info key status"
+msgid "Expired"
+msgstr "Caducada"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:113
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Error"
+msgstr "Error"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:149
+#, kde-format
+msgctxt "@label fallback device name"
+msgid "Device"
+msgstr "Dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:155
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:34
+#, kde-format
+msgctxt "@info connection status"
+msgid "Connected"
+msgstr "Conectado"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:157
+#, kde-format
+msgctxt "@info connection status"
+msgid "Connecting"
+msgstr "Conectando"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:159
+#, kde-format
+msgctxt "@info connection status"
+msgid "Reconnecting"
+msgstr "Reconectando"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:161
+#, kde-format
+msgctxt "@info connection status"
+msgid "Connection interrupted"
+msgstr "Conexión interrumpida"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:163
+#, kde-format
+msgctxt "@info connection status"
+msgid "Disconnected"
+msgstr "Desconectado"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:180
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Ready to send the chosen key"
+msgstr "Lista para enviar la clave elegida"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:182
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "This device cannot receive the key"
+msgstr "Este dispositivo no admite recibir la clave"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:184
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Waiting for you to accept on the phone"
+msgstr "Esperando que aceptes en el teléfono"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:186
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Sending your key"
+msgstr "Enviando tu clave"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:188
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Waiting for the phone to store it"
+msgstr "Esperando que el teléfono la guarde"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:190
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "The phone stored your key and checked that it can decrypt"
+msgstr "El teléfono guardó tu clave y comprobó que puede descifrar"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:199
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Transfer test available"
+msgstr "Prueba de transferencia disponible"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:201
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Waiting for Android to accept"
+msgstr "Esperando que Android acepte"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:203
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Sending test key"
+msgstr "Enviando clave de prueba"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:205
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Waiting for storage confirmation"
+msgstr "Esperando confirmación de guardado"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:207
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Android confirmed storage and the challenge"
+msgstr "Android confirmó el guardado y el desafío"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:209
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Android rejected the offer"
+msgstr "Android rechazó la oferta"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:211
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Transfer cancelled"
+msgstr "Transferencia cancelada"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:213
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "The transfer expired"
+msgstr "La transferencia caducó"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:215
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "Connection lost; the result is uncertain"
+msgstr "Conexión perdida; el resultado es incierto"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:217
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "The transfer failed"
+msgstr "La transferencia falló"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:219
+#, kde-format
+msgctxt "@info key transfer status"
+msgid "This session does not support the test"
+msgstr "Esta sesión no admite la prueba"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:229
+#, kde-format
+msgid "Checking route…"
+msgstr "Comprobando ruta…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:236
+#, kde-format
+msgid ""
+"Scan the QR code and choose Reconnect on Android. The connection code "
+"expires in 5 minutes."
+msgstr ""
+"Escanea el QR y elige Reconectar en Android. El código de conexión caduca en "
+"5 minutos."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:236
+#, kde-format
+msgid ""
+"Scan the QR code and choose Pair Device on Android. The connection code "
+"expires in 5 minutes."
+msgstr ""
+"Escanea el QR y elige Vincular dispositivo en Android. El código de conexión "
+"caduca en 5 minutos."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:238
+#, kde-format
+msgid ""
+"Compare the seven emoji and their names with Android. Confirm only if all of "
+"them match on both screens."
+msgstr ""
+"Compara los siete emojis y sus nombres con Android. Confirma solo si todos "
+"coinciden en ambas pantallas."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:240
+#, kde-format
+msgid "The other screen is confirming the comparison."
+msgstr "La otra pantalla está confirmando la comparación."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:242
+#, kde-format
+msgid "Trying to recover the authenticated session with this device."
+msgstr "Intentando recuperar la sesión autenticada con este dispositivo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:244
+#, kde-format
+msgid "Closing the link. The device stays paired."
+msgstr "Cerrando el enlace. El dispositivo seguirá emparejado."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:246
+#, kde-format
+msgid "The invitation expired. Create a new one to try again."
+msgstr "La invitación caducó. Genera una nueva para volver a intentarlo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:248
+#, kde-format
+msgid ""
+"The saved trust was not changed. Check the profile and reload the devices."
+msgstr ""
+"No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar "
+"los dispositivos."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:250
+#, kde-format
+msgid ""
+"Reload the devices. If the problem continues, check the application log."
+msgstr ""
+"Vuelve a cargar los dispositivos. Si el problema continúa, consulta el "
+"registro de la aplicación."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:252
+#, kde-format
+msgid "Check that the system keyring is available and try again."
+msgstr ""
+"Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:254
+#, kde-format
+msgid ""
+"The device was not authenticated. Trust was not extended; create a new code "
+"to retry."
+msgstr ""
+"No se autenticó el dispositivo. La confianza no se amplió; genera un código "
+"nuevo para reintentar."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:256
+#, kde-format
+msgid "The pairing was rejected and no trust was granted."
+msgstr "La vinculación fue rechazada y no se concedió confianza."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:258
+#, kde-format
+msgid "The operation was cancelled. The trust already saved is kept."
+msgstr ""
+"La operación se canceló. La confianza que ya estaba guardada se conserva."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:260
+#, kde-format
+msgid "Check the Internet access and try again."
+msgstr "Comprueba el acceso a Internet y vuelve a intentarlo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:260
+#, kde-format
+msgid "Check that both devices are on the same network and try again."
+msgstr ""
+"Comprueba que ambos dispositivos estén en la misma red y vuelve a intentarlo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:262
+#, kde-format
+msgid ""
+"The session is disconnected. The saved trust is kept; you can reconnect the "
+"device."
+msgstr ""
+"La sesión está desconectada. La confianza guardada se conserva; puedes "
+"reconectar el dispositivo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:264
+#, kde-format
+msgid ""
+"The authenticated session is active. Closing this window does not disconnect "
+"it."
+msgstr ""
+"La sesión autenticada está activa. Cerrar esta ventana no la desconecta."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:435
+#, kde-format
+msgctxt "@action:button"
+msgid "Back to Devices"
+msgstr "Volver a dispositivos"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:453
+#, kde-format
+msgctxt "@title"
+msgid "Your devices"
+msgstr "Tus dispositivos"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:459
+#, kde-format
+msgid "Device connection and options"
+msgstr "Conexión y opciones del dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:459
+#, kde-format
+msgid "Pair and connect your devices"
+msgstr "Vincula y conecta tus dispositivos"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:468
+#, kde-format
+msgctxt "@action:button"
+msgid "More Options"
+msgstr "Más opciones"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:476
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Connection Options"
+msgstr "Opciones de conexión"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:486
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Refresh Devices and Networks"
+msgstr "Actualizar dispositivos y redes"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:496
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Delete All Pairings…"
+msgstr "Borrar todas las vinculaciones…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:545
+#, kde-format
+msgctxt "@action:button"
+msgid "Reconnect Device"
+msgstr "Reconectar dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:545
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1057
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1094
+#, kde-format
+msgctxt "@action:button"
+msgid "Pair Device"
+msgstr "Vincular dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:568
+#, kde-format
+msgid "Local pairing QR code"
+msgstr "Código QR de vinculación local"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:583
+#, kde-format
+msgid ""
+"The phone tries the local network first and, if it cannot reach it, uses the "
+"Internet."
+msgstr "El teléfono prueba primero la red local y, si no llega, usa Internet."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:583
+#, kde-format
+msgid "Both devices need Internet access."
+msgstr "Ambos dispositivos necesitan acceso a Internet."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:583
+#, kde-format
+msgid "Both devices must be on the same local network."
+msgstr "Ambos dispositivos deben estar en la misma red local."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:583
+#, kde-format
+msgid "Emulator mode: only for Android on this computer."
+msgstr "Modo emulador: solo para Android en esta computadora."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:589
+#, kde-format
+msgctxt "@action:button"
+msgid "Hide Code"
+msgstr "Ocultar código"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:589
+#, kde-format
+msgctxt "@action:button"
+msgid "Use a Code Instead of QR"
+msgstr "Usar código en lugar de QR"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:606
+#, kde-format
+msgid "One-time invitation code"
+msgstr "Código de invitación de un solo uso"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:609
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy"
+msgstr "Copiar"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:619
+#, kde-format
+msgctxt "@title"
+msgid "Compare the seven items"
+msgstr "Compara los siete elementos"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:660
+#, kde-format
+msgctxt "@info SAS emoji position and emoji"
+msgid "Item %1: %2"
+msgstr "Elemento %1: %2"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:678
+#, kde-format
+msgid "If a single emoji or name does not match, reject the pairing."
+msgstr "Si un solo emoji o nombre no coincide, rechaza la vinculación."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:678
+#, kde-format
+msgid ""
+"The full comparison could not be shown. Reject the pairing and try again."
+msgstr ""
+"No se pudo mostrar la comparación completa. Rechaza la vinculación y vuelve "
+"a intentarlo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:693
+#, kde-format
+msgctxt "@action:button"
+msgid "They Do Not Match"
+msgstr "No coinciden"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:698
+#, kde-format
+msgctxt "@action:button"
+msgid "All 7 Match"
+msgstr "Los 7 coinciden"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:712
+#, kde-format
+msgctxt "@title:group"
+msgid "Connection privacy"
+msgstr "Privacidad de la conexión"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:724
+#, kde-format
+msgctxt "@option:radio"
+msgid "Automatic (recommended)"
+msgstr "Automática (recomendada)"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:736
+#, kde-format
+msgid ""
+"Uses the route the system chooses, including your VPN if it is connected."
+msgstr "Usa la ruta que elija el sistema, incluida tu VPN si está conectada."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:744
+#, kde-format
+msgctxt "@option:radio"
+msgid "Only through a VPN"
+msgstr "Solo a través de VPN"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:756
+#, kde-format
+msgid ""
+"The Internet is only used while the system sends it through a VPN. If the "
+"VPN disconnects, the connection pauses."
+msgstr ""
+"Internet solo se usa mientras el sistema lo envía por una VPN. Si la VPN se "
+"desconecta, la conexión se pausa."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:768
+#, kde-format
+msgid "VPN connected: the Internet connection goes through it."
+msgstr "VPN conectada: la conexión a Internet pasa por ella."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:770
+#, kde-format
+msgid ""
+"No VPN is connected. Internet connections are paused until you connect it."
+msgstr ""
+"No hay una VPN conectada. Las conexiones por Internet están en pausa hasta "
+"que la conectes."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:772
+#, kde-format
+msgid ""
+"This system does not allow checking the VPN, so Internet connections are "
+"paused."
+msgstr ""
+"Este sistema no permite comprobar la VPN, así que las conexiones por "
+"Internet están en pausa."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:780
+#, kde-format
+msgctxt "@option:check"
+msgid "Also allow the local network"
+msgstr "Permitir también la red local"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:792
+#, kde-format
+msgctxt "@option:check"
+msgid "Hide my IP address from the other device"
+msgstr "Ocultar mi dirección IP al otro dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:803
+#, kde-format
+msgid ""
+"Everything goes through the relay server. It is a bit slower and disables "
+"the local network."
+msgstr ""
+"Todo pasa por el servidor de retransmisión. Es algo más lento y desactiva la "
+"red local."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:813
+#, kde-format
+msgctxt "@title:group"
+msgid "How to pair a new device"
+msgstr "Cómo emparejar un dispositivo nuevo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:825
+#, kde-format
+msgctxt "@option:radio"
+msgid "Automatic: local network and, if it cannot reach it, the Internet"
+msgstr "Automático: red local y, si no llega, Internet"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:839
+#, kde-format
+msgctxt "@option:radio"
+msgid "Internet only"
+msgstr "Solo por Internet"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:857
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Connection server (wss://…)"
+msgstr "Servidor de conexión (wss://…)"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:858
+#, kde-format
+msgid "Internet connection server"
+msgstr "Servidor de conexión por Internet"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:864
+#, kde-format
+msgctxt "@option:radio"
+msgid "Local network only"
+msgstr "Solo red local"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:879
+#, kde-format
+msgid "Unavailable while you hide your IP address."
+msgstr "No disponible mientras ocultas tu dirección IP."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:879
+#, kde-format
+msgid "Unavailable: enable “Also allow the local network” in Privacy."
+msgstr "No disponible: activa «Permitir también la red local» en Privacidad."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:893
+#, kde-format
+msgid "This computer's local network"
+msgstr "Red local de este equipo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:898
+#, kde-format
+msgctxt "@action:button"
+msgid "Refresh Networks"
+msgstr "Actualizar redes"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:910
+#, kde-format
+msgid ""
+"No local network was found. Connect to Wi-Fi or Ethernet and refresh the "
+"networks."
+msgstr ""
+"No se encontró una red local. Conéctate a Wi-Fi o Ethernet y actualiza las "
+"redes."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:918
+#, kde-format
+msgctxt "@option:radio"
+msgid "Android emulator on this computer (advanced)"
+msgstr "Emulador Android en este equipo (avanzado)"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:935
+#, kde-format
+msgctxt "@title:group"
+msgid "Authorized devices"
+msgstr "Dispositivos autorizados"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:941
+#, kde-format
+msgid "Loading authorized devices…"
+msgstr "Cargando dispositivos autorizados…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:999
+#, kde-format
+msgid "More actions for %1"
+msgstr "Más acciones para %1"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1002
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "More actions"
+msgstr "Más acciones"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1007
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "View Details and Options"
+msgstr "Ver detalles y opciones"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1023
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:162
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Rename…"
+msgstr "Cambiar nombre…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1054
+#, kde-format
+msgctxt "@title placeholder"
+msgid "No paired devices"
+msgstr "Sin dispositivos vinculados"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1055
+#, kde-format
+msgid ""
+"Pair KryptoPass for Android to keep a secure connection with this computer."
+msgstr ""
+"Vincula KryptoPass para Android para mantener una conexión segura con este "
+"equipo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1119
+#, kde-format
+msgctxt "@title:window"
+msgid "Delete All Pairings?"
+msgstr "¿Borrar todas las vinculaciones?"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1119
+#, kde-format
+msgctxt "@title:window"
+msgid "Forget Device?"
+msgstr "¿Olvidar dispositivo?"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1123
+#, kde-format
+msgid ""
+"The connection will close, and this pairing profile's private identity, its "
+"authorizations and local names will be deleted. The vault and the OpenPGP "
+"keys are kept. To pair again, compare a new SAS."
+msgstr ""
+"Se cerrará la conexión y se borrarán la identidad privada de este perfil de "
+"vinculación, sus autorizaciones y nombres locales. La bóveda y las claves "
+"OpenPGP se conservan. Para volver a vincular, compara un SAS nuevo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1123
+#, kde-format
+msgid ""
+"The connection will close, and the authorization and local name of “%1” will "
+"be removed on this computer. Also forget this computer on Android before "
+"pairing them again. The vault and OpenPGP are kept."
+msgstr ""
+"Se cerrará la conexión y se eliminarán la autorización y el nombre local de "
+"«%1» en este equipo. También olvida este equipo en Android antes de volver a "
+"emparejarlos. La bóveda y OpenPGP se conservan."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1133
+#, kde-format
+msgctxt "@action:button"
+msgid "Delete All Pairings"
+msgstr "Borrar todas las vinculaciones"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1133
+#, kde-format
+msgctxt "@action:button"
+msgid "Forget Device"
+msgstr "Olvidar dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1153
+#, kde-format
+msgctxt "@title:window"
+msgid "One Connection at a Time"
+msgstr "Una conexión a la vez"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1156
+#, kde-format
+msgid ""
+"You are now connected to %1. To connect another device, open this connection "
+"and press Disconnect. Your devices stay paired."
+msgstr ""
+"Ahora estás conectado a %1. Para conectar otro dispositivo, abre esta "
+"conexión y pulsa Desconectar. Tus dispositivos seguirán vinculados."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1162
+#, kde-format
+msgctxt "@action:button dismiss"
+msgid "Back"
+msgstr "Volver"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1166
+#, kde-format
+msgctxt "@action:button"
+msgid "View Current Connection"
+msgstr "Ver conexión actual"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1208
+#, kde-format
+msgctxt "@title:window"
+msgid "Send Your OpenPGP Key to the Phone"
+msgstr "Enviar tu clave OpenPGP al teléfono"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1208
+#, kde-format
+msgctxt "@title:window"
+msgid "Confirm Sending the Test Key"
+msgstr "Confirmar envío de clave de prueba"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1248
+#, kde-format
+msgid "Recipient: %1"
+msgstr "Destinatario: %1"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1254
+#, kde-format
+msgid ""
+"Chosen key: %1\n"
+"Full fingerprint; compare it with the phone:"
+msgstr ""
+"Clave elegida: %1\n"
+"Huella completa; compárala con el teléfono:"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1254
+#, kde-format
+msgid "Full fingerprint of the synthetic OpenPGP identity:"
+msgstr "Fingerprint completo de la identidad OpenPGP sintética:"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1264
+#, kde-format
+msgid "Full fingerprint of your key"
+msgstr "Fingerprint completo de tu clave"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1264
+#, kde-format
+msgid "Full fingerprint of the test key"
+msgstr "Fingerprint completo de la clave de prueba"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1271
+#, kde-format
+msgid ""
+"Only the chosen private key will be sent to this phone, after you accept it "
+"there. GnuPG will ask for its passphrase to export it, and it stays "
+"protected by it. It does not change the vault's main key or replace an "
+"existing identity on the phone. If vault sync is enabled with this phone, "
+"items that include this key will also sync with it. This confirmation "
+"authorizes a single transfer in this session."
+msgstr ""
+"Se enviará únicamente la clave privada elegida a este teléfono, después de "
+"que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá "
+"protegida con ella. No cambia la clave principal de la bóveda ni reemplaza "
+"una identidad existente en el teléfono. Si la sincronización de la bóveda "
+"está activada con este teléfono, también se sincronizarán con él los "
+"elementos que incluyan esta clave. Esta confirmación autoriza un único envío "
+"en esta sesión."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1271
+#, kde-format
+msgid ""
+"Only the synthetic test key will be sent, after Android accepts it. This "
+"confirmation authorizes a single transfer for this session."
+msgstr ""
+"Solo se enviará la clave sintética de prueba, después de que Android la "
+"acepte. Esta confirmación autoriza una única transferencia para esta sesión."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1277
+#, kde-format
+msgid ""
+"The connection or the key changed. Close this confirmation and choose the "
+"key again."
+msgstr ""
+"La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la "
+"clave."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1287
+#, kde-format
+msgid "Exporting your key with GnuPG; enter its passphrase if asked…"
+msgstr "Exportando tu clave con GnuPG; escribe su contraseña si te la pide…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1287
+#, kde-format
+msgid "Preparing the test key in GnuPG…"
+msgstr "Preparando la clave de prueba en GnuPG…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1316
+#, kde-format
+msgctxt "@action:button"
+msgid "Confirm and Send"
+msgstr "Confirmar y enviar"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1316
+#, kde-format
+msgid "Preparing…"
+msgstr "Preparando…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1316
+#, kde-format
+msgid "Sending…"
+msgstr "Enviando…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1316
+#: crates/kp-desktop/ui/qml/EntryListPane.qml:419
+#: crates/kp-desktop/ui/qml/Main.qml:1178
+#: crates/kp-desktop/ui/qml/Main.qml:1205
+#, kde-format
+msgctxt "@action:button"
+msgid "Retry"
+msgstr "Reintentar"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1316
+#, kde-format
+msgctxt "@action:button"
+msgid "Back to Device"
+msgstr "Volver al dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1347
+#, kde-format
+msgctxt "@title:window"
+msgid "Receive Your OpenPGP Key from the Phone"
+msgstr "Recibir tu clave OpenPGP desde el teléfono"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1358
+#, kde-format
+msgid "From: %1"
+msgstr "Origen: %1"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1364
+#, kde-format
+msgid ""
+"Full fingerprint of the offered key. Compare it with the one the phone shows:"
+msgstr ""
+"Fingerprint completo de la clave ofrecida. Compáralo con el que muestra el "
+"teléfono:"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1374
+#, kde-format
+msgid "Full fingerprint of the offered key"
+msgstr "Fingerprint completo de la clave ofrecida"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1385
+#, kde-format
+msgid ""
+"Only the passphrase-protected private key with this fingerprint will be "
+"accepted. After importing it, GnuPG may ask for its passphrase to check that "
+"it works."
+msgstr ""
+"Solo se aceptará la clave privada protegida con contraseña de esta huella. "
+"Después de importarla, GnuPG puede pedirte su contraseña para comprobar que "
+"funciona."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1431
+#, kde-format
+msgctxt "@action:button"
+msgid "Accept and Import"
+msgstr "Aceptar e importar"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1450
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1463
+#, kde-format
+msgctxt "@title:window"
+msgid "Device Name"
+msgstr "Nombre del dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1464
+#, kde-format
+msgid "Local device name"
+msgstr "Nombre local del dispositivo"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1473
+#, kde-format
+msgid "It is stored only on this computer."
+msgstr "Solo se guarda en este equipo."
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1489
+#, kde-format
+msgctxt "@action:button"
+msgid "Remove Name"
+msgstr "Quitar nombre"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1505
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:713
+#, kde-format
+msgid "Saving…"
+msgstr "Guardando…"
+
+#: crates/kp-desktop/ui/qml/DevicesWindow.qml:1505
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
+#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:130
+#, kde-format
+msgctxt "@action:button"
+msgid "Save"
+msgstr "Guardar"
+
 #: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
 #: crates/kp-desktop/ui/qml/EntryTypes.qml:48
 #, kde-format
@@ -947,14 +2218,6 @@ msgstr "Prueba con otro título, carpeta o tipo."
 #, kde-format
 msgid "Create an item to get started."
 msgstr "Crea un elemento para empezar."
-
-#: crates/kp-desktop/ui/qml/EntryListPane.qml:419
-#: crates/kp-desktop/ui/qml/Main.qml:1178
-#: crates/kp-desktop/ui/qml/Main.qml:1205
-#, kde-format
-msgctxt "@action:button"
-msgid "Retry"
-msgstr "Reintentar"
 
 #: crates/kp-desktop/ui/qml/EntryListPane.qml:419
 #, kde-format
@@ -1378,12 +2641,6 @@ msgctxt "@item folder icon"
 msgid "Passwords"
 msgstr "Contraseñas"
 
-#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:108
-#, kde-format
-msgctxt "@item folder icon"
-msgid "Development"
-msgstr "Desarrollo"
-
 #: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:112
 #, kde-format
 msgctxt "@item folder icon"
@@ -1498,19 +2755,6 @@ msgstr "Carpetas principales"
 #, kde-format
 msgid "Parent folder"
 msgstr "Carpeta superior"
-
-#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:713
-#, kde-format
-msgid "Saving…"
-msgstr "Guardando…"
-
-#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
-#: crates/kp-desktop/ui/qml/IdentityAddDialog.qml:130
-#, kde-format
-msgctxt "@action:button"
-msgid "Save"
-msgstr "Guardar"
 
 #: crates/kp-desktop/ui/qml/FolderEditor.qml:352
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:729
@@ -2225,12 +3469,6 @@ msgctxt "@info key status"
 msgid "Revoked"
 msgstr "Revocada"
 
-#: crates/kp-desktop/ui/qml/IdentityWording.qml:29
-#, kde-format
-msgctxt "@info key status"
-msgid "Expired"
-msgstr "Caducada"
-
 #: crates/kp-desktop/ui/qml/IdentityWording.qml:31
 #, kde-format
 msgctxt "@info key status"
@@ -2881,12 +4119,6 @@ msgctxt "@action:inmenu"
 msgid "View Keys"
 msgstr "Ver claves"
 
-#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:162
-#, kde-format
-msgctxt "@action:inmenu"
-msgid "Rename…"
-msgstr "Cambiar nombre…"
-
 #: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:178
 #, kde-format
 msgid "No people."
@@ -2979,12 +4211,6 @@ msgstr "Error al cargar claves"
 #, kde-format
 msgid "GnuPG error details"
 msgstr "Detalles del error de GnuPG"
-
-#: crates/kp-desktop/ui/qml/KeyImportReview.qml:96
-#, kde-format
-msgctxt "@title"
-msgid "OpenPGP key"
-msgstr "Clave OpenPGP"
 
 #: crates/kp-desktop/ui/qml/KeyImportReview.qml:101
 #, kde-format
@@ -3141,6 +4367,7 @@ msgid "Private only"
 msgstr "Solo privada"
 
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:89
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:59
 #: crates/kp-desktop/ui/qml/VersionDialog.qml:102
 #, kde-format
 msgid "No name"
@@ -3323,11 +4550,6 @@ msgstr "Eliminar del llavero"
 #, kde-format
 msgid "Operation complete."
 msgstr "Operación completada."
-
-#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:444
-#, kde-format
-msgid "Full fingerprint: %1"
-msgstr "Huella completa: %1"
 
 #: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:452
 #, kde-format
@@ -4192,6 +5414,7 @@ msgid "View Details…"
 msgstr "Ver detalles…"
 
 #: crates/kp-desktop/ui/qml/Main.qml:1340
+#: crates/kp-desktop/ui/qml/SyncStatusPopover.qml:61
 #, kde-format
 msgid "%1 key"
 msgid_plural "%1 keys"
@@ -5493,6 +6716,275 @@ msgstr "Campo"
 #, kde-format
 msgid "No value"
 msgstr "Sin valor"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:47
+#, kde-format
+msgid "The phone does not have this key, so it does not sync."
+msgstr "El teléfono no tiene esta clave, así que no se sincroniza."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:50
+#, kde-format
+msgid ""
+"It syncs. The phone could not be checked (disconnected or an older version)."
+msgstr ""
+"Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión "
+"anterior)."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:50
+#, kde-format
+msgid "It syncs."
+msgstr "Se sincroniza."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:53
+#, kde-format
+msgid "The phone has it, but it does not sync."
+msgstr "El teléfono la tiene, pero no se sincroniza."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:53
+#, kde-format
+msgid "Only the phone has it; Desktop does not have its private key."
+msgstr "Solo la tiene el teléfono; Desktop no tiene su clave privada."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:55
+#, kde-format
+msgid "Only on Desktop: the phone does not have it."
+msgstr "Solo en Desktop: el teléfono no la tiene."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:55
+#, kde-format
+msgid "Only on Desktop."
+msgstr "Solo en Desktop."
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:59
+#, kde-format
+msgid "Unknown key"
+msgstr "Clave desconocida"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:74
+#, kde-format
+msgctxt "@title:group"
+msgid "Keys in Sync (%1 of %2)"
+msgstr "Claves en Sincronización (%1 de %2)"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:79
+#: crates/kp-desktop/ui/qml/SyncStatusPopover.qml:78
+#, kde-format
+msgctxt "@action:button"
+msgid "Refresh"
+msgstr "Actualizar"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:85
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Negotiate with the phone again to read its current keys"
+msgstr "Vuelve a negociar con el teléfono para leer sus claves actuales"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:122
+#, kde-format
+msgctxt "@action:button"
+msgid "Unlock…"
+msgstr "Desbloquear…"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:128
+#, kde-format
+msgctxt "@action:button"
+msgid "Sync"
+msgstr "Sincronizar"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:135
+#, kde-format
+msgctxt "@action:button"
+msgid "Stop Syncing"
+msgstr "Dejar de sincronizar"
+
+#: crates/kp-desktop/ui/qml/SyncKeyList.qml:145
+#, kde-format
+msgid "There are no keys with a private part on this computer yet."
+msgstr "Aún no hay claves con parte privada en este equipo."
+
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:20
+#, kde-format
+msgctxt "@title:window"
+msgid "Keys to Sync"
+msgstr "Claves para sincronizar"
+
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:58
+#, kde-format
+msgid ""
+"Items encrypted only with one of the checked keys are synced. Which keys the "
+"phone has could not be checked (disconnected or an older version): check "
+"only the ones it has, or it will not be able to open those items."
+msgstr ""
+"Se sincronizan los elementos cifrados solo con una de las claves marcadas. "
+"No se pudo comprobar qué claves tiene el teléfono (desconectado o versión "
+"anterior): marca únicamente las que tiene, o no podrá abrir esos elementos."
+
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:58
+#, kde-format
+msgid ""
+"Items encrypted only with one of the checked keys are synced. Only keys that "
+"both this computer and the phone have are shown."
+msgstr ""
+"Se sincronizan los elementos cifrados solo con una de las claves marcadas. "
+"Solo se muestran las claves que tienen este equipo y el teléfono."
+
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:79
+#, kde-format
+msgid "There are no keys with a valid private key on this computer."
+msgstr "No hay claves con clave privada válida en este equipo."
+
+#: crates/kp-desktop/ui/qml/SyncKeysPicker.qml:79
+#, kde-format
+msgid ""
+"The phone has none of this computer's keys. Send it a key from Devices first."
+msgstr ""
+"El teléfono no tiene ninguna de las claves de este equipo. Envíale una clave "
+"desde Dispositivos primero."
+
+#: crates/kp-desktop/ui/qml/SyncStatusBadge.qml:95
+#, kde-format
+msgid "Vault status: %1"
+msgstr "Estado de la bóveda: %1"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:32
+#, kde-format
+msgid "Connected · no key syncs"
+msgstr "Conectado · ninguna clave se sincroniza"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:34
+#, kde-format
+msgctxt "@info %1 is a relative time such as 5 min ago"
+msgid "Last synced %1"
+msgstr "Última sincronización %1"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:36
+#, kde-format
+msgid "Reconnecting…"
+msgstr "Reconectando…"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:38
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:107
+#, kde-format
+msgid "Connecting…"
+msgstr "Conectando…"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:40
+#, kde-format
+msgid "Connection failed"
+msgstr "Falló la conexión"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:42
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:109
+#, kde-format
+msgid "Offline"
+msgstr "Sin conexión"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:101
+#, kde-format
+msgid "A passphrase is missing"
+msgstr "Falta una contraseña"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:103
+#, kde-format
+msgid "Sync error"
+msgstr "Error de sincronización"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:105
+#, kde-format
+msgid "Syncing…"
+msgstr "Sincronizando…"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:111
+#, kde-format
+msgid "No keys to sync"
+msgstr "Sin claves que sincronizar"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:113
+#, kde-format
+msgctxt "@info vault sync status"
+msgid "Synced"
+msgstr "Sincronizada"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:118
+#, kde-format
+msgid ""
+"Sync continues. What arrives encrypted for a key without its passphrase will "
+"be visible once you unlock it."
+msgstr ""
+"La sincronización sigue. Lo que llega cifrado para una clave sin contraseña "
+"se verá al desbloquearla."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:122
+#, kde-format
+msgid "your devices"
+msgstr "tus dispositivos"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:124
+#, kde-format
+msgid "No connection with %1. The vault syncs when it reconnects."
+msgstr "Sin conexión con %1. La bóveda se sincroniza al volver a conectarse."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:126
+#, kde-format
+msgid "Connecting to %1…"
+msgstr "Conectando con %1…"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:128
+#, kde-format
+msgid "%1 is connected, but no key syncs with it."
+msgstr "%1 está conectado, pero ninguna clave se sincroniza con él."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:128
+#, kde-format
+msgid "No key syncs with %1."
+msgstr "Ninguna clave se sincroniza con %1."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:128
+#, kde-format
+msgid "Choose the keys in Devices."
+msgstr "Elige las claves en Dispositivos."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:130
+#: crates/kp-desktop/ui/qml/SyncStatusPopover.qml:31
+#, kde-format
+msgid "No paired devices. The vault is only on this computer."
+msgstr "Ningún dispositivo vinculado. La bóveda solo está en este equipo."
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:143
+#, kde-format
+msgctxt "@info relative time"
+msgid "now"
+msgstr "ahora"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:145
+#, kde-format
+msgctxt "@info relative time"
+msgid "%1 s ago"
+msgstr "hace %1 s"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:148
+#, kde-format
+msgctxt "@info relative time"
+msgid "%1 min ago"
+msgstr "hace %1 min"
+
+#: crates/kp-desktop/ui/qml/SyncStatusModel.qml:149
+#, kde-format
+msgctxt "@info relative time"
+msgid "%1 h ago"
+msgstr "hace %1 h"
+
+#: crates/kp-desktop/ui/qml/SyncStatusPopover.qml:39
+#, kde-format
+msgctxt "@action:button"
+msgid "Pair a Device"
+msgstr "Vincular un dispositivo"
+
+#: crates/kp-desktop/ui/qml/SyncStatusPopover.qml:70
+#, kde-format
+msgctxt "@action:button"
+msgid "Choose Keys"
+msgstr "Elegir claves"
 
 #: crates/kp-desktop/ui/qml/ToastHost.qml:137
 #, kde-format

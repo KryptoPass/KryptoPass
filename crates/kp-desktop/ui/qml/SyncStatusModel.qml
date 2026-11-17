@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import org.kde.ki18n
 
 // One place that decides what the vault Sync status is, so the footer indicator and its
 // popover never disagree. It owns the rules (when to spin, what to say), the per-device
@@ -28,17 +29,17 @@ QtObject {
         const keys = host.vaultSyncKeyIds(id).length;
         let stats;
         if (connected && !syncs)
-            stats = qsTr("Conectado · ninguna clave se sincroniza");
+            stats = KI18n.i18n("Connected · no key syncs");
         else if (connected)
-            stats = lastSyncMs > 0 ? qsTr("Última sincronización %1").arg(ago(lastSyncMs)) : qsTr("Conectado");
+            stats = lastSyncMs > 0 ? KI18n.i18nc("@info %1 is a relative time such as 5 min ago", "Last synced %1", ago(lastSyncMs)) : KI18n.i18nc("@info connection status", "Connected");
         else if (raw === "reconnecting")
-            stats = qsTr("Reconectando…");
+            stats = KI18n.i18n("Reconnecting…");
         else if (raw === "connecting")
-            stats = qsTr("Conectando…");
+            stats = KI18n.i18n("Connecting…");
         else if (raw === "failed")
-            stats = qsTr("Falló la conexión");
+            stats = KI18n.i18n("Connection failed");
         else
-            stats = qsTr("Sin conexión");
+            stats = KI18n.i18n("Offline");
         return {
             id: id,
             name: host.deviceName(device),
@@ -97,36 +98,36 @@ QtObject {
     readonly property string label: {
         switch (phase) {
         case "locked":
-            return qsTr("Falta una contraseña");
+            return KI18n.i18n("A passphrase is missing");
         case "error":
-            return syncOn && controller.vaultSyncFailed && storeStatus.length === 0 ? qsTr("Error de sincronización") : storeStatus;
+            return syncOn && controller.vaultSyncFailed && storeStatus.length === 0 ? KI18n.i18n("Sync error") : storeStatus;
         case "working":
-            return busy ? storeStatus : qsTr("Sincronizando…");
+            return busy ? storeStatus : KI18n.i18n("Syncing…");
         case "connecting":
-            return qsTr("Conectando…");
+            return KI18n.i18n("Connecting…");
         case "offline":
-            return qsTr("Sin conexión");
+            return KI18n.i18n("Offline");
         case "setup":
-            return qsTr("Sin claves que sincronizar");
+            return KI18n.i18n("No keys to sync");
         default:
-            return storeStatus.length > 0 ? storeStatus : (syncOn ? qsTr("Sincronizada") : "");
+            return storeStatus.length > 0 ? storeStatus : (syncOn ? KI18n.i18nc("@info vault sync status", "Synced") : "");
         }
     }
     readonly property string detail: {
         if (phase === "locked")
-            return qsTr("La sincronización sigue. Lo que llega cifrado para una clave sin contraseña se verá al desbloquearla.");
+            return KI18n.i18n("Sync continues. What arrives encrypted for a key without its passphrase will be visible once you unlock it.");
         if (phase === "error" && syncOn && controller.vaultSyncFailed && controller.vaultSyncMessage.length > 0)
             return controller.vaultSyncMessage;
         const pool = syncOn ? syncDevices : devices;
-        const who = pool.length === 1 ? pool[0].name : qsTr("tus dispositivos");
+        const who = pool.length === 1 ? pool[0].name : KI18n.i18n("your devices");
         if (phase === "offline")
-            return qsTr("Sin conexión con %1. La bóveda se sincroniza al volver a conectarse.").arg(who);
+            return KI18n.i18n("No connection with %1. The vault syncs when it reconnects.", who);
         if (phase === "connecting")
-            return qsTr("Conectando con %1…").arg(who);
+            return KI18n.i18n("Connecting to %1…", who);
         if (phase === "setup")
-            return (link === "connected" ? qsTr("%1 está conectado, pero ninguna clave se sincroniza con él.") : qsTr("Ninguna clave se sincroniza con %1.")).arg(who) + " " + qsTr("Elige las claves en Dispositivos.");
+            return (link === "connected" ? KI18n.i18n("%1 is connected, but no key syncs with it.", who) : KI18n.i18n("No key syncs with %1.", who)) + " " + KI18n.i18n("Choose the keys in Devices.");
         if (phase === "idle" && label.length === 0)
-            return qsTr("Ningún dispositivo vinculado. La bóveda solo está en este equipo.");
+            return KI18n.i18n("No paired devices. The vault is only on this computer.");
         return label;
     }
 
@@ -139,13 +140,13 @@ QtObject {
             return "";
         const seconds = Math.max(0, Math.round((nowMs - ms) / 1000));
         if (seconds < 10)
-            return qsTr("ahora");
+            return KI18n.i18nc("@info relative time", "now");
         if (seconds < 60)
-            return qsTr("hace %1 s").arg(seconds);
+            return KI18n.i18nc("@info relative time", "%1 s ago", seconds);
         const minutes = Math.round(seconds / 60);
         if (minutes < 60)
-            return qsTr("hace %1 min").arg(minutes);
-        return qsTr("hace %1 h").arg(Math.round(minutes / 60));
+            return KI18n.i18nc("@info relative time", "%1 min ago", minutes);
+        return KI18n.i18nc("@info relative time", "%1 h ago", Math.round(minutes / 60));
     }
 
     // Renegotiates with the phone so it reads the current keys and binding.

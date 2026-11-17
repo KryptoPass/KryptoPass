@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // Vault Sync status for the list footer, in the manner of KDE's task indicators and of the
 // phone: a still cloud icon with a progress ring that turns around it only while there is
@@ -91,7 +92,7 @@ Controls.ToolButton {
         }
     }
 
-    Accessible.name: qsTr("Estado de la bóveda: %1").arg(model.detail)
+    Accessible.name: KI18n.i18n("Vault status: %1", model.detail)
     Controls.ToolTip.visible: (hovered || visualFocus) && !tipHidden && !detailsOpen && model.detail.length > 0
     Controls.ToolTip.text: model.detail
     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay

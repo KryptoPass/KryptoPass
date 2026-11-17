@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // The keys that matter for Sync with one device: which are synced, which the phone holds
 // but are not synced, which exist only here, and what the user can do about each. Used by
@@ -43,19 +44,19 @@ ColumnLayout {
             let text = "";
             if (inSet && onPhone === false) {
                 state = "warning";
-                text = qsTr("El teléfono no tiene esta clave, así que no se sincroniza.");
+                text = KI18n.i18n("The phone does not have this key, so it does not sync.");
             } else if (inSet) {
                 state = "active";
-                text = onPhone === null ? qsTr("Se sincroniza. No se pudo comprobar el teléfono (desconectado o versión anterior).") : qsTr("Se sincroniza.");
+                text = onPhone === null ? KI18n.i18n("It syncs. The phone could not be checked (disconnected or an older version).") : KI18n.i18n("It syncs.");
             } else if (onPhone) {
                 state = onDesktop ? "available" : "idle";
-                text = onDesktop ? qsTr("El teléfono la tiene, pero no se sincroniza.") : qsTr("Solo la tiene el teléfono; Desktop no tiene su clave privada.");
+                text = onDesktop ? KI18n.i18n("The phone has it, but it does not sync.") : KI18n.i18n("Only the phone has it; Desktop does not have its private key.");
             } else {
-                text = onPhone === false ? qsTr("Solo en Desktop: el teléfono no la tiene.") : qsTr("Solo en Desktop.");
+                text = onPhone === false ? KI18n.i18n("Only on Desktop: the phone does not have it.") : KI18n.i18n("Only on Desktop.");
             }
             return {
                 id: id,
-                title: entry ? (entry.title || qsTr("Sin nombre")) : qsTr("Clave desconocida"),
+                title: entry ? (entry.title || KI18n.i18n("No name")) : KI18n.i18n("Unknown key"),
                 email: entry ? (entry.email || "") : "",
                 short: id.slice(-16),
                 state: state,
@@ -70,18 +71,18 @@ ColumnLayout {
         Layout.fillWidth: true
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Claves en Sincronización (%1 de %2)").arg(list.syncedKeys.length).arg(list.syncKeyRows.length)
+            text: KI18n.i18nc("@title:group", "Keys in Sync (%1 of %2)", list.syncedKeys.length, list.syncKeyRows.length)
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
         }
         Controls.Button {
-            text: qsTr("Actualizar")
+            text: KI18n.i18nc("@action:button", "Refresh")
             icon.name: "view-refresh"
             flat: true
             enabled: String(list.device.connection || "") === "connected"
             onClicked: list.host.controller.retryVaultSync(list.deviceId)
             Controls.ToolTip.visible: hovered
-            Controls.ToolTip.text: qsTr("Vuelve a negociar con el teléfono para leer sus claves actuales")
+            Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "Negotiate with the phone again to read its current keys")
         }
     }
     Repeater {
@@ -118,20 +119,20 @@ ColumnLayout {
             }
             Controls.Button {
                 visible: keyRow.modelData.locked
-                text: qsTr("Desbloquear…")
+                text: KI18n.i18nc("@action:button", "Unlock…")
                 icon.name: "dialog-password"
                 onClicked: list.host.controller.unlockSyncKey(keyRow.modelData.id)
             }
             Controls.Button {
                 visible: keyRow.modelData.canAdd
-                text: qsTr("Sincronizar")
+                text: KI18n.i18nc("@action:button", "Sync")
                 icon.name: "list-add"
                 enabled: !list.host.controller.busy
                 onClicked: list.host.controller.enableVaultSync(list.deviceId, list.syncedKeys.concat([keyRow.modelData.id]).join(","))
             }
             Controls.Button {
                 visible: keyRow.modelData.inSet && list.syncedKeys.length > 1
-                text: qsTr("Dejar de sincronizar")
+                text: KI18n.i18nc("@action:button", "Stop Syncing")
                 flat: true
                 enabled: !list.host.controller.busy
                 onClicked: list.host.controller.enableVaultSync(list.deviceId, list.syncedKeys.filter(id => String(id).toUpperCase() !== keyRow.modelData.id).join(","))
@@ -141,7 +142,7 @@ ColumnLayout {
     Controls.Label {
         Layout.fillWidth: true
         visible: list.syncKeyRows.length === 0
-        text: qsTr("Aún no hay claves con parte privada en este equipo.")
+        text: KI18n.i18n("There are no keys with a private part on this computer yet.")
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         color: Kirigami.Theme.disabledTextColor

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: dialog
@@ -22,7 +23,7 @@ Controls.ApplicationWindow {
     readonly property var selectedDevice: devices.find(device => String(device.deviceId) === selectedDeviceId) || null
     readonly property bool showingDetail: selectedDevice !== null
     readonly property var activeDevice: devices.find(device => String(device.deviceId) === controller.activeDeviceId) || null
-    readonly property string activeDeviceName: activeDevice ? deviceName(activeDevice) : qsTr("otro dispositivo")
+    readonly property string activeDeviceName: activeDevice ? deviceName(activeDevice) : KI18n.i18n("another device")
     // Which offer the last key transfer of this window carried, to label its status.
     property bool keyTransferVault: false
     property string keyTransferDeviceId: ""
@@ -60,7 +61,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 36
     minimumWidth: Kirigami.Units.gridUnit * 24
     minimumHeight: Kirigami.Units.gridUnit * 22
-    title: qsTr("Dispositivos")
+    title: KI18n.i18nc("@title:window", "Devices")
 
     function open() {
         // Devices expose keys and Sync, so they stay closed while the vault is locked.
@@ -91,25 +92,25 @@ Controls.ApplicationWindow {
     function inboundPhaseLabel(transfer) {
         switch (transfer.phase) {
         case "assessing":
-            return qsTr("Revisando la clave ofrecida…");
+            return KI18n.i18n("Reviewing the offered key…");
         case "waiting_decision":
-            return qsTr("Esperando tu decisión");
+            return KI18n.i18nc("@info key transfer status", "Waiting for your decision");
         case "receiving":
-            return qsTr("Recibiendo (%1 de %2 bytes)").arg(transfer.received || 0).arg(transfer.total || 0);
+            return KI18n.i18nc("@info key transfer status", "Receiving (%1 of %2 bytes)", transfer.received || 0, transfer.total || 0);
         case "importing":
-            return qsTr("Importando en GnuPG");
+            return KI18n.i18nc("@info key transfer status", "Importing into GnuPG");
         case "verifying":
-            return qsTr("Comprobando el desafío");
+            return KI18n.i18nc("@info key transfer status", "Checking the challenge");
         case "complete":
-            return qsTr("Completado");
+            return KI18n.i18nc("@info key transfer status", "Complete");
         case "rejected":
-            return qsTr("Rechazada");
+            return KI18n.i18nc("@info key transfer status", "Rejected");
         case "cancelled":
-            return qsTr("Cancelada por el teléfono");
+            return KI18n.i18nc("@info key transfer status", "Cancelled by the phone");
         case "expired":
-            return qsTr("Caducada");
+            return KI18n.i18nc("@info key status", "Expired");
         case "failed":
-            return qsTr("Error");
+            return KI18n.i18nc("@info key transfer status", "Error");
         default:
             return "";
         }
@@ -145,21 +146,21 @@ Controls.ApplicationWindow {
     }
 
     function deviceName(device) {
-        return String(device.alias || "").length > 0 ? String(device.alias) : String(device.displayName || qsTr("Dispositivo"));
+        return String(device.alias || "").length > 0 ? String(device.alias) : String(device.displayName || KI18n.i18nc("@label fallback device name", "Device"));
     }
 
     function connectionLabel(state) {
         switch (state) {
         case "connected":
-            return qsTr("Conectado");
+            return KI18n.i18nc("@info connection status", "Connected");
         case "connecting":
-            return qsTr("Conectando");
+            return KI18n.i18nc("@info connection status", "Connecting");
         case "reconnecting":
-            return qsTr("Reconectando");
+            return KI18n.i18nc("@info connection status", "Reconnecting");
         case "failed":
-            return qsTr("Conexión interrumpida");
+            return KI18n.i18nc("@info connection status", "Connection interrupted");
         default:
-            return qsTr("Desconectado");
+            return KI18n.i18nc("@info connection status", "Disconnected");
         }
     }
 
@@ -176,17 +177,17 @@ Controls.ApplicationWindow {
     function keyTransferLabel(phase) {
         switch (phase) {
         case "ready":
-            return qsTr("Lista para enviar la clave elegida");
+            return KI18n.i18nc("@info key transfer status", "Ready to send the chosen key");
         case "unsupported":
-            return qsTr("Este dispositivo no admite recibir la clave");
+            return KI18n.i18nc("@info key transfer status", "This device cannot receive the key");
         case "waiting_acceptance":
-            return qsTr("Esperando que aceptes en el teléfono");
+            return KI18n.i18nc("@info key transfer status", "Waiting for you to accept on the phone");
         case "sending":
-            return qsTr("Enviando tu clave");
+            return KI18n.i18nc("@info key transfer status", "Sending your key");
         case "waiting_receipt":
-            return qsTr("Esperando que el teléfono la guarde");
+            return KI18n.i18nc("@info key transfer status", "Waiting for the phone to store it");
         case "complete":
-            return qsTr("El teléfono guardó tu clave y comprobó que puede descifrar");
+            return KI18n.i18nc("@info key transfer status", "The phone stored your key and checked that it can decrypt");
         default:
             return syntheticTransferLabel(phase);
         }
@@ -195,27 +196,27 @@ Controls.ApplicationWindow {
     function syntheticTransferLabel(phase) {
         switch (phase) {
         case "ready":
-            return qsTr("Prueba de transferencia disponible");
+            return KI18n.i18nc("@info key transfer status", "Transfer test available");
         case "waiting_acceptance":
-            return qsTr("Esperando que Android acepte");
+            return KI18n.i18nc("@info key transfer status", "Waiting for Android to accept");
         case "sending":
-            return qsTr("Enviando clave de prueba");
+            return KI18n.i18nc("@info key transfer status", "Sending test key");
         case "waiting_receipt":
-            return qsTr("Esperando confirmación de guardado");
+            return KI18n.i18nc("@info key transfer status", "Waiting for storage confirmation");
         case "complete":
-            return qsTr("Android confirmó el guardado y el desafío");
+            return KI18n.i18nc("@info key transfer status", "Android confirmed storage and the challenge");
         case "rejected":
-            return qsTr("Android rechazó la oferta");
+            return KI18n.i18nc("@info key transfer status", "Android rejected the offer");
         case "cancelled":
-            return qsTr("Transferencia cancelada");
+            return KI18n.i18nc("@info key transfer status", "Transfer cancelled");
         case "expired":
-            return qsTr("La transferencia caducó");
+            return KI18n.i18nc("@info key transfer status", "The transfer expired");
         case "uncertain":
-            return qsTr("Conexión perdida; el resultado es incierto");
+            return KI18n.i18nc("@info key transfer status", "Connection lost; the result is uncertain");
         case "failed":
-            return qsTr("La transferencia falló");
+            return KI18n.i18nc("@info key transfer status", "The transfer failed");
         default:
-            return qsTr("Esta sesión no admite la prueba");
+            return KI18n.i18nc("@info key transfer status", "This session does not support the test");
         }
     }
 
@@ -225,42 +226,42 @@ Controls.ApplicationWindow {
                 ipv6: "IPv6",
                 mixed: "IPv4 / IPv6"
             })[device.addressFamily] || "";
-        const route = String(device.routeLabel || qsTr("Comprobando ruta…"));
+        const route = String(device.routeLabel || KI18n.i18n("Checking route…"));
         return family ? route + " · " + family : route;
     }
 
     function hintForStatus(code) {
         switch (code) {
         case "waiting_peer":
-            return dialog.reconnectFlow ? qsTr("Escanea el QR y elige Reconectar en Android. El código de conexión caduca en 5 minutos.") : qsTr("Escanea el QR y elige Vincular dispositivo en Android. El código de conexión caduca en 5 minutos.");
+            return dialog.reconnectFlow ? KI18n.i18n("Scan the QR code and choose Reconnect on Android. The connection code expires in 5 minutes.") : KI18n.i18n("Scan the QR code and choose Pair Device on Android. The connection code expires in 5 minutes.");
         case "awaiting_sas":
-            return qsTr("Compara los siete emojis y sus nombres con Android. Confirma solo si todos coinciden en ambas pantallas.");
+            return KI18n.i18n("Compare the seven emoji and their names with Android. Confirm only if all of them match on both screens.");
         case "confirming":
-            return qsTr("La otra pantalla está confirmando la comparación.");
+            return KI18n.i18n("The other screen is confirming the comparison.");
         case "reconnecting":
-            return qsTr("Intentando recuperar la sesión autenticada con este dispositivo.");
+            return KI18n.i18n("Trying to recover the authenticated session with this device.");
         case "closing":
-            return qsTr("Cerrando el enlace. El dispositivo seguirá emparejado.");
+            return KI18n.i18n("Closing the link. The device stays paired.");
         case "expired":
-            return qsTr("La invitación caducó. Genera una nueva para volver a intentarlo.");
+            return KI18n.i18n("The invitation expired. Create a new one to try again.");
         case "trust_error":
-            return qsTr("No se cambió la confianza guardada. Comprueba el perfil y vuelve a cargar los dispositivos.");
+            return KI18n.i18n("The saved trust was not changed. Check the profile and reload the devices.");
         case "profile_error":
-            return qsTr("Vuelve a cargar los dispositivos. Si el problema continúa, consulta el registro de la aplicación.");
+            return KI18n.i18n("Reload the devices. If the problem continues, check the application log.");
         case "keystore_error":
-            return qsTr("Comprueba que el llavero del sistema esté disponible y vuelve a intentarlo.");
+            return KI18n.i18n("Check that the system keyring is available and try again.");
         case "authentication_error":
-            return qsTr("No se autenticó el dispositivo. La confianza no se amplió; genera un código nuevo para reintentar.");
+            return KI18n.i18n("The device was not authenticated. Trust was not extended; create a new code to retry.");
         case "rejected":
-            return qsTr("La vinculación fue rechazada y no se concedió confianza.");
+            return KI18n.i18n("The pairing was rejected and no trust was granted.");
         case "cancelled":
-            return qsTr("La operación se canceló. La confianza que ya estaba guardada se conserva.");
+            return KI18n.i18n("The operation was cancelled. The trust already saved is kept.");
         case "transport_error":
-            return dialog.controller.internetEnabled ? qsTr("Comprueba el acceso a Internet y vuelve a intentarlo.") : qsTr("Comprueba que ambos dispositivos estén en la misma red y vuelve a intentarlo.");
+            return dialog.controller.internetEnabled ? KI18n.i18n("Check the Internet access and try again.") : KI18n.i18n("Check that both devices are on the same network and try again.");
         case "disconnected":
-            return qsTr("La sesión está desconectada. La confianza guardada se conserva; puedes reconectar el dispositivo.");
+            return KI18n.i18n("The session is disconnected. The saved trust is kept; you can reconnect the device.");
         case "connected":
-            return qsTr("La sesión autenticada está activa. Cerrar esta ventana no la desconecta.");
+            return KI18n.i18n("The authenticated session is active. Closing this window does not disconnect it.");
         default:
             return "";
         }
@@ -431,7 +432,7 @@ Controls.ApplicationWindow {
             Controls.ToolButton {
                 visible: dialog.showingDetail
                 icon.name: "go-previous"
-                text: qsTr("Volver a dispositivos")
+                text: KI18n.i18nc("@action:button", "Back to Devices")
                 display: Controls.AbstractButton.IconOnly
                 Controls.ToolTip.visible: hovered
                 Controls.ToolTip.text: text
@@ -449,13 +450,13 @@ Controls.ApplicationWindow {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 4
-                    text: dialog.showingDetail ? dialog.deviceName(dialog.selectedDevice) : qsTr("Tus dispositivos")
+                    text: dialog.showingDetail ? dialog.deviceName(dialog.selectedDevice) : KI18n.i18nc("@title", "Your devices")
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: dialog.showingDetail ? qsTr("Conexión y opciones del dispositivo") : qsTr("Vincula y conecta tus dispositivos")
+                    text: dialog.showingDetail ? KI18n.i18n("Device connection and options") : KI18n.i18n("Pair and connect your devices")
                     textFormat: Text.PlainText
                     color: Kirigami.Theme.disabledTextColor
                     elide: Text.ElideRight
@@ -464,7 +465,7 @@ Controls.ApplicationWindow {
             Controls.ToolButton {
                 id: moreButton
                 icon.name: "overflow-menu"
-                text: qsTr("Más opciones")
+                text: KI18n.i18nc("@action:button", "More Options")
                 display: Controls.AbstractButton.IconOnly
                 Controls.ToolTip.visible: hovered
                 Controls.ToolTip.text: text
@@ -472,7 +473,7 @@ Controls.ApplicationWindow {
                 Controls.Menu {
                     id: moreMenu
                     Controls.MenuItem {
-                        text: qsTr("Opciones de conexión")
+                        text: KI18n.i18nc("@action:inmenu", "Connection Options")
                         icon.name: "network-wired"
                         checkable: true
                         checked: dialog.networkOptionsVisible
@@ -482,7 +483,7 @@ Controls.ApplicationWindow {
                         }
                     }
                     Controls.MenuItem {
-                        text: qsTr("Actualizar dispositivos y redes")
+                        text: KI18n.i18nc("@action:inmenu", "Refresh Devices and Networks")
                         icon.name: "view-refresh"
                         enabled: !dialog.controller.busy && !dialog.controller.awaiting
                         onTriggered: {
@@ -492,7 +493,7 @@ Controls.ApplicationWindow {
                     }
                     Controls.MenuSeparator {}
                     Controls.MenuItem {
-                        text: qsTr("Borrar todas las vinculaciones…")
+                        text: KI18n.i18nc("@action:inmenu", "Delete All Pairings…")
                         icon.name: "edit-clear-all"
                         enabled: !dialog.controller.busy && !dialog.controller.aliasBusy
                         onTriggered: {
@@ -541,7 +542,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.waitingForPeer
-                text: dialog.reconnectFlow ? qsTr("Reconectar dispositivo") : qsTr("Vincular dispositivo")
+                text: dialog.reconnectFlow ? KI18n.i18nc("@action:button", "Reconnect Device") : KI18n.i18nc("@action:button", "Pair Device")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -564,7 +565,7 @@ Controls.ApplicationWindow {
                         cache: false
                         asynchronous: true
                         smooth: false
-                        Accessible.name: qsTr("Código QR de vinculación local")
+                        Accessible.name: KI18n.i18n("Local pairing QR code")
                     }
                 }
                 ColumnLayout {
@@ -579,13 +580,13 @@ Controls.ApplicationWindow {
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: dialog.controller.internetEnabled && dialog.controller.lanEnabled ? qsTr("El teléfono prueba primero la red local y, si no llega, usa Internet.") : dialog.controller.internetEnabled ? qsTr("Ambos dispositivos necesitan acceso a Internet.") : (dialog.controller.lanEnabled ? qsTr("Ambos dispositivos deben estar en la misma red local.") : qsTr("Modo emulador: solo para Android en esta computadora."))
+                        text: dialog.controller.internetEnabled && dialog.controller.lanEnabled ? KI18n.i18n("The phone tries the local network first and, if it cannot reach it, uses the Internet.") : dialog.controller.internetEnabled ? KI18n.i18n("Both devices need Internet access.") : (dialog.controller.lanEnabled ? KI18n.i18n("Both devices must be on the same local network.") : KI18n.i18n("Emulator mode: only for Android on this computer."))
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                         color: Kirigami.Theme.disabledTextColor
                     }
                     Controls.ToolButton {
-                        text: dialog.showInvitationCode ? qsTr("Ocultar código") : qsTr("Usar código en lugar de QR")
+                        text: dialog.showInvitationCode ? KI18n.i18nc("@action:button", "Hide Code") : KI18n.i18nc("@action:button", "Use a Code Instead of QR")
                         icon.name: "edit-paste"
                         onClicked: dialog.showInvitationCode = !dialog.showInvitationCode
                     }
@@ -602,10 +603,10 @@ Controls.ApplicationWindow {
                     readOnly: true
                     selectByMouse: true
                     font.family: "monospace"
-                    Accessible.name: qsTr("Código de invitación de un solo uso")
+                    Accessible.name: KI18n.i18n("One-time invitation code")
                 }
                 Controls.Button {
-                    text: qsTr("Copiar")
+                    text: KI18n.i18nc("@action:button", "Copy")
                     icon.name: "edit-copy"
                     onClicked: dialog.copyRequested(dialog.controller.bootstrap)
                 }
@@ -615,7 +616,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.comparing
-                text: qsTr("Compara los siete elementos")
+                text: KI18n.i18nc("@title", "Compare the seven items")
             }
             Controls.Label {
                 Layout.fillWidth: true
@@ -656,7 +657,7 @@ Controls.ApplicationWindow {
                                 font.pixelSize: Kirigami.Units.gridUnit * 1.6
                                 horizontalAlignment: Text.AlignHCenter
                                 textFormat: Text.PlainText
-                                Accessible.name: qsTr("Elemento %1: %2").arg(sasCell.index + 1).arg(String(sasCell.modelData.emoji || ""))
+                                Accessible.name: KI18n.i18nc("@info SAS emoji position and emoji", "Item %1: %2", sasCell.index + 1, String(sasCell.modelData.emoji || ""))
                             }
                             Controls.Label {
                                 Layout.fillWidth: true
@@ -674,7 +675,7 @@ Controls.ApplicationWindow {
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.comparing
-                text: dialog.sasReady ? qsTr("Si un solo emoji o nombre no coincide, rechaza la vinculación.") : qsTr("No se pudo mostrar la comparación completa. Rechaza la vinculación y vuelve a intentarlo.")
+                text: dialog.sasReady ? KI18n.i18n("If a single emoji or name does not match, reject the pairing.") : KI18n.i18n("The full comparison could not be shown. Reject the pairing and try again.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
@@ -689,12 +690,12 @@ Controls.ApplicationWindow {
                 }
                 Controls.Button {
                     id: noMatchesButton
-                    text: qsTr("No coinciden")
+                    text: KI18n.i18nc("@action:button", "They Do Not Match")
                     icon.name: "dialog-cancel"
                     onClicked: dialog.controller.decide(false)
                 }
                 Controls.Button {
-                    text: qsTr("Los 7 coinciden")
+                    text: KI18n.i18nc("@action:button", "All 7 Match")
                     icon.name: "dialog-ok-apply"
                     enabled: dialog.sasReady
                     onClicked: dialog.controller.decide(true)
@@ -708,7 +709,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.networkOptionsVisible
-                text: qsTr("Privacidad de la conexión")
+                text: KI18n.i18nc("@title:group", "Connection privacy")
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -720,7 +721,7 @@ Controls.ApplicationWindow {
                 Controls.RadioButton {
                     id: privacyAutomatic
                     Layout.fillWidth: true
-                    text: qsTr("Automática (recomendada)")
+                    text: KI18n.i18nc("@option:radio", "Automatic (recommended)")
                     checked: !dialog.controller.requireVpn
                     enabled: !dialog.controller.maintenanceBusy
                     onToggled: {
@@ -732,7 +733,7 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     Layout.leftMargin: privacyAutomatic.indicator.width + privacyAutomatic.spacing
-                    text: qsTr("Usa la ruta que elija el sistema, incluida tu VPN si está conectada.")
+                    text: KI18n.i18n("Uses the route the system chooses, including your VPN if it is connected.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -740,7 +741,7 @@ Controls.ApplicationWindow {
                 Controls.RadioButton {
                     id: privacyVpn
                     Layout.fillWidth: true
-                    text: qsTr("Solo a través de VPN")
+                    text: KI18n.i18nc("@option:radio", "Only through a VPN")
                     checked: dialog.controller.requireVpn
                     enabled: !dialog.controller.maintenanceBusy
                     onToggled: {
@@ -752,7 +753,7 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     Layout.leftMargin: privacyVpn.indicator.width + privacyVpn.spacing
-                    text: qsTr("Internet solo se usa mientras el sistema lo envía por una VPN. Si la VPN se desconecta, la conexión se pausa.")
+                    text: KI18n.i18n("The Internet is only used while the system sends it through a VPN. If the VPN disconnects, the connection pauses.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -764,11 +765,11 @@ Controls.ApplicationWindow {
                     text: {
                         switch (dialog.controller.vpnStatus) {
                         case 2:
-                            return qsTr("VPN conectada: la conexión a Internet pasa por ella.");
+                            return KI18n.i18n("VPN connected: the Internet connection goes through it.");
                         case 3:
-                            return qsTr("No hay una VPN conectada. Las conexiones por Internet están en pausa hasta que la conectes.");
+                            return KI18n.i18n("No VPN is connected. Internet connections are paused until you connect it.");
                         default:
-                            return qsTr("Este sistema no permite comprobar la VPN, así que las conexiones por Internet están en pausa.");
+                            return KI18n.i18n("This system does not allow checking the VPN, so Internet connections are paused.");
                         }
                     }
                 }
@@ -776,7 +777,7 @@ Controls.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.leftMargin: privacyVpn.indicator.width + privacyVpn.spacing
                     visible: dialog.controller.requireVpn
-                    text: qsTr("Permitir también la red local")
+                    text: KI18n.i18nc("@option:check", "Also allow the local network")
                     checked: dialog.controller.allowLanException && !dialog.controller.relayOnly
                     enabled: !dialog.controller.relayOnly && !dialog.controller.maintenanceBusy
                     onToggled: {
@@ -788,7 +789,7 @@ Controls.ApplicationWindow {
                     id: hideAddress
                     Layout.fillWidth: true
                     Layout.topMargin: Kirigami.Units.smallSpacing
-                    text: qsTr("Ocultar mi dirección IP al otro dispositivo")
+                    text: KI18n.i18nc("@option:check", "Hide my IP address from the other device")
                     checked: dialog.controller.relayOnly
                     enabled: !dialog.controller.maintenanceBusy
                     onToggled: {
@@ -799,7 +800,7 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     Layout.leftMargin: hideAddress.indicator.width + hideAddress.spacing
-                    text: qsTr("Todo pasa por el servidor de retransmisión. Es algo más lento y desactiva la red local.")
+                    text: KI18n.i18n("Everything goes through the relay server. It is a bit slower and disables the local network.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -809,7 +810,7 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.networkOptionsVisible
-                text: qsTr("Cómo emparejar un dispositivo nuevo")
+                text: KI18n.i18nc("@title:group", "How to pair a new device")
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -821,7 +822,7 @@ Controls.ApplicationWindow {
                 Controls.RadioButton {
                     id: pairByAuto
                     Layout.fillWidth: true
-                    text: qsTr("Automático: red local y, si no llega, Internet")
+                    text: KI18n.i18nc("@option:radio", "Automatic: local network and, if it cannot reach it, the Internet")
                     checked: dialog.controller.internetEnabled && dialog.controller.lanEnabled
                     enabled: !dialog.controller.busy && dialog.lanAllowed
                     onToggled: {
@@ -835,7 +836,7 @@ Controls.ApplicationWindow {
                 Controls.RadioButton {
                     id: pairByInternet
                     Layout.fillWidth: true
-                    text: qsTr("Solo por Internet")
+                    text: KI18n.i18nc("@option:radio", "Internet only")
                     checked: dialog.controller.internetEnabled && !dialog.controller.lanEnabled
                     enabled: !dialog.controller.busy
                     onToggled: {
@@ -853,14 +854,14 @@ Controls.ApplicationWindow {
                     visible: dialog.controller.internetEnabled
                     enabled: !dialog.controller.busy
                     text: dialog.controller.relayOrigin
-                    placeholderText: qsTr("Servidor de conexión (wss://…)")
-                    Accessible.name: qsTr("Servidor de conexión por Internet")
+                    placeholderText: KI18n.i18nc("@info:placeholder", "Connection server (wss://…)")
+                    Accessible.name: KI18n.i18n("Internet connection server")
                     onEditingFinished: dialog.controller.configureInternet(true, text)
                 }
                 Controls.RadioButton {
                     id: pairByLan
                     Layout.fillWidth: true
-                    text: qsTr("Solo red local")
+                    text: KI18n.i18nc("@option:radio", "Local network only")
                     checked: dialog.controller.lanEnabled && !dialog.controller.internetEnabled
                     enabled: !dialog.controller.busy && dialog.lanAllowed
                     onToggled: {
@@ -875,7 +876,7 @@ Controls.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.leftMargin: pairByLan.indicator.width + pairByLan.spacing
                     visible: !dialog.lanAllowed
-                    text: dialog.controller.relayOnly ? qsTr("No disponible mientras ocultas tu dirección IP.") : qsTr("No disponible: activa «Permitir también la red local» en Privacidad.")
+                    text: dialog.controller.relayOnly ? KI18n.i18n("Unavailable while you hide your IP address.") : KI18n.i18n("Unavailable: enable “Also allow the local network” in Privacy.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -889,12 +890,12 @@ Controls.ApplicationWindow {
                         enabled: !dialog.controller.busy
                         model: dialog.controller.networkAddresses
                         currentIndex: dialog.controller.networkIndex
-                        Accessible.name: qsTr("Red local de este equipo")
+                        Accessible.name: KI18n.i18n("This computer's local network")
                         onActivated: index => dialog.controller.configureNetwork(true, index)
                     }
                     Controls.ToolButton {
                         icon.name: "view-refresh"
-                        text: qsTr("Actualizar redes")
+                        text: KI18n.i18nc("@action:button", "Refresh Networks")
                         display: Controls.AbstractButton.IconOnly
                         Controls.ToolTip.visible: hovered
                         Controls.ToolTip.text: text
@@ -906,7 +907,7 @@ Controls.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.leftMargin: pairByLan.indicator.width + pairByLan.spacing
                     visible: dialog.lanAllowed && dialog.controller.lanEnabled && dialog.controller.networkIndex < 0
-                    text: qsTr("No se encontró una red local. Conéctate a Wi-Fi o Ethernet y actualiza las redes.")
+                    text: KI18n.i18n("No local network was found. Connect to Wi-Fi or Ethernet and refresh the networks.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -914,7 +915,7 @@ Controls.ApplicationWindow {
                 Controls.RadioButton {
                     id: pairByEmulator
                     Layout.fillWidth: true
-                    text: qsTr("Emulador Android en este equipo (avanzado)")
+                    text: KI18n.i18nc("@option:radio", "Android emulator on this computer (advanced)")
                     checked: !dialog.controller.lanEnabled && !dialog.controller.internetEnabled
                     enabled: !dialog.controller.busy && dialog.lanAllowed
                     onToggled: {
@@ -931,13 +932,13 @@ Controls.ApplicationWindow {
             Kirigami.ListSectionHeader {
                 Layout.fillWidth: true
                 visible: dialog.devices.length > 0 || dialog.controller.busy
-                text: qsTr("Dispositivos autorizados")
+                text: KI18n.i18nc("@title:group", "Authorized devices")
             }
             Controls.Label {
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.largeSpacing
                 visible: dialog.devices.length === 0 && dialog.controller.busy
-                text: qsTr("Cargando dispositivos autorizados…")
+                text: KI18n.i18n("Loading authorized devices…")
                 textFormat: Text.PlainText
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -995,20 +996,20 @@ Controls.ApplicationWindow {
                         Controls.ToolButton {
                             id: deviceMenuButton
                             icon.name: "overflow-menu"
-                            text: qsTr("Más acciones para %1").arg(dialog.deviceName(deviceRow.modelData))
+                            text: KI18n.i18n("More actions for %1", dialog.deviceName(deviceRow.modelData))
                             display: Controls.AbstractButton.IconOnly
                             Controls.ToolTip.visible: hovered
-                            Controls.ToolTip.text: qsTr("Más acciones")
+                            Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "More actions")
                             onClicked: deviceMenu.popup(deviceMenuButton, 0, deviceMenuButton.height)
                             Controls.Menu {
                                 id: deviceMenu
                                 Controls.MenuItem {
-                                    text: qsTr("Ver detalles y opciones")
+                                    text: KI18n.i18nc("@action:inmenu", "View Details and Options")
                                     icon.name: "document-properties"
                                     onTriggered: dialog.openDevice(deviceRow.modelData)
                                 }
                                 Controls.MenuItem {
-                                    text: deviceRow.modelData.isActive ? qsTr("Desconectar") : qsTr("Reconectar")
+                                    text: deviceRow.modelData.isActive ? KI18n.i18nc("@action", "Disconnect") : KI18n.i18nc("@action", "Reconnect")
                                     icon.name: deviceRow.modelData.isActive ? "network-disconnect" : "network-connect"
                                     enabled: !dialog.controller.busy && !dialog.controller.syncBusy && !dialog.controller.maintenanceBusy && dialog.controller.statusCode !== "closing"
                                     onTriggered: {
@@ -1019,14 +1020,14 @@ Controls.ApplicationWindow {
                                     }
                                 }
                                 Controls.MenuItem {
-                                    text: qsTr("Cambiar nombre…")
+                                    text: KI18n.i18nc("@action:inmenu", "Rename…")
                                     icon.name: "edit-rename"
                                     enabled: !dialog.controller.aliasBusy && !dialog.controller.busy
                                     onTriggered: dialog.openAliasEditor(deviceRow.modelData)
                                 }
                                 Controls.MenuSeparator {}
                                 Controls.MenuItem {
-                                    text: qsTr("Olvidar dispositivo…")
+                                    text: KI18n.i18nc("@action", "Forget Device…")
                                     icon.name: "edit-delete"
                                     enabled: !dialog.controller.busy && !dialog.controller.aliasBusy
                                     onTriggered: dialog.forgetDevice(deviceRow.modelData)
@@ -1050,10 +1051,10 @@ Controls.ApplicationWindow {
                 Layout.rightMargin: Kirigami.Units.gridUnit * 2
                 visible: dialog.devices.length === 0 && !dialog.controller.busy && !dialog.waitingForPeer && !dialog.comparing
                 icon.name: "network-connect"
-                text: qsTr("Sin dispositivos vinculados")
-                explanation: qsTr("Vincula KryptoPass para Android para mantener una conexión segura con este equipo.")
+                text: KI18n.i18nc("@title placeholder", "No paired devices")
+                explanation: KI18n.i18n("Pair KryptoPass for Android to keep a secure connection with this computer.")
                 helpfulAction: Kirigami.Action {
-                    text: qsTr("Vincular dispositivo")
+                    text: KI18n.i18nc("@action:button", "Pair Device")
                     icon.name: "network-connect"
                     enabled: dialog.canPair || dialog.controller.sessionActive
                     onTriggered: dialog.startPairing()
@@ -1090,7 +1091,7 @@ Controls.ApplicationWindow {
                 visible: dialog.statusIsProblem
             }
             Controls.Button {
-                text: qsTr("Vincular dispositivo")
+                text: KI18n.i18nc("@action:button", "Pair Device")
                 visible: !dialog.showingDetail
                 icon.name: "network-connect"
                 enabled: dialog.canPair || dialog.controller.sessionActive
@@ -1098,7 +1099,7 @@ Controls.ApplicationWindow {
             }
             Controls.Button {
                 enabled: !dialog.controller.maintenanceBusy
-                text: dialog.controller.busy ? qsTr("Cancelar") : qsTr("Cerrar")
+                text: dialog.controller.busy ? KI18n.i18nc("@action:button", "Cancel") : KI18n.i18nc("@action:button", "Close")
                 icon.name: dialog.controller.busy ? "dialog-cancel" : "dialog-close"
                 onClicked: {
                     if (dialog.controller.busy)
@@ -1115,21 +1116,21 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: dialog.resetRequested ? qsTr("¿Borrar todas las vinculaciones?") : qsTr("¿Olvidar dispositivo?")
+        title: dialog.resetRequested ? KI18n.i18nc("@title:window", "Delete All Pairings?") : KI18n.i18nc("@title:window", "Forget Device?")
         width: Math.min(Kirigami.Units.gridUnit * 24, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
         contentItem: Controls.Label {
-            text: dialog.resetRequested ? qsTr("Se cerrará la conexión y se borrarán la identidad privada de este perfil de vinculación, sus autorizaciones y nombres locales. La bóveda y las claves OpenPGP se conservan. Para volver a vincular, compara un SAS nuevo.") : qsTr("Se cerrará la conexión y se eliminarán la autorización y el nombre local de «%1» en este equipo. También olvida este equipo en Android antes de volver a emparejarlos. La bóveda y OpenPGP se conservan.").arg(dialog.forgetTargetName)
+            text: dialog.resetRequested ? KI18n.i18n("The connection will close, and this pairing profile's private identity, its authorizations and local names will be deleted. The vault and the OpenPGP keys are kept. To pair again, compare a new SAS.") : KI18n.i18n("The connection will close, and the authorization and local name of “%1” will be removed on this computer. Also forget this computer on Android before pairing them again. The vault and OpenPGP are kept.", dialog.forgetTargetName)
             wrapMode: Text.WordWrap
             textFormat: Text.PlainText
         }
         footer: Controls.DialogButtonBox {
             Controls.Button {
-                text: qsTr("Cancelar")
+                text: KI18n.i18nc("@action:button", "Cancel")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
             }
             Controls.Button {
-                text: dialog.resetRequested ? qsTr("Borrar todas las vinculaciones") : qsTr("Olvidar dispositivo")
+                text: dialog.resetRequested ? KI18n.i18nc("@action:button", "Delete All Pairings") : KI18n.i18nc("@action:button", "Forget Device")
                 icon.name: "edit-delete"
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.DestructiveRole
                 onClicked: {
@@ -1149,20 +1150,20 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: qsTr("Una conexión a la vez")
+        title: KI18n.i18nc("@title:window", "One Connection at a Time")
         width: Math.min(Kirigami.Units.gridUnit * 24, dialog.width - Kirigami.Units.gridUnit * 2)
         contentItem: Controls.Label {
-            text: qsTr("Ahora estás conectado a %1. Para conectar otro dispositivo, abre esta conexión y pulsa Desconectar. Tus dispositivos seguirán vinculados.").arg(dialog.activeDeviceName)
+            text: KI18n.i18n("You are now connected to %1. To connect another device, open this connection and press Disconnect. Your devices stay paired.", dialog.activeDeviceName)
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
         }
         footer: Controls.DialogButtonBox {
             Controls.Button {
-                text: qsTr("Volver")
+                text: KI18n.i18nc("@action:button dismiss", "Back")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
             }
             Controls.Button {
-                text: qsTr("Ver conexión actual")
+                text: KI18n.i18nc("@action:button", "View Current Connection")
                 enabled: dialog.activeDevice !== null
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
             }
@@ -1204,7 +1205,7 @@ Controls.ApplicationWindow {
         modal: true
         padding: Kirigami.Units.largeSpacing
         spacing: 0
-        title: vaultIdentity ? qsTr("Enviar tu clave OpenPGP al teléfono") : qsTr("Confirmar envío de clave de prueba")
+        title: vaultIdentity ? KI18n.i18nc("@title:window", "Send Your OpenPGP Key to the Phone") : KI18n.i18nc("@title:window", "Confirm Sending the Test Key")
         width: Math.min(Kirigami.Units.gridUnit * 26, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
         property string deviceId: ""
@@ -1244,13 +1245,13 @@ Controls.ApplicationWindow {
                     spacing: Kirigami.Units.smallSpacing
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: qsTr("Destinatario: %1").arg(syntheticTransferApproval.recipient)
+                        text: KI18n.i18n("Recipient: %1", syntheticTransferApproval.recipient)
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: syntheticTransferApproval.vaultIdentity ? qsTr("Clave elegida: %1\nHuella completa; compárala con el teléfono:").arg(syntheticTransferApproval.keyTitle) : qsTr("Fingerprint completo de la identidad OpenPGP sintética:")
+                        text: syntheticTransferApproval.vaultIdentity ? KI18n.i18n("Chosen key: %1\nFull fingerprint; compare it with the phone:", syntheticTransferApproval.keyTitle) : KI18n.i18n("Full fingerprint of the synthetic OpenPGP identity:")
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
@@ -1260,20 +1261,20 @@ Controls.ApplicationWindow {
                         textFormat: Text.PlainText
                         font.family: "monospace"
                         wrapMode: Text.WrapAnywhere
-                        Accessible.name: syntheticTransferApproval.vaultIdentity ? qsTr("Fingerprint completo de tu clave") : qsTr("Fingerprint completo de la clave de prueba")
+                        Accessible.name: syntheticTransferApproval.vaultIdentity ? KI18n.i18n("Full fingerprint of your key") : KI18n.i18n("Full fingerprint of the test key")
                     }
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     visible: !syntheticTransferApproval.approved
                     type: Kirigami.MessageType.Warning
-                    text: syntheticTransferApproval.vaultIdentity ? qsTr("Se enviará únicamente la clave privada elegida a este teléfono, después de que la aceptes allí. GnuPG pedirá su contraseña para exportarla y seguirá protegida con ella. No cambia la clave principal de la bóveda ni reemplaza una identidad existente en el teléfono. Si la sincronización de la bóveda está activada con este teléfono, también se sincronizarán con él los elementos que incluyan esta clave. Esta confirmación autoriza un único envío en esta sesión.") : qsTr("Solo se enviará la clave sintética de prueba, después de que Android la acepte. Esta confirmación autoriza una única transferencia para esta sesión.")
+                    text: syntheticTransferApproval.vaultIdentity ? KI18n.i18n("Only the chosen private key will be sent to this phone, after you accept it there. GnuPG will ask for its passphrase to export it, and it stays protected by it. It does not change the vault's main key or replace an existing identity on the phone. If vault sync is enabled with this phone, items that include this key will also sync with it. This confirmation authorizes a single transfer in this session.") : KI18n.i18n("Only the synthetic test key will be sent, after Android accepts it. This confirmation authorizes a single transfer for this session.")
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     visible: !syntheticTransferApproval.approved && (syntheticTransferApproval.transferDevice.connection !== "connected" || String(syntheticTransferApproval.transferDevice.connectionGeneration) !== syntheticTransferApproval.connectionGeneration || (syntheticTransferApproval.vaultIdentity && !syntheticTransferApproval.chosenKeyAvailable))
                     type: Kirigami.MessageType.Warning
-                    text: qsTr("La conexión o la clave cambió. Cierra esta confirmación y vuelve a elegir la clave.")
+                    text: KI18n.i18n("The connection or the key changed. Close this confirmation and choose the key again.")
                 }
                 Controls.BusyIndicator {
                     Layout.alignment: Qt.AlignHCenter
@@ -1283,7 +1284,7 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: syntheticTransferApproval.approved
-                    text: dialog.controller.syntheticTransferPreparing ? (syntheticTransferApproval.vaultIdentity ? qsTr("Exportando tu clave con GnuPG; escribe su contraseña si te la pide…") : qsTr("Preparando la clave de prueba en GnuPG…")) : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
+                    text: dialog.controller.syntheticTransferPreparing ? (syntheticTransferApproval.vaultIdentity ? KI18n.i18n("Exporting your key with GnuPG; enter its passphrase if asked…") : KI18n.i18n("Preparing the test key in GnuPG…")) : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                 }
@@ -1299,7 +1300,7 @@ Controls.ApplicationWindow {
             padding: syntheticTransferApproval.padding
             spacing: Kirigami.Units.smallSpacing * 2
             Controls.Button {
-                text: syntheticTransferApproval.approved ? (syntheticTransferApproval.transferPending ? qsTr("Cancelar transferencia") : qsTr("Cerrar")) : qsTr("Cancelar")
+                text: syntheticTransferApproval.approved ? (syntheticTransferApproval.transferPending ? KI18n.i18nc("@action:button", "Cancel Transfer") : KI18n.i18nc("@action:button", "Close")) : KI18n.i18nc("@action:button", "Cancel")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
                 onClicked: {
                     if (syntheticTransferApproval.approved && syntheticTransferApproval.transferPending) {
@@ -1312,7 +1313,7 @@ Controls.ApplicationWindow {
             }
             Controls.Button {
                 enabled: syntheticTransferApproval.approved ? !syntheticTransferApproval.transferPending : syntheticTransferApproval.canConfirm
-                text: !syntheticTransferApproval.approved ? qsTr("Confirmar y enviar") : dialog.controller.syntheticTransferPreparing ? qsTr("Preparando…") : syntheticTransferApproval.transferPending ? qsTr("Enviando…") : syntheticTransferApproval.canConfirm ? qsTr("Reintentar") : qsTr("Volver al dispositivo")
+                text: !syntheticTransferApproval.approved ? KI18n.i18nc("@action:button", "Confirm and Send") : dialog.controller.syntheticTransferPreparing ? KI18n.i18n("Preparing…") : syntheticTransferApproval.transferPending ? KI18n.i18n("Sending…") : syntheticTransferApproval.canConfirm ? KI18n.i18nc("@action:button", "Retry") : KI18n.i18nc("@action:button", "Back to Device")
                 icon.name: syntheticTransferApproval.approved && !syntheticTransferApproval.transferPending ? (syntheticTransferApproval.canConfirm ? "view-refresh" : "go-previous") : "mail-send"
                 // ActionRole keeps the dialog open: AcceptRole would close it, and closing
                 // an approved, pending transfer cancels it in onClosed.
@@ -1343,7 +1344,7 @@ Controls.ApplicationWindow {
         anchors.centerIn: parent
         modal: true
         closePolicy: Controls.Popup.NoAutoClose
-        title: qsTr("Recibir tu clave OpenPGP desde el teléfono")
+        title: KI18n.i18nc("@title:window", "Receive Your OpenPGP Key from the Phone")
         width: Math.min(Kirigami.Units.gridUnit * 28, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
         readonly property var transfer: dialog.inboundTransfer
@@ -1354,13 +1355,13 @@ Controls.ApplicationWindow {
             spacing: Kirigami.Units.mediumSpacing
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Origen: %1").arg(String(inboundKeyDialog.transfer.deviceName || ""))
+                text: KI18n.i18n("From: %1", String(inboundKeyDialog.transfer.deviceName || ""))
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Fingerprint completo de la clave ofrecida. Compáralo con el que muestra el teléfono:")
+                text: KI18n.i18n("Full fingerprint of the offered key. Compare it with the one the phone shows:")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
             }
@@ -1370,7 +1371,7 @@ Controls.ApplicationWindow {
                 textFormat: Text.PlainText
                 font.family: "monospace"
                 wrapMode: Text.WrapAnywhere
-                Accessible.name: qsTr("Fingerprint completo de la clave ofrecida")
+                Accessible.name: KI18n.i18n("Full fingerprint of the offered key")
             }
             Kirigami.InlineMessage {
                 Layout.fillWidth: true
@@ -1381,7 +1382,7 @@ Controls.ApplicationWindow {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: inboundKeyDialog.transfer.canDecide === true
-                text: qsTr("Solo se aceptará la clave privada protegida con contraseña de esta huella. Después de importarla, GnuPG puede pedirte su contraseña para comprobar que funciona.")
+                text: KI18n.i18n("Only the passphrase-protected private key with this fingerprint will be accepted. After importing it, GnuPG may ask for its passphrase to check that it works.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
@@ -1420,21 +1421,21 @@ Controls.ApplicationWindow {
         footer: Controls.DialogButtonBox {
             Controls.Button {
                 visible: inboundKeyDialog.transfer.canDecide === true || inboundKeyDialog.phase === "assessing"
-                text: qsTr("Rechazar")
+                text: KI18n.i18nc("@action:button", "Reject")
                 icon.name: "dialog-cancel"
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
                 onClicked: dialog.controller.rejectInboundKeyTransfer()
             }
             Controls.Button {
                 visible: inboundKeyDialog.transfer.canDecide === true
-                text: qsTr("Aceptar e importar")
+                text: KI18n.i18nc("@action:button", "Accept and Import")
                 icon.name: "document-import"
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
                 onClicked: dialog.controller.acceptInboundKeyTransfer()
             }
             Controls.Button {
                 visible: inboundKeyDialog.transfer.finished === true
-                text: qsTr("Cerrar")
+                text: KI18n.i18nc("@action:button", "Close")
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
                 onClicked: dialog.controller.dismissInboundKeyTransfer()
             }
@@ -1446,7 +1447,7 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: qsTr("Nombre del dispositivo")
+        title: KI18n.i18nc("@title:window", "Device Name")
         width: Math.min(Kirigami.Units.gridUnit * 22, dialog.width - Kirigami.Units.gridUnit * 2)
         standardButtons: Controls.Dialog.NoButton
 
@@ -1459,8 +1460,8 @@ Controls.ApplicationWindow {
                 maximumLength: 64
                 enabled: !dialog.controller.aliasBusy
                 selectByMouse: true
-                placeholderText: qsTr("Nombre del dispositivo")
-                Accessible.name: qsTr("Nombre local del dispositivo")
+                placeholderText: KI18n.i18nc("@title:window", "Device Name")
+                Accessible.name: KI18n.i18n("Local device name")
                 onTextEdited: dialog.aliasDraft = text
                 onAccepted: {
                     dialog.aliasDraft = text;
@@ -1469,7 +1470,7 @@ Controls.ApplicationWindow {
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Solo se guarda en este equipo.")
+                text: KI18n.i18n("It is stored only on this computer.")
                 textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 color: Kirigami.Theme.disabledTextColor
@@ -1485,7 +1486,7 @@ Controls.ApplicationWindow {
         }
         footer: Controls.DialogButtonBox {
             Controls.Button {
-                text: qsTr("Quitar nombre")
+                text: KI18n.i18nc("@action:button", "Remove Name")
                 enabled: !dialog.controller.aliasBusy
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ResetRole
                 onClicked: {
@@ -1495,13 +1496,13 @@ Controls.ApplicationWindow {
                 }
             }
             Controls.Button {
-                text: qsTr("Cancelar")
+                text: KI18n.i18nc("@action:button", "Cancel")
                 enabled: !dialog.controller.aliasBusy
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
                 onClicked: aliasDialog.close()
             }
             Controls.Button {
-                text: dialog.controller.aliasBusy ? qsTr("Guardando…") : qsTr("Guardar")
+                text: dialog.controller.aliasBusy ? KI18n.i18n("Saving…") : KI18n.i18nc("@action:button", "Save")
                 enabled: !dialog.controller.aliasBusy
                 // Not AcceptRole: the dialog closes only after aliasSaved confirms the write.
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 // Floating Sync status anchored to the footer indicator, as compact as the phone's: one
 // row per device with its name, a refresh icon and what it is doing. Everything it says
@@ -27,7 +28,7 @@ Controls.Popup {
         Controls.Label {
             Layout.fillWidth: true
             visible: popup.model.devices.length === 0
-            text: qsTr("Ningún dispositivo vinculado. La bóveda solo está en este equipo.")
+            text: KI18n.i18n("No paired devices. The vault is only on this computer.")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
             color: Kirigami.Theme.disabledTextColor
@@ -35,7 +36,7 @@ Controls.Popup {
         Controls.Button {
             visible: popup.model.devices.length === 0
             icon.name: "list-add"
-            text: qsTr("Vincular un dispositivo")
+            text: KI18n.i18nc("@action:button", "Pair a Device")
             onClicked: popup.openDevices("")
         }
         Repeater {
@@ -57,7 +58,7 @@ Controls.Popup {
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: row.modelData.stats + (row.modelData.route ? " · " + row.modelData.route : "") + " · " + qsTr("%n clave", "", row.modelData.keys)
+                        text: row.modelData.stats + (row.modelData.route ? " · " + row.modelData.route : "") + " · " + KI18n.i18np("%1 key", "%1 keys", row.modelData.keys)
                         textFormat: Text.PlainText
                         font: Kirigami.Theme.smallFont
                         color: Kirigami.Theme.disabledTextColor
@@ -66,7 +67,7 @@ Controls.Popup {
                 }
                 Controls.Button {
                     visible: !row.modelData.syncs
-                    text: qsTr("Elegir claves")
+                    text: KI18n.i18nc("@action:button", "Choose Keys")
                     onClicked: popup.openDevices(row.modelData.id)
                 }
                 Controls.ToolButton {
@@ -74,7 +75,7 @@ Controls.Popup {
                     icon.name: "view-refresh"
                     display: Controls.AbstractButton.IconOnly
                     enabled: row.modelData.connected
-                    text: qsTr("Actualizar")
+                    text: KI18n.i18nc("@action:button", "Refresh")
                     onClicked: popup.model.retry(row.modelData.id)
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.text: text

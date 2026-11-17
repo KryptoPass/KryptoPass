@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: picker
@@ -18,7 +19,7 @@ Controls.Dialog {
     readonly property bool keyCurrent: selectedKey !== null && host.canTransferKey(selectedKey)
     readonly property bool canContinue: selectedKey !== null && sessionCurrent && keyCurrent && !host.keyStore.controller.busy && !host.controller.busy && !host.controller.syncBusy && !host.controller.maintenanceBusy && !host.controller.syntheticTransferPreparing
     signal keyChosen(string fingerprint, string title)
-    title: qsTr("Elegir clave para enviar")
+    title: KI18n.i18nc("@title:window", "Choose Key to Send")
     modal: true
     // The desktop style removes dialog padding for ScrollView content by default.
     padding: Kirigami.Units.largeSpacing
@@ -42,14 +43,14 @@ Controls.Dialog {
                 spacing: Kirigami.Units.smallSpacing
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Para: %1").arg(picker.recipient)
+                    text: KI18n.i18n("To: %1", picker.recipient)
                     textFormat: Text.PlainText
                     font.weight: Font.DemiBold
                     wrapMode: Text.Wrap
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Elige cuál de tus claves privadas quieres enviar al teléfono.")
+                    text: KI18n.i18n("Choose which of your private keys to send to the phone.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -83,7 +84,7 @@ Controls.Dialog {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: picker.selectedKey !== null
-                    text: qsTr("Huella completa: %1").arg(picker.selectedFingerprint.replace(/(.{4})/g, "$1 ").trim())
+                    text: KI18n.i18n("Full fingerprint: %1", picker.selectedFingerprint.replace(/(.{4})/g, "$1 ").trim())
                     textFormat: Text.PlainText
                     font.family: "monospace"
                     wrapMode: Text.WrapAnywhere
@@ -92,14 +93,14 @@ Controls.Dialog {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: picker.selectedKey !== null && !picker.host.keyStore.isPrimary(picker.selectedFingerprint)
-                    text: qsTr("Esta clave no es la principal de la bóveda activa. Enviarla no cambia la principal ni da acceso a los elementos cifrados solo con ella.")
+                    text: KI18n.i18n("This key is not the active vault's main key. Sending it does not change the main key or give access to items encrypted only with it.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Por ahora, el teléfono admite una sola clave importada. No reemplaza una existente.")
+                    text: KI18n.i18n("For now, the phone accepts a single imported key. It does not replace an existing one.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: Kirigami.Theme.disabledTextColor
@@ -119,7 +120,7 @@ Controls.Dialog {
                     Layout.fillWidth: true
                     visible: !picker.sessionCurrent || (picker.selectedKey !== null && !picker.keyCurrent)
                     type: Kirigami.MessageType.Warning
-                    text: qsTr("La conexión o la clave elegida ya no está disponible. Cierra y vuelve a elegir antes de enviarla.")
+                    text: KI18n.i18n("The connection or the chosen key is no longer available. Close and choose again before sending it.")
                 }
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
@@ -130,13 +131,13 @@ Controls.Dialog {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !picker.host.keyStore.controller.busy && picker.keys.length === 0
-                    text: qsTr("No hay claves privadas disponibles en GnuPG. Revisa tus claves antes de enviarlas.")
+                    text: KI18n.i18n("No private keys are available in GnuPG. Check your keys before sending them.")
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                 }
             }
             Controls.ToolButton {
-                text: qsTr("Actualizar claves")
+                text: KI18n.i18nc("@action:button", "Refresh Keys")
                 icon.name: "view-refresh"
                 enabled: !picker.host.keyStore.controller.busy
                 onClicked: picker.host.keyStore.controller.refreshKeys()
@@ -147,11 +148,11 @@ Controls.Dialog {
         padding: picker.padding
         spacing: Kirigami.Units.smallSpacing * 2
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
         }
         Controls.Button {
-            text: qsTr("Revisar envío")
+            text: KI18n.i18nc("@action:button", "Review Transfer")
             icon.name: "go-next"
             enabled: picker.canContinue
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole
