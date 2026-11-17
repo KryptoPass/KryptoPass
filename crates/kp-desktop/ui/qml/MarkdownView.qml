@@ -4,6 +4,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop
+import org.kde.ki18n
 
 Controls.Control {
     id: root
@@ -11,7 +12,7 @@ Controls.Control {
     property bool selectable: true
     property bool showBackground: true
     property color codeBackgroundColor: Kirigami.Theme.alternateBackgroundColor
-    property string accessibleLabel: qsTr("Documento Markdown")
+    property string accessibleLabel: KI18n.i18n("Markdown document")
     readonly property var spoilerActions: document?.spoilerActions || []
     readonly property var revealedActions: document?.revealedActions || []
     readonly property string selectedText: textView.selectedText
@@ -163,7 +164,7 @@ Controls.Control {
                         border.color: Kirigami.Theme.focusColor
                         radius: Kirigami.Units.cornerRadius
                     }
-                    Accessible.name: revealed ? qsTr("Ocultar spoiler %1").arg(spoilerButton.index + 1) : qsTr("Mostrar spoiler %1").arg(spoilerButton.index + 1)
+                    Accessible.name: revealed ? KI18n.i18n("Hide spoiler %1", spoilerButton.index + 1) : KI18n.i18n("Show spoiler %1", spoilerButton.index + 1)
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.text: spoilerButton.Accessible.name
                     onClicked: root.document.activateLink(spoilerButton.modelData)

@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -39,7 +40,7 @@ SecretFields {
 
     Controls.Label {
         Layout.fillWidth: true
-        text: qsTr("Contenido")
+        text: KI18n.i18nc("@title:group", "Content")
         font.weight: Font.DemiBold
     }
     MarkdownEditor {
@@ -48,8 +49,8 @@ SecretFields {
         objectNamePrefix: "markdown"
         Layout.fillWidth: true
         editorMinimumHeight: Kirigami.Units.gridUnit * 9
-        accessibleName: qsTr("Contenido Markdown de la nota segura")
-        placeholderText: qsTr("Escribe el contenido que quieres guardar cifrado.")
+        accessibleName: KI18n.i18n("Markdown content of the secure note")
+        placeholderText: KI18n.i18nc("@info:placeholder", "Write the content you want to store encrypted.")
         onSourceTextEdited: text => root.value = text
     }
 
@@ -57,9 +58,9 @@ SecretFields {
         id: notesEditor
         Layout.fillWidth: true
         Layout.topMargin: 16
-        label: qsTr("Notas adicionales")
-        accessibleName: qsTr("Markdown de las notas adicionales de la nota segura")
-        placeholderText: qsTr("Añade contexto opcional.")
+        label: KI18n.i18nc("@title:group", "Additional notes")
+        accessibleName: KI18n.i18n("Markdown of the secure note's additional notes")
+        placeholderText: KI18n.i18nc("@info:placeholder", "Add optional context.")
         onSourceTextEdited: text => root.notes = text
     }
 }

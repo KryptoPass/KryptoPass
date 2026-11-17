@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -77,7 +78,7 @@ SecretFields {
     Binding {
         target: root
         property: "missingRequiredFields"
-        value: root.password.length > 0 ? [] : [qsTr("Contraseña")]
+        value: root.password.length > 0 ? [] : [KI18n.i18nc("@label", "Password")]
     }
 
     function setUrls(values) {
@@ -88,24 +89,24 @@ SecretFields {
         Layout.fillWidth: true
         spacing: 16
         Accessible.role: Accessible.Grouping
-        Accessible.name: qsTr("Datos de acceso")
+        Accessible.name: KI18n.i18nc("@title:group", "Sign-in details")
         Controls.Label {
-            text: qsTr("Datos de acceso")
+            text: KI18n.i18nc("@title:group", "Sign-in details")
             font.weight: Font.DemiBold
         }
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
             Controls.Label {
-                text: qsTr("Correo o usuario")
+                text: KI18n.i18nc("@label:textbox", "Email or username")
             }
             Controls.TextField {
                 id: usernameField
                 inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 Layout.fillWidth: true
                 text: root.username
-                Accessible.name: qsTr("Correo o usuario")
-                Accessible.description: root.usernameInvalid ? qsTr("Revisa este campo.") : ""
+                Accessible.name: KI18n.i18nc("@label:textbox", "Email or username")
+                Accessible.description: root.usernameInvalid ? KI18n.i18n("Check this field.") : ""
                 onTextEdited: root.username = text
                 Rectangle {
                     anchors.fill: parent
@@ -122,7 +123,7 @@ SecretFields {
             Layout.fillWidth: true
             spacing: 6
             Controls.Label {
-                text: qsTr("Contraseña *")
+                text: KI18n.i18nc("@label:textbox required field", "Password *")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -137,8 +138,8 @@ SecretFields {
                     text: root.password
                     echoMode: root.passwordVisible ? TextInput.Normal : TextInput.Password
                     passwordMaskDelay: 0
-                    Accessible.name: qsTr("Contraseña")
-                    Accessible.description: root.passwordInvalid ? qsTr("Obligatorio. Revisa este campo.") : qsTr("Obligatorio.")
+                    Accessible.name: KI18n.i18nc("@label", "Password")
+                    Accessible.description: root.passwordInvalid ? KI18n.i18n("Required. Check this field.") : KI18n.i18n("Required.")
                     onTextEdited: root.password = text
                     Controls.ToolButton {
                         id: revealButton
@@ -146,7 +147,7 @@ SecretFields {
                         anchors.verticalCenter: parent.verticalCenter
                         width: height
                         height: parent.height
-                        text: root.passwordVisible ? qsTr("Ocultar contraseña") : qsTr("Mostrar contraseña")
+                        text: root.passwordVisible ? KI18n.i18nc("@action:button", "Hide Password") : KI18n.i18nc("@action:button", "Show Password")
                         icon.name: root.passwordVisible ? "view-hidden" : "view-visible"
                         display: Controls.AbstractButton.IconOnly
                         checkable: true
@@ -168,9 +169,9 @@ SecretFields {
                     }
                 }
                 Controls.Button {
-                    text: qsTr("Generar")
+                    text: KI18n.i18nc("@action:button", "Generate")
                     icon.name: "tools-wizard"
-                    Accessible.name: qsTr("Generar contraseña")
+                    Accessible.name: KI18n.i18nc("@title:window", "Generate Password")
                     onClicked: root.generatePasswordRequested()
                 }
             }
@@ -179,7 +180,7 @@ SecretFields {
             Layout.fillWidth: true
             spacing: 6
             Controls.Label {
-                text: qsTr("Autenticación de dos pasos (TOTP)")
+                text: KI18n.i18nc("@title:group", "Two-step authentication (TOTP)")
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -193,9 +194,9 @@ SecretFields {
                     text: root.totpInput
                     echoMode: root.totpVisible ? TextInput.Normal : TextInput.Password
                     passwordMaskDelay: 0
-                    placeholderText: qsTr("Base32 u otpauth:// (opcional)")
-                    Accessible.name: qsTr("Semilla TOTP, inicialmente oculta")
-                    Accessible.description: root.totpInvalid ? qsTr("La semilla TOTP no es válida. %1").arg(totpHint.text) : totpHint.text
+                    placeholderText: KI18n.i18nc("@info:placeholder", "Base32 or otpauth:// (optional)")
+                    Accessible.name: KI18n.i18n("TOTP secret, hidden at first")
+                    Accessible.description: root.totpInvalid ? KI18n.i18n("The TOTP secret is not valid. %1", totpHint.text) : totpHint.text
                     onTextEdited: root.totpInput = text
                     Controls.ToolButton {
                         id: totpRevealButton
@@ -203,7 +204,7 @@ SecretFields {
                         anchors.verticalCenter: parent.verticalCenter
                         width: height
                         height: parent.height
-                        text: root.totpVisible ? qsTr("Ocultar semilla TOTP") : qsTr("Mostrar semilla TOTP")
+                        text: root.totpVisible ? KI18n.i18nc("@action:button", "Hide TOTP Secret") : KI18n.i18nc("@action:button", "Show TOTP Secret")
                         icon.name: root.totpVisible ? "view-hidden" : "view-visible"
                         display: Controls.AbstractButton.IconOnly
                         checkable: true
@@ -228,7 +229,7 @@ SecretFields {
             Controls.Label {
                 id: totpHint
                 Layout.fillWidth: true
-                text: qsTr("La semilla se guarda cifrada. Déjala vacía para quitar TOTP; no aparece en la vista de lectura.")
+                text: KI18n.i18n("The secret is stored encrypted. Leave it empty to remove TOTP; it is not shown in the read view.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
@@ -240,12 +241,12 @@ SecretFields {
                 id: urlsEditor
                 objectName: "loginUrlsEditor"
                 Layout.fillWidth: true
-                label: qsTr("Sitios web")
-                inputLabel: qsTr("Sitio web")
-                addLabel: qsTr("Añadir sitio web")
+                label: KI18n.i18nc("@title:group", "Websites")
+                inputLabel: KI18n.i18nc("@label:textbox", "Website")
+                addLabel: KI18n.i18nc("@action:button", "Add Website")
                 maximumValues: 100
                 invalid: root.urlsInvalid
-                accessibleDescription: root.urlsInvalid ? qsTr("Revisa las direcciones web. %1").arg(urlsHint.text) : urlsHint.text
+                accessibleDescription: root.urlsInvalid ? KI18n.i18n("Check the web addresses. %1", urlsHint.text) : urlsHint.text
                 values: root.urls
                 onValuesEdited: function (values) {
                     root.urls = values;
@@ -254,7 +255,7 @@ SecretFields {
             Controls.Label {
                 id: urlsHint
                 Layout.fillWidth: true
-                text: qsTr("La primera dirección se conserva como sitio principal.")
+                text: KI18n.i18n("The first address is kept as the main site.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
@@ -264,8 +265,8 @@ SecretFields {
     NotesEditor {
         id: notesEditor
         Layout.fillWidth: true
-        placeholderText: qsTr("Añade contexto opcional para reconocer este elemento.")
-        accessibleName: qsTr("Notas de la credencial")
+        placeholderText: KI18n.i18nc("@info:placeholder", "Add optional context to recognize this item.")
+        accessibleName: KI18n.i18n("Login notes")
         onSourceTextEdited: value => root.notes = value
     }
 }

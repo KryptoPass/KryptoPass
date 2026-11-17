@@ -132,8 +132,8 @@ TestCase {
         const view = createPreview(previewHtml());
         const first = verifyInlineToggle(view, 0);
         const second = verifyInlineToggle(view, 1);
-        compare(first.Accessible.name, qsTr("Mostrar spoiler %1").arg(1));
-        compare(second.Accessible.name, qsTr("Mostrar spoiler %1").arg(2));
+        compare(first.Accessible.name, "Show spoiler 1");
+        compare(second.Accessible.name, "Show spoiler 2");
         compare(first.icon.name, "", "A hidden spoiler must expose its mask without an eye icon");
         compare(second.icon.name, "");
         verify(first.activeFocusOnTab && second.activeFocusOnTab);
@@ -147,7 +147,7 @@ TestCase {
         view.document.revealedActions = ["kryptopass-spoiler:1:0"];
         view.document.html = previewHtml(true);
         tryVerify(() => first.icon.name === "view-hidden");
-        compare(first.Accessible.name, qsTr("Ocultar spoiler %1").arg(1));
+        compare(first.Accessible.name, "Hide spoiler 1");
         verifyInlineToggle(view, 0);
         compare(second.icon.name, "", "Revealing one spoiler must leave the other mask without an eye");
         first.forceActiveFocus(Qt.TabFocusReason);
@@ -159,7 +159,7 @@ TestCase {
         view.document.revealedActions = [];
         view.document.html = previewHtml();
         tryVerify(() => first.icon.name === "");
-        compare(first.Accessible.name, qsTr("Mostrar spoiler %1").arg(1));
+        compare(first.Accessible.name, "Show spoiler 1");
         verifyInlineToggle(view, 0);
     }
 

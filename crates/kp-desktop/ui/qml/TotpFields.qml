@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -52,8 +53,8 @@ SecretFields {
 
     Dialogs.FileDialog {
         id: qrFileDialog
-        title: qsTr("Importar código QR de TOTP")
-        nameFilters: [qsTr("Imágenes PNG o JPEG (*.png *.jpg *.jpeg)"), qsTr("Todos los archivos (*)")]
+        title: KI18n.i18nc("@title:window", "Import TOTP QR Code")
+        nameFilters: [KI18n.i18n("PNG or JPEG images (*.png *.jpg *.jpeg)"), KI18n.i18n("All files (*)")]
         onVisibleChanged: root.externalModalRequested(visible)
         onAccepted: root.prepareTotpQrRequested(selectedFile)
     }
@@ -68,7 +69,7 @@ SecretFields {
 
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Semilla o URI TOTP")
+                text: KI18n.i18nc("@title:group", "TOTP secret or URI")
                 wrapMode: Text.Wrap
             }
             RowLayout {
@@ -81,12 +82,12 @@ SecretFields {
                     text: root.totpInput
                     echoMode: root.inputVisible ? TextInput.Normal : TextInput.Password
                     passwordMaskDelay: 0
-                    placeholderText: qsTr("Base32 u otpauth://")
-                    Accessible.name: qsTr("Semilla o URI TOTP, inicialmente oculta")
+                    placeholderText: KI18n.i18nc("@info:placeholder", "Base32 or otpauth://")
+                    Accessible.name: KI18n.i18n("TOTP secret or URI, hidden at first")
                     onTextEdited: root.totpInput = text
                 }
                 Controls.ToolButton {
-                    text: root.inputVisible ? qsTr("Ocultar semilla TOTP") : qsTr("Mostrar semilla TOTP")
+                    text: root.inputVisible ? KI18n.i18nc("@action:button", "Hide TOTP Secret") : KI18n.i18nc("@action:button", "Show TOTP Secret")
                     icon.name: root.inputVisible ? "view-hidden" : "view-visible"
                     display: Controls.AbstractButton.IconOnly
                     checkable: true
@@ -99,12 +100,12 @@ SecretFields {
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Introduce la semilla Base32 completa o una URI otpauth://. También puedes leerla desde una imagen QR.")
+                text: KI18n.i18n("Enter the full Base32 secret or an otpauth:// URI. You can also read it from a QR image.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
             Controls.Button {
-                text: qsTr("Leer código QR de una imagen…")
+                text: KI18n.i18nc("@action:button", "Read QR Code from Image…")
                 icon.name: "view-barcode-qr"
                 onClicked: qrFileDialog.open()
             }

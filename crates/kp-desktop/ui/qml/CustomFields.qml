@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -128,13 +129,13 @@ SecretFields {
 
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Campos personalizados")
+            text: KI18n.i18nc("@title:group", "Custom fields")
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Añade los datos que necesites. Los campos pueden repetirse y cambiar de orden.")
+            text: KI18n.i18n("Add the data you need. Fields can repeat and be reordered.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -173,12 +174,12 @@ SecretFields {
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
                             text: recordFrame.key
-                            placeholderText: qsTr("Nombre del campo")
-                            Accessible.name: qsTr("Nombre del campo %1").arg(recordFrame.index + 1)
+                            placeholderText: KI18n.i18nc("@info:placeholder", "Field name")
+                            Accessible.name: KI18n.i18n("Field name %1", recordFrame.index + 1)
                             onTextEdited: root.updateRecord(recordFrame.index, "key", text)
                         }
                         Controls.ToolButton {
-                            text: qsTr("Mover campo hacia arriba")
+                            text: KI18n.i18nc("@action:button", "Move Field Up")
                             icon.name: "arrow-up"
                             display: Controls.AbstractButton.IconOnly
                             enabled: recordFrame.index > 0
@@ -188,7 +189,7 @@ SecretFields {
                             Controls.ToolTip.text: text
                         }
                         Controls.ToolButton {
-                            text: qsTr("Mover campo hacia abajo")
+                            text: KI18n.i18nc("@action:button", "Move Field Down")
                             icon.name: "arrow-down"
                             display: Controls.AbstractButton.IconOnly
                             enabled: recordFrame.index < recordModel.count - 1
@@ -198,7 +199,7 @@ SecretFields {
                             Controls.ToolTip.text: text
                         }
                         Controls.ToolButton {
-                            text: qsTr("Quitar campo %1").arg(recordFrame.index + 1)
+                            text: KI18n.i18nc("@action:button", "Remove Field %1", recordFrame.index + 1)
                             icon.name: "edit-delete"
                             display: Controls.AbstractButton.IconOnly
                             Accessible.name: text
@@ -211,7 +212,7 @@ SecretFields {
                     SecretInput {
                         objectName: "customRecordValueField"
                         Layout.fillWidth: true
-                        label: qsTr("Valor")
+                        label: KI18n.i18nc("@label:textbox", "Value")
                         value: recordFrame.value
                         multiline: !!recordFrame.multiline || recordFrame.value.indexOf("\n") >= 0 || recordFrame.value.indexOf("\r") >= 0
                         concealed: !!recordFrame.concealed
@@ -224,14 +225,14 @@ SecretFields {
                     RowLayout {
                         Layout.fillWidth: true
                         Controls.CheckBox {
-                            text: qsTr("Permitir varias líneas")
-                            Accessible.name: qsTr("Permitir varias líneas en %1").arg(recordFrame.key || qsTr("campo sin nombre"))
+                            text: KI18n.i18nc("@option:check", "Allow multiple lines")
+                            Accessible.name: KI18n.i18n("Allow multiple lines in %1", recordFrame.key || KI18n.i18n("unnamed field"))
                             checked: !!recordFrame.multiline
                             onToggled: root.updateRecord(recordFrame.index, "multiline", checked)
                         }
                         Controls.CheckBox {
-                            text: qsTr("Ocultar en el detalle")
-                            Accessible.name: qsTr("Ocultar %1 en el detalle").arg(recordFrame.key || qsTr("campo sin nombre"))
+                            text: KI18n.i18nc("@option:check", "Hide in details")
+                            Accessible.name: KI18n.i18n("Hide %1 in details", recordFrame.key || KI18n.i18n("unnamed field"))
                             checked: !!recordFrame.concealed
                             onToggled: root.updateRecord(recordFrame.index, "concealed", checked)
                         }
@@ -241,7 +242,7 @@ SecretFields {
         }
 
         Controls.Button {
-            text: qsTr("Agregar campo")
+            text: KI18n.i18nc("@action:button", "Add Field")
             icon.name: "list-add"
             enabled: recordModel.count < root.maximumRecords
             onClicked: root.addRecord()

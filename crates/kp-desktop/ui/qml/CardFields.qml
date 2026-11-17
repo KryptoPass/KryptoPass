@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -57,7 +58,7 @@ SecretFields {
 
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Titular")
+            label: KI18n.i18nc("@label:textbox", "Holder")
             value: root.holder
             onValueEdited: function (value) {
                 root.holder = value;
@@ -65,7 +66,7 @@ SecretFields {
         }
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Número de tarjeta")
+            label: KI18n.i18nc("@label:textbox", "Card number")
             value: root.number
             concealed: true
             maximumLength: 64
@@ -85,9 +86,9 @@ SecretFields {
 
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Mes de vencimiento")
+                label: KI18n.i18nc("@label:textbox", "Expiration month")
                 value: root.expiryMonth > 0 ? String(root.expiryMonth) : ""
-                placeholderText: qsTr("1–12")
+                placeholderText: KI18n.i18nc("@info:placeholder month", "1–12")
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: IntValidator {
                     bottom: 1
@@ -99,22 +100,22 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Año de vencimiento")
+                label: KI18n.i18nc("@label:textbox", "Expiration year")
                 value: root.expiryYear > 0 ? String(root.expiryYear) : ""
-                placeholderText: qsTr("AAAA")
+                placeholderText: KI18n.i18nc("@info:placeholder year", "YYYY")
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: IntValidator {
                     bottom: 1900
                     top: 9999
                 }
-                hint: qsTr("Escribe el año con cuatro cifras.")
+                hint: KI18n.i18n("Enter the year with four digits.")
                 onValueEdited: function (value) {
                     root.expiryYear = value.length ? Number(value) : 0;
                 }
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("CVV")
+                label: KI18n.i18nc("@label:textbox", "CVV")
                 value: root.cvv
                 concealed: true
                 maximumLength: 4
@@ -122,14 +123,14 @@ SecretFields {
                 validator: RegularExpressionValidator {
                     regularExpression: /[0-9]{0,4}/
                 }
-                hint: qsTr("Usa 3 o 4 cifras.")
+                hint: KI18n.i18n("Use 3 or 4 digits.")
                 onValueEdited: function (value) {
                     root.cvv = value;
                 }
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("PIN")
+                label: KI18n.i18nc("@label:textbox", "PIN")
                 value: root.pin
                 concealed: true
                 maximumLength: 64

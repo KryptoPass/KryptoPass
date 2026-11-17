@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -10,7 +11,7 @@ ColumnLayout {
     Accessible.role: Accessible.Grouping
     Accessible.name: root.label
 
-    property string label: qsTr("Notas")
+    property string label: KI18n.i18nc("@title:group", "Notes")
     property alias accessibleName: editor.accessibleName
     property alias placeholderText: editor.placeholderText
     readonly property string sourceText: editor.sourceText
@@ -41,8 +42,8 @@ ColumnLayout {
         objectNamePrefix: "markdownNotes"
         Layout.fillWidth: true
         editorMinimumHeight: Kirigami.Units.gridUnit * 5
-        accessibleName: qsTranslate("SecretDetail", "Notas del elemento")
-        placeholderText: qsTranslate("NoteFields", "Añade contexto opcional.")
+        accessibleName: KI18n.i18n("Item notes")
+        placeholderText: KI18n.i18nc("@info:placeholder", "Add optional context.")
         onSourceTextEdited: value => root.sourceTextEdited(value)
     }
 }

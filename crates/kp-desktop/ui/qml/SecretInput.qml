@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -76,7 +77,7 @@ ColumnLayout {
 
         Controls.ToolButton {
             visible: root.concealed
-            text: root.secretVisible ? qsTr("Ocultar %1").arg(root.label) : qsTr("Mostrar %1").arg(root.label)
+            text: root.secretVisible ? KI18n.i18nc("@action:button %1 is a field name", "Hide %1", root.label) : KI18n.i18nc("@action:button %1 is a field name", "Show %1", root.label)
             icon.name: root.secretVisible ? "view-hidden" : "view-visible"
             display: Controls.AbstractButton.IconOnly
             checkable: true

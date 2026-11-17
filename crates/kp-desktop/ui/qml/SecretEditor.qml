@@ -5,6 +5,7 @@ import QtQuick.Dialogs as Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Pane {
     id: editor
@@ -38,25 +39,25 @@ Controls.Pane {
     property var pendingRelatedEntry: null
     property bool opened: false
     property var pendingNavigation: null
-    readonly property string title: entryId ? qsTr("Editar elemento") : qsTr("Nuevo elemento")
+    readonly property string title: entryId ? KI18n.i18nc("@title", "Edit Item") : KI18n.i18nc("@title", "New Item")
 
     readonly property bool saving: storeAdapter.controller.saving
     readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !preparingSecretMaterial && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
-    readonly property string iconStateText: storeAdapter.controller.iconBusy ? qsTr("Preparando imagen…") : draftIcon?.kind === "image" ? qsTr("Imagen personalizada") : draftIcon?.kind === "theme" ? draftIcon.name : qsTr("Automático")
+    readonly property string iconStateText: storeAdapter.controller.iconBusy ? KI18n.i18n("Preparing image…") : draftIcon?.kind === "image" ? KI18n.i18nc("@label item icon", "Custom image") : draftIcon?.kind === "theme" ? draftIcon.name : KI18n.i18nc("@label item icon", "Automatic")
     readonly property string saveBlockReason: {
         if (!loaded)
             return "";
         const missing = [];
         if (!titleField.text.trim())
-            missing.push(qsTr("Nombre"));
+            missing.push(KI18n.i18nc("@label", "Name"));
         for (const label of fieldsHost.missingRequiredFields)
             missing.push(label);
         if (missing.length === 1)
-            return qsTr("Falta completar: %1.").arg(missing[0]);
+            return KI18n.i18n("Still missing: %1.", missing[0]);
         if (missing.length > 1)
-            return qsTr("Falta completar: %1 y %2.").arg(missing[0]).arg(missing[1]);
+            return KI18n.i18n("Still missing: %1 and %2.", missing[0], missing[1]);
         if (!recipientChooser.eligibleSelection)
-            return qsTr("Elige al menos una clave válida para cifrar el elemento.");
+            return KI18n.i18n("Choose at least one valid key to encrypt the item.");
         return "";
     }
 
@@ -173,7 +174,7 @@ Controls.Pane {
         if (kindIndex < 0) {
             waitingForEditor = false;
             pendingRelatedEntry = null;
-            saveError = qsTr("No se puede editar este tipo de elemento.");
+            saveError = KI18n.i18n("This item type cannot be edited.");
             return;
         }
         const relatedPrefill = !resultId ? pendingRelatedEntry : null;
@@ -199,10 +200,10 @@ Controls.Pane {
             const customIndex = kindField.model.findIndex(option => option.id === "custom");
             if (customIndex < 0) {
                 waitingForEditor = false;
-                saveError = qsTr("No se puede crear el elemento vinculado.");
+                saveError = KI18n.i18n("The linked item cannot be created.");
                 return;
             }
-            titleField.text = qsTr("Elemento vinculado de %1").arg(relatedPrefill.title);
+            titleField.text = KI18n.i18nc("@label default title %1 is the original item", "Item linked to %1", relatedPrefill.title);
             draftFolderId = relatedPrefill.folder;
             kindField.currentIndex = customIndex;
             fieldsHost.loadContent({
@@ -365,8 +366,8 @@ Controls.Pane {
 
     Dialogs.FileDialog {
         id: iconFileDialog
-        title: qsTr("Elegir imagen del elemento")
-        nameFilters: [qsTr("Imágenes (*.png *.jpg *.jpeg *.webp)")]
+        title: KI18n.i18nc("@title:window", "Choose Item Image")
+        nameFilters: [KI18n.i18n("Images (*.png *.jpg *.jpeg *.webp)")]
         onAccepted: {
             editor.externalModalOpen = false;
             editor.storeAdapter.controller.prepareEntryIcon(selectedFile);
@@ -436,7 +437,7 @@ Controls.Pane {
             if (editor.savePending && !editor.storeAdapter.controller.saving) {
                 editor.savePending = false;
                 editor.invalidField = editor.storeAdapter.controller.editorErrorField || "";
-                editor.saveError = editor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar el elemento.");
+                editor.saveError = editor.storeAdapter.controller.errorMessage || KI18n.i18n("The item could not be saved.");
                 if (editor.invalidField)
                     Qt.callLater(fieldsHost.focusInvalidField);
             } else if (editor.waitingForEditor && !editor.storeAdapter.controller.editorBusy) {
@@ -461,7 +462,7 @@ Controls.Pane {
                     elide: Text.ElideRight
                 }
                 Controls.ToolButton {
-                    text: qsTr("Cerrar editor")
+                    text: KI18n.i18nc("@action:button", "Close Editor")
                     icon.name: "window-close"
                     display: Controls.AbstractButton.IconOnly
                     enabled: !editor.saving && !editor.savePending
@@ -515,7 +516,7 @@ Controls.Pane {
                                 Layout.minimumWidth: 0
                                 spacing: 6
                                 Controls.Label {
-                                    text: qsTr("Tipo")
+                                    text: KI18n.i18nc("@label item type", "Type")
                                 }
                                 Controls.ComboBox {
                                     id: kindField
@@ -524,8 +525,8 @@ Controls.Pane {
                                     model: editor.storeAdapter.kindOptions
                                     textRole: "name"
                                     valueRole: "id"
-                                    Accessible.name: qsTr("Tipo de elemento")
-                                    Accessible.description: editor.entryId ? qsTr("El tipo no se puede cambiar al editar un elemento existente.") : qsTr("Cambia el tipo para elegir otro formulario antes de escribir los datos.")
+                                    Accessible.name: KI18n.i18n("Item type")
+                                    Accessible.description: editor.entryId ? KI18n.i18n("The type cannot be changed when editing an existing item.") : KI18n.i18n("Change the type to pick another form before entering the data.")
                                     enabled: !editor.entryId && !editor.preparingSecretMaterial
                                     onActivated: {
                                         if (!editor.entryId && !editor.preparingSecretMaterial)
@@ -538,7 +539,7 @@ Controls.Pane {
                                 Layout.minimumWidth: 0
                                 spacing: 6
                                 Controls.Label {
-                                    text: qsTr("Carpeta")
+                                    text: KI18n.i18nc("@label", "Folder")
                                 }
                                 FolderPicker {
                                     id: folderField
@@ -546,7 +547,7 @@ Controls.Pane {
                                     Layout.minimumWidth: 0
                                     folderRows: editor.storeAdapter.folderRows
                                     selectedId: editor.draftFolderId
-                                    accessibleLabel: qsTr("Carpeta del elemento")
+                                    accessibleLabel: KI18n.i18n("Item folder")
                                     onFolderSelected: function (folderId) {
                                         editor.draftFolderId = folderId;
                                         editor.updateDirty();
@@ -564,14 +565,14 @@ Controls.Pane {
                                 Layout.preferredWidth: titleField.implicitHeight
                                 Layout.preferredHeight: titleField.implicitHeight
                                 padding: 4
-                                text: qsTr("Cambiar icono del elemento")
+                                text: KI18n.i18nc("@action:button", "Change Item Icon")
                                 display: Controls.AbstractButton.IconOnly
                                 focusPolicy: Qt.ClickFocus
                                 activeFocusOnTab: false
                                 Accessible.name: text
                                 Accessible.description: editor.iconStateText
                                 Controls.ToolTip.visible: hovered || visualFocus
-                                Controls.ToolTip.text: qsTr("%1 · %2").arg(text).arg(editor.iconStateText)
+                                Controls.ToolTip.text: KI18n.i18nc("@label two parts of a subtitle", "%1 · %2", text, editor.iconStateText)
                                 onClicked: iconMenu.open()
                                 contentItem: EntryIcon {
                                     entryIcon: editor.draftIcon
@@ -583,7 +584,7 @@ Controls.Pane {
                                     id: iconMenu
                                     y: iconButton.height
                                     Controls.MenuItem {
-                                        text: qsTr("Usar favicon automático")
+                                        text: KI18n.i18nc("@action:inmenu", "Use Automatic Favicon")
                                         onTriggered: {
                                             editor.draftIcon = null;
                                             editor.draftIconSource = "";
@@ -591,14 +592,14 @@ Controls.Pane {
                                         }
                                     }
                                     Controls.MenuItem {
-                                        text: qsTr("Elegir imagen…")
+                                        text: KI18n.i18nc("@action:inmenu", "Choose Image…")
                                         onTriggered: {
                                             editor.externalModalOpen = true;
                                             iconFileDialog.open();
                                         }
                                     }
                                     Controls.MenuItem {
-                                        text: qsTr("Elegir icono del tema…")
+                                        text: KI18n.i18nc("@action:inmenu", "Choose Theme Icon…")
                                         onTriggered: iconWindow.openWith(editor.draftIcon?.kind === "theme" ? editor.draftIcon.name : "", titleField.text.trim(), kindField.currentText, editor.storeAdapter.kindIcon(kindField.currentValue || "login"))
                                     }
                                 }
@@ -607,15 +608,15 @@ Controls.Pane {
                                 Layout.fillWidth: true
                                 spacing: 6
                                 Controls.Label {
-                                    text: qsTr("Nombre *")
+                                    text: KI18n.i18nc("@label:textbox required field", "Name *")
                                 }
                                 Controls.TextField {
                                     id: titleField
                                     objectName: "entryNameField"
                                     Layout.fillWidth: true
-                                    Accessible.name: qsTr("Nombre del elemento")
-                                    Accessible.description: qsTr("Obligatorio. Identifica el elemento en la lista.")
-                                    placeholderText: qsTr("Ej. Correo personal")
+                                    Accessible.name: KI18n.i18n("Item name")
+                                    Accessible.description: KI18n.i18n("Required. Identifies the item in the list.")
+                                    placeholderText: KI18n.i18nc("@info:placeholder", "E.g. Personal email")
                                     onTextEdited: editor.updateDirty()
                                 }
                             }
@@ -700,16 +701,16 @@ Controls.Pane {
                     running: visible
                     Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
                     Layout.preferredHeight: width
-                    Accessible.name: qsTr("Guardando elemento")
+                    Accessible.name: KI18n.i18n("Saving item")
                 }
                 Controls.Button {
-                    text: qsTr("Cancelar")
+                    text: KI18n.i18nc("@action:button", "Cancel")
                     enabled: !editor.saving && !editor.savePending && !editor.storeAdapter.controller.editorBusy
                     onClicked: editor.requestClose()
                 }
                 Controls.Button {
                     objectName: "entrySaveButton"
-                    text: editor.saving ? qsTr("Guardando…") : editor.entryId ? qsTr("Guardar cambios") : qsTr("Crear elemento")
+                    text: editor.saving ? KI18n.i18n("Saving…") : editor.entryId ? KI18n.i18nc("@action:button", "Save Changes") : KI18n.i18nc("@action:button", "Create Item")
                     icon.name: "document-save"
                     highlighted: true
                     enabled: editor.canSave
@@ -725,7 +726,7 @@ Controls.Pane {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: qsTr("Descartar cambios")
+        title: KI18n.i18nc("@title:window", "Discard Changes")
         standardButtons: Controls.Dialog.Discard | Controls.Dialog.Cancel
         onDiscarded: {
             discardDialog.close();
@@ -742,7 +743,7 @@ Controls.Pane {
         }
         Controls.Label {
             width: Math.min(editor.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 28)
-            text: qsTr("Hay cambios sin guardar. Si continúas, se descartarán.")
+            text: KI18n.i18n("There are unsaved changes. If you continue, they will be discarded.")
             wrapMode: Text.Wrap
         }
     }

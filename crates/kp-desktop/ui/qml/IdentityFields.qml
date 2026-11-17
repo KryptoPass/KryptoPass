@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -150,7 +151,7 @@ SecretFields {
 
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Nombre")
+            text: KI18n.i18nc("@label", "Name")
             font.weight: Font.DemiBold
         }
         GridLayout {
@@ -160,7 +161,7 @@ SecretFields {
             rowSpacing: Kirigami.Units.largeSpacing
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Nombre")
+                label: KI18n.i18nc("@label", "Name")
                 value: root.firstName
                 onValueEdited: function (value) {
                     root.firstName = value;
@@ -168,7 +169,7 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Apellidos")
+                label: KI18n.i18nc("@label:textbox", "Last name")
                 value: root.lastName
                 onValueEdited: function (value) {
                     root.lastName = value;
@@ -181,13 +182,13 @@ SecretFields {
             spacing: Kirigami.Units.smallSpacing
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Documentos")
+                text: KI18n.i18nc("@title:group", "Documents")
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Guarda solo los datos que necesites tener a mano.")
+                text: KI18n.i18n("Store only the data you need to have at hand.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
@@ -217,11 +218,11 @@ SecretFields {
                             Layout.fillWidth: true
                             Controls.Label {
                                 Layout.fillWidth: true
-                                text: qsTr("Documento %1").arg(documentFrame.index + 1)
+                                text: KI18n.i18nc("@title", "Document %1", documentFrame.index + 1)
                                 font.weight: Font.Medium
                             }
                             Controls.ToolButton {
-                                text: qsTr("Mover documento hacia arriba")
+                                text: KI18n.i18nc("@action:button", "Move Document Up")
                                 icon.name: "arrow-up"
                                 display: Controls.AbstractButton.IconOnly
                                 enabled: documentFrame.index > 0
@@ -231,7 +232,7 @@ SecretFields {
                                 Controls.ToolTip.text: text
                             }
                             Controls.ToolButton {
-                                text: qsTr("Mover documento hacia abajo")
+                                text: KI18n.i18nc("@action:button", "Move Document Down")
                                 icon.name: "arrow-down"
                                 display: Controls.AbstractButton.IconOnly
                                 enabled: documentFrame.index < documentModel.count - 1
@@ -241,7 +242,7 @@ SecretFields {
                                 Controls.ToolTip.text: text
                             }
                             Controls.ToolButton {
-                                text: qsTr("Quitar documento %1").arg(documentFrame.index + 1)
+                                text: KI18n.i18nc("@action:button", "Remove Document %1", documentFrame.index + 1)
                                 icon.name: "edit-delete"
                                 display: Controls.AbstractButton.IconOnly
                                 Accessible.name: text
@@ -258,7 +259,7 @@ SecretFields {
                             SecretInput {
                                 id: documentTypeField
                                 Layout.fillWidth: true
-                                label: qsTr("Tipo de documento")
+                                label: KI18n.i18nc("@label:textbox", "Document type")
                                 value: documentFrame.documentType
                                 onValueEdited: function (value) {
                                     root.updateDocument(documentFrame.index, "documentType", value);
@@ -266,7 +267,7 @@ SecretFields {
                             }
                             SecretInput {
                                 Layout.fillWidth: true
-                                label: qsTr("Número")
+                                label: KI18n.i18nc("@label:textbox document", "Number")
                                 value: documentFrame.number
                                 concealed: true
                                 onValueEdited: function (value) {
@@ -275,7 +276,7 @@ SecretFields {
                             }
                             SecretInput {
                                 Layout.fillWidth: true
-                                label: qsTr("País o región")
+                                label: KI18n.i18nc("@label:textbox", "Country or region")
                                 value: documentFrame.country
                                 onValueEdited: function (value) {
                                     root.updateDocument(documentFrame.index, "country", value);
@@ -283,9 +284,9 @@ SecretFields {
                             }
                             SecretInput {
                                 Layout.fillWidth: true
-                                label: qsTr("Fecha de vencimiento")
+                                label: KI18n.i18nc("@label:textbox", "Expiration date")
                                 value: documentFrame.expires
-                                placeholderText: qsTr("Fecha opcional")
+                                placeholderText: KI18n.i18nc("@info:placeholder", "Optional date")
                                 onValueEdited: function (value) {
                                     root.updateDocument(documentFrame.index, "expires", value);
                                 }
@@ -295,7 +296,7 @@ SecretFields {
                 }
             }
             Controls.Button {
-                text: qsTr("Agregar documento")
+                text: KI18n.i18nc("@action:button", "Add Document")
                 icon.name: "list-add"
                 enabled: documentModel.count < root.maximumDocuments
                 onClicked: root.addDocument()
@@ -305,9 +306,9 @@ SecretFields {
         StringListEditor {
             objectName: "identityEmailsEditor"
             Layout.fillWidth: true
-            label: qsTr("Correos")
-            inputLabel: qsTr("Correo")
-            addLabel: qsTr("Agregar correo")
+            label: KI18n.i18nc("@title:group", "Emails")
+            inputLabel: KI18n.i18nc("@label:textbox", "Email")
+            addLabel: KI18n.i18nc("@action:button", "Add Email")
             maximumValues: 100
             values: root.emails
             onValuesEdited: function (values) {
@@ -317,9 +318,9 @@ SecretFields {
         StringListEditor {
             objectName: "identityPhonesEditor"
             Layout.fillWidth: true
-            label: qsTr("Teléfonos")
-            inputLabel: qsTr("Teléfono")
-            addLabel: qsTr("Agregar teléfono")
+            label: KI18n.i18nc("@title:group", "Phones")
+            inputLabel: KI18n.i18nc("@label:textbox", "Phone")
+            addLabel: KI18n.i18nc("@action:button", "Add Phone")
             maximumValues: 100
             values: root.phones
             onValuesEdited: function (values) {
@@ -328,7 +329,7 @@ SecretFields {
         }
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Dirección")
+            label: KI18n.i18nc("@label:textbox postal address", "Address")
             value: root.address
             multiline: true
             onValueEdited: function (value) {

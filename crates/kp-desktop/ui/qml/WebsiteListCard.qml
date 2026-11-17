@@ -3,12 +3,13 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Frame {
     id: root
 
     required property var urls
-    property string heading: qsTranslate("SecretDetail", "Sitios web")
+    property string heading: KI18n.i18nc("@title:group", "Websites")
     property string badge: ""
 
     readonly property var websiteUrls: Array.isArray(urls) ? urls.map(value => String(value || "")) : []
@@ -49,7 +50,7 @@ Controls.Frame {
                 required property string modelData
                 required property int index
                 readonly property string webUrl: root.safeWebUrl(modelData)
-                readonly property string domain: webUrl ? webUrl.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] : qsTranslate("SecretDetail", "Enlace no válido")
+                readonly property string domain: webUrl ? webUrl.replace(/^https?:\/\//i, "").split(/[/?#]/)[0] : KI18n.i18n("Invalid link")
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
 
@@ -77,22 +78,22 @@ Controls.Frame {
                         }
                     }
                     Controls.ToolButton {
-                        text: qsTranslate("SecretDetail", "Abrir sitio web")
+                        text: KI18n.i18nc("@action:button", "Open Website")
                         icon.name: "external-link-symbolic"
                         display: Controls.AbstractButton.IconOnly
                         enabled: !!websiteDelegate.webUrl
-                        Accessible.name: qsTranslate("SecretDetail", "Abrir %1 en el navegador").arg(websiteDelegate.domain)
+                        Accessible.name: KI18n.i18n("Open %1 in the browser", websiteDelegate.domain)
                         Accessible.description: websiteDelegate.modelData
                         onClicked: Qt.openUrlExternally(websiteDelegate.webUrl)
                         Controls.ToolTip.visible: hovered || visualFocus
                         Controls.ToolTip.text: websiteDelegate.modelData
                     }
                     Controls.ToolButton {
-                        text: qsTranslate("SecretDetail", "Copiar sitio web")
+                        text: KI18n.i18nc("@action:button", "Copy Website")
                         icon.name: "edit-copy"
                         display: Controls.AbstractButton.IconOnly
                         enabled: !!websiteDelegate.modelData
-                        Accessible.name: qsTranslate("SecretDetail", "Copiar %1").arg(websiteDelegate.domain)
+                        Accessible.name: KI18n.i18nc("@action:button %1 is a field name", "Copy %1", websiteDelegate.domain)
                         Accessible.description: websiteDelegate.modelData
                         onClicked: root.copyUrlRequested(websiteDelegate.index)
                         Controls.ToolTip.visible: hovered || visualFocus
@@ -108,7 +109,7 @@ Controls.Frame {
         Controls.Label {
             Layout.fillWidth: true
             visible: root.websiteUrls.length === 0
-            text: qsTranslate("SecretDetail", "No hay sitios web guardados.")
+            text: KI18n.i18n("No websites saved.")
             wrapMode: Text.Wrap
         }
     }

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -61,7 +62,7 @@ SecretFields {
 
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Producto o servicio")
+            label: KI18n.i18nc("@label:textbox", "Product or service")
             value: root.product
             onValueEdited: function (value) {
                 root.product = value;
@@ -69,7 +70,7 @@ SecretFields {
         }
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Clave de licencia")
+            label: KI18n.i18nc("@label:textbox", "License key")
             value: root.licenseKey
             concealed: true
             onValueEdited: function (value) {
@@ -83,7 +84,7 @@ SecretFields {
             rowSpacing: Kirigami.Units.largeSpacing
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Titular")
+                label: KI18n.i18nc("@label:textbox", "Holder")
                 value: root.holder
                 onValueEdited: function (value) {
                     root.holder = value;
@@ -91,7 +92,7 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Correo")
+                label: KI18n.i18nc("@label:textbox", "Email")
                 value: root.email
                 onValueEdited: function (value) {
                     root.email = value;
@@ -99,7 +100,7 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Versión")
+                label: KI18n.i18nc("@label:textbox", "Version")
                 value: root.version
                 onValueEdited: function (value) {
                     root.version = value;
@@ -107,7 +108,7 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Fecha de compra")
+                label: KI18n.i18nc("@label:textbox", "Purchase date")
                 value: root.purchased
                 onValueEdited: function (value) {
                     root.purchased = value;
@@ -115,7 +116,7 @@ SecretFields {
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Fecha de vencimiento")
+                label: KI18n.i18nc("@label:textbox", "Expiration date")
                 value: root.expires
                 onValueEdited: function (value) {
                     root.expires = value;

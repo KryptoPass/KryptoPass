@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -71,8 +72,8 @@ SecretFields {
 
     Dialogs.FileDialog {
         id: keyFileDialog
-        title: qsTr("Importar clave privada OpenSSH")
-        nameFilters: [qsTr("Claves privadas OpenSSH (*)"), qsTr("Todos los archivos (*)")]
+        title: KI18n.i18nc("@title:window", "Import OpenSSH Private Key")
+        nameFilters: [KI18n.i18n("OpenSSH private keys (*)"), KI18n.i18n("All files (*)")]
         onVisibleChanged: root.externalModalRequested(visible)
         onAccepted: root.prepareSshKeyRequested(selectedFile, root.passphrase)
     }
@@ -86,18 +87,18 @@ SecretFields {
             spacing: Kirigami.Units.smallSpacing
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Clave privada")
+                text: KI18n.i18nc("@title:group", "Private key")
                 font.weight: Font.DemiBold
             }
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("Importa un archivo de clave privada OpenSSH. Si está cifrado, escribe su frase de contraseña.")
+                text: KI18n.i18n("Import an OpenSSH private key file. If it is encrypted, enter its passphrase.")
                 color: Kirigami.Theme.disabledTextColor
                 wrapMode: Text.Wrap
             }
             SecretInput {
                 Layout.fillWidth: true
-                label: qsTr("Frase de contraseña")
+                label: KI18n.i18nc("@label:textbox", "Passphrase")
                 value: root.passphrase
                 concealed: true
                 onValueEdited: function (value) {
@@ -105,14 +106,14 @@ SecretFields {
                 }
             }
             Controls.Button {
-                text: qsTr("Elegir archivo de clave…")
+                text: KI18n.i18nc("@action:button", "Choose Key File…")
                 icon.name: "document-open"
                 onClicked: keyFileDialog.open()
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !!root.importToken
-                text: qsTr("La clave seleccionada está lista para guardar.")
+                text: KI18n.i18n("The selected key is ready to save.")
                 color: Kirigami.Theme.positiveTextColor
                 wrapMode: Text.Wrap
             }
@@ -126,24 +127,24 @@ SecretFields {
                 spacing: Kirigami.Units.smallSpacing
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Datos públicos de la clave")
+                    text: KI18n.i18nc("@title:group", "Public key data")
                     font.weight: Font.DemiBold
                 }
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !!root.algorithm
-                    text: qsTr("Algoritmo: %1").arg(root.algorithm)
+                    text: KI18n.i18n("Algorithm: %1", root.algorithm)
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                 }
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: !!root.fingerprint
-                    text: qsTr("Huella: %1").arg(root.fingerprint)
+                    text: KI18n.i18n("Fingerprint: %1", root.fingerprint)
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     font.family: Kirigami.Theme.fixedWidthFont.family
-                    Accessible.name: qsTr("Huella de la clave SSH")
+                    Accessible.name: KI18n.i18n("SSH key fingerprint")
                 }
                 Controls.TextArea {
                     Layout.fillWidth: true
@@ -153,14 +154,14 @@ SecretFields {
                     selectByMouse: true
                     wrapMode: TextEdit.WrapAnywhere
                     textFormat: TextEdit.PlainText
-                    Accessible.name: qsTr("Clave pública SSH")
+                    Accessible.name: KI18n.i18n("SSH public key")
                 }
             }
         }
 
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Usuario")
+            label: KI18n.i18nc("@label:textbox", "User")
             value: root.user
             onValueEdited: function (value) {
                 root.user = value;
@@ -169,9 +170,9 @@ SecretFields {
         StringListEditor {
             objectName: "sshHostsEditor"
             Layout.fillWidth: true
-            label: qsTr("Equipos")
-            inputLabel: qsTr("Equipo o host")
-            addLabel: qsTr("Agregar equipo")
+            label: KI18n.i18nc("@title:group", "Hosts")
+            inputLabel: KI18n.i18nc("@label:textbox", "Host")
+            addLabel: KI18n.i18nc("@action:button", "Add Host")
             values: root.hosts
             onValuesEdited: function (values) {
                 root.hosts = values;

@@ -334,8 +334,8 @@ TestCase {
             expiryMonth: 12,
             expiryYear: 2026
         });
-        const monthInput = findSecretInput(card, qsTr("Mes de vencimiento"));
-        const yearInput = findSecretInput(card, qsTr("Año de vencimiento"));
+        const monthInput = findSecretInput(card, "Expiration month");
+        const yearInput = findSecretInput(card, "Expiration year");
         verify(monthInput !== null, "card month input should be discoverable");
         verify(yearInput !== null, "card year input should be discoverable");
 

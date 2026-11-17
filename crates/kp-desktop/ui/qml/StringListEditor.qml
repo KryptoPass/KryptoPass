@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -11,7 +12,7 @@ ColumnLayout {
     Accessible.name: root.label
 
     property string label: ""
-    property string addLabel: qsTr("Agregar elemento")
+    property string addLabel: KI18n.i18nc("@action:button list entry", "Add Entry")
     property string inputLabel: label
     property string accessibleDescription: ""
     property bool invalid: false
@@ -168,7 +169,7 @@ ColumnLayout {
             }
 
             Controls.ToolButton {
-                text: qsTr("Mover %1 hacia arriba").arg(root.inputLabel)
+                text: KI18n.i18nc("@action:button", "Move %1 Up", root.inputLabel)
                 icon.name: "arrow-up"
                 display: Controls.AbstractButton.IconOnly
                 enabled: valueRow.index > 0
@@ -179,7 +180,7 @@ ColumnLayout {
             }
 
             Controls.ToolButton {
-                text: qsTr("Mover %1 hacia abajo").arg(root.inputLabel)
+                text: KI18n.i18nc("@action:button", "Move %1 Down", root.inputLabel)
                 icon.name: "arrow-down"
                 display: Controls.AbstractButton.IconOnly
                 enabled: valueRow.index < valueModel.count - 1
@@ -190,7 +191,7 @@ ColumnLayout {
             }
 
             Controls.ToolButton {
-                text: qsTr("Quitar %1 %2").arg(root.inputLabel).arg(valueRow.index + 1)
+                text: KI18n.i18nc("@action:button %1 is the entry label, %2 its position", "Remove %1 %2", root.inputLabel, valueRow.index + 1)
                 icon.name: "edit-delete"
                 display: Controls.AbstractButton.IconOnly
                 Accessible.name: text

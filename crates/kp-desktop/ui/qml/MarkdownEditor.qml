@@ -4,6 +4,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop
+import org.kde.ki18n
 
 // Reusable editor for original Markdown source and its disposable preview.
 // `sourceText` always holds the plain source. `sourceTextEdited` reports edits
@@ -20,8 +21,8 @@ ColumnLayout {
     property string objectNamePrefix: "markdown"
     property string sourceText: ""
     property bool previewMode: false
-    property string accessibleName: qsTr("Fuente Markdown")
-    property string placeholderText: qsTr("Escribe el texto que quieres guardar cifrado.")
+    property string accessibleName: KI18n.i18n("Markdown source")
+    property string placeholderText: KI18n.i18nc("@info:placeholder", "Write the text you want to store encrypted.")
     property real editorMinimumHeight: Kirigami.Units.gridUnit * 9
     property bool synchronizingSource: false
     readonly property bool effectivelyVisible: {
@@ -42,107 +43,107 @@ ColumnLayout {
         {
             name: "undo",
             suffix: "UndoButton",
-            label: qsTr("Deshacer"),
+            label: KI18n.i18nc("@action:button", "Undo"),
             icon: "edit-undo",
-            tip: qsTr("Deshacer")
+            tip: KI18n.i18nc("@action:button", "Undo")
         },
         {
             name: "redo",
             suffix: "RedoButton",
-            label: qsTr("Rehacer"),
+            label: KI18n.i18nc("@action:button", "Redo"),
             icon: "edit-redo",
-            tip: qsTr("Rehacer")
+            tip: KI18n.i18nc("@action:button", "Redo")
         },
         {
             name: "bold",
             suffix: "BoldButton",
-            label: qsTr("Negrita"),
+            label: KI18n.i18nc("@action:button", "Bold"),
             icon: "format-text-bold",
-            tip: qsTr("Negrita · Ctrl+B")
+            tip: KI18n.i18nc("@info:tooltip", "Bold · Ctrl+B")
         },
         {
             name: "italic",
             suffix: "ItalicButton",
-            label: qsTr("Cursiva"),
+            label: KI18n.i18nc("@action:button", "Italic"),
             icon: "format-text-italic",
-            tip: qsTr("Cursiva · Ctrl+I")
+            tip: KI18n.i18nc("@info:tooltip", "Italic · Ctrl+I")
         },
         {
             name: "strike",
             suffix: "StrikeButton",
-            label: qsTr("Tachado"),
+            label: KI18n.i18nc("@action:button", "Strikethrough"),
             icon: "format-text-strikethrough",
-            tip: qsTr("Tachado")
+            tip: KI18n.i18nc("@action:button", "Strikethrough")
         },
         {
             name: "heading",
             suffix: "HeadingButton",
-            label: qsTr("Encabezado"),
+            label: KI18n.i18nc("@action:button", "Heading"),
             icon: "format-text-uppercase",
-            tip: qsTr("Encabezado de nivel 2")
+            tip: KI18n.i18nc("@info:tooltip", "Level 2 heading")
         },
         {
             name: "bulletList",
             suffix: "BulletListButton",
-            label: qsTr("Lista con viñetas"),
+            label: KI18n.i18nc("@action:button", "Bulleted List"),
             icon: "format-list-unordered",
-            tip: qsTr("Lista con viñetas")
+            tip: KI18n.i18nc("@action:button", "Bulleted List")
         },
         {
             name: "orderedList",
             suffix: "OrderedListButton",
-            label: qsTr("Lista numerada"),
+            label: KI18n.i18nc("@action:button", "Numbered List"),
             icon: "format-list-ordered",
-            tip: qsTr("Lista numerada")
+            tip: KI18n.i18nc("@action:button", "Numbered List")
         },
         {
             name: "taskList",
             suffix: "TaskListButton",
-            label: qsTr("Lista de tareas"),
+            label: KI18n.i18nc("@action:button", "Task List"),
             icon: "view-task",
-            tip: qsTr("Lista de tareas")
+            tip: KI18n.i18nc("@action:button", "Task List")
         },
         {
             name: "quote",
             suffix: "QuoteButton",
-            label: qsTr("Cita"),
+            label: KI18n.i18nc("@action:button", "Quote"),
             icon: "format-text-blockquote",
-            tip: qsTr("Cita")
+            tip: KI18n.i18nc("@action:button", "Quote")
         },
         {
             name: "inlineCode",
             suffix: "InlineCodeButton",
-            label: qsTr("Código en línea"),
+            label: KI18n.i18nc("@action:button", "Inline Code"),
             icon: "format-text-code",
-            tip: qsTr("Código en línea")
+            tip: KI18n.i18nc("@action:button", "Inline Code")
         },
         {
             name: "codeBlock",
             suffix: "CodeBlockButton",
-            label: qsTr("Bloque de código"),
+            label: KI18n.i18nc("@action:button", "Code Block"),
             icon: "code-context",
-            tip: qsTr("Bloque de código")
+            tip: KI18n.i18nc("@action:button", "Code Block")
         },
         {
             name: "link",
             suffix: "LinkButton",
-            label: qsTr("Insertar enlace"),
+            label: KI18n.i18nc("@action:button", "Insert Link"),
             icon: "insert-link",
-            tip: qsTr("Insertar enlace · Ctrl+K")
+            tip: KI18n.i18nc("@info:tooltip", "Insert Link · Ctrl+K")
         },
         {
             name: "spoiler",
             suffix: "SpoilerButton",
-            label: qsTr("Insertar spoiler"),
+            label: KI18n.i18nc("@action:button", "Insert Spoiler"),
             icon: "view-hidden",
-            tip: qsTr("Insertar spoiler")
+            tip: KI18n.i18nc("@action:button", "Insert Spoiler")
         },
         {
             name: "highlight",
             suffix: "HighlightButton",
-            label: qsTr("Resaltar"),
+            label: KI18n.i18nc("@action:button", "Highlight"),
             icon: "draw-highlight",
-            tip: qsTr("Resaltar")
+            tip: KI18n.i18nc("@action:button", "Highlight")
         }
     ]
 
@@ -410,7 +411,7 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
         Accessible.role: Accessible.PageTabList
-        Accessible.name: qsTr("Modo de edición")
+        Accessible.name: KI18n.i18n("Editing mode")
 
         Controls.ButtonGroup {
             id: previewModeGroup
@@ -419,7 +420,7 @@ ColumnLayout {
         Controls.ToolButton {
             id: editModeButton
             objectName: root.objectNamePrefix + "EditModeButton"
-            text: qsTr("Editar")
+            text: KI18n.i18nc("@action:button markdown mode", "Edit")
             icon.name: "document-edit"
             checkable: true
             autoExclusive: true
@@ -428,7 +429,7 @@ ColumnLayout {
             activeFocusOnTab: !root.previewMode
             KeyNavigation.right: previewModeButton
             KeyNavigation.tab: !root.previewMode ? (root.firstToolbarItem() || sourceEditor) : null
-            Accessible.name: qsTr("Editar Markdown")
+            Accessible.name: KI18n.i18n("Edit Markdown")
             Accessible.role: Accessible.PageTab
             Accessible.checkable: true
             Accessible.checked: editModeButton.checked
@@ -437,7 +438,7 @@ ColumnLayout {
         Controls.ToolButton {
             id: previewModeButton
             objectName: root.objectNamePrefix + "ModeButton"
-            text: qsTr("Previsualizar")
+            text: KI18n.i18nc("@action:button markdown mode", "Preview")
             icon.name: "document-preview"
             checkable: true
             autoExclusive: true
@@ -446,7 +447,7 @@ ColumnLayout {
             activeFocusOnTab: root.previewMode
             KeyNavigation.left: editModeButton
             KeyNavigation.tab: !root.previewMode ? (root.firstToolbarItem() || sourceEditor) : null
-            Accessible.name: qsTr("Previsualizar Markdown")
+            Accessible.name: KI18n.i18n("Preview Markdown")
             Accessible.role: Accessible.PageTab
             Accessible.checkable: true
             Accessible.checked: previewModeButton.checked
@@ -545,7 +546,7 @@ ColumnLayout {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: root.sourceText.length === 0
-                    text: qsTr("No hay contenido para previsualizar.")
+                    text: KI18n.i18n("There is no content to preview.")
                     color: Kirigami.Theme.disabledTextColor
                     wrapMode: Text.Wrap
                 }

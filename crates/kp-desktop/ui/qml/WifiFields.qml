@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 SecretFields {
     id: root
@@ -50,7 +51,7 @@ SecretFields {
 
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Nombre de la red (SSID)")
+            label: KI18n.i18nc("@label:textbox", "Network name (SSID)")
             value: root.ssid
             onValueEdited: function (value) {
                 root.ssid = value;
@@ -61,7 +62,7 @@ SecretFields {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
             Controls.Label {
-                text: qsTr("Seguridad")
+                text: KI18n.i18nc("@label Wi-Fi security", "Security")
             }
             Controls.ComboBox {
                 id: securityField
@@ -70,43 +71,43 @@ SecretFields {
                 model: [
                     {
                         value: "open",
-                        label: qsTr("Abierta")
+                        label: KI18n.i18nc("@item:inlistbox Wi-Fi security", "Open")
                     },
                     {
                         value: "wep",
-                        label: qsTr("WEP")
+                        label: KI18n.i18nc("@item:inlistbox Wi-Fi security", "WEP")
                     },
                     {
                         value: "wpa",
-                        label: qsTr("WPA / WPA2")
+                        label: KI18n.i18nc("@item:inlistbox Wi-Fi security", "WPA / WPA2")
                     },
                     {
                         value: "wpa3",
-                        label: qsTr("WPA3")
+                        label: KI18n.i18nc("@item:inlistbox Wi-Fi security", "WPA3")
                     }
                 ]
                 textRole: "label"
                 valueRole: "value"
                 currentIndex: Math.max(0, ["open", "wep", "wpa", "wpa3"].indexOf(root.security))
-                Accessible.name: qsTr("Tipo de seguridad Wi-Fi")
+                Accessible.name: KI18n.i18n("Wi-Fi security type")
                 onActivated: root.security = currentValue
             }
         }
 
         SecretInput {
             Layout.fillWidth: true
-            label: qsTr("Contraseña de la red")
+            label: KI18n.i18nc("@label:textbox", "Network password")
             value: root.password
             concealed: true
-            hint: root.security === "wpa3" ? qsTr("El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.") : root.security === "open" ? qsTr("Déjala vacía para una red abierta.") : ""
+            hint: root.security === "wpa3" ? KI18n.i18n("The connection QR code is available for open, WEP and WPA/WPA2 networks.") : root.security === "open" ? KI18n.i18n("Leave it empty for an open network.") : ""
             onValueEdited: function (value) {
                 root.password = value;
             }
         }
 
         Controls.CheckBox {
-            text: qsTr("Red oculta")
-            Accessible.name: qsTr("La red Wi-Fi está oculta")
+            text: KI18n.i18nc("@option:check", "Hidden network")
+            Accessible.name: KI18n.i18n("The Wi-Fi network is hidden")
             checked: root.hidden
             onToggled: root.hidden = checked
         }
