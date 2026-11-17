@@ -91,7 +91,7 @@ fuente es español mientras desktop y AppStream son inglés.
 
 Propuesta: migrar QML y C++ a KI18n y `.po`, con `KLocalizedContext` fijado en
 el `QQmlEngine`. Mantener el dominio de traducción en la identidad generada.
-La lengua fuente sigue en español (ver «Decisiones»).
+La lengua fuente pasa a inglés (ver «Decisiones»).
 
 #### 3. KCrash: decidido, queda fuera
 
@@ -234,6 +234,14 @@ Tomadas el 16 de noviembre de 2026.
   contraseñas puede contener secretos. Un crash se diagnostica con el log.
 - **Lengua fuente en español.** El proyecto no busca, por ahora, que lo
   mantenga KDE. Si eso cambia, la fuente pasa a inglés junto con KI18n.
+  Sustituida el 17 de noviembre (abajo).
+
+Tomada el 17 de noviembre de 2026.
+
+- **Lengua fuente en inglés.** KI18n trata `en_US` como el idioma del código y
+  nunca le carga catálogos: con la fuente en español, un sistema en `en_US`
+  vería siempre español. Las cadenas pasan a inglés al migrarlas a KI18n, y el
+  español se convierte en una traducción (`po/es/`).
 
 ## Límites de esta revisión
 

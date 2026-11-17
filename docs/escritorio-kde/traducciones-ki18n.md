@@ -33,8 +33,10 @@ describe el flujo de destino, el mismo que siguen las aplicaciones KDE.
 | `just i18n-check` | Falla si la plantilla está vieja o un catálogo no pasa `msgfmt --check`; forma parte de `just verify` |
 | `just i18n-new-language <idioma>` | Crea `po/<idioma>/<app id>.po` con `msginit` |
 
-La lengua fuente es el español (decisión del 16 de noviembre): no hace falta
-catálogo `es`, y el inglés necesita `po/en/`.
+La lengua fuente es el inglés (decisión del 17 de noviembre). El español es
+una traducción más, en `po/es/<app id>.po`: al migrar cada cadena, el texto en
+español actual pasa a ser su traducción, para que la interfaz en español no
+cambie.
 
 ## En tiempo de ejecución
 
@@ -64,11 +66,14 @@ catálogo `es`, y el inglés necesita `po/en/`.
 
 KI18n da por hecho que el texto fuente está en `en_US`: nunca carga catálogos
 para `en_US` y convierte `LANGUAGE=en` en `en_US`. Con la fuente en español,
-un usuario con el sistema en `en_US` verá siempre español; solo `en_GB` u
-otras variantes reciben la traducción inglesa. Comprobado el 17 de noviembre
-con KI18n 6.31. Mientras la fuente siga en español no hay arreglo limpio.
+un usuario con el sistema en `en_US` vería siempre español. Comprobado el 17
+de noviembre con KI18n 6.31; por eso la fuente pasa a inglés.
 
 ## Fases pendientes
+
+En cada fase, cada cadena se escribe en inglés y su texto en español actual
+entra en `po/es/` en el mismo cambio, así la interfaz en español nunca queda a
+medias.
 
 1. **QML y C++.** `qsTr` → `i18n`/`i18nc`; `QCoreApplication::translate` →
    `i18n` con `TRANSLATION_DOMAIN`. Plurales con `i18np` y `%1`.
@@ -79,4 +84,5 @@ con KI18n 6.31. Mientras la fuente siga en español no hay arreglo limpio.
    las recetas `translations*` y el `QTranslator` de `initialize_desktop`.
 
 Fuera de alcance por ahora: las traducciones del `.desktop` y del metainfo,
-que KDE inyecta con scripty directamente en esos archivos.
+que KDE inyecta con scripty directamente en esos archivos (su fuente ya es
+inglés), y el manual DocBook, que hoy está escrito en español.
