@@ -15,6 +15,13 @@ crate=crates/kp-desktop
 $XGETTEXT --force-po $(find "$crate/src/native" "$crate/ui/qml" \( -name '*.cpp' -o -name '*.h' -o -name '*.qml' \) | sort) \
     -o "$podir/$domain.pot"
 
+# The application description lives in Cargo.toml; extract it with the context that
+# desktop_integration.cpp translates it with.
+snippet=$(mktemp --suffix=.cpp)
+trap 'rm -f "$snippet"' EXIT
+python3 -c 'import json, sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print("i18nc(\"@info application description\", " + json.dumps(load_metadata()["description"]) + ");")' > "$snippet"
+$XGETTEXT --join-existing --no-location "$snippet" -o "$podir/$domain.pot"
+
 # Same keywords; -L Rust overrides the C++ language that $XGETTEXT selects.
 # KI18n placeholders (%1) are the same in Rust, so msgfmt checks them too.
 # shellcheck disable=SC2046

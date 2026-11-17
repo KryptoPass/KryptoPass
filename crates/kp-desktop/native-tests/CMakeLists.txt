@@ -3,6 +3,7 @@ project(kryptopass_icon_tests LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Core DBus Gui Network Test)
 find_package(KF6Config CONFIG REQUIRED)
+find_package(KF6I18n CONFIG REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,7 +29,7 @@ add_executable(session_lock_tests
 )
 # Exercise event policy without a desktop poller or the user's live idle timers.
 target_include_directories(session_lock_tests BEFORE PRIVATE fakes ../src)
-target_link_libraries(session_lock_tests PRIVATE Qt6::Core Qt6::DBus Qt6::Test KF6::ConfigCore)
+target_link_libraries(session_lock_tests PRIVATE Qt6::Core Qt6::DBus Qt6::Test KF6::ConfigCore KF6::I18n)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(session_lock_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

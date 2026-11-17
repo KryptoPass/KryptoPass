@@ -5,6 +5,8 @@
 #include <KActionCollection>
 #include <KHelpClient>
 #include <KHelpMenu>
+#include <KLazyLocalizedString>
+#include <KLocalizedString>
 #include <KShortcutsDialog>
 #include <KStandardActions>
 #include <KStandardShortcut>
@@ -24,56 +26,48 @@
 
 namespace
 {
-QString translated(const char *source)
-{
-    return QCoreApplication::translate("Shortcuts", source);
-}
-
 KActionCollection *actions()
 {
     static auto collection = [] {
         auto *result = new KActionCollection(qApp);
         result->setComponentName(QString::fromUtf8(kryptopass::identity::desktop_file_id));
-        const auto add = [result](const char *id, const char *label, const char *icon, const QList<QKeySequence> &keys) {
+        const auto add = [result](const char *id, const KLazyLocalizedString &label, const char *icon, const QList<QKeySequence> &keys) {
             auto *action = result->addAction(QString::fromLatin1(id));
-            action->setText(translated(label));
+            action->setText(label.toString());
             action->setIcon(QIcon::fromTheme(QString::fromLatin1(icon)));
             KActionCollection::setDefaultShortcuts(action, keys);
         };
-        add("newEntry", QT_TRANSLATE_NOOP("Shortcuts", "Nuevo elemento…"), "document-new", KStandardShortcut::shortcut(KStandardShortcut::New));
-        add("editEntry", QT_TRANSLATE_NOOP("Shortcuts", "Editar elemento…"), "document-edit", {QKeySequence(Qt::Key_F2)});
-        add("trashEntry",
-            QT_TRANSLATE_NOOP("Shortcuts", "Mover elemento a la papelera"),
-            "user-trash",
-            KStandardShortcut::shortcut(KStandardShortcut::DeleteFile));
-        add("newFolder", QT_TRANSLATE_NOOP("Shortcuts", "Nueva carpeta…"), "folder-new", {QKeySequence(QStringLiteral("Ctrl+Shift+N"))});
-        add("refreshKeys", QT_TRANSLATE_NOOP("Shortcuts", "Recargar llavero"), "view-refresh", KStandardShortcut::shortcut(KStandardShortcut::Reload));
-        add("createKey", QT_TRANSLATE_NOOP("Shortcuts", "Añadir identidad…"), "document-new", {QKeySequence(QStringLiteral("Ctrl+Shift+K"))});
-        add("importKey", QT_TRANSLATE_NOOP("Shortcuts", "Importar clave OpenPGP…"), "document-import", {QKeySequence(QStringLiteral("Ctrl+Shift+I"))});
-        add("importVault", QT_TRANSLATE_NOOP("Shortcuts", "Importar desde otro gestor de contraseñas…"), "document-import", {});
-        add("exportBackup", QT_TRANSLATE_NOOP("Shortcuts", "Exportar copia de seguridad…"), "document-save", {});
-        add("restoreBackup", QT_TRANSLATE_NOOP("Shortcuts", "Restaurar copia de seguridad…"), "document-revert", {});
-        add("moveEntry", QT_TRANSLATE_NOOP("Shortcuts", "Mover a otra carpeta…"), "folder-move", {});
-        add("showDevices", QT_TRANSLATE_NOOP("Shortcuts", "Dispositivos"), "network-connect", {});
-        add("showVault", QT_TRANSLATE_NOOP("Shortcuts", "Carpetas"), "folder", {});
-        add("showKeys", QT_TRANSLATE_NOOP("Shortcuts", "Claves"), "view-certificate", {});
-        add("showAll", QT_TRANSLATE_NOOP("Shortcuts", "Todos los elementos"), "view-list-details", {});
-        add("showFavorites", QT_TRANSLATE_NOOP("Shortcuts", "Favoritos"), "rating", {});
-        add("showTrash", QT_TRANSLATE_NOOP("Shortcuts", "Papelera"), "user-trash", {});
-        add("toggleFavorite", QT_TRANSLATE_NOOP("Shortcuts", "Favorito"), "rating", {});
-        add("restoreEntry", QT_TRANSLATE_NOOP("Shortcuts", "Restaurar elemento"), "edit-undo", {});
-        add("deleteEntry", QT_TRANSLATE_NOOP("Shortcuts", "Eliminar elemento definitivamente…"), "edit-delete", {});
-        add("copyUsername", QT_TRANSLATE_NOOP("Shortcuts", "Copiar nombre de usuario"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+U"))});
-        add("copyPassword", QT_TRANSLATE_NOOP("Shortcuts", "Copiar contraseña"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+P"))});
-        add("copyTotp", QT_TRANSLATE_NOOP("Shortcuts", "Copiar código de verificación"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+T"))});
-        add("showBackupInFolder", QT_TRANSLATE_NOOP("Shortcuts", "Mostrar en la carpeta"), "system-file-manager", {});
-        add("lockVault", QT_TRANSLATE_NOOP("Shortcuts", "Bloquear o desbloquear bóveda"), "object-locked", {});
-        add("copyFingerprint", QT_TRANSLATE_NOOP("Shortcuts", "Copiar huella"), "edit-copy", {});
-        add("folderUp", QT_TRANSLATE_NOOP("Shortcuts", "Subir carpeta"), "go-up", {QKeySequence(QStringLiteral("Ctrl+Alt+Up"))});
-        add("folderDown", QT_TRANSLATE_NOOP("Shortcuts", "Bajar carpeta"), "go-down", {QKeySequence(QStringLiteral("Ctrl+Alt+Down"))});
-        add("moveFolder", QT_TRANSLATE_NOOP("Shortcuts", "Mover carpeta…"), "folder-move", {});
+        add("newEntry", kli18nc("@action", "New Item…"), "document-new", KStandardShortcut::shortcut(KStandardShortcut::New));
+        add("editEntry", kli18nc("@action", "Edit Item…"), "document-edit", {QKeySequence(Qt::Key_F2)});
+        add("trashEntry", kli18nc("@action", "Move Item to Trash"), "user-trash", KStandardShortcut::shortcut(KStandardShortcut::DeleteFile));
+        add("newFolder", kli18nc("@action", "New Folder…"), "folder-new", {QKeySequence(QStringLiteral("Ctrl+Shift+N"))});
+        add("refreshKeys", kli18nc("@action", "Reload Keyring"), "view-refresh", KStandardShortcut::shortcut(KStandardShortcut::Reload));
+        add("createKey", kli18nc("@action", "Add Identity…"), "document-new", {QKeySequence(QStringLiteral("Ctrl+Shift+K"))});
+        add("importKey", kli18nc("@action", "Import OpenPGP Key…"), "document-import", {QKeySequence(QStringLiteral("Ctrl+Shift+I"))});
+        add("importVault", kli18nc("@action", "Import from Another Password Manager…"), "document-import", {});
+        add("exportBackup", kli18nc("@action", "Export Backup…"), "document-save", {});
+        add("restoreBackup", kli18nc("@action", "Restore Backup…"), "document-revert", {});
+        add("moveEntry", kli18nc("@action", "Move to Another Folder…"), "folder-move", {});
+        add("showDevices", kli18nc("@action", "Devices"), "network-connect", {});
+        add("showVault", kli18nc("@action", "Folders"), "folder", {});
+        add("showKeys", kli18nc("@action", "Keys"), "view-certificate", {});
+        add("showAll", kli18nc("@action", "All Items"), "view-list-details", {});
+        add("showFavorites", kli18nc("@action", "Favorites"), "rating", {});
+        add("showTrash", kli18nc("@action", "Trash"), "user-trash", {});
+        add("toggleFavorite", kli18nc("@action", "Favorite"), "rating", {});
+        add("restoreEntry", kli18nc("@action", "Restore Item"), "edit-undo", {});
+        add("deleteEntry", kli18nc("@action", "Delete Item Permanently…"), "edit-delete", {});
+        add("copyUsername", kli18nc("@action", "Copy Username"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+U"))});
+        add("copyPassword", kli18nc("@action", "Copy Password"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+P"))});
+        add("copyTotp", kli18nc("@action", "Copy Verification Code"), "edit-copy", {QKeySequence(QStringLiteral("Ctrl+Shift+T"))});
+        add("showBackupInFolder", kli18nc("@action", "Show in Folder"), "system-file-manager", {});
+        add("lockVault", kli18nc("@action", "Lock or Unlock Vault"), "object-locked", {});
+        add("copyFingerprint", kli18nc("@action", "Copy Fingerprint"), "edit-copy", {});
+        add("folderUp", kli18nc("@action", "Move Folder Up"), "go-up", {QKeySequence(QStringLiteral("Ctrl+Alt+Up"))});
+        add("folderDown", kli18nc("@action", "Move Folder Down"), "go-down", {QKeySequence(QStringLiteral("Ctrl+Alt+Down"))});
+        add("moveFolder", kli18nc("@action", "Move Folder…"), "folder-move", {});
         auto *configureApp = result->addAction(QStringLiteral("configureApp"));
-        configureApp->setText(QCoreApplication::translate("Shortcuts", "Configurar %1…").arg(QString::fromUtf8(kryptopass::identity::display_name)));
+        configureApp->setText(i18nc("@action", "Configure %1…", QString::fromUtf8(kryptopass::identity::display_name)));
         configureApp->setIcon(QIcon::fromTheme(QStringLiteral("preferences-other")));
         KActionCollection::setDefaultShortcuts(configureApp, KStandardShortcut::shortcut(KStandardShortcut::Preferences));
         const auto standard = [result](const char *id, KStandardActions::StandardAction kind) {
@@ -113,7 +107,8 @@ void initialize_desktop()
     install(QString::fromUtf8(desktop_file_id), QStringLiteral(":/i18n"));
 
     KAboutData about(QString::fromUtf8(desktop_file_id), QString::fromUtf8(display_name), QString::fromUtf8(version));
-    about.setShortDescription(QCoreApplication::translate("Metadata", description));
+    // Messages.sh extracts the description from Cargo.toml with this context.
+    about.setShortDescription(i18nc("@info application description", description));
     about.setLicense(KAboutLicense::byKeyword(QString::fromUtf8(license)));
     about.setCopyrightStatement(QString::fromUtf8(copyright));
     about.setHomepage(QString::fromUtf8(homepage));

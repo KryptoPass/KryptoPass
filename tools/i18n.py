@@ -29,6 +29,8 @@ KDE_XGETTEXT_KEYWORDS = [
     "-kxi18n:1", "-kxi18nc:1c,2", "-kxi18np:1,2", "-kxi18ncp:1c,2,3",
     "-kkxi18n:1", "-kkxi18nc:1c,2", "-kkxi18np:1,2", "-kkxi18ncp:1c,2,3",
     "-kI18N_NOOP:1", "-kI18NC_NOOP:1c,2",
+    "-kkli18n:1", "-kkli18nc:1c,2", "-kkli18np:1,2", "-kkli18ncp:1c,2,3",
+    "-kklxi18n:1", "-kklxi18nc:1c,2", "-kklxi18np:1,2", "-kklxi18ncp:1c,2,3",
 ]
 
 

@@ -2,6 +2,7 @@
 #include "native/settings.h"
 
 #include <KIdleTime>
+#include <KLocalizedString>
 #include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -152,7 +153,7 @@ void SessionLockMonitor::acquireSleepInhibitor()
                                                   QStringLiteral("Inhibit"));
     request.setArguments({QStringLiteral("sleep"),
                           QCoreApplication::applicationName(),
-                          QCoreApplication::translate("SessionLock", "Bloquear la bóveda antes de suspender"),
+                          i18nc("@info reason shown by the system before sleep", "Lock the vault before suspending"),
                           QStringLiteral("delay")});
     const auto query = ++sleepQuery_;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::systemBus().asyncCall(request), this);

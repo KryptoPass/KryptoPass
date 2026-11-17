@@ -6,6 +6,7 @@
 #include <Akonadi/ItemModifyJob>
 #include <KContacts/Addressee>
 #include <KJob>
+#include <KLocalizedString>
 
 #include <QAbstractItemView>
 #include <QApplication>
@@ -225,7 +226,7 @@ void showEditor(QObject *receiver, const Akonadi::Item &item, bool creating)
     });
     QObject::connect(dialog, &Akonadi::ContactEditorDialog::error, receiver, [receiverGuard](const QString &) {
         if (receiverGuard) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se pudo guardar el contacto en KDE Contacts."));
+            invokeOperation(receiverGuard.data(), false, i18n("The contact could not be saved in KDE Contacts."));
         }
     });
     QObject::connect(receiver, &QObject::destroyed, dialog, &QObject::deleteLater);
@@ -241,11 +242,11 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
 {
     const QPointer<QObject> receiverGuard(receiver);
     if (!item.isValid()) {
-        invokeOperation(receiver, false, QCoreApplication::translate("Contacts", "El contacto seleccionado ya no está disponible."));
+        invokeOperation(receiver, false, i18n("The selected contact is no longer available."));
         return;
     }
     if (!item.hasPayload<KContacts::Addressee>()) {
-        invokeOperation(receiver, false, QCoreApplication::translate("Contacts", "No se pudieron leer los datos del contacto seleccionado."));
+        invokeOperation(receiver, false, i18n("The selected contact's data could not be read."));
         return;
     }
 
@@ -253,12 +254,12 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
     try {
         contact = item.payload<KContacts::Addressee>();
     } catch (...) {
-        invokeOperation(receiver, false, QCoreApplication::translate("Contacts", "No se pudieron leer los datos del contacto seleccionado."));
+        invokeOperation(receiver, false, i18n("The selected contact's data could not be read."));
         return;
     }
 
     if (contact.uid().isEmpty()) {
-        invokeOperation(receiver, false, QCoreApplication::translate("Contacts", "El contacto seleccionado no tiene una identidad válida."));
+        invokeOperation(receiver, false, i18n("The selected contact has no valid identity."));
         return;
     }
 
@@ -275,15 +276,17 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
         : (previous.isEmpty() ? normalizedFingerprint : previous + QLatin1Char(',') + normalizedFingerprint);
     const QString updatedNotes = notesWithFingerprintBlock(contact.note(), fingerprintsForNotes);
     const QString existingDisplay =
-        detectedFingerprints.isEmpty() ? QCoreApplication::translate("Contacts", "(ninguna)") : detectedFingerprints.join(QStringLiteral(", "));
-    const QString confirmation = QCoreApplication::translate("Contacts",
-                                                             "¿Vincular esta huella con el contacto?\n\nContacto: %1\nHuella: %2\n\n"
-                                                             "KryptoPass añadirá la huella a las preferencias de KDE si falta y mantendrá un bloque de huellas "
-                                                             "al final de las notas para facilitar la sincronización. "
-                                                             "Conservará el resto del contenido y las preferencias existentes.\n\n"
-                                                             "Huella(s) detectadas:\n%3")
-                                     .arg(contactName, normalizedFingerprint, existingDisplay);
-    const auto answer = QMessageBox::question(QApplication::activeWindow(), QCoreApplication::translate("Contacts", "Añadir huella OpenPGP"), confirmation);
+        detectedFingerprints.isEmpty() ? i18nc("@label no fingerprints", "(none)") : detectedFingerprints.join(QStringLiteral(", "));
+    const QString confirmation = i18n(
+        "Link this fingerprint to the contact?\n\nContact: %1\nFingerprint: %2\n\n"
+        "KryptoPass will add the fingerprint to the KDE preferences if it is missing and keep a block of fingerprints "
+        "at the end of the notes to help syncing. "
+        "The rest of the content and the existing preferences are kept.\n\n"
+        "Detected fingerprint(s):\n%3",
+        contactName,
+        normalizedFingerprint,
+        existingDisplay);
+    const auto answer = QMessageBox::question(QApplication::activeWindow(), i18nc("@title:window", "Add OpenPGP Fingerprint"), confirmation);
     if (!receiverGuard) {
         return;
     }
@@ -310,7 +313,7 @@ void finishLink(QObject *receiver, const Akonadi::Item &item, const QString &fin
     QObject::connect(job, &KJob::result, receiverGuard.data(), [receiverGuard, job](KJob *) {
         if (receiverGuard) {
             if (job->error()) {
-                invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se pudo guardar el vínculo en KDE Contacts."));
+                invokeOperation(receiverGuard.data(), false, i18n("The link could not be saved in KDE Contacts."));
             } else {
                 invokeOperation(receiverGuard.data(), true, {});
             }
@@ -367,26 +370,23 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
     }
 
     if (itemsByUid.isEmpty()) {
-        invokeOperation(receiverGuard.data(),
-                        false,
-                        QCoreApplication::translate("Contacts", "No hay contactos únicos con una identidad válida para vincular."));
+        invokeOperation(receiverGuard.data(), false, i18n("There are no unique contacts with a valid identity to link."));
         return;
     }
 
     auto *dialog = new QDialog(QApplication::activeWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->setWindowTitle(QCoreApplication::translate("Contacts", "Elegir contacto para vincular"));
+    dialog->setWindowTitle(i18nc("@title:window", "Choose Contact to Link"));
     dialog->resize(520, 440);
 
     auto *layout = new QVBoxLayout(dialog);
-    auto *description =
-        new QLabel(QCoreApplication::translate("Contacts", "Selecciona un contacto de KDE Contacts para añadirle esta huella OpenPGP."), dialog);
+    auto *description = new QLabel(i18n("Select a contact from KDE Contacts to add this OpenPGP fingerprint to."), dialog);
     description->setWordWrap(true);
     layout->addWidget(description);
 
     auto *search = new QLineEdit(dialog);
     search->setClearButtonEnabled(true);
-    search->setPlaceholderText(QCoreApplication::translate("Contacts", "Buscar por nombre o UID"));
+    search->setPlaceholderText(i18nc("@info:placeholder", "Search by name or UID"));
     layout->addWidget(search);
 
     auto *contactList = new QListWidget(dialog);
@@ -434,14 +434,14 @@ void showContactSelector(QObject *receiver, const QString &fingerprint, const Ak
         }
         const QListWidgetItem *selected = contactList->currentItem();
         if (!selected || selected->isHidden()) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "Selecciona un contacto para vincular."));
+            invokeOperation(receiverGuard.data(), false, i18n("Select a contact to link."));
             return;
         }
 
         const QString uid = selected->data(Qt::UserRole).toString();
         const auto item = itemsByUid.constFind(uid);
         if (item == itemsByUid.cend()) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "El contacto seleccionado ya no está disponible."));
+            invokeOperation(receiverGuard.data(), false, i18n("The selected contact is no longer available."));
             return;
         }
 
@@ -481,7 +481,7 @@ void startContactSearch(QObject *receiver)
         QStringList records;
         QString error;
         if (job->error()) {
-            error = QCoreApplication::translate("Contacts", "No se pudieron consultar los contactos de KDE.");
+            error = i18n("The KDE contacts could not be read.");
         } else {
             const auto contacts = job->contacts();
             records.reserve(contacts.size());
@@ -526,11 +526,9 @@ void open_contact_editor(QObject *receiver, const QString &uid)
         }
         const auto items = job->items();
         if (job->error() || items.isEmpty()) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se encontró el contacto que quieres editar."));
+            invokeOperation(receiverGuard.data(), false, i18n("The contact you want to edit was not found."));
         } else if (items.size() != 1) {
-            invokeOperation(receiverGuard.data(),
-                            false,
-                            QCoreApplication::translate("Contacts", "El identificador del contacto no es único; no se abrió ningún registro."));
+            invokeOperation(receiverGuard.data(), false, i18n("The contact identifier is not unique; no record was opened."));
         } else {
             showEditor(receiverGuard.data(), items.at(0), false);
         }
@@ -541,7 +539,7 @@ void open_contact_editor(QObject *receiver, const QString &uid)
 void choose_contact_for_key(QObject *receiver, const QString &fingerprint)
 {
     if (!receiver || !isFullFingerprint(fingerprint)) {
-        invokeOperation(receiver, false, QCoreApplication::translate("Contacts", "La huella seleccionada no es completa o no es válida."));
+        invokeOperation(receiver, false, i18n("The selected fingerprint is incomplete or not valid."));
         return;
     }
 
@@ -553,7 +551,7 @@ void choose_contact_for_key(QObject *receiver, const QString &fingerprint)
             return;
         }
         if (job->error()) {
-            invokeOperation(receiverGuard.data(), false, QCoreApplication::translate("Contacts", "No se pudieron consultar los contactos de KDE."));
+            invokeOperation(receiverGuard.data(), false, i18n("The KDE contacts could not be read."));
         } else {
             showContactSelector(receiverGuard.data(), fingerprint.toUpper(), job->items());
         }
