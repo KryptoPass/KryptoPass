@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: moveDialog
@@ -19,7 +20,7 @@ Controls.Dialog {
     width: Math.min(420, parent.width - Kirigami.Units.gridUnit * 4)
     modal: true
     closePolicy: Controls.Popup.NoAutoClose
-    title: qsTr("Mover elemento")
+    title: KI18n.i18nc("@title:window", "Move Item")
 
     function openMove() {
         if (pending || storeAdapter.controller.busy || !storeAdapter.selected)
@@ -55,7 +56,7 @@ Controls.Dialog {
             if (!moveDialog.pending || moveDialog.storeAdapter.controller.busy)
                 return;
             moveDialog.pending = false;
-            moveDialog.operationError = moveDialog.storeAdapter.controller.errorMessage || qsTr("No se pudo mover el elemento.");
+            moveDialog.operationError = moveDialog.storeAdapter.controller.errorMessage || KI18n.i18n("The item could not be moved.");
         }
     }
 
@@ -69,7 +70,7 @@ Controls.Dialog {
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Mover solo cambia la carpeta. Se conserva quién tiene acceso.")
+            text: KI18n.i18n("Moving only changes the folder. Who has access stays the same.")
             wrapMode: Text.Wrap
         }
         FolderPicker {
@@ -78,7 +79,7 @@ Controls.Dialog {
             enabled: !moveDialog.pending && !moveDialog.storeAdapter.controller.busy
             folderRows: moveDialog.storeAdapter.folderRows
             selectedId: moveDialog.destinationFolderId
-            accessibleLabel: qsTr("Carpeta de destino")
+            accessibleLabel: KI18n.i18n("Destination folder")
             onFolderSelected: function (folderId) {
                 moveDialog.destinationFolderId = folderId;
             }
@@ -96,12 +97,12 @@ Controls.Dialog {
             Layout.fillWidth: true
         }
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             enabled: !moveDialog.pending && !moveDialog.storeAdapter.controller.busy
             onClicked: moveDialog.close()
         }
         Controls.Button {
-            text: moveDialog.pending ? qsTr("Moviendo…") : qsTr("Mover")
+            text: moveDialog.pending ? KI18n.i18n("Moving…") : KI18n.i18nc("@action:button", "Move")
             icon.name: "folder-move"
             enabled: !moveDialog.pending && !moveDialog.storeAdapter.controller.busy && !!moveDialog.entryId
             onClicked: moveDialog.submit()

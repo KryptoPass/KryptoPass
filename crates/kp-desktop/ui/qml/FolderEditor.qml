@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ApplicationWindow {
     id: folderEditor
@@ -39,7 +40,7 @@ Controls.ApplicationWindow {
     height: Kirigami.Units.gridUnit * 28
     minimumWidth: Kirigami.Units.gridUnit * 18
     minimumHeight: Kirigami.Units.gridUnit * 20
-    title: folderId ? qsTr("Editar carpeta") : qsTr("Nueva carpeta")
+    title: folderId ? KI18n.i18nc("@action:inmenu", "Edit Folder") : KI18n.i18nc("@title", "New Folder")
 
     function currentFolderDraft() {
         return {
@@ -164,7 +165,7 @@ Controls.ApplicationWindow {
             if (!folderEditor.pending || folderEditor.storeAdapter.controller.busy)
                 return;
             folderEditor.pending = false;
-            folderEditor.saveError = folderEditor.storeAdapter.controller.errorMessage || qsTr("No se pudo guardar la carpeta.");
+            folderEditor.saveError = folderEditor.storeAdapter.controller.errorMessage || KI18n.i18n("The folder could not be saved.");
         }
     }
 
@@ -216,7 +217,7 @@ Controls.ApplicationWindow {
                     spacing: 8
 
                     Controls.Label {
-                        text: qsTr("Nombre")
+                        text: KI18n.i18nc("@label", "Name")
                     }
                     RowLayout {
                         Layout.fillWidth: true
@@ -227,8 +228,8 @@ Controls.ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                             enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
-                            Accessible.name: qsTr("Nombre de la carpeta")
-                            placeholderText: qsTr("Nombre de la carpeta")
+                            Accessible.name: KI18n.i18n("Folder name")
+                            placeholderText: KI18n.i18n("Folder name")
                             onTextEdited: folderEditor.saveError = ""
                         }
                         FolderIcon {
@@ -247,7 +248,7 @@ Controls.ApplicationWindow {
                     spacing: 8
 
                     Controls.Label {
-                        text: qsTr("Dentro de:")
+                        text: KI18n.i18nc("@label:listbox parent folder", "Inside:")
                     }
                     FolderPicker {
                         id: parentField
@@ -255,8 +256,8 @@ Controls.ApplicationWindow {
                         enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                         folderRows: folderEditor.storeAdapter.folderRows
                         selectedId: folderEditor.selectedParentId
-                        emptyLabel: qsTr("Carpetas principales")
-                        accessibleLabel: qsTr("Carpeta superior")
+                        emptyLabel: KI18n.i18nc("@item:inlistbox", "Top-level folders")
+                        accessibleLabel: KI18n.i18n("Parent folder")
                         onFolderSelected: function (folderId) {
                             folderEditor.selectedParentId = folderId;
                             folderEditor.saveError = "";
@@ -329,13 +330,13 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
             }
             Controls.Button {
-                text: qsTr("Cancelar")
+                text: KI18n.i18nc("@action:button", "Cancel")
                 icon.name: "dialog-cancel"
                 enabled: !folderEditor.pending && !folderEditor.storeAdapter.controller.busy
                 onClicked: folderEditor.requestClose()
             }
             Controls.Button {
-                text: folderEditor.pending ? qsTr("Guardando…") : qsTr("Guardar")
+                text: folderEditor.pending ? KI18n.i18n("Saving…") : KI18n.i18nc("@action:button", "Save")
                 icon.name: "document-save"
                 enabled: folderEditor.canSave
                 onClicked: folderEditor.submit()
@@ -348,7 +349,7 @@ Controls.ApplicationWindow {
         parent: Controls.Overlay.overlay
         anchors.centerIn: parent
         modal: true
-        title: qsTr("Descartar cambios")
+        title: KI18n.i18nc("@title:window", "Discard Changes")
         standardButtons: Controls.Dialog.Discard | Controls.Dialog.Cancel
         onDiscarded: {
             const action = folderEditor.sensitiveClearAction;
@@ -364,7 +365,7 @@ Controls.ApplicationWindow {
         }
         Controls.Label {
             width: Math.min(folderEditor.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 28)
-            text: qsTr("Hay cambios sin guardar. Si continúas, se descartarán.")
+            text: KI18n.i18n("There are unsaved changes. If you continue, they will be discarded.")
             wrapMode: Text.Wrap
         }
     }

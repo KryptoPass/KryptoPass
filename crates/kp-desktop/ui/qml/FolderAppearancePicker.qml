@@ -4,6 +4,7 @@ import org.kryptopass.desktop as Desktop
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: picker
@@ -32,99 +33,99 @@ ColumnLayout {
     property var iconOptions: [
         {
             value: "folder",
-            name: qsTr("Carpeta")
+            name: KI18n.i18nc("@label", "Folder")
         },
         {
             value: "user-home",
-            name: qsTr("Inicio")
+            name: KI18n.i18nc("@item folder icon", "Home")
         },
         {
             value: "applications-office",
-            name: qsTr("Trabajo")
+            name: KI18n.i18nc("@item folder icon", "Work")
         },
         {
             value: "user-identity",
-            name: qsTr("Personal")
+            name: KI18n.i18nc("@item folder icon", "Personal")
         },
         {
             value: "folder-favorites",
-            name: qsTr("Favoritos")
+            name: KI18n.i18nc("@title vault scope", "Favorites")
         },
         {
             value: "office-address-book",
-            name: qsTr("Contactos")
+            name: KI18n.i18nc("@item folder icon", "Contacts")
         },
         {
             value: "wallet-open",
-            name: qsTr("Billetera")
+            name: KI18n.i18nc("@item folder icon", "Wallet")
         },
         {
             value: "view-financial-account-credit-card",
-            name: qsTr("Tarjetas")
+            name: KI18n.i18nc("@item folder icon", "Cards")
         },
         {
             value: "view-calendar",
-            name: qsTr("Calendario")
+            name: KI18n.i18nc("@item folder icon", "Calendar")
         },
         {
             value: "text-x-generic",
-            name: qsTr("Documentos")
+            name: KI18n.i18nc("@title:group", "Documents")
         },
         {
             value: "applications-education",
-            name: qsTr("Estudios")
+            name: KI18n.i18nc("@item folder icon", "Studies")
         },
         {
             value: "headphones",
-            name: qsTr("Música")
+            name: KI18n.i18nc("@item folder icon", "Music")
         },
         {
             value: "mail-message",
-            name: qsTr("Correo")
+            name: KI18n.i18nc("@label:textbox", "Email")
         },
         {
             value: "globe",
-            name: qsTr("Internet")
+            name: KI18n.i18nc("@item folder icon", "Internet")
         },
         {
             value: "cloudstatus",
-            name: qsTr("Nube")
+            name: KI18n.i18nc("@item folder icon", "Cloud")
         },
         {
             value: "network-server",
-            name: qsTr("Servidores")
+            name: KI18n.i18nc("@item folder icon", "Servers")
         },
         {
             value: "security-high",
-            name: qsTr("Seguridad")
+            name: KI18n.i18nc("@label Wi-Fi security", "Security")
         },
         {
             value: "dialog-password",
-            name: qsTr("Contraseñas")
+            name: KI18n.i18nc("@item folder icon", "Passwords")
         },
         {
             value: "format-text-code",
-            name: qsTr("Desarrollo")
+            name: KI18n.i18nc("@item folder icon", "Development")
         },
         {
             value: "utilities-terminal",
-            name: qsTr("Terminal")
+            name: KI18n.i18nc("@item folder icon", "Terminal")
         },
         {
             value: "phone",
-            name: qsTr("Teléfono")
+            name: KI18n.i18nc("@label:textbox", "Phone")
         },
         {
             value: "camera-photo",
-            name: qsTr("Fotos")
+            name: KI18n.i18nc("@item folder icon", "Photos")
         },
         {
             value: "applications-games",
-            name: qsTr("Juegos")
+            name: KI18n.i18nc("@item folder icon", "Games")
         },
         {
             value: "preferences-system",
-            name: qsTr("Sistema")
+            name: KI18n.i18nc("@item folder icon", "System")
         }
     ]
 
@@ -142,7 +143,7 @@ ColumnLayout {
 
     Controls.Label {
         visible: picker.showColors
-        text: qsTr("Color")
+        text: KI18n.i18nc("@title:group", "Color")
         font.weight: Font.DemiBold
     }
 
@@ -171,7 +172,7 @@ ColumnLayout {
                 checked: modelData.value === Desktop.FolderPalette.canonicalColor(picker.selectedColor)
                 text: ""
                 Accessible.name: modelData.name
-                Accessible.description: checked ? qsTr("Color seleccionado") : qsTr("Seleccionar color")
+                Accessible.description: checked ? KI18n.i18n("Selected color") : KI18n.i18n("Select color")
                 focusPolicy: Qt.StrongFocus
                 onActiveFocusChanged: {
                     if (activeFocus)
@@ -223,7 +224,7 @@ ColumnLayout {
 
     Controls.Label {
         Layout.topMargin: picker.showColors ? Kirigami.Units.largeSpacing : 0
-        text: qsTr("Icono")
+        text: KI18n.i18nc("@title:group", "Icon")
         font.weight: Font.DemiBold
     }
 
@@ -251,7 +252,7 @@ ColumnLayout {
                 checked: modelData.value === picker.selectedIcon
                 text: ""
                 Accessible.name: modelData.name
-                Accessible.description: checked ? qsTr("Icono seleccionado") : qsTr("Seleccionar icono")
+                Accessible.description: checked ? KI18n.i18n("Selected icon") : KI18n.i18n("Select icon")
                 focusPolicy: Qt.StrongFocus
                 onActiveFocusChanged: {
                     if (activeFocus)

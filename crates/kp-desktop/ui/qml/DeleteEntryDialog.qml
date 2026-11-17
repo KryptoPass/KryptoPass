@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: deleteEntryDialog
@@ -18,7 +19,7 @@ Controls.Dialog {
     width: Math.min(420, parent.width - Kirigami.Units.gridUnit * 4)
     modal: true
     closePolicy: Controls.Popup.NoAutoClose
-    title: qsTr("Eliminar definitivamente")
+    title: KI18n.i18nc("@action:button", "Delete Permanently")
 
     function openForSelected() {
         if (pending || storeAdapter.controller.busy || !storeAdapter.selected)
@@ -52,7 +53,7 @@ Controls.Dialog {
             if (!deleteEntryDialog.pending || deleteEntryDialog.storeAdapter.controller.busy)
                 return;
             deleteEntryDialog.pending = false;
-            deleteEntryDialog.operationError = deleteEntryDialog.storeAdapter.controller.errorMessage || qsTr("No se pudo eliminar el elemento.");
+            deleteEntryDialog.operationError = deleteEntryDialog.storeAdapter.controller.errorMessage || KI18n.i18n("The item could not be deleted.");
         }
     }
 
@@ -66,7 +67,7 @@ Controls.Dialog {
         }
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("¿Eliminar definitivamente «%1»? Esta acción no se puede deshacer.").arg(deleteEntryDialog.storeAdapter.entries.find(entry => entry.id === deleteEntryDialog.entryId)?.title || "")
+            text: KI18n.i18n("Permanently delete “%1”? This action cannot be undone.", deleteEntryDialog.storeAdapter.entries.find(entry => entry.id === deleteEntryDialog.entryId)?.title || "")
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
         }
@@ -83,12 +84,12 @@ Controls.Dialog {
             Layout.fillWidth: true
         }
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             enabled: !deleteEntryDialog.pending && !deleteEntryDialog.storeAdapter.controller.busy
             onClicked: deleteEntryDialog.close()
         }
         Controls.Button {
-            text: deleteEntryDialog.pending ? qsTr("Eliminando…") : qsTr("Eliminar definitivamente")
+            text: deleteEntryDialog.pending ? KI18n.i18n("Deleting…") : KI18n.i18nc("@action:button", "Delete Permanently")
             icon.name: "edit-delete"
             enabled: !deleteEntryDialog.pending && !deleteEntryDialog.storeAdapter.controller.busy && !!deleteEntryDialog.entryId
             onClicked: deleteEntryDialog.submit()

@@ -3,18 +3,19 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Button {
     id: picker
 
     property var folderRows: []
     property string selectedId: ""
-    property string emptyLabel: qsTr("Sin carpeta")
-    property string accessibleLabel: qsTr("Carpeta")
+    property string emptyLabel: KI18n.i18nc("@label folder name", "No folder")
+    property string accessibleLabel: KI18n.i18nc("@label", "Folder")
 
     readonly property bool menuOpen: folderMenu.opened
     readonly property var selectedFolder: (folderRows || []).find(folder => folder.id === selectedId) || null
-    readonly property string selectedName: selectedId === "" ? emptyLabel : selectedFolder ? selectedFolder.name : qsTr("Carpeta no disponible")
+    readonly property string selectedName: selectedId === "" ? emptyLabel : selectedFolder ? selectedFolder.name : KI18n.i18n("Folder unavailable")
     readonly property var options: [
         {
             id: "",
@@ -32,8 +33,8 @@ Controls.Button {
     topPadding: Kirigami.Units.smallSpacing
     bottomPadding: Kirigami.Units.smallSpacing
     Accessible.role: Accessible.Button
-    Accessible.name: qsTr("%1: %2").arg(accessibleLabel).arg(selectedName)
-    Accessible.description: qsTr("Abre la lista de carpetas.")
+    Accessible.name: KI18n.i18nc("@label label and value", "%1: %2", accessibleLabel, selectedName)
+    Accessible.description: KI18n.i18n("Opens the list of folders.")
     onClicked: folderMenu.open()
 
     contentItem: RowLayout {
@@ -70,7 +71,7 @@ Controls.Button {
                 checkable: true
                 checked: modelData.id === picker.selectedId
                 Accessible.name: modelData.name
-                Accessible.description: checked ? qsTr("Seleccionada") : qsTr("Seleccionar carpeta")
+                Accessible.description: checked ? KI18n.i18nc("@info folder", "Selected") : KI18n.i18n("Select folder")
 
                 contentItem: Controls.Label {
                     leftPadding: folderMenuItem.mirrored ? 0 : folderMenuItem.indicator.width + Kirigami.Units.smallSpacing

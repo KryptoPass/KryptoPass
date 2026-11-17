@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:29-0400\n"
+"POT-Creation-Date: 2026-11-17 15:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -84,8 +84,13 @@ msgid "Choose What to Keep"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/ConflictDialog.qml:52
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:87
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:99
 #: crates/kp-desktop/ui/qml/EntryIconWindow.qml:149
 #: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:333
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:100
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:59
 #: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:90
 #: crates/kp-desktop/ui/qml/PasswordGenerator.qml:133
 #: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:198
@@ -209,6 +214,66 @@ msgstr ""
 #, kde-format
 msgctxt "@action:button"
 msgid "Add Field"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:22
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:92
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:104
+#, kde-format
+msgctxt "@action:button"
+msgid "Delete Permanently"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:56
+#, kde-format
+msgid "The item could not be deleted."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:70
+#, kde-format
+msgid "Permanently delete “%1”? This action cannot be undone."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteEntryDialog.qml:92
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:104
+#, kde-format
+msgid "Deleting…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:22
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:104
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:264
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Delete Folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:57
+#, kde-format
+msgid "The folder could not be deleted."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:71
+#, kde-format
+msgid "Delete the folder “%1”?"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:77
+#, kde-format
+msgid ""
+"The folder, its subfolders and all their items, including those in the "
+"trash, will be permanently deleted. This action cannot be undone."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:77
+#, kde-format
+msgid "Its items and subfolders will move to the parent folder."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/DeleteFolderDialog.qml:83
+#, kde-format
+msgctxt "@option:check"
+msgid "Also delete the items and subfolders"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/DetailActionBar.qml:27
@@ -613,6 +678,8 @@ msgid "Search by name, type or folder"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:154
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:36
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:14
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:542
 #, kde-format
 msgctxt "@label"
@@ -620,6 +687,7 @@ msgid "Folder"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:163
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:13
 #: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:87
 #: crates/kp-desktop/ui/qml/SecretStore.qml:147
 #, kde-format
@@ -872,12 +940,202 @@ msgstr ""
 msgid "All files (*)"
 msgstr ""
 
-#: crates/kp-desktop/ui/qml/HelpButton.qml:15
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:40
 #, kde-format
-msgctxt "@action:button"
-msgid "More Information"
+msgctxt "@item folder icon"
+msgid "Home"
 msgstr ""
 
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:44
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Work"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:48
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Personal"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:52
+#: crates/kp-desktop/ui/qml/Main.qml:359
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:140
+#, kde-format
+msgctxt "@title vault scope"
+msgid "Favorites"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:56
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Contacts"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:60
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Wallet"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:64
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Cards"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:68
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Calendar"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:72
+#: crates/kp-desktop/ui/qml/IdentityFields.qml:185
+#, kde-format
+msgctxt "@title:group"
+msgid "Documents"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:76
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Studies"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:80
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Music"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:84
+#: crates/kp-desktop/ui/qml/IdentityFields.qml:310
+#: crates/kp-desktop/ui/qml/LicenseFields.qml:95
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Email"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:88
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Internet"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:92
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Cloud"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:96
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Servers"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:100
+#: crates/kp-desktop/ui/qml/WifiFields.qml:65
+#, kde-format
+msgctxt "@label Wi-Fi security"
+msgid "Security"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:104
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Passwords"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:108
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Development"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:112
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Terminal"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:116
+#: crates/kp-desktop/ui/qml/IdentityFields.qml:322
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Phone"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:120
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Photos"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:124
+#, kde-format
+msgctxt "@item folder icon"
+msgid "Games"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:128
+#, kde-format
+msgctxt "@item folder icon"
+msgid "System"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:146
+#, kde-format
+msgctxt "@title:group"
+msgid "Color"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:175
+#, kde-format
+msgid "Selected color"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:175
+#, kde-format
+msgid "Select color"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:227
+#, kde-format
+msgctxt "@title:group"
+msgid "Icon"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:255
+#, kde-format
+msgid "Selected icon"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderAppearancePicker.qml:255
+#, kde-format
+msgid "Select icon"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:43
+#: crates/kp-desktop/ui/qml/SidebarPane.qml:253
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Edit Folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:43
+#, kde-format
+msgctxt "@title"
+msgid "New Folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:168
+#, kde-format
+msgid "The folder could not be saved."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:220
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:154
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:164
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:52
@@ -887,16 +1145,165 @@ msgctxt "@label"
 msgid "Name"
 msgstr ""
 
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:231
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:232
+#, kde-format
+msgid "Folder name"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:251
+#, kde-format
+msgctxt "@label:listbox parent folder"
+msgid "Inside:"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:259
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:44
+#, kde-format
+msgctxt "@item:inlistbox"
+msgid "Top-level folders"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:260
+#, kde-format
+msgid "Parent folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:713
+#, kde-format
+msgid "Saving…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:339
+#, kde-format
+msgctxt "@action:button"
+msgid "Save"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:352
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:729
+#, kde-format
+msgctxt "@title:window"
+msgid "Discard Changes"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderEditor.qml:368
+#: crates/kp-desktop/ui/qml/SecretEditor.qml:746
+#, kde-format
+msgid "There are unsaved changes. If you continue, they will be discarded."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:13
+#, kde-format
+msgctxt "@item folder color"
+msgid "No color"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:19
+#, kde-format
+msgctxt "@item folder color"
+msgid "Red"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:25
+#, kde-format
+msgctxt "@item folder color"
+msgid "Coral"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:31
+#, kde-format
+msgctxt "@item folder color"
+msgid "Orange"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:37
+#, kde-format
+msgctxt "@item folder color"
+msgid "Amber"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:43
+#, kde-format
+msgctxt "@item folder color"
+msgid "Green"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:49
+#, kde-format
+msgctxt "@item folder color"
+msgid "Turquoise"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:55
+#, kde-format
+msgctxt "@item folder color"
+msgid "Blue"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:61
+#, kde-format
+msgctxt "@item folder color"
+msgid "Indigo"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:67
+#, kde-format
+msgctxt "@item folder color"
+msgid "Violet"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:73
+#, kde-format
+msgctxt "@item folder color"
+msgid "Pink"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPalette.qml:79
+#, kde-format
+msgctxt "@item folder color"
+msgid "Gray"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:18
+#, kde-format
+msgid "Folder unavailable"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:36
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:249
+#, kde-format
+msgctxt "@label label and value"
+msgid "%1: %2"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:37
+#, kde-format
+msgid "Opens the list of folders."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:74
+#, kde-format
+msgctxt "@info folder"
+msgid "Selected"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/FolderPicker.qml:74
+#, kde-format
+msgid "Select folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/HelpButton.qml:15
+#, kde-format
+msgctxt "@action:button"
+msgid "More Information"
+msgstr ""
+
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:172
 #, kde-format
 msgctxt "@label:textbox"
 msgid "Last name"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/IdentityFields.qml:185
-#, kde-format
-msgctxt "@title:group"
-msgid "Documents"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:191
@@ -971,13 +1378,6 @@ msgctxt "@title:group"
 msgid "Emails"
 msgstr ""
 
-#: crates/kp-desktop/ui/qml/IdentityFields.qml:310
-#: crates/kp-desktop/ui/qml/LicenseFields.qml:95
-#, kde-format
-msgctxt "@label:textbox"
-msgid "Email"
-msgstr ""
-
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:311
 #, kde-format
 msgctxt "@action:button"
@@ -988,12 +1388,6 @@ msgstr ""
 #, kde-format
 msgctxt "@title:group"
 msgid "Phones"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/IdentityFields.qml:322
-#, kde-format
-msgctxt "@label:textbox"
-msgid "Phone"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/IdentityFields.qml:323
@@ -1377,13 +1771,6 @@ msgid "All Items"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/Main.qml:359
-#: crates/kp-desktop/ui/qml/SidebarPane.qml:140
-#, kde-format
-msgctxt "@title vault scope"
-msgid "Favorites"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/Main.qml:359
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:145
 #, kde-format
 msgctxt "@title vault scope"
@@ -1716,6 +2103,52 @@ msgstr ""
 #: crates/kp-desktop/ui/qml/MarkdownView.qml:167
 #, kde-format
 msgid "Show spoiler %1"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:23
+#, kde-format
+msgctxt "@title:window"
+msgid "Move Item"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:59
+#, kde-format
+msgid "The item could not be moved."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:73
+#, kde-format
+msgid "Moving only changes the folder. Who has access stays the same."
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:82
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:45
+#, kde-format
+msgid "Destination folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:105
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:64
+#, kde-format
+msgid "Moving…"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:105
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:64
+#, kde-format
+msgctxt "@action:button"
+msgid "Move"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:17
+#, kde-format
+msgctxt "@title:window"
+msgid "Move Folder"
+msgstr ""
+
+#: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:35
+#, kde-format
+msgid "Choose the parent folder. Subfolders and items will move too."
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/NavigationItem.qml:200
@@ -2073,12 +2506,6 @@ msgctxt "@action:button"
 msgid "View Key Details"
 msgstr ""
 
-#: crates/kp-desktop/ui/qml/SecretDetail.qml:249
-#, kde-format
-msgctxt "@label label and value"
-msgid "%1: %2"
-msgstr ""
-
 #: crates/kp-desktop/ui/qml/SecretDetail.qml:257
 #, kde-format
 msgid "OpenPGP fingerprint: %1"
@@ -2327,11 +2754,6 @@ msgstr ""
 
 #: crates/kp-desktop/ui/qml/SecretEditor.qml:713
 #, kde-format
-msgid "Saving…"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:713
-#, kde-format
 msgctxt "@action:button"
 msgid "Save Changes"
 msgstr ""
@@ -2340,17 +2762,6 @@ msgstr ""
 #, kde-format
 msgctxt "@action:button"
 msgid "Create Item"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:729
-#, kde-format
-msgctxt "@title:window"
-msgid "Discard Changes"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SecretEditor.qml:746
-#, kde-format
-msgid "There are unsaved changes. If you continue, they will be discarded."
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:21
@@ -2472,18 +2883,6 @@ msgstr ""
 #, kde-format
 msgctxt "@title"
 msgid "My Folders"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SidebarPane.qml:253
-#, kde-format
-msgctxt "@action:inmenu"
-msgid "Edit Folder"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/SidebarPane.qml:264
-#, kde-format
-msgctxt "@action:inmenu"
-msgid "Delete Folder"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:283
@@ -2830,12 +3229,6 @@ msgstr ""
 #, kde-format
 msgctxt "@label:textbox"
 msgid "Network name (SSID)"
-msgstr ""
-
-#: crates/kp-desktop/ui/qml/WifiFields.qml:65
-#, kde-format
-msgctxt "@label Wi-Fi security"
-msgid "Security"
 msgstr ""
 
 #: crates/kp-desktop/ui/qml/WifiFields.qml:74

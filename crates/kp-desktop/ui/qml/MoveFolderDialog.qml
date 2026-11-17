@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: dialog
@@ -13,7 +14,7 @@ Controls.Dialog {
     property bool pending: false
     anchors.centerIn: parent
     width: Math.min(parent.width - Kirigami.Units.largeSpacing * 4, Kirigami.Units.gridUnit * 24)
-    title: qsTr("Mover carpeta")
+    title: KI18n.i18nc("@title:window", "Move Folder")
     modal: true
     closePolicy: pending ? Controls.Popup.NoAutoClose : Controls.Popup.CloseOnEscape
     standardButtons: Controls.Dialog.NoButton
@@ -31,7 +32,7 @@ Controls.Dialog {
         spacing: Kirigami.Units.largeSpacing
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Elige la carpeta superior. También se moverán las subcarpetas y los elementos.")
+            text: KI18n.i18n("Choose the parent folder. Subfolders and items will move too.")
             wrapMode: Text.Wrap
         }
         FolderPicker {
@@ -40,8 +41,8 @@ Controls.Dialog {
             enabled: !dialog.pending
             folderRows: dialog.storeAdapter.folderRows.filter(folder => dialog.storeAdapter.canMoveFolder(dialog.folderId, folder.id))
             selectedId: dialog.destinationId
-            emptyLabel: qsTr("Carpetas principales")
-            accessibleLabel: qsTr("Carpeta de destino")
+            emptyLabel: KI18n.i18nc("@item:inlistbox", "Top-level folders")
+            accessibleLabel: KI18n.i18n("Destination folder")
             onFolderSelected: function (id) {
                 dialog.destinationId = id;
             }
@@ -55,12 +56,12 @@ Controls.Dialog {
     }
     footer: Controls.DialogButtonBox {
         Controls.Button {
-            text: qsTr("Cancelar")
+            text: KI18n.i18nc("@action:button", "Cancel")
             enabled: !dialog.pending
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
         }
         Controls.Button {
-            text: dialog.pending ? qsTr("Moviendo…") : qsTr("Mover")
+            text: dialog.pending ? KI18n.i18n("Moving…") : KI18n.i18nc("@action:button", "Move")
             enabled: !dialog.pending && !dialog.storeAdapter.busy
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
         }
