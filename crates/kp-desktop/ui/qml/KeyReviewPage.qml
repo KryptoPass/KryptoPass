@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -10,8 +11,8 @@ ColumnLayout {
     required property var selectedKey
     required property KeyStore keyStore
 
-    property string title: qsTr("Revisa la clave")
-    property string subtitle: qsTr("Verifica la huella digital y marca la clave como propia para usarla.")
+    property string title: KI18n.i18nc("@title", "Review the key")
+    property string subtitle: KI18n.i18n("Verify the fingerprint and mark the key as your own to use it.")
     property bool importedFromFile: true
 
     readonly property bool ready: !!selectedKey && selectedKey.hasSecret && selectedKey.statusCode === "valid" && selectedKey.canEncrypt && !selectedKey.needsOwnTrust
@@ -52,7 +53,7 @@ ColumnLayout {
         Layout.topMargin: Kirigami.Units.largeSpacing
 
         Controls.Button {
-            text: qsTr("Atrás")
+            text: KI18n.i18nc("@action:button", "Back")
             icon.name: "go-previous"
             enabled: !root.busy
             onClicked: root.backRequested()
@@ -62,7 +63,7 @@ ColumnLayout {
         }
         Controls.Button {
             id: continueButton
-            text: qsTr("Continuar")
+            text: KI18n.i18nc("@action:button", "Continue")
             icon.name: "go-next"
             highlighted: true
             enabled: root.ready && !root.busy

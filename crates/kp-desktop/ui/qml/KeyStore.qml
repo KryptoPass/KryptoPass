@@ -1,5 +1,6 @@
 import QtQuick
 import org.kryptopass.desktop as Backend
+import org.kde.ki18n
 
 QtObject {
     id: store
@@ -20,7 +21,7 @@ QtObject {
     readonly property IdentityWording wording: IdentityWording {}
     readonly property var health: JSON.parse(controller.identityHealth)
     function dateText(seconds) {
-        return wording.dateText(seconds) || qsTr("Sin registro");
+        return wording.dateText(seconds) || KI18n.i18n("Not recorded");
     }
     function purposeText(purpose) {
         return wording.roleTitle(purpose);
@@ -98,7 +99,7 @@ QtObject {
             personId: person.id,
             isPerson: true,
             title: person.name,
-            email: qsTr("%n identidad", "", identities.length),
+            email: KI18n.i18np("%1 identity", "%1 identities", identities.length),
             identities: identities,
             status: "",
             statusCode: "",

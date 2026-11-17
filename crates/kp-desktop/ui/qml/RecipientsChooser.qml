@@ -4,12 +4,13 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop as Backend
+import org.kde.ki18n
 
 ColumnLayout {
     id: chooser
 
     Accessible.role: Accessible.Grouping
-    Accessible.name: qsTr("Quién tiene acceso")
+    Accessible.name: KI18n.i18nc("@title:group", "Who has access")
 
     required property KeyStore keyStore
     readonly property Backend.ContactsController contactsController: keyStore.contactsController
@@ -45,7 +46,7 @@ ColumnLayout {
         readonly property Controls.Dialog dialog: Controls.Dialog {
             id: contactRecipientDialog
             parent: Controls.Overlay.overlay
-            title: qsTr("Elegir un contacto vinculado")
+            title: KI18n.i18nc("@title:window", "Choose a Linked Contact")
             modal: true
             standardButtons: Controls.Dialog.Cancel
             implicitWidth: Math.min(Kirigami.Units.gridUnit * 28, chooser.width)
@@ -58,7 +59,7 @@ ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Elige un contacto ya vinculado a una de estas claves. La coincidencia se hace por huella completa, nunca por correo.")
+                    text: KI18n.i18n("Choose a contact already linked to one of these keys. Matching uses the full fingerprint, never the email.")
                     wrapMode: Text.Wrap
                 }
                 Controls.ScrollView {
@@ -74,7 +75,7 @@ ColumnLayout {
                                 required property var modelData
                                 Layout.fillWidth: true
                                 text: contactChoice.modelData.name || contactChoice.modelData.email || contactChoice.modelData.uid
-                                Accessible.name: qsTr("Elegir contacto %1, huella %2").arg(text).arg(contactChoice.modelData.openPgpFingerprint)
+                                Accessible.name: KI18n.i18n("Choose contact %1, fingerprint %2", text, contactChoice.modelData.openPgpFingerprint)
                                 onClicked: {
                                     chooser.contactsController.selectRecipient(contactChoice.modelData.openPgpFingerprint);
                                     contactRecipientDialog.close();
@@ -132,7 +133,7 @@ ColumnLayout {
     }
 
     Controls.Label {
-        text: qsTr("Quién tiene acceso")
+        text: KI18n.i18nc("@title:group", "Who has access")
         font.weight: Font.DemiBold
     }
 
@@ -142,7 +143,7 @@ ColumnLayout {
 
         Controls.Label {
             Layout.fillWidth: true
-            text: qsTr("Elige quién puede abrir este elemento con su clave privada OpenPGP.")
+            text: KI18n.i18n("Choose who can open this item with their OpenPGP private key.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -150,8 +151,8 @@ ColumnLayout {
         Kirigami.SearchField {
             id: recipientSearch
             Layout.fillWidth: true
-            placeholderText: qsTr("Buscar nombre, correo o huella…")
-            Accessible.name: qsTr("Buscar personas con clave OpenPGP")
+            placeholderText: KI18n.i18nc("@info:placeholder recipients", "Search name, email or fingerprint…")
+            Accessible.name: KI18n.i18n("Search people with an OpenPGP key")
         }
 
         Flow {
@@ -160,37 +161,37 @@ ColumnLayout {
 
             Controls.Button {
                 id: keyActionsButton
-                text: qsTr("Añadir o importar clave")
+                text: KI18n.i18nc("@action:button", "Add or Import Key")
                 icon.name: "list-add"
-                Accessible.name: qsTr("Añadir o importar una clave de acceso")
+                Accessible.name: KI18n.i18n("Add or import an access key")
                 Controls.ToolTip.visible: hovered || visualFocus
-                Controls.ToolTip.text: qsTr("Actualizar contactos, importar una clave o buscarla en un servidor")
+                Controls.ToolTip.text: KI18n.i18nc("@info:tooltip", "Refresh contacts, import a key or look it up on a server")
                 onClicked: keyActionsMenu.open()
                 Controls.Menu {
                     id: keyActionsMenu
                     y: keyActionsButton.height
                     Controls.MenuItem {
-                        text: qsTr("Actualizar contactos de KDE")
+                        text: KI18n.i18nc("@action:inmenu", "Refresh KDE Contacts")
                         icon.name: "view-refresh"
                         enabled: !chooser.contactsController.busy
                         onTriggered: chooser.contactsController.refreshContacts()
                     }
                     Controls.MenuSeparator {}
                     Controls.MenuItem {
-                        text: qsTr("Importar clave desde un archivo…")
+                        text: KI18n.i18nc("@action:inmenu", "Import Key from File…")
                         icon.name: "document-import"
                         enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
                         onTriggered: recoveryDialog.openFor("import")
                     }
                     Controls.MenuItem {
-                        text: qsTr("Obtener clave del servidor…")
+                        text: KI18n.i18nc("@action:inmenu", "Fetch Key from Server…")
                         icon.name: "download"
                         enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
                         onTriggered: recoveryDialog.openFor("refreshExternal")
                     }
                     Controls.MenuSeparator {}
                     Controls.MenuItem {
-                        text: qsTr("Elegir desde contactos")
+                        text: KI18n.i18nc("@action:inmenu", "Choose from Contacts")
                         icon.name: "contact-new"
                         enabled: !chooser.contactsController.busy && chooser.contactRows.length > 0 && chooser.encryptableKeys.length > 0
                         onTriggered: {
@@ -207,7 +208,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: chooser.contactsController.busy
-            text: qsTr("Consultando o actualizando KDE Contacts…")
+            text: KI18n.i18n("Reading or updating KDE Contacts…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -224,7 +225,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: !!recipientSearch.text && chooser.matchingKeys.length === 0 && chooser.encryptableKeys.length > 0
-            text: qsTr("No hay claves que coincidan con la búsqueda.")
+            text: KI18n.i18n("No keys match the search.")
             wrapMode: Text.Wrap
         }
         Repeater {
@@ -242,7 +243,7 @@ ColumnLayout {
                     Controls.CheckBox {
                         id: keyCheck
                         checked: chooser.selectedFingerprints.includes(keyRow.modelData.id)
-                        Accessible.name: qsTr("Dar acceso a %1, %2, huella %3").arg(keyRow.modelData.title).arg(keyRow.modelData.email || "").arg(keyRow.modelData.id)
+                        Accessible.name: KI18n.i18n("Give access to %1, %2, fingerprint %3", keyRow.modelData.title, keyRow.modelData.email || "", keyRow.modelData.id)
                         onToggled: chooser.setChecked(keyRow.modelData.id, checked)
                     }
                     ColumnLayout {
@@ -266,11 +267,11 @@ ColumnLayout {
                     }
                     Controls.ToolButton {
                         id: keyDetails
-                        text: checked ? qsTr("Ocultar detalles de la clave") : qsTr("Ver detalles de la clave")
+                        text: checked ? KI18n.i18nc("@action:button", "Hide Key Details") : KI18n.i18nc("@action:button", "View Key Details")
                         icon.name: checked ? "arrow-up" : "arrow-down"
                         display: Controls.AbstractButton.IconOnly
                         checkable: true
-                        Accessible.name: qsTr("%1: %2").arg(text).arg(keyRow.modelData.title)
+                        Accessible.name: KI18n.i18nc("@label label and value", "%1: %2", text, keyRow.modelData.title)
                         Controls.ToolTip.visible: hovered || visualFocus
                         Controls.ToolTip.text: text
                     }
@@ -279,7 +280,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: keyCheck.implicitWidth + 8
                     visible: keyDetails.checked
-                    text: qsTr("Huella OpenPGP: %1").arg(keyRow.modelData.id)
+                    text: KI18n.i18n("OpenPGP fingerprint: %1", keyRow.modelData.id)
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     color: Kirigami.Theme.disabledTextColor
@@ -288,7 +289,7 @@ ColumnLayout {
                     Layout.leftMargin: keyCheck.implicitWidth + 8
                     visible: keyDetails.checked
                     enabled: !chooser.keyStore.controller.busy && !chooser.keyStore.controller.operationBusy
-                    text: qsTr("Copiar clave pública")
+                    text: KI18n.i18nc("@action", "Copy Public Key")
                     icon.name: "edit-copy"
                     onClicked: recoveryDialog.openFor("copyPublic", keyRow.modelData.id)
                 }
@@ -302,7 +303,7 @@ ColumnLayout {
                     Controls.Label {
                         Layout.fillWidth: true
                         visible: contactLinkArea.linkedContacts.length > 0
-                        text: qsTr("Contactos vinculados: %1").arg(contactLinkArea.linkedContacts.map(contact => contact.name || contact.email || contact.uid).join(", "))
+                        text: KI18n.i18n("Linked contacts: %1", contactLinkArea.linkedContacts.map(contact => contact.name || contact.email || contact.uid).join(", "))
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
@@ -314,19 +315,19 @@ ColumnLayout {
                             delegate: Controls.Button {
                                 id: linkedContactEdit
                                 required property var modelData
-                                text: qsTr("Editar %1").arg(linkedContactEdit.modelData.name || linkedContactEdit.modelData.email || linkedContactEdit.modelData.uid)
+                                text: KI18n.i18nc("@action:button %1 is a contact", "Edit %1", linkedContactEdit.modelData.name || linkedContactEdit.modelData.email || linkedContactEdit.modelData.uid)
                                 icon.name: "document-edit"
                                 enabled: !chooser.contactsController.busy
-                                Accessible.name: qsTr("Editar contacto %1 vinculado a %2").arg(linkedContactEdit.modelData.name || linkedContactEdit.modelData.email || linkedContactEdit.modelData.uid).arg(keyRow.modelData.title)
+                                Accessible.name: KI18n.i18n("Edit contact %1 linked to %2", linkedContactEdit.modelData.name || linkedContactEdit.modelData.email || linkedContactEdit.modelData.uid, keyRow.modelData.title)
                                 onClicked: chooser.contactsController.editContact(linkedContactEdit.modelData.uid)
                             }
                         }
                     }
                     Controls.Button {
-                        text: qsTr("Vincular a contacto de KDE…")
+                        text: KI18n.i18nc("@action:button", "Link to KDE Contact…")
                         icon.name: "link"
                         enabled: !chooser.contactsController.busy
-                        Accessible.name: qsTr("Añadir vínculo de contacto para la clave %1").arg(keyRow.modelData.title)
+                        Accessible.name: KI18n.i18n("Add a contact link for key %1", keyRow.modelData.title)
                         onClicked: chooser.contactsController.chooseContactForKey(keyRow.modelData.id)
                     }
                 }
@@ -343,12 +344,12 @@ ColumnLayout {
                 spacing: 8
                 Controls.CheckBox {
                     checked: chooser.selectedFingerprints.includes(unavailableRow.modelData)
-                    Accessible.name: qsTr("Clave de acceso original no disponible, huella %1").arg(unavailableRow.modelData)
+                    Accessible.name: KI18n.i18n("Original access key unavailable, fingerprint %1", unavailableRow.modelData)
                     onToggled: chooser.setChecked(unavailableRow.modelData, checked)
                 }
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("%1 · sin clave válida para cifrar").arg(unavailableRow.modelData)
+                    text: KI18n.i18n("%1 · no valid key to encrypt with", unavailableRow.modelData)
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                 }
@@ -358,7 +359,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: chooser.keyStore.controller.busy && chooser.encryptableKeys.length === 0
-            text: qsTr("Consultando claves OpenPGP…")
+            text: KI18n.i18n("Reading OpenPGP keys…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -366,7 +367,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: !chooser.keyStore.controller.busy && chooser.encryptableKeys.length === 0 && chooser.unavailableFingerprints.length === 0
-            text: qsTr("No hay claves válidas con capacidad de cifrado. Actualiza el llavero o revisa las claves.")
+            text: KI18n.i18n("There are no valid keys that can encrypt. Refresh the keyring or check the keys.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -374,7 +375,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: chooser.unavailableFingerprints.length > 0
-            text: qsTr("Se conserva cada huella original. Desmarca las claves no disponibles o elige una clave válida antes de guardar.")
+            text: KI18n.i18n("Each original fingerprint is kept. Uncheck the unavailable keys or choose a valid key before saving.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }

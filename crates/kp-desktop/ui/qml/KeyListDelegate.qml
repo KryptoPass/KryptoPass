@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.ItemDelegate {
     id: root
@@ -17,13 +18,13 @@ Controls.ItemDelegate {
     icon.width: Kirigami.Units.iconSizes.large
     icon.height: Kirigami.Units.iconSizes.large
     padding: Kirigami.Units.largeSpacing
-    Accessible.description: entry.isPerson ? entry.email : qsTr("%1. %2. Huella: %3").arg(entry.email || qsTr("Sin correo electrónico")).arg(root.summary).arg(entry.id)
+    Accessible.description: entry.isPerson ? entry.email : KI18n.i18nc("@info accessible description: email, status, fingerprint", "%1. %2. Fingerprint: %3", entry.email || KI18n.i18n("No email"), root.summary, entry.id)
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
 
     Controls.ToolTip.visible: (hovered || visualFocus) && (nameLabel.truncated || emailLabel.truncated)
     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-    Controls.ToolTip.text: text + "\n" + (entry.email || qsTr("Sin correo electrónico"))
+    Controls.ToolTip.text: text + "\n" + (entry.email || KI18n.i18n("No email"))
 
     contentItem: RowLayout {
         spacing: Kirigami.Units.largeSpacing
@@ -55,7 +56,7 @@ Controls.ItemDelegate {
                 }
                 Controls.Label {
                     visible: root.primary
-                    text: qsTr("Bóveda")
+                    text: KI18n.i18nc("@label badge", "Vault")
                     font: Kirigami.Theme.smallFont
                     color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.positiveTextColor
                 }
@@ -64,7 +65,7 @@ Controls.ItemDelegate {
                 id: emailLabel
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                text: root.entry.email || qsTr("Sin correo electrónico")
+                text: root.entry.email || KI18n.i18n("No email")
                 textFormat: Text.PlainText
                 elide: Text.ElideMiddle
                 color: root.highlighted || root.down ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.disabledTextColor

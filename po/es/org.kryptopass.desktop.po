@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:33-0400\n"
+"POT-Creation-Date: 2026-11-17 15:36-0400\n"
 "PO-Revision-Date: 2026-11-17 15:19-0400\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -63,6 +63,7 @@ msgstr "Elegir…"
 #: crates/kp-desktop/ui/qml/BackupWindow.qml:434
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:355
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:452
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:778
 #, kde-format
 msgctxt "@action:button"
 msgid "Change…"
@@ -142,6 +143,7 @@ msgstr "Archivos admitidos: .kpb, .gpg, .pgp"
 
 #: crates/kp-desktop/ui/qml/BackupWindow.qml:398
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:317
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:743
 #, kde-format
 msgctxt "@action:button"
 msgid "Browse…"
@@ -170,6 +172,7 @@ msgstr "Copia guardada"
 
 #: crates/kp-desktop/ui/qml/BackupWindow.qml:491
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:551
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:834
 #: crates/kp-desktop/ui/qml/SettingsDialog.qml:108
 #: crates/kp-desktop/ui/qml/VersionDialog.qml:213
 #, kde-format
@@ -185,6 +188,7 @@ msgstr "Cerrar"
 #: crates/kp-desktop/ui/qml/EntryPickerDialog.qml:24
 #: crates/kp-desktop/ui/qml/FolderEditor.qml:333
 #: crates/kp-desktop/ui/qml/ImportWindow.qml:551
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:834
 #: crates/kp-desktop/ui/qml/MoveEntryDialog.qml:100
 #: crates/kp-desktop/ui/qml/MoveFolderDialog.qml:59
 #: crates/kp-desktop/ui/qml/OnlineServicesDialog.qml:90
@@ -221,6 +225,7 @@ msgstr "Copia cifrada de KryptoPass (*.kpb *.gpg *.pgp)"
 
 #: crates/kp-desktop/ui/qml/BackupWindow.qml:511
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:471
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:860
 #: crates/kp-desktop/ui/qml/LockScreen.qml:214
 #: crates/kp-desktop/ui/qml/SshKeyFields.qml:76
 #: crates/kp-desktop/ui/qml/TotpFields.qml:57
@@ -637,6 +642,7 @@ msgid "Identity"
 msgstr "Identidad"
 
 #: crates/kp-desktop/ui/qml/EntryDetailPane.qml:80
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:90
 #: crates/kp-desktop/ui/qml/Main.qml:359
 #: crates/kp-desktop/ui/qml/SidebarPane.qml:124
 #, kde-format
@@ -1170,6 +1176,7 @@ msgid "Import a Private Key…"
 msgstr "Importar una clave privada…"
 
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:353
+#: crates/kp-desktop/ui/qml/KeyReviewPage.qml:56
 #, kde-format
 msgctxt "@action:button"
 msgid "Back"
@@ -1181,6 +1188,9 @@ msgid "Creating the key…"
 msgstr "Creando la clave…"
 
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:362
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:238
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:834
+#: crates/kp-desktop/ui/qml/KeyReviewPage.qml:66
 #, kde-format
 msgctxt "@action:button"
 msgid "Continue"
@@ -1245,6 +1255,7 @@ msgid "Need help?"
 msgstr "¿Necesitas ayuda?"
 
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:469
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:857
 #: crates/kp-desktop/ui/qml/LockScreen.qml:212
 #, kde-format
 msgctxt "@title:window"
@@ -1252,6 +1263,7 @@ msgid "Select OpenPGP Key to Import"
 msgstr "Seleccionar clave OpenPGP para importar"
 
 #: crates/kp-desktop/ui/qml/FirstRunScreen.qml:471
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:860
 #: crates/kp-desktop/ui/qml/LockScreen.qml:214
 #, kde-format
 msgid "OpenPGP files (*.asc *.gpg *.pgp *.key)"
@@ -1589,6 +1601,7 @@ msgid "Folder unavailable"
 msgstr "Carpeta no disponible"
 
 #: crates/kp-desktop/ui/qml/FolderPicker.qml:36
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:274
 #: crates/kp-desktop/ui/qml/SecretDetail.qml:249
 #, kde-format
 msgctxt "@label label and value"
@@ -1855,6 +1868,1098 @@ msgstr "Los elementos ya están en la bóveda actual."
 msgctxt "@action:button"
 msgid "Import"
 msgstr "Importar"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:43
+#, kde-format
+msgctxt "@title"
+msgid "Contacts with an OpenPGP fingerprint"
+msgstr "Contactos con huella OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:47
+#, kde-format
+msgid ""
+"Link a key to a contact from its details. You can choose anyone in your KDE "
+"address book."
+msgstr ""
+"Vincula una clave a un contacto desde sus detalles. Puedes elegir cualquier "
+"persona de tu agenda KDE."
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:54
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:97
+#, kde-format
+msgctxt "@action:button"
+msgid "Refresh Address Book"
+msgstr "Actualizar agenda"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:60
+#, kde-format
+msgctxt "@action:button"
+msgid "Import Key…"
+msgstr "Importar clave…"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:66
+#, kde-format
+msgctxt "@action:button"
+msgid "Fetch from Server…"
+msgstr "Obtener del servidor…"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:72
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:651
+#, kde-format
+msgctxt "@action:button"
+msgid "Configure Online Services…"
+msgstr "Configurar servicios online…"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:77
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:109
+#, kde-format
+msgctxt "@action:button"
+msgid "Open KDE Contacts"
+msgstr "Abrir KDE Contacts"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:103
+#, kde-format
+msgid "Reading KDE Contacts…"
+msgstr "Consultando KDE Contacts…"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:110
+#, kde-format
+msgid ""
+"No contacts have a linked OpenPGP fingerprint. Add the fingerprint in the "
+"KDE address book or link a key from its details."
+msgstr ""
+"No hay contactos con una huella OpenPGP vinculada. Añade la huella en la "
+"agenda KDE o vincula una clave desde sus detalles."
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:124
+#, kde-format
+msgid "Unnamed contact"
+msgstr "Contacto sin nombre"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:139
+#, kde-format
+msgid "No full OpenPGP fingerprint linked"
+msgstr "Sin huella OpenPGP completa vinculada"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:147
+#, kde-format
+msgid "Key available in the local keyring: %1"
+msgstr "Clave disponible en el llavero local: %1"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:147
+#, kde-format
+msgid "Key not imported yet"
+msgstr "Clave pendiente de importar"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:156
+#, kde-format
+msgctxt "@action:button"
+msgid "Open Key"
+msgstr "Abrir clave"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:167
+#, kde-format
+msgctxt "@action:button"
+msgid "Fetch Key by Fingerprint…"
+msgstr "Obtener clave por huella…"
+
+#: crates/kp-desktop/ui/qml/KeyAddressBook.qml:173
+#, kde-format
+msgctxt "@action:button"
+msgid "Edit Contact"
+msgstr "Editar contacto"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:32
+#, kde-format
+msgctxt "@title:group"
+msgid "Linked contact"
+msgstr "Contacto vinculado"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:37
+#, kde-format
+msgid "No linked contact."
+msgstr "Sin contacto vinculado."
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:64
+#: crates/kp-desktop/ui/qml/MarkdownEditor.qml:423
+#, kde-format
+msgctxt "@action:button markdown mode"
+msgid "Edit"
+msgstr "Editar"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:66
+#, kde-format
+msgid "Edit contact %1"
+msgstr "Editar contacto %1"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:76
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:431
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:327
+#, kde-format
+msgctxt "@action:button"
+msgid "Link to KDE Contact…"
+msgstr "Vincular a contacto de KDE…"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:90
+#, kde-format
+msgctxt "@title:group"
+msgid "KDE address book"
+msgstr "Agenda KDE"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:103
+#, kde-format
+msgctxt "@action:button"
+msgid "New Contact"
+msgstr "Nuevo contacto"
+
+#: crates/kp-desktop/ui/qml/KeyContactPanel.qml:117
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:211
+#, kde-format
+msgid "Reading or updating KDE Contacts…"
+msgstr "Consultando o actualizando KDE Contacts…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:24
+#, kde-format
+msgctxt "@title:window"
+msgid "Rename Person"
+msgstr "Cambiar nombre de la persona"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:24
+#, kde-format
+msgctxt "@title:window"
+msgid "Add Person"
+msgstr "Añadir persona"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:46
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Person's name"
+msgstr "Nombre de la persona"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:63
+#, kde-format
+msgctxt "@title:window"
+msgid "Remove Person from KryptoPass"
+msgstr "Quitar persona de KryptoPass"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:67
+#, kde-format
+msgid ""
+"Their keys stay in the keyring, without an assigned person and without your "
+"verifications."
+msgstr ""
+"Sus claves siguen en el llavero, sin persona asignada y sin tus "
+"verificaciones."
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:94
+#, kde-format
+msgctxt "@action:button"
+msgid "Add Person…"
+msgstr "Añadir persona…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:105
+#, kde-format
+msgctxt "@action:button"
+msgid "Import Public Key…"
+msgstr "Importar clave pública…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:111
+#, kde-format
+msgctxt "@action:button"
+msgid "Back to People"
+msgstr "Volver a personas"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:111
+#, kde-format
+msgctxt "@action:button"
+msgid "Link with the KDE Address Book…"
+msgstr "Vincular con la agenda de KDE…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:144
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Remove Person…"
+msgstr "Quitar persona…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:153
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "View Keys"
+msgstr "Ver claves"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:162
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Rename…"
+msgstr "Cambiar nombre…"
+
+#: crates/kp-desktop/ui/qml/KeyContactsOverview.qml:178
+#, kde-format
+msgid "No people."
+msgstr "Sin personas."
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:20
+#, kde-format
+msgctxt "@title:tab"
+msgid "General and Access"
+msgstr "General y accesos"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:20
+#, kde-format
+msgctxt "@title:tab"
+msgid "Security and Recovery"
+msgstr "Seguridad y recuperación"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:20
+#, kde-format
+msgctxt "@title:tab"
+msgid "Servers and Signatures"
+msgstr "Servidores y firmas"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:20
+#, kde-format
+msgctxt "@title:tab"
+msgid "KDE Contacts"
+msgstr "Contactos KDE"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:33
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:367
+#: crates/kp-desktop/ui/qml/Main.qml:455
+#, kde-format
+msgid "Copied to clipboard"
+msgstr "Copiado al portapapeles"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:76
+#, kde-format
+msgctxt "@action:button"
+msgid "Edit Alias in KryptoPass"
+msgstr "Editar alias en KryptoPass"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:110
+#, kde-format
+msgctxt "@action:button"
+msgid "Change"
+msgstr "Cambiar"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:128
+#, kde-format
+msgid "Key fingerprint"
+msgstr "Huella de la clave"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:134
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:115
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Fingerprint"
+msgstr "Copiar huella"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:151
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:198
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:292
+#, kde-format
+msgctxt "@action"
+msgid "Copy Public Key"
+msgstr "Copiar clave pública"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:161
+#, kde-format
+msgctxt "@action:button"
+msgid "Export…"
+msgstr "Exportar…"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:171
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Export Public Key (.asc)…"
+msgstr "Exportar clave pública (.asc)…"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:176
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Back Up Private Key (.asc)…"
+msgstr "Respaldar clave privada (.asc)…"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:192
+#, kde-format
+msgid "This person's keys"
+msgstr "Claves de esta persona"
+
+#: crates/kp-desktop/ui/qml/KeyDetail.qml:211
+#, kde-format
+msgid "Key section"
+msgstr "Sección de la clave"
+
+#: crates/kp-desktop/ui/qml/KeyErrorDialog.qml:14
+#, kde-format
+msgctxt "@title:window"
+msgid "Error Loading Keys"
+msgstr "Error al cargar claves"
+
+#: crates/kp-desktop/ui/qml/KeyErrorDialog.qml:26
+#, kde-format
+msgid "GnuPG error details"
+msgstr "Detalles del error de GnuPG"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:96
+#, kde-format
+msgctxt "@title"
+msgid "OpenPGP key"
+msgstr "Clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:101
+#, kde-format
+msgid "No identity"
+msgstr "Sin identidad"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:158
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:173
+#, kde-format
+msgctxt "@title review check"
+msgid "Trust in GnuPG"
+msgstr "Confianza en GnuPG"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:160
+#, kde-format
+msgctxt "@info review status"
+msgid "No ultimate trust"
+msgstr "Sin confianza absoluta"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:162
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:236
+#, kde-format
+msgctxt "@action:button"
+msgid "Mark as Mine"
+msgstr "Marcar como mía"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:174
+#, kde-format
+msgctxt "@info review status"
+msgid "Ultimate trust"
+msgstr "Confianza absoluta"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:181
+#, kde-format
+msgctxt "@title review check"
+msgid "Key origin"
+msgstr "Origen de la clave"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:182
+#, kde-format
+msgid "The key was imported from a local file. Keep that file."
+msgstr "La clave se importó desde un archivo local. Conserva ese archivo."
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:182
+#, kde-format
+msgid "The key was already in your local GnuPG keyring."
+msgstr "La clave ya estaba en tu llavero GnuPG local."
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:183
+#, kde-format
+msgctxt "@info review status"
+msgid "Imported from file"
+msgstr "Importada desde archivo"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:183
+#, kde-format
+msgctxt "@info review status"
+msgid "Found in your GnuPG keyring"
+msgstr "Detectada en tu llavero GnuPG"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:190
+#, kde-format
+msgctxt "@title review check"
+msgid "Encryption"
+msgstr "Cifrado"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:191
+#, kde-format
+msgctxt "@info review status"
+msgid "No valid encryption subkey"
+msgstr "Sin subclave de cifrado vigente"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:193
+#, kde-format
+msgctxt "@action:button"
+msgid "Add Encryption Subkey"
+msgstr "Añadir subclave de cifrado"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:206
+#, kde-format
+msgctxt "@title review check"
+msgid "Vault's main key"
+msgstr "Clave principal de la bóveda"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:207
+#, kde-format
+msgctxt "@info review status"
+msgid "This vault uses another key"
+msgstr "Esta bóveda usa otra clave"
+
+#: crates/kp-desktop/ui/qml/KeyImportReview.qml:213
+#, kde-format
+msgid "This key is not valid for use with the vault."
+msgstr "Esta clave no es válida para usarla con la bóveda."
+
+#: crates/kp-desktop/ui/qml/KeyListDelegate.qml:21
+#: crates/kp-desktop/ui/qml/KeyListDelegate.qml:27
+#: crates/kp-desktop/ui/qml/KeyListDelegate.qml:68
+#, kde-format
+msgid "No email"
+msgstr "Sin correo electrónico"
+
+#: crates/kp-desktop/ui/qml/KeyListDelegate.qml:21
+#, kde-format
+msgctxt "@info accessible description: email, status, fingerprint"
+msgid "%1. %2. Fingerprint: %3"
+msgstr "%1. %2. Huella: %3"
+
+#: crates/kp-desktop/ui/qml/KeyListDelegate.qml:59
+#, kde-format
+msgctxt "@label badge"
+msgid "Vault"
+msgstr "Bóveda"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:31
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "30 days"
+msgstr "30 días"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:35
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "90 days"
+msgstr "90 días"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:39
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "180 days"
+msgstr "180 días"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:43
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "1 year"
+msgstr "1 año"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:47
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "2 years"
+msgstr "2 años"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:51
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "5 years"
+msgstr "5 años"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:55
+#, kde-format
+msgctxt "@item:inlistbox key expiry"
+msgid "Never expires"
+msgstr "Sin caducidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:61
+#, kde-format
+msgctxt "@item:inlistbox subkey usage"
+msgid "Data encryption"
+msgstr "Cifrado de datos"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:65
+#, kde-format
+msgctxt "@item:inlistbox subkey usage"
+msgid "Signing"
+msgstr "Firma"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:69
+#, kde-format
+msgctxt "@item:inlistbox subkey usage"
+msgid "SSH access (authentication)"
+msgstr "Acceso SSH (autenticación)"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:75
+#, kde-format
+msgctxt "@item:inlistbox key material"
+msgid "Public and private"
+msgstr "Pública y privada"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:79
+#, kde-format
+msgctxt "@item:inlistbox key material"
+msgid "Private only"
+msgstr "Solo privada"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:84
+#, kde-format
+msgctxt "@item:inlistbox key material"
+msgid "Public only"
+msgstr "Solo pública"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:89
+#: crates/kp-desktop/ui/qml/VersionDialog.qml:102
+#, kde-format
+msgid "No name"
+msgstr "Sin nombre"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:195
+#, kde-format
+msgctxt "@title:window"
+msgid "Create OpenPGP Key"
+msgstr "Crear clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:196
+#, kde-format
+msgctxt "@title:window"
+msgid "Import OpenPGP Key"
+msgstr "Importar clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:197
+#, kde-format
+msgctxt "@title:window"
+msgid "Export Public Key"
+msgstr "Exportar clave pública"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:199
+#, kde-format
+msgctxt "@title:window"
+msgid "Back Up Private Key"
+msgstr "Respaldar clave privada"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:200
+#, kde-format
+msgctxt "@title:window"
+msgid "Change Passphrase"
+msgstr "Cambiar contraseña (passphrase)"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:201
+#, kde-format
+msgctxt "@title:window"
+msgid "Change Expiry"
+msgstr "Cambiar caducidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:202
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:226
+#, kde-format
+msgctxt "@action"
+msgid "Add Identity"
+msgstr "Añadir identidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:203
+#, kde-format
+msgctxt "@title:window"
+msgid "Choose Primary Identity"
+msgstr "Elegir identidad principal"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:204
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:228
+#, kde-format
+msgctxt "@action"
+msgid "Revoke Identity"
+msgstr "Revocar identidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:205
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:229
+#, kde-format
+msgctxt "@action"
+msgid "Add Subkey"
+msgstr "Añadir subclave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:206
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:230
+#, kde-format
+msgctxt "@action"
+msgid "Revoke Subkey"
+msgstr "Revocar subclave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:207
+#, kde-format
+msgctxt "@title:window"
+msgid "Create Revocation Certificate"
+msgstr "Generar certificado de revocación"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:208
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:232
+#, kde-format
+msgctxt "@action"
+msgid "Revoke Key"
+msgstr "Revocar clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:209
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:233
+#, kde-format
+msgctxt "@action"
+msgid "Certify Identity"
+msgstr "Certificar identidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:210
+#, kde-format
+msgctxt "@title:window"
+msgid "Fetch or Refresh Key"
+msgstr "Obtener o actualizar clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:211
+#, kde-format
+msgctxt "@title:window"
+msgid "Delete Key from Keyring"
+msgstr "Eliminar clave del llavero"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:212
+#, kde-format
+msgctxt "@title:window"
+msgid "Confirm Trust in GnuPG"
+msgstr "Confirmar confianza en GnuPG"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:214
+#, kde-format
+msgctxt "@title:window"
+msgid "OpenPGP Operation"
+msgstr "Operación OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:219
+#, kde-format
+msgctxt "@action:button"
+msgid "Create Key"
+msgstr "Crear clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:220
+#, kde-format
+msgctxt "@action:button"
+msgid "Import Key"
+msgstr "Importar clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:221
+#, kde-format
+msgctxt "@action:button"
+msgid "Export Public"
+msgstr "Exportar pública"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:222
+#, kde-format
+msgctxt "@action:button"
+msgid "Copy Public"
+msgstr "Copiar pública"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:223
+#, kde-format
+msgctxt "@action:button"
+msgid "Save Private Backup"
+msgstr "Guardar respaldo privado"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:224
+#, kde-format
+msgctxt "@action:button"
+msgid "Open Secure Dialog"
+msgstr "Abrir diálogo seguro"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:225
+#, kde-format
+msgctxt "@action:button"
+msgid "Save Expiry"
+msgstr "Guardar caducidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:227
+#, kde-format
+msgctxt "@action:button"
+msgid "Make Primary"
+msgstr "Elegir como principal"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:231
+#, kde-format
+msgctxt "@action:button"
+msgid "Save Certificate"
+msgstr "Guardar certificado"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:234
+#, kde-format
+msgctxt "@action:button"
+msgid "Fetch Key"
+msgstr "Obtener clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:235
+#, kde-format
+msgctxt "@action:button"
+msgid "Delete from Keyring"
+msgstr "Eliminar del llavero"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:331
+#, kde-format
+msgid "Operation complete."
+msgstr "Operación completada."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:444
+#, kde-format
+msgid "Full fingerprint: %1"
+msgstr "Huella completa: %1"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:452
+#, kde-format
+msgid "Target identity: %1"
+msgstr "Identidad objetivo: %1"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:459
+#, kde-format
+msgid "Target subkey: %1"
+msgstr "Subclave objetivo: %1"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:468
+#, kde-format
+msgid ""
+"GnuPG may ask for the passphrase in its secure dialog. The passphrase is "
+"never typed into or stored in KryptoPass."
+msgstr ""
+"GnuPG puede pedir la passphrase en su diálogo seguro. La passphrase no se "
+"escribe ni se guarda en KryptoPass."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:476
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Name <email@example.org>"
+msgstr "Nombre <correo@example.org>"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:477
+#, kde-format
+msgid "Name and email of the OpenPGP identity"
+msgstr "Nombre y correo de la identidad OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:484
+#, kde-format
+msgctxt "@label:listbox"
+msgid "Initial key expiry"
+msgstr "Caducidad inicial de la clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:495
+#, kde-format
+msgid "Expiry"
+msgstr "Caducidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:501
+#, kde-format
+msgid ""
+"Choose an OpenPGP file to import. The keyring changes only with the file's "
+"content; no identity is accepted because of its email."
+msgstr ""
+"Elige un archivo OpenPGP para importar. El llavero solo se modifica con el "
+"contenido del archivo; ninguna identidad se acepta por su correo."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:507
+#, kde-format
+msgid ""
+"The full public key will be exported, including its identities and public "
+"subkeys."
+msgstr ""
+"Se exportará la clave pública completa, incluidas sus identidades y "
+"subclaves públicas."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:513
+#, kde-format
+msgid ""
+"The file will contain private key material. It keeps GnuPG's current "
+"protection; if the key has no passphrase, the backup will not be protected "
+"by one either. Store it somewhere private."
+msgstr ""
+"El archivo contendrá material de clave privada. Conserva la protección "
+"actual de GnuPG; si la clave no tiene frase de contraseña, el respaldo "
+"tampoco estará protegido por una. Guárdalo en un lugar privado."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:521
+#, kde-format
+msgctxt "@option:check"
+msgid ""
+"I understand that the file contains private material and keeps the key's "
+"current protection"
+msgstr ""
+"Entiendo que el archivo contiene material privado y conserva la protección "
+"actual de la clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:527
+#, kde-format
+msgid ""
+"GnuPG will open its secure pinentry dialog. Enter the passphrase there; "
+"KryptoPass neither asks for it nor receives it."
+msgstr ""
+"GnuPG abrirá su diálogo seguro de pinentry. Escribe la passphrase allí; "
+"KryptoPass no la solicita ni la recibe."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:533
+#, kde-format
+msgid "The new expiry will apply only to the selected subkey."
+msgstr "La nueva caducidad se aplicará solo a la subclave seleccionada."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:533
+#, kde-format
+msgid ""
+"The new expiry will apply to the primary key. Choose “Never expires” to "
+"remove the expiration date."
+msgstr ""
+"La nueva caducidad se aplicará a la clave primaria. Elige “Sin caducidad” "
+"para quitar la fecha de vencimiento."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:539
+#, kde-format
+msgid ""
+"Add an identity to this key of yours. Use a name and email you want to "
+"publish in OpenPGP."
+msgstr ""
+"Añade una identidad a esta clave propia. Usa un nombre y correo que quieras "
+"publicar en OpenPGP."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:545
+#, kde-format
+msgid "The chosen identity will become the key's primary identity."
+msgstr "La identidad elegida se usará como identidad principal de la clave."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:551
+#, kde-format
+msgid ""
+"This identity will be revoked permanently. It will no longer be valid for "
+"the key."
+msgstr ""
+"Se revocará esta identidad de forma permanente. La identidad dejará de ser "
+"válida para la clave."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:562
+#, kde-format
+msgid "Usage of the new subkey"
+msgstr "Uso de la nueva subclave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:570
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Optional label, for example: GitHub SSH"
+msgstr "Etiqueta opcional, por ejemplo: GitHub SSH"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:571
+#, kde-format
+msgid "Subkey label"
+msgstr "Etiqueta de la subclave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:577
+#, kde-format
+msgid ""
+"Only the subkey shown will be revoked. The primary key will not be revoked."
+msgstr ""
+"Se revocará solo la subclave mostrada. La clave primaria no se revocará."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:583
+#, kde-format
+msgid ""
+"Store the certificate safely outside this computer: whoever has it can "
+"revoke the key. Creating the certificate does not revoke the key yet."
+msgstr ""
+"Guarda y custodia el certificado fuera del equipo: quien lo tenga podrá "
+"revocar la clave. Crear el certificado no la revoca todavía."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:589
+#, kde-format
+msgid ""
+"Revoking the primary key is permanent and affects all its identities and "
+"subkeys."
+msgstr ""
+"La revocación de la clave primaria es permanente y afecta a todas sus "
+"identidades y subclaves."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:595
+#, kde-format
+msgid ""
+"Choose a key of yours that can certify and review the identity you will "
+"sign. A certification does not confirm that you verified its owner."
+msgstr ""
+"Elige una clave propia que pueda certificar y revisa la identidad que "
+"firmarás. Una certificación no confirma que hayas verificado a su "
+"propietario."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:614
+#, kde-format
+msgid "Your key that will certify this identity"
+msgstr "Clave propia que certificará esta identidad"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:621
+#, kde-format
+msgctxt "@option:check"
+msgid "Keep the certification local, without exporting it"
+msgstr "Mantener la certificación local, sin exportarla"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:626
+#, kde-format
+msgid ""
+"Fetch the key by its full fingerprint. Check the fingerprint with its owner "
+"before giving them access to an item."
+msgstr ""
+"Obtén la clave por su huella completa. Comprueba la huella con su "
+"propietario antes de darle acceso a un elemento."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:631
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:639
+#, kde-format
+msgctxt "@label:listbox"
+msgid "Key server"
+msgstr "Servidor de claves"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:638
+#, kde-format
+msgctxt "@item:inlistbox key server"
+msgid "GnuPG configuration"
+msgstr "Configuración de GnuPG"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:645
+#, kde-format
+msgid "Online lookups are disabled. Enable them in the settings to fetch keys."
+msgstr ""
+"Las consultas online están desactivadas. Actívalas en la configuración para "
+"obtener claves."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:657
+#, kde-format
+msgctxt "@label:textbox"
+msgid "Full OpenPGP fingerprint"
+msgstr "Huella OpenPGP completa"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:664
+#, kde-format
+msgctxt "@info:placeholder"
+msgid "Full fingerprint of 40 or 64 hexadecimal characters"
+msgstr "Huella completa de 40 o 64 caracteres hexadecimales"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:666
+#, kde-format
+msgid "Full OpenPGP fingerprint to retrieve an external key"
+msgstr "Huella OpenPGP completa para recuperar una clave externa"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:671
+#, kde-format
+msgid ""
+"This key has its private part on this computer, but GnuPG does not know it "
+"is yours, so it refuses to encrypt with it. Marking it as yours gives it "
+"ultimate trust in this keyring. Only do this with keys that are really "
+"yours. Nothing is sent to other devices and nothing is revoked."
+msgstr ""
+"Esta clave tiene su parte privada en este equipo, pero GnuPG no sabe que es "
+"tuya y por eso se niega a cifrar con ella. Al marcarla como tuya, GnuPG le "
+"da confianza total (ultimate) en este llavero. Solo hazlo con claves que "
+"sean realmente tuyas. No se envía nada a otros dispositivos ni se revoca "
+"nada."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:677
+#, kde-format
+msgid ""
+"Deletion affects only the local keyring; it does not revoke the key or "
+"withdraw copies other people already have. If you delete the private part "
+"without a backup, you will lose access to this key's secrets."
+msgstr ""
+"El borrado afecta solo al llavero local y no revoca la clave ni retira "
+"copias que otras personas ya tengan. Si borras la parte privada sin "
+"respaldo, perderás acceso a los secretos de esta clave."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:688
+#, kde-format
+msgid "Material to delete from the keyring"
+msgstr "Material que se eliminará del llavero"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:730
+#, kde-format
+msgid "Drop your OpenPGP key here"
+msgstr "Suelta aquí tu clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:736
+#, kde-format
+msgid "Supported files: .asc, .gpg, .pgp"
+msgstr "Archivos admitidos: .asc, .gpg, .pgp"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:788
+#, kde-format
+msgid "No file chosen."
+msgstr "No se ha elegido un archivo."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:797
+#, kde-format
+msgctxt "@action:button"
+msgid "Choose Destination…"
+msgstr "Elegir destino…"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:813
+#, kde-format
+msgctxt "@option:check"
+msgid ""
+"I understand that this only deletes local material and does not revoke the "
+"key"
+msgstr "Entiendo que esto solo elimina material local y no revoca la clave"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:813
+#, kde-format
+msgctxt "@option:check"
+msgid "I understand that this revocation is permanent"
+msgstr "Entiendo la consecuencia permanente de esta revocación"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:821
+#, kde-format
+msgid ""
+"Permanent revocation of primary key %1 and all its identities and subkeys."
+msgstr ""
+"Revocación permanente de la clave primaria %1 y de todas sus identidades y "
+"subclaves."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:823
+#, kde-format
+msgid "The identity “%1” of key %2 will be revoked permanently."
+msgstr "Se revocará permanentemente la identidad “%1” de la clave %2."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:825
+#, kde-format
+msgid "Subkey %1 of key %2 will be revoked permanently."
+msgstr "Se revocará permanentemente la subclave %1 de la clave %2."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:826
+#, kde-format
+msgid "the selected material"
+msgstr "material seleccionado"
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:828
+#, kde-format
+msgid ""
+"The private part of key %1 will be deleted and the public part kept. Without "
+"a backup you will not be able to use this key to decrypt or sign again. "
+"Local deletion does not revoke the key, and a backup can restore it."
+msgstr ""
+"Se eliminará la parte privada de la clave %1 y se conservará la parte "
+"pública. Sin respaldo no podrás volver a usar esta clave para descifrar o "
+"firmar. El borrado local no revoca la clave y una copia de respaldo puede "
+"restaurarla."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:829
+#, kde-format
+msgid "%1 of key %2 will be deleted from the local keyring."
+msgstr "Se eliminará %1 de la clave %2 del llavero local."
+
+#: crates/kp-desktop/ui/qml/KeyOperationDialog.qml:857
+#, kde-format
+msgctxt "@title:window"
+msgid "Choose OpenPGP File Destination"
+msgstr "Elegir destino de archivo OpenPGP"
+
+#: crates/kp-desktop/ui/qml/KeyReviewPage.qml:14
+#, kde-format
+msgctxt "@title"
+msgid "Review the key"
+msgstr "Revisa la clave"
+
+#: crates/kp-desktop/ui/qml/KeyReviewPage.qml:15
+#, kde-format
+msgid "Verify the fingerprint and mark the key as your own to use it."
+msgstr "Verifica la huella digital y marca la clave como propia para usarla."
+
+#: crates/kp-desktop/ui/qml/KeyStore.qml:24
+#, kde-format
+msgid "Not recorded"
+msgstr "Sin registro"
+
+#: crates/kp-desktop/ui/qml/KeyStore.qml:102
+#, kde-format
+msgid "%1 identity"
+msgid_plural "%1 identities"
+msgstr[0] "%1 identidad"
+msgstr[1] "%1 identidades"
 
 #: crates/kp-desktop/ui/qml/LicenseFields.qml:65
 #, kde-format
@@ -2233,11 +3338,6 @@ msgstr "Guarda o descarta los cambios de carpeta antes de salir."
 msgid "The backup folder could not be opened."
 msgstr "No se pudo abrir la carpeta del respaldo."
 
-#: crates/kp-desktop/ui/qml/Main.qml:455
-#, kde-format
-msgid "Copied to clipboard"
-msgstr "Copiado al portapapeles"
-
 #: crates/kp-desktop/ui/qml/Main.qml:459
 #, kde-format
 msgid "The activity file was created, but the text editor could not be opened."
@@ -2502,12 +3602,6 @@ msgstr "Resaltar"
 #, kde-format
 msgid "Editing mode"
 msgstr "Modo de edición"
-
-#: crates/kp-desktop/ui/qml/MarkdownEditor.qml:423
-#, kde-format
-msgctxt "@action:button markdown mode"
-msgid "Edit"
-msgstr "Editar"
 
 #: crates/kp-desktop/ui/qml/MarkdownEditor.qml:432
 #, kde-format
@@ -2811,6 +3905,175 @@ msgstr "Generando con el generador criptográfico del sistema…"
 msgid "Generating…"
 msgstr "Generando…"
 
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:13
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:136
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:207
+#, kde-format
+msgctxt "@title:group"
+msgid "Who has access"
+msgstr "Quién tiene acceso"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:49
+#, kde-format
+msgctxt "@title:window"
+msgid "Choose a Linked Contact"
+msgstr "Elegir un contacto vinculado"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:62
+#, kde-format
+msgid ""
+"Choose a contact already linked to one of these keys. Matching uses the full "
+"fingerprint, never the email."
+msgstr ""
+"Elige un contacto ya vinculado a una de estas claves. La coincidencia se "
+"hace por huella completa, nunca por correo."
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:78
+#, kde-format
+msgid "Choose contact %1, fingerprint %2"
+msgstr "Elegir contacto %1, huella %2"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:146
+#, kde-format
+msgid "Choose who can open this item with their OpenPGP private key."
+msgstr "Elige quién puede abrir este elemento con su clave privada OpenPGP."
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:154
+#, kde-format
+msgctxt "@info:placeholder recipients"
+msgid "Search name, email or fingerprint…"
+msgstr "Buscar nombre, correo o huella…"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:155
+#, kde-format
+msgid "Search people with an OpenPGP key"
+msgstr "Buscar personas con clave OpenPGP"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:164
+#, kde-format
+msgctxt "@action:button"
+msgid "Add or Import Key"
+msgstr "Añadir o importar clave"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:166
+#, kde-format
+msgid "Add or import an access key"
+msgstr "Añadir o importar una clave de acceso"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:168
+#, kde-format
+msgctxt "@info:tooltip"
+msgid "Refresh contacts, import a key or look it up on a server"
+msgstr "Actualizar contactos, importar una clave o buscarla en un servidor"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:174
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Refresh KDE Contacts"
+msgstr "Actualizar contactos de KDE"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:181
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Import Key from File…"
+msgstr "Importar clave desde un archivo…"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:187
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Fetch Key from Server…"
+msgstr "Obtener clave del servidor…"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:194
+#, kde-format
+msgctxt "@action:inmenu"
+msgid "Choose from Contacts"
+msgstr "Elegir desde contactos"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:228
+#, kde-format
+msgid "No keys match the search."
+msgstr "No hay claves que coincidan con la búsqueda."
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:246
+#, kde-format
+msgid "Give access to %1, %2, fingerprint %3"
+msgstr "Dar acceso a %1, %2, huella %3"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:270
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
+#, kde-format
+msgctxt "@action:button"
+msgid "Hide Key Details"
+msgstr "Ocultar detalles de la clave"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:270
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
+#, kde-format
+msgctxt "@action:button"
+msgid "View Key Details"
+msgstr "Ver detalles de la clave"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:283
+#: crates/kp-desktop/ui/qml/SecretDetail.qml:257
+#, kde-format
+msgid "OpenPGP fingerprint: %1"
+msgstr "Huella OpenPGP: %1"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:306
+#, kde-format
+msgid "Linked contacts: %1"
+msgstr "Contactos vinculados: %1"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:318
+#, kde-format
+msgctxt "@action:button %1 is a contact"
+msgid "Edit %1"
+msgstr "Editar %1"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:321
+#, kde-format
+msgid "Edit contact %1 linked to %2"
+msgstr "Editar contacto %1 vinculado a %2"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:330
+#, kde-format
+msgid "Add a contact link for key %1"
+msgstr "Añadir vínculo de contacto para la clave %1"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:347
+#, kde-format
+msgid "Original access key unavailable, fingerprint %1"
+msgstr "Clave de acceso original no disponible, huella %1"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:352
+#, kde-format
+msgid "%1 · no valid key to encrypt with"
+msgstr "%1 · sin clave válida para cifrar"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:362
+#, kde-format
+msgid "Reading OpenPGP keys…"
+msgstr "Consultando claves OpenPGP…"
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:370
+#, kde-format
+msgid ""
+"There are no valid keys that can encrypt. Refresh the keyring or check the "
+"keys."
+msgstr ""
+"No hay claves válidas con capacidad de cifrado. Actualiza el llavero o "
+"revisa las claves."
+
+#: crates/kp-desktop/ui/qml/RecipientsChooser.qml:378
+#, kde-format
+msgid ""
+"Each original fingerprint is kept. Uncheck the unavailable keys or choose a "
+"valid key before saving."
+msgstr ""
+"Se conserva cada huella original. Desmarca las claves no disponibles o elige "
+"una clave válida antes de guardar."
+
 #: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:12
 #: crates/kp-desktop/ui/qml/RelatedEntryPicker.qml:122
 #, kde-format
@@ -2937,34 +4200,11 @@ msgstr "Fecha no disponible"
 msgid "This item type cannot be shown."
 msgstr "No se puede mostrar este tipo de elemento."
 
-#: crates/kp-desktop/ui/qml/SecretDetail.qml:207
-#, kde-format
-msgctxt "@title:group"
-msgid "Who has access"
-msgstr "Quién tiene acceso"
-
 #: crates/kp-desktop/ui/qml/SecretDetail.qml:216
 #, kde-format
 msgctxt "@label recipient"
 msgid "Key unavailable"
 msgstr "Clave no disponible"
-
-#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
-#, kde-format
-msgctxt "@action:button"
-msgid "Hide Key Details"
-msgstr "Ocultar detalles de la clave"
-
-#: crates/kp-desktop/ui/qml/SecretDetail.qml:245
-#, kde-format
-msgctxt "@action:button"
-msgid "View Key Details"
-msgstr "Ver detalles de la clave"
-
-#: crates/kp-desktop/ui/qml/SecretDetail.qml:257
-#, kde-format
-msgid "OpenPGP fingerprint: %1"
-msgstr "Huella OpenPGP: %1"
 
 #: crates/kp-desktop/ui/qml/SecretDetail.qml:286
 #: crates/kp-desktop/ui/qml/SecretDetail.qml:292
@@ -3577,11 +4817,6 @@ msgstr "%1 · Versión %2 de %3"
 msgid ""
 "Read only. Viewing or copying this data does not change the current one."
 msgstr "Solo lectura. Consultar o copiar estos datos no modifica el actual."
-
-#: crates/kp-desktop/ui/qml/VersionDialog.qml:102
-#, kde-format
-msgid "No name"
-msgstr "Sin nombre"
 
 #: crates/kp-desktop/ui/qml/VersionDialog.qml:103
 #, kde-format

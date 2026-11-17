@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop
+import org.kde.ki18n
 
 Controls.Dialog {
     id: keyErrorDialog
@@ -10,7 +11,7 @@ Controls.Dialog {
     anchors.centerIn: parent
     width: Math.min(640, parent.width - Kirigami.Units.largeSpacing * 4)
     height: Math.min(implicitHeight, parent.height - Kirigami.Units.largeSpacing * 4)
-    title: qsTranslate("Main", "Error al cargar claves")
+    title: KI18n.i18nc("@title:window", "Error Loading Keys")
     modal: true
     standardButtons: Controls.Dialog.Close
     contentItem: Controls.ScrollView {
@@ -22,7 +23,7 @@ Controls.Dialog {
             selectByMouse: true
             textFormat: TextEdit.PlainText
             wrapMode: TextEdit.Wrap
-            Accessible.name: qsTranslate("Main", "Detalles del error de GnuPG")
+            Accessible.name: KI18n.i18n("GnuPG error details")
         }
     }
 }

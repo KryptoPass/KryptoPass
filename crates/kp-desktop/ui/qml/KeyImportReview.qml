@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -92,12 +93,12 @@ ColumnLayout {
                     Kirigami.Heading {
                         Layout.fillWidth: true
                         level: 3
-                        text: qsTr("Clave OpenPGP")
+                        text: KI18n.i18nc("@title", "OpenPGP key")
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: root.key?.pgpTitle || root.key?.title || qsTr("Sin identidad")
+                        text: root.key?.pgpTitle || root.key?.title || KI18n.i18n("No identity")
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }
@@ -111,7 +112,7 @@ ColumnLayout {
                     }
                 }
                 Controls.ToolButton {
-                    text: qsTr("Copiar huella")
+                    text: KI18n.i18nc("@action:button", "Copy Fingerprint")
                     icon.name: "edit-copy"
                     display: Controls.AbstractButton.IconOnly
                     enabled: !!root.key?.id
@@ -154,11 +155,11 @@ ColumnLayout {
         visible: root.hasSecret && root.needsOwnTrust
         level: "warning"
         indicator: "security-low"
-        title: qsTr("Confianza en GnuPG")
+        title: KI18n.i18nc("@title review check", "Trust in GnuPG")
         help: root.wording.tips.ownerTrust
-        status: qsTr("Sin confianza absoluta")
+        status: KI18n.i18nc("@info review status", "No ultimate trust")
         Controls.Button {
-            text: qsTr("Marcar como mía")
+            text: KI18n.i18nc("@action:button", "Mark as Mine")
             highlighted: true
             enabled: !!root.key?.id && !root.busy
             onClicked: root.runOperation("markAsOwn")
@@ -169,27 +170,27 @@ ColumnLayout {
         visible: root.hasSecret && !root.needsOwnTrust
         level: "ok"
         indicator: "dialog-ok-apply"
-        title: qsTr("Confianza en GnuPG")
-        status: qsTr("Confianza absoluta")
+        title: KI18n.i18nc("@title review check", "Trust in GnuPG")
+        status: KI18n.i18nc("@info review status", "Ultimate trust")
     }
 
     IdentityRow {
         visible: root.hasSecret
         level: "ok"
         indicator: root.importedFromFile ? "document-import" : "view-certificate"
-        title: qsTr("Origen de la clave")
-        help: root.importedFromFile ? qsTr("La clave se importó desde un archivo local. Conserva ese archivo.") : qsTr("La clave ya estaba en tu llavero GnuPG local.")
-        status: root.importedFromFile ? qsTr("Importada desde archivo") : qsTr("Detectada en tu llavero GnuPG")
+        title: KI18n.i18nc("@title review check", "Key origin")
+        help: root.importedFromFile ? KI18n.i18n("The key was imported from a local file. Keep that file.") : KI18n.i18n("The key was already in your local GnuPG keyring.")
+        status: root.importedFromFile ? KI18n.i18nc("@info review status", "Imported from file") : KI18n.i18nc("@info review status", "Found in your GnuPG keyring")
     }
 
     IdentityRow {
         visible: !!root.key && !root.canEncrypt
         level: "warning"
         indicator: "security-medium"
-        title: qsTr("Cifrado")
-        status: qsTr("Sin subclave de cifrado vigente")
+        title: KI18n.i18nc("@title review check", "Encryption")
+        status: KI18n.i18nc("@info review status", "No valid encryption subkey")
         Controls.Button {
-            text: qsTr("Añadir subclave de cifrado")
+            text: KI18n.i18nc("@action:button", "Add Encryption Subkey")
             enabled: !!root.key?.id && !root.busy
             onClicked: root.runOperation("addSubkey", {
                 usage: "encrypt",
@@ -202,14 +203,14 @@ ColumnLayout {
         visible: !!root.keyStore.primaryKey && !!root.key && root.keyStore.primaryKey.toUpperCase() !== root.key.id.toUpperCase()
         level: "warning"
         indicator: "view-certificate"
-        title: qsTr("Clave principal de la bóveda")
-        status: qsTr("Esta bóveda usa otra clave")
+        title: KI18n.i18nc("@title review check", "Vault's main key")
+        status: KI18n.i18nc("@info review status", "This vault uses another key")
     }
 
     Controls.Label {
         Layout.fillWidth: true
         visible: !!root.key && !root.valid
-        text: qsTr("Esta clave no es válida para usarla con la bóveda.")
+        text: KI18n.i18n("This key is not valid for use with the vault.")
         color: Kirigami.Theme.negativeTextColor
         wrapMode: Text.Wrap
     }

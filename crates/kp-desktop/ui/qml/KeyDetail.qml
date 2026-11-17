@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -16,7 +17,7 @@ ColumnLayout {
     readonly property IdentityWording wording: keyStore.wording
     readonly property bool own: !!selectedKey?.own
     readonly property bool compact: width < Kirigami.Units.gridUnit * 34
-    readonly property var sections: [qsTr("General y accesos"), qsTr("Seguridad y recuperación"), qsTr("Servidores y firmas"), qsTr("Contactos KDE")]
+    readonly property var sections: [KI18n.i18nc("@title:tab", "General and Access"), KI18n.i18nc("@title:tab", "Security and Recovery"), KI18n.i18nc("@title:tab", "Servers and Signatures"), KI18n.i18nc("@title:tab", "KDE Contacts")]
     onSelectedKeyChanged: {
         if (displayedId !== (selectedKey?.id || "")) {
             tabs.currentIndex = 0;
@@ -29,7 +30,7 @@ ColumnLayout {
         clipboardSource.selectAll();
         clipboardSource.copy();
         clipboardSource.deselect();
-        notificationRequested(qsTr("Copiado al portapapeles"));
+        notificationRequested(KI18n.i18n("Copied to clipboard"));
     }
     TextEdit {
         id: clipboardSource
@@ -72,7 +73,7 @@ ColumnLayout {
                     id: editButton
                     icon.name: "document-edit"
                     display: Controls.AbstractButton.IconOnly
-                    text: qsTr("Editar alias en KryptoPass")
+                    text: KI18n.i18nc("@action:button", "Edit Alias in KryptoPass")
                     enabled: root.available
                     Controls.ToolTip.visible: hovered || visualFocus
                     Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
@@ -106,7 +107,7 @@ ColumnLayout {
                 }
                 Kirigami.LinkButton {
                     visible: !!root.selectedKey?.hasSecret
-                    text: qsTr("Cambiar")
+                    text: KI18n.i18nc("@action:button", "Change")
                     enabled: root.available
                     onClicked: root.operationDialog.openFor("expiry", root.selectedKey.id)
                 }
@@ -124,13 +125,13 @@ ColumnLayout {
                     elide: Text.ElideMiddle
                     font.family: Kirigami.Theme.fixedWidthFont.family
                     opacity: 0.75
-                    Accessible.name: qsTr("Huella de la clave")
+                    Accessible.name: KI18n.i18n("Key fingerprint")
                 }
                 Controls.ToolButton {
                     id: copyFingerprintButton
                     icon.name: "edit-copy"
                     display: Controls.AbstractButton.IconOnly
-                    text: qsTr("Copiar huella")
+                    text: KI18n.i18nc("@action:button", "Copy Fingerprint")
                     implicitWidth: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
                     implicitHeight: implicitWidth
                     Controls.ToolTip.visible: hovered || visualFocus
@@ -147,7 +148,7 @@ ColumnLayout {
             Layout.alignment: Qt.AlignTop
             spacing: Kirigami.Units.smallSpacing
             Controls.Button {
-                text: qsTr("Copiar clave pública")
+                text: KI18n.i18nc("@action", "Copy Public Key")
                 icon.name: "edit-copy"
                 display: root.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
                 enabled: root.available
@@ -157,7 +158,7 @@ ColumnLayout {
             }
             Controls.Button {
                 id: exportButton
-                text: qsTr("Exportar…")
+                text: KI18n.i18nc("@action:button", "Export…")
                 icon.name: "document-save-as"
                 display: root.compact ? Controls.AbstractButton.IconOnly : Controls.AbstractButton.TextBesideIcon
                 enabled: root.available
@@ -167,12 +168,12 @@ ColumnLayout {
                 Controls.Menu {
                     id: exportMenu
                     Controls.MenuItem {
-                        text: qsTr("Exportar clave pública (.asc)…")
+                        text: KI18n.i18nc("@action:inmenu", "Export Public Key (.asc)…")
                         icon.name: "document-save-as"
                         onTriggered: root.operationDialog.openFor("exportPublic", root.selectedKey.id)
                     }
                     Controls.MenuItem {
-                        text: qsTr("Respaldar clave privada (.asc)…")
+                        text: KI18n.i18nc("@action:inmenu", "Back Up Private Key (.asc)…")
                         icon.name: "document-encrypted"
                         enabled: !!root.selectedKey?.hasSecret
                         onTriggered: root.operationDialog.openFor("backupPrivate", root.selectedKey.id)
@@ -188,7 +189,7 @@ ColumnLayout {
         visible: !!root.keyStore.selectedRow?.isPerson && root.keyStore.selectedRow.identities.length > 1
         model: root.keyStore.selectedRow?.isPerson ? root.keyStore.selectedRow.identities : []
         textRole: "title"
-        Accessible.name: qsTr("Claves de esta persona")
+        Accessible.name: KI18n.i18n("This person's keys")
         currentIndex: root.keyStore.selectedRow?.isPerson ? root.keyStore.selectedRow.identities.findIndex(key => key.id === root.selectedKey?.id) : -1
         onActivated: index => root.keyStore.selectedIdentityId = root.keyStore.selectedRow.identities[index].id
     }
@@ -207,7 +208,7 @@ ColumnLayout {
         visible: root.width < Kirigami.Units.gridUnit * 30
         model: root.sections
         currentIndex: tabs.currentIndex
-        Accessible.name: qsTr("Sección de la clave")
+        Accessible.name: KI18n.i18n("Key section")
         onActivated: index => tabs.currentIndex = index
     }
     Controls.TabBar {

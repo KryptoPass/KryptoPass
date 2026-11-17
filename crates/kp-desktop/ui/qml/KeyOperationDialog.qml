@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs as Dialogs
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 
 Controls.Dialog {
     id: dialog
@@ -27,65 +28,65 @@ Controls.Dialog {
     property string operationWarning: ""
     readonly property var expiryOptions: [
         {
-            label: qsTr("30 días"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "30 days"),
             days: 30
         },
         {
-            label: qsTr("90 días"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "90 days"),
             days: 90
         },
         {
-            label: qsTr("180 días"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "180 days"),
             days: 180
         },
         {
-            label: qsTr("1 año"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "1 year"),
             days: 365
         },
         {
-            label: qsTr("2 años"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "2 years"),
             days: 730
         },
         {
-            label: qsTr("5 años"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "5 years"),
             days: 1825
         },
         {
-            label: qsTr("Sin caducidad"),
+            label: KI18n.i18nc("@item:inlistbox key expiry", "Never expires"),
             days: 0
         }
     ]
     readonly property var usageOptions: [
         {
-            label: qsTr("Cifrado de datos"),
+            label: KI18n.i18nc("@item:inlistbox subkey usage", "Data encryption"),
             value: "encrypt"
         },
         {
-            label: qsTr("Firma"),
+            label: KI18n.i18nc("@item:inlistbox subkey usage", "Signing"),
             value: "sign"
         },
         {
-            label: qsTr("Acceso SSH (autenticación)"),
+            label: KI18n.i18nc("@item:inlistbox subkey usage", "SSH access (authentication)"),
             value: "authenticate"
         }
     ]
     readonly property var materialOptions: privateMaterialAvailable ? [
         {
-            label: qsTr("Pública y privada"),
+            label: KI18n.i18nc("@item:inlistbox key material", "Public and private"),
             value: "both"
         },
         {
-            label: qsTr("Solo privada"),
+            label: KI18n.i18nc("@item:inlistbox key material", "Private only"),
             value: "private"
         }
     ] : [
         {
-            label: qsTr("Solo pública"),
+            label: KI18n.i18nc("@item:inlistbox key material", "Public only"),
             value: "public"
         }
     ]
     readonly property var certifierOptions: keyStore.entries.filter(key => key.hasSecret && key.canCertify && key.id.toUpperCase() !== normalizedFingerprint(fingerprint)).map(key => ({
-                label: (key.title || qsTr("Sin nombre")) + " · " + key.id,
+                label: (key.title || KI18n.i18n("No name")) + " · " + key.id,
                 fingerprint: key.id
             }))
     readonly property bool controllerBusy: keyStore.controller.busy || keyStore.controller.operationBusy
@@ -191,50 +192,50 @@ Controls.Dialog {
 
     function titleForAction() {
         const titles = {
-            create: qsTr("Crear clave OpenPGP"),
-            import: qsTr("Importar clave OpenPGP"),
-            exportPublic: qsTr("Exportar clave pública"),
-            copyPublic: qsTr("Copiar clave pública"),
-            backupPrivate: qsTr("Respaldar clave privada"),
-            passphrase: qsTr("Cambiar contraseña (passphrase)"),
-            expiry: qsTr("Cambiar caducidad"),
-            addIdentity: qsTr("Añadir identidad"),
-            primaryIdentity: qsTr("Elegir identidad principal"),
-            revokeIdentity: qsTr("Revocar identidad"),
-            addSubkey: qsTr("Añadir subclave"),
-            revokeSubkey: qsTr("Revocar subclave"),
-            prepareRevocation: qsTr("Generar certificado de revocación"),
-            revokeKey: qsTr("Revocar clave"),
-            certify: qsTr("Certificar identidad"),
-            refreshExternal: qsTr("Obtener o actualizar clave"),
-            delete: qsTr("Eliminar clave del llavero"),
-            markAsOwn: qsTr("Confirmar confianza en GnuPG")
+            create: KI18n.i18nc("@title:window", "Create OpenPGP Key"),
+            import: KI18n.i18nc("@title:window", "Import OpenPGP Key"),
+            exportPublic: KI18n.i18nc("@title:window", "Export Public Key"),
+            copyPublic: KI18n.i18nc("@action", "Copy Public Key"),
+            backupPrivate: KI18n.i18nc("@title:window", "Back Up Private Key"),
+            passphrase: KI18n.i18nc("@title:window", "Change Passphrase"),
+            expiry: KI18n.i18nc("@title:window", "Change Expiry"),
+            addIdentity: KI18n.i18nc("@action", "Add Identity"),
+            primaryIdentity: KI18n.i18nc("@title:window", "Choose Primary Identity"),
+            revokeIdentity: KI18n.i18nc("@action", "Revoke Identity"),
+            addSubkey: KI18n.i18nc("@action", "Add Subkey"),
+            revokeSubkey: KI18n.i18nc("@action", "Revoke Subkey"),
+            prepareRevocation: KI18n.i18nc("@title:window", "Create Revocation Certificate"),
+            revokeKey: KI18n.i18nc("@action", "Revoke Key"),
+            certify: KI18n.i18nc("@action", "Certify Identity"),
+            refreshExternal: KI18n.i18nc("@title:window", "Fetch or Refresh Key"),
+            delete: KI18n.i18nc("@title:window", "Delete Key from Keyring"),
+            markAsOwn: KI18n.i18nc("@title:window", "Confirm Trust in GnuPG")
         };
-        return titles[action] || qsTr("Operación OpenPGP");
+        return titles[action] || KI18n.i18nc("@title:window", "OpenPGP Operation");
     }
 
     function operationButtonText() {
         const labels = {
-            create: qsTr("Crear clave"),
-            import: qsTr("Importar clave"),
-            exportPublic: qsTr("Exportar pública"),
-            copyPublic: qsTr("Copiar pública"),
-            backupPrivate: qsTr("Guardar respaldo privado"),
-            passphrase: qsTr("Abrir diálogo seguro"),
-            expiry: qsTr("Guardar caducidad"),
-            addIdentity: qsTr("Añadir identidad"),
-            primaryIdentity: qsTr("Elegir como principal"),
-            revokeIdentity: qsTr("Revocar identidad"),
-            addSubkey: qsTr("Añadir subclave"),
-            revokeSubkey: qsTr("Revocar subclave"),
-            prepareRevocation: qsTr("Guardar certificado"),
-            revokeKey: qsTr("Revocar clave"),
-            certify: qsTr("Certificar identidad"),
-            refreshExternal: qsTr("Obtener clave"),
-            delete: qsTr("Eliminar del llavero"),
-            markAsOwn: qsTr("Marcar como mía")
+            create: KI18n.i18nc("@action:button", "Create Key"),
+            import: KI18n.i18nc("@action:button", "Import Key"),
+            exportPublic: KI18n.i18nc("@action:button", "Export Public"),
+            copyPublic: KI18n.i18nc("@action:button", "Copy Public"),
+            backupPrivate: KI18n.i18nc("@action:button", "Save Private Backup"),
+            passphrase: KI18n.i18nc("@action:button", "Open Secure Dialog"),
+            expiry: KI18n.i18nc("@action:button", "Save Expiry"),
+            addIdentity: KI18n.i18nc("@action", "Add Identity"),
+            primaryIdentity: KI18n.i18nc("@action:button", "Make Primary"),
+            revokeIdentity: KI18n.i18nc("@action", "Revoke Identity"),
+            addSubkey: KI18n.i18nc("@action", "Add Subkey"),
+            revokeSubkey: KI18n.i18nc("@action", "Revoke Subkey"),
+            prepareRevocation: KI18n.i18nc("@action:button", "Save Certificate"),
+            revokeKey: KI18n.i18nc("@action", "Revoke Key"),
+            certify: KI18n.i18nc("@action", "Certify Identity"),
+            refreshExternal: KI18n.i18nc("@action:button", "Fetch Key"),
+            delete: KI18n.i18nc("@action:button", "Delete from Keyring"),
+            markAsOwn: KI18n.i18nc("@action:button", "Mark as Mine")
         };
-        return labels[action] || qsTr("Continuar");
+        return labels[action] || KI18n.i18nc("@action:button", "Continue");
     }
 
     function requestObject() {
@@ -327,7 +328,7 @@ Controls.Dialog {
     function successMessage(message) {
         if (message)
             return message;
-        return qsTr("Operación completada.");
+        return KI18n.i18n("Operation complete.");
     }
 
     Shortcut {
@@ -363,7 +364,7 @@ Controls.Dialog {
             publicKeyClipboardSource.copy();
             publicKeyClipboardSource.deselect();
             publicKeyClipboardSource.text = "";
-            dialog.notificationRequested(qsTr("Copiado al portapapeles"));
+            dialog.notificationRequested(KI18n.i18n("Copied to clipboard"));
         }
     }
 
@@ -427,7 +428,7 @@ Controls.Dialog {
             Controls.Button {
                 visible: !!dialog.completionMessage && !!dialog.completedFingerprint && (dialog.action === "import" || dialog.action === "refreshExternal")
                 enabled: !dialog.keyStore.contactsController.busy
-                text: qsTr("Vincular a contacto de KDE…")
+                text: KI18n.i18nc("@action:button", "Link to KDE Contact…")
                 icon.name: "link"
                 onClicked: dialog.keyStore.contactsController.chooseContactForKey(dialog.completedFingerprint)
             }
@@ -440,7 +441,7 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !!(dialog.fingerprint || fingerprintField.text) && dialog.action !== "create" && dialog.action !== "import"
-                text: qsTr("Huella completa: %1").arg(dialog.requestFingerprint())
+                text: KI18n.i18n("Full fingerprint: %1", dialog.requestFingerprint())
                 textFormat: Text.PlainText
                 font: Kirigami.Theme.fixedWidthFont
                 wrapMode: Text.WrapAnywhere
@@ -448,14 +449,14 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !!dialog.userId
-                text: qsTr("Identidad objetivo: %1").arg(dialog.userId)
+                text: KI18n.i18n("Target identity: %1", dialog.userId)
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: !!dialog.subkeyFingerprint
-                text: qsTr("Subclave objetivo: %1").arg(dialog.subkeyFingerprint)
+                text: KI18n.i18n("Target subkey: %1", dialog.subkeyFingerprint)
                 textFormat: Text.PlainText
                 font: Kirigami.Theme.fixedWidthFont
                 wrapMode: Text.WrapAnywhere
@@ -464,7 +465,7 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "create"
-                text: qsTr("GnuPG puede pedir la passphrase en su diálogo seguro. La passphrase no se escribe ni se guarda en KryptoPass.")
+                text: KI18n.i18n("GnuPG may ask for the passphrase in its secure dialog. The passphrase is never typed into or stored in KryptoPass.")
                 wrapMode: Text.Wrap
             }
             Controls.TextField {
@@ -472,15 +473,15 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 visible: dialog.action === "create" || dialog.action === "addIdentity"
                 enabled: !dialog.controllerBusy
-                placeholderText: qsTr("Nombre <correo@example.org>")
-                Accessible.name: qsTr("Nombre y correo de la identidad OpenPGP")
+                placeholderText: KI18n.i18nc("@info:placeholder", "Name <email@example.org>")
+                Accessible.name: KI18n.i18n("Name and email of the OpenPGP identity")
                 onAccepted: if (dialog.canSubmit)
                     dialog.submit()
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "create"
-                text: qsTr("Caducidad inicial de la clave")
+                text: KI18n.i18nc("@label:listbox", "Initial key expiry")
                 wrapMode: Text.Wrap
             }
             Controls.ComboBox {
@@ -491,25 +492,25 @@ Controls.Dialog {
                 model: dialog.expiryOptions
                 textRole: "label"
                 currentIndex: 3
-                Accessible.name: qsTr("Caducidad")
+                Accessible.name: KI18n.i18n("Expiry")
             }
 
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "import" && !dialog.completionMessage
-                text: qsTr("Elige un archivo OpenPGP para importar. El llavero solo se modifica con el contenido del archivo; ninguna identidad se acepta por su correo.")
+                text: KI18n.i18n("Choose an OpenPGP file to import. The keyring changes only with the file's content; no identity is accepted because of its email.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "exportPublic"
-                text: qsTr("Se exportará la clave pública completa, incluidas sus identidades y subclaves públicas.")
+                text: KI18n.i18n("The full public key will be exported, including its identities and public subkeys.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "backupPrivate"
-                text: qsTr("El archivo contendrá material de clave privada. Conserva la protección actual de GnuPG; si la clave no tiene frase de contraseña, el respaldo tampoco estará protegido por una. Guárdalo en un lugar privado.")
+                text: KI18n.i18n("The file will contain private key material. It keeps GnuPG's current protection; if the key has no passphrase, the backup will not be protected by one either. Store it somewhere private.")
                 wrapMode: Text.Wrap
             }
             Controls.CheckBox {
@@ -517,37 +518,37 @@ Controls.Dialog {
                 visible: dialog.action === "backupPrivate"
                 enabled: !dialog.controllerBusy
                 checked: dialog.privateBackupConfirmed
-                text: qsTr("Entiendo que el archivo contiene material privado y conserva la protección actual de la clave")
+                text: KI18n.i18nc("@option:check", "I understand that the file contains private material and keeps the key's current protection")
                 onToggled: dialog.privateBackupConfirmed = checked
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "passphrase"
-                text: qsTr("GnuPG abrirá su diálogo seguro de pinentry. Escribe la passphrase allí; KryptoPass no la solicita ni la recibe.")
+                text: KI18n.i18n("GnuPG will open its secure pinentry dialog. Enter the passphrase there; KryptoPass neither asks for it nor receives it.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "expiry"
-                text: dialog.subkeys.length ? qsTr("La nueva caducidad se aplicará solo a la subclave seleccionada.") : qsTr("La nueva caducidad se aplicará a la clave primaria. Elige “Sin caducidad” para quitar la fecha de vencimiento.")
+                text: dialog.subkeys.length ? KI18n.i18n("The new expiry will apply only to the selected subkey.") : KI18n.i18n("The new expiry will apply to the primary key. Choose “Never expires” to remove the expiration date.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "addIdentity"
-                text: qsTr("Añade una identidad a esta clave propia. Usa un nombre y correo que quieras publicar en OpenPGP.")
+                text: KI18n.i18n("Add an identity to this key of yours. Use a name and email you want to publish in OpenPGP.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "primaryIdentity"
-                text: qsTr("La identidad elegida se usará como identidad principal de la clave.")
+                text: KI18n.i18n("The chosen identity will become the key's primary identity.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "revokeIdentity"
-                text: qsTr("Se revocará esta identidad de forma permanente. La identidad dejará de ser válida para la clave.")
+                text: KI18n.i18n("This identity will be revoked permanently. It will no longer be valid for the key.")
                 wrapMode: Text.Wrap
             }
             Controls.ComboBox {
@@ -558,7 +559,7 @@ Controls.Dialog {
                 model: dialog.usageOptions
                 textRole: "label"
                 currentIndex: 0
-                Accessible.name: qsTr("Uso de la nueva subclave")
+                Accessible.name: KI18n.i18n("Usage of the new subkey")
             }
             Controls.TextField {
                 id: subkeyLabelField
@@ -566,32 +567,32 @@ Controls.Dialog {
                 visible: dialog.action === "addSubkey"
                 enabled: !dialog.controllerBusy
                 maximumLength: 160
-                placeholderText: qsTr("Etiqueta opcional, por ejemplo: GitHub SSH")
-                Accessible.name: qsTr("Etiqueta de la subclave")
+                placeholderText: KI18n.i18nc("@info:placeholder", "Optional label, for example: GitHub SSH")
+                Accessible.name: KI18n.i18n("Subkey label")
                 onTextChanged: dialog.subkeyLabel = text
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "revokeSubkey"
-                text: qsTr("Se revocará solo la subclave mostrada. La clave primaria no se revocará.")
+                text: KI18n.i18n("Only the subkey shown will be revoked. The primary key will not be revoked.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "prepareRevocation"
-                text: qsTr("Guarda y custodia el certificado fuera del equipo: quien lo tenga podrá revocar la clave. Crear el certificado no la revoca todavía.")
+                text: KI18n.i18n("Store the certificate safely outside this computer: whoever has it can revoke the key. Creating the certificate does not revoke the key yet.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "revokeKey"
-                text: qsTr("La revocación de la clave primaria es permanente y afecta a todas sus identidades y subclaves.")
+                text: KI18n.i18n("Revoking the primary key is permanent and affects all its identities and subkeys.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "certify"
-                text: qsTr("Elige una clave propia que pueda certificar y revisa la identidad que firmarás. Una certificación no confirma que hayas verificado a su propietario.")
+                text: KI18n.i18n("Choose a key of yours that can certify and review the identity you will sign. A certification does not confirm that you verified its owner.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
@@ -610,70 +611,70 @@ Controls.Dialog {
                 model: dialog.certifierOptions
                 textRole: "label"
                 currentIndex: 0
-                Accessible.name: qsTr("Clave propia que certificará esta identidad")
+                Accessible.name: KI18n.i18n("Your key that will certify this identity")
             }
             Controls.CheckBox {
                 id: localCertificationCheck
                 visible: dialog.action === "certify"
                 enabled: !dialog.controllerBusy
                 checked: true
-                text: qsTr("Mantener la certificación local, sin exportarla")
+                text: KI18n.i18nc("@option:check", "Keep the certification local, without exporting it")
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal"
-                text: qsTr("Obtén la clave por su huella completa. Comprueba la huella con su propietario antes de darle acceso a un elemento.")
+                text: KI18n.i18n("Fetch the key by its full fingerprint. Check the fingerprint with its owner before giving them access to an item.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 visible: dialog.action === "refreshExternal"
-                text: qsTr("Servidor de claves")
+                text: KI18n.i18nc("@label:listbox", "Key server")
             }
             Controls.ComboBox {
                 id: serverCombo
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal"
                 enabled: !dialog.controllerBusy && dialog.keyStore.onlineSettings.enabled
-                model: dialog.keyStore.onlineSettings.keyservers.length ? dialog.keyStore.onlineSettings.keyservers : [qsTr("Configuración de GnuPG")]
-                Accessible.name: qsTr("Servidor de claves")
+                model: dialog.keyStore.onlineSettings.keyservers.length ? dialog.keyStore.onlineSettings.keyservers : [KI18n.i18nc("@item:inlistbox key server", "GnuPG configuration")]
+                Accessible.name: KI18n.i18nc("@label:listbox", "Key server")
                 onModelChanged: currentIndex = 0
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal" && !dialog.keyStore.onlineSettings.enabled
-                text: qsTr("Las consultas online están desactivadas. Actívalas en la configuración para obtener claves.")
+                text: KI18n.i18n("Online lookups are disabled. Enable them in the settings to fetch keys.")
                 wrapMode: Text.Wrap
             }
             Controls.Button {
                 visible: dialog.action === "refreshExternal"
                 enabled: !dialog.controllerBusy
-                text: qsTr("Configurar servicios online…")
+                text: KI18n.i18nc("@action:button", "Configure Online Services…")
                 icon.name: "configure"
                 onClicked: onlineDialog.edit()
             }
             Controls.Label {
                 visible: dialog.action === "refreshExternal" && !dialog.fingerprint
-                text: qsTr("Huella OpenPGP completa")
+                text: KI18n.i18nc("@label:textbox", "Full OpenPGP fingerprint")
             }
             Controls.TextField {
                 id: fingerprintField
                 Layout.fillWidth: true
                 visible: dialog.action === "refreshExternal" && !dialog.fingerprint
                 enabled: !dialog.controllerBusy
-                placeholderText: qsTr("Huella completa de 40 o 64 caracteres hexadecimales")
+                placeholderText: KI18n.i18nc("@info:placeholder", "Full fingerprint of 40 or 64 hexadecimal characters")
                 font: Kirigami.Theme.fixedWidthFont
-                Accessible.name: qsTr("Huella OpenPGP completa para recuperar una clave externa")
+                Accessible.name: KI18n.i18n("Full OpenPGP fingerprint to retrieve an external key")
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "markAsOwn"
-                text: qsTr("Esta clave tiene su parte privada en este equipo, pero GnuPG no sabe que es tuya y por eso se niega a cifrar con ella. Al marcarla como tuya, GnuPG le da confianza total (ultimate) en este llavero. Solo hazlo con claves que sean realmente tuyas. No se envía nada a otros dispositivos ni se revoca nada.")
+                text: KI18n.i18n("This key has its private part on this computer, but GnuPG does not know it is yours, so it refuses to encrypt with it. Marking it as yours gives it ultimate trust in this keyring. Only do this with keys that are really yours. Nothing is sent to other devices and nothing is revoked.")
                 wrapMode: Text.Wrap
             }
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.action === "delete"
-                text: qsTr("El borrado afecta solo al llavero local y no revoca la clave ni retira copias que otras personas ya tengan. Si borras la parte privada sin respaldo, perderás acceso a los secretos de esta clave.")
+                text: KI18n.i18n("Deletion affects only the local keyring; it does not revoke the key or withdraw copies other people already have. If you delete the private part without a backup, you will lose access to this key's secrets.")
                 wrapMode: Text.Wrap
             }
             Controls.ComboBox {
@@ -684,7 +685,7 @@ Controls.Dialog {
                 model: dialog.materialOptions
                 textRole: "label"
                 currentIndex: 0
-                Accessible.name: qsTr("Material que se eliminará del llavero")
+                Accessible.name: KI18n.i18n("Material to delete from the keyring")
             }
 
             DropArea {
@@ -726,20 +727,20 @@ Controls.Dialog {
                     Controls.Label {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Suelta aquí tu clave OpenPGP")
+                        text: KI18n.i18n("Drop your OpenPGP key here")
                         wrapMode: Text.Wrap
                     }
                     Controls.Label {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Archivos admitidos: .asc, .gpg, .pgp")
+                        text: KI18n.i18n("Supported files: .asc, .gpg, .pgp")
                         color: Kirigami.Theme.disabledTextColor
                         wrapMode: Text.Wrap
                     }
                     Controls.Button {
                         Layout.alignment: Qt.AlignHCenter
                         Layout.topMargin: Kirigami.Units.smallSpacing
-                        text: qsTr("Examinar…")
+                        text: KI18n.i18nc("@action:button", "Browse…")
                         icon.name: "document-open"
                         enabled: !dialog.controllerBusy
                         onClicked: fileDialog.open()
@@ -774,7 +775,7 @@ Controls.Dialog {
                         }
                     }
                     Controls.Button {
-                        text: qsTr("Cambiar…")
+                        text: KI18n.i18nc("@action:button", "Change…")
                         icon.name: "document-open"
                         enabled: !dialog.controllerBusy
                         onClicked: fileDialog.open()
@@ -784,7 +785,7 @@ Controls.Dialog {
             Controls.Label {
                 Layout.fillWidth: true
                 visible: dialog.needsFile && dialog.action !== "import"
-                text: dialog.filePath ? dialog.filePath : qsTr("No se ha elegido un archivo.")
+                text: dialog.filePath ? dialog.filePath : KI18n.i18n("No file chosen.")
                 textFormat: Text.PlainText
                 color: dialog.filePath ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                 wrapMode: Text.WrapAnywhere
@@ -793,7 +794,7 @@ Controls.Dialog {
                 Layout.alignment: Qt.AlignLeft
                 visible: dialog.needsFile && dialog.action !== "import"
                 enabled: !dialog.controllerBusy
-                text: qsTr("Elegir destino…")
+                text: KI18n.i18nc("@action:button", "Choose Destination…")
                 icon.name: "document-save-as"
                 onClicked: fileDialog.open()
             }
@@ -809,7 +810,7 @@ Controls.Dialog {
                 visible: dialog.destructive
                 enabled: !dialog.controllerBusy
                 checked: dialog.consequenceConfirmed
-                text: dialog.action === "delete" ? qsTr("Entiendo que esto solo elimina material local y no revoca la clave") : qsTr("Entiendo la consecuencia permanente de esta revocación")
+                text: dialog.action === "delete" ? KI18n.i18nc("@option:check", "I understand that this only deletes local material and does not revoke the key") : KI18n.i18nc("@option:check", "I understand that this revocation is permanent")
                 onToggled: dialog.consequenceConfirmed = checked
             }
         }
@@ -817,20 +818,20 @@ Controls.Dialog {
 
     function destructiveDescription() {
         if (action === "revokeKey")
-            return qsTr("Revocación permanente de la clave primaria %1 y de todas sus identidades y subclaves.").arg(fingerprint);
+            return KI18n.i18n("Permanent revocation of primary key %1 and all its identities and subkeys.", fingerprint);
         if (action === "revokeIdentity")
-            return qsTr("Se revocará permanentemente la identidad “%1” de la clave %2.").arg(userId).arg(fingerprint);
+            return KI18n.i18n("The identity “%1” of key %2 will be revoked permanently.", userId, fingerprint);
         if (action === "revokeSubkey")
-            return qsTr("Se revocará permanentemente la subclave %1 de la clave %2.").arg(subkeyFingerprint).arg(fingerprint);
-        const material = materialOptions[materialCombo.currentIndex]?.label || qsTr("material seleccionado");
+            return KI18n.i18n("Subkey %1 of key %2 will be revoked permanently.", subkeyFingerprint, fingerprint);
+        const material = materialOptions[materialCombo.currentIndex]?.label || KI18n.i18n("the selected material");
         if (privateMaterialAvailable && materialOptions[materialCombo.currentIndex]?.value === "private")
-            return qsTr("Se eliminará la parte privada de la clave %1 y se conservará la parte pública. Sin respaldo no podrás volver a usar esta clave para descifrar o firmar. El borrado local no revoca la clave y una copia de respaldo puede restaurarla.").arg(fingerprint);
-        return qsTr("Se eliminará %1 de la clave %2 del llavero local.").arg(material).arg(fingerprint);
+            return KI18n.i18n("The private part of key %1 will be deleted and the public part kept. Without a backup you will not be able to use this key to decrypt or sign again. Local deletion does not revoke the key, and a backup can restore it.", fingerprint);
+        return KI18n.i18n("%1 of key %2 will be deleted from the local keyring.", material, fingerprint);
     }
 
     footer: Controls.DialogButtonBox {
         Controls.Button {
-            text: dialog.action === "import" && dialog.completionMessage ? qsTr("Continuar") : dialog.completionMessage ? qsTr("Cerrar") : qsTr("Cancelar")
+            text: dialog.action === "import" && dialog.completionMessage ? KI18n.i18nc("@action:button", "Continue") : dialog.completionMessage ? KI18n.i18nc("@action:button", "Close") : KI18n.i18nc("@action:button", "Cancel")
             highlighted: dialog.action === "import" && dialog.completionMessage
             enabled: !dialog.controllerBusy
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
@@ -853,10 +854,10 @@ Controls.Dialog {
 
     Dialogs.FileDialog {
         id: fileDialog
-        title: dialog.action === "import" ? qsTr("Seleccionar clave OpenPGP para importar") : qsTr("Elegir destino de archivo OpenPGP")
+        title: dialog.action === "import" ? KI18n.i18nc("@title:window", "Select OpenPGP Key to Import") : KI18n.i18nc("@title:window", "Choose OpenPGP File Destination")
         fileMode: dialog.action === "import" ? Dialogs.FileDialog.OpenFile : Dialogs.FileDialog.SaveFile
         defaultSuffix: dialog.action === "backupPrivate" ? "gpg" : "asc"
-        nameFilters: [qsTr("Archivos OpenPGP (*.asc *.gpg *.pgp *.key)"), qsTr("Todos los archivos (*)")]
+        nameFilters: [KI18n.i18n("OpenPGP files (*.asc *.gpg *.pgp *.key)"), KI18n.i18n("All files (*)")]
         onAccepted: {
             dialog.filePath = selectedFile.toString();
             if (dialog.action === "import") {

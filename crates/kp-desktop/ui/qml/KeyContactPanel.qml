@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kryptopass.desktop as Backend
+import org.kde.ki18n
 
 ColumnLayout {
     id: root
@@ -28,12 +29,12 @@ ColumnLayout {
         Kirigami.Heading {
             Layout.fillWidth: true
             level: 4
-            text: qsTr("Contacto vinculado")
+            text: KI18n.i18nc("@title:group", "Linked contact")
         }
         Controls.Label {
             Layout.fillWidth: true
             visible: root.linkedContacts.length === 0
-            text: qsTr("Sin contacto vinculado.")
+            text: KI18n.i18n("No linked contact.")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -60,9 +61,9 @@ ColumnLayout {
                 }
                 Controls.Button {
                     enabled: !root.contactsController.busy
-                    text: qsTr("Editar")
+                    text: KI18n.i18nc("@action:button markdown mode", "Edit")
                     icon.name: "document-edit"
-                    Accessible.name: qsTr("Editar contacto %1").arg(linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid)
+                    Accessible.name: KI18n.i18n("Edit contact %1", linkedContactRow.modelData.name || linkedContactRow.modelData.email || linkedContactRow.modelData.uid)
                     onClicked: root.contactsController.editContact(linkedContactRow.modelData.uid)
                 }
             }
@@ -72,7 +73,7 @@ ColumnLayout {
             spacing: Kirigami.Units.smallSpacing
             Controls.Button {
                 enabled: !root.contactsController.busy
-                text: qsTr("Vincular a contacto de KDE…")
+                text: KI18n.i18nc("@action:button", "Link to KDE Contact…")
                 icon.name: "link"
                 onClicked: root.contactsController.chooseContactForKey(root.selectedKey.id)
             }
@@ -86,26 +87,26 @@ ColumnLayout {
 
     Kirigami.Heading {
         level: 4
-        text: qsTr("Agenda KDE")
+        text: KI18n.i18nc("@title:group", "KDE address book")
     }
     Flow {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
         Controls.Button {
             enabled: !root.contactsController.busy
-            text: qsTr("Actualizar agenda")
+            text: KI18n.i18nc("@action:button", "Refresh Address Book")
             icon.name: "view-refresh"
             onClicked: root.contactsController.refreshContacts()
         }
         Controls.Button {
             enabled: !root.contactsController.busy
-            text: qsTr("Nuevo contacto")
+            text: KI18n.i18nc("@action:button", "New Contact")
             icon.name: "contact-new"
             onClicked: root.contactsController.newContact()
         }
         Controls.Button {
             enabled: !root.contactsController.busy
-            text: qsTr("Abrir KDE Contacts")
+            text: KI18n.i18nc("@action:button", "Open KDE Contacts")
             icon.name: "view-pim-contacts"
             onClicked: root.contactsController.openContacts()
         }
@@ -113,7 +114,7 @@ ColumnLayout {
     Controls.Label {
         Layout.fillWidth: true
         visible: root.contactsController.busy
-        text: qsTr("Consultando o actualizando KDE Contacts…")
+        text: KI18n.i18n("Reading or updating KDE Contacts…")
         color: Kirigami.Theme.disabledTextColor
         wrapMode: Text.Wrap
     }
