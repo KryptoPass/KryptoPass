@@ -1,7 +1,7 @@
 #include "native/session_lock.h"
+#include "native/settings.h"
 
 #include <KIdleTime>
-#include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -31,15 +31,14 @@ private Q_SLOTS:
     void initTestCase()
     {
         QVERIFY(settings_.isValid());
-        QCoreApplication::setOrganizationName(QStringLiteral("org.kryptopass.tests"));
         QCoreApplication::setApplicationName(QStringLiteral("org.kryptopass.tests.sessionlock"));
-        QSettings::setDefaultFormat(QSettings::IniFormat);
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings_.path());
+        // KSharedConfig resolves its file here on first use, away from the user's config.
+        qputenv("XDG_CONFIG_HOME", QFile::encodeName(settings_.path()));
     }
 
     void init()
     {
-        QSettings().clear();
+        kryptopass::desktop::native::settings::group(kryptopass::desktop::native::settings::kSecurityGroup).deleteGroup();
         set_idle_lock_seconds(0);
     }
 

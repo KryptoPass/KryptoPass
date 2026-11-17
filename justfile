@@ -232,7 +232,7 @@ dev-reset:
     cache="${XDG_CACHE_HOME:-$HOME/.cache}"
     backup="$data/{{ app_org }}-reset-$(date +%Y%m%d-%H%M%S)"
     moved=0
-    for path in "$data/{{ app_id }}" "$config/{{ app_id }}" "$config/{{ app_org }}" "$state/{{ app_id }}staterc" "$cache/{{ app_org }}"; do
+    for path in "$data/{{ app_id }}" "$config/{{ app_id }}" "$config/{{ app_id }}rc" "$config/{{ app_org }}" "$state/{{ app_id }}staterc" "$cache/{{ app_org }}"; do
         [ -e "$path" ] || [ -L "$path" ] || continue
         target="$backup${path#"$HOME"}"
         mkdir -p "$(dirname "$target")"

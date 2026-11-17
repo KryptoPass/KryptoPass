@@ -1,21 +1,20 @@
 #include "native/online_services.h"
+#include "native/settings.h"
 #include <QDesktopServices>
-#include <QSettings>
 #include <QUrl>
 
 namespace kryptopass::desktop::native
 {
 QString online_settings()
 {
-    return QSettings().value(QStringLiteral("openpgp/onlineServices")).toString();
+    return settings::group(settings::kOpenPgpGroup).readEntry(settings::kOnlineServices, QString());
 }
 
 bool save_online_settings(const QString &json)
 {
-    QSettings settings;
-    settings.setValue(QStringLiteral("openpgp/onlineServices"), json);
-    settings.sync();
-    return settings.status() == QSettings::NoError;
+    auto group = settings::group(settings::kOpenPgpGroup);
+    group.writeEntry(settings::kOnlineServices, json);
+    return group.sync();
 }
 
 bool open_online_url(const QString &url)

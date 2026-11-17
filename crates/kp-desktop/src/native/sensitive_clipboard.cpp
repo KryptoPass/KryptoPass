@@ -1,4 +1,5 @@
 #include "native/sensitive_clipboard.h"
+#include "native/settings.h"
 
 #include <QByteArray>
 #include <QClipboard>
@@ -6,7 +7,6 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QPointer>
-#include <QSettings>
 #include <QTimer>
 #include <QUuid>
 
@@ -17,7 +17,6 @@ namespace
 
 constexpr int kDefaultAutoClearSeconds = 30;
 constexpr int kMaximumAutoClearSeconds = 24 * 60 * 60;
-constexpr auto kAutoClearSettingsKey = "security/clipboardAutoClearSeconds";
 constexpr QLatin1StringView kOwnedTokenMimeType("application/x-kryptopass-owned-clipboard-token");
 constexpr QLatin1StringView kPasswordManagerHintMimeType("x-kde-passwordManagerHint");
 
@@ -221,17 +220,14 @@ void clear_owned()
 
 int auto_clear_seconds()
 {
-    QSettings settings;
-    bool ok = false;
-    const int configured = settings.value(QLatin1String(kAutoClearSettingsKey), kDefaultAutoClearSeconds).toInt(&ok);
-    return ok ? boundedSeconds(configured) : kDefaultAutoClearSeconds;
+    return boundedSeconds(settings::group(settings::kSecurityGroup).readEntry(settings::kClipboardAutoClearSeconds, kDefaultAutoClearSeconds));
 }
 
 void set_auto_clear_seconds(int seconds)
 {
-    QSettings settings;
-    settings.setValue(QLatin1String(kAutoClearSettingsKey), boundedSeconds(seconds));
-    settings.sync();
+    auto group = settings::group(settings::kSecurityGroup);
+    group.writeEntry(settings::kClipboardAutoClearSeconds, boundedSeconds(seconds));
+    group.sync();
     if (auto *clipboardGuard = guard()) {
         clipboardGuard->setAutoClearSeconds(seconds);
     }

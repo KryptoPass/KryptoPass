@@ -1,4 +1,5 @@
 #include "native/session_lock.h"
+#include "native/settings.h"
 
 #include <KIdleTime>
 #include <QCoreApplication>
@@ -8,13 +9,11 @@
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
 #include <QPointer>
-#include <QSettings>
 
 #include <algorithm>
 
 namespace
 {
-constexpr auto kIdleSettingsKey = "security/idleLockSeconds";
 constexpr int kDefaultIdleSeconds = 5 * 60;
 constexpr int kMaximumIdleSeconds = 24 * 60 * 60;
 QPointer<kryptopass::desktop::native::SessionLockMonitor> monitor;
@@ -180,15 +179,16 @@ void install_session_lock_monitor(QObject *receiver)
 
 int idle_lock_seconds()
 {
-    bool ok = false;
-    const int seconds = QSettings().value(QLatin1String(kIdleSettingsKey), kDefaultIdleSeconds).toInt(&ok);
-    return ok ? std::clamp(seconds, 0, kMaximumIdleSeconds) : kDefaultIdleSeconds;
+    const int seconds = settings::group(settings::kSecurityGroup).readEntry(settings::kIdleLockSeconds, kDefaultIdleSeconds);
+    return std::clamp(seconds, 0, kMaximumIdleSeconds);
 }
 
 void set_idle_lock_seconds(int seconds)
 {
     seconds = std::clamp(seconds, 0, kMaximumIdleSeconds);
-    QSettings().setValue(QLatin1String(kIdleSettingsKey), seconds);
+    auto group = settings::group(settings::kSecurityGroup);
+    group.writeEntry(settings::kIdleLockSeconds, seconds);
+    group.sync();
     if (monitor) {
         monitor->setIdleSeconds(seconds);
     }

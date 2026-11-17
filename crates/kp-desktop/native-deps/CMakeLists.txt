@@ -16,6 +16,7 @@ add_library(kryptopass_kde INTERFACE)
 target_link_libraries(kryptopass_kde INTERFACE
     KF6::Contacts
     KF6::XmlGui
+    KF6::ConfigCore
     KF6::ConfigGui
     KF6::ConfigWidgets
     KF6::CoreAddons
@@ -32,4 +33,4 @@ target_link_libraries(kryptopass_kde INTERFACE
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/includes.txt"
     CONTENT "$<JOIN:$<TARGET_PROPERTY:kryptopass_kde,INTERFACE_INCLUDE_DIRECTORIES>,\n>\n")
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/libraries.txt" CONTENT
-    "$<TARGET_LINKER_FILE:KF6::Contacts>\n$<TARGET_LINKER_FILE:KF6::XmlGui>\n$<TARGET_LINKER_FILE:KF6::ConfigGui>\n$<TARGET_LINKER_FILE:KF6::ConfigWidgets>\n$<TARGET_LINKER_FILE:KF6::CoreAddons>\n$<TARGET_LINKER_FILE:KF6::DBusAddons>\n$<TARGET_LINKER_FILE:KF6::WindowSystem>\n$<TARGET_LINKER_FILE:KF6::IdleTime>\n$<TARGET_LINKER_FILE:KF6::KIOGui>\n$<TARGET_LINKER_FILE:KPim6::AkonadiCore>\n$<TARGET_LINKER_FILE:KPim6::AkonadiContactCore>\n$<TARGET_LINKER_FILE:KPim6::AkonadiContactWidgets>\n")
+    "$<TARGET_LINKER_FILE:KF6::Contacts>\n$<TARGET_LINKER_FILE:KF6::XmlGui>\n$<TARGET_LINKER_FILE:KF6::ConfigCore>\n$<TARGET_LINKER_FILE:KF6::ConfigGui>\n$<TARGET_LINKER_FILE:KF6::ConfigWidgets>\n$<TARGET_LINKER_FILE:KF6::CoreAddons>\n$<TARGET_LINKER_FILE:KF6::DBusAddons>\n$<TARGET_LINKER_FILE:KF6::WindowSystem>\n$<TARGET_LINKER_FILE:KF6::IdleTime>\n$<TARGET_LINKER_FILE:KF6::KIOGui>\n$<TARGET_LINKER_FILE:KPim6::AkonadiCore>\n$<TARGET_LINKER_FILE:KPim6::AkonadiContactCore>\n$<TARGET_LINKER_FILE:KPim6::AkonadiContactWidgets>\n")

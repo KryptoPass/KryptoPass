@@ -63,7 +63,8 @@ algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
   `-Werror`. `just cxx-tidy` pasa clang-tidy con `.clang-tidy`.
 - Las opciones de línea de comandos se declaran solo en
   `src/native/command_line.cpp` (`QCommandLineParser`); Rust las lee con
-  `launch.rs`.
+  `launch.rs`. Los ajustes nativos usan KConfig con las claves de
+  `src/native/settings.h`.
 - `lint` corre tras `check`/`clippy` para que los `.qmltypes` estén frescos; con
   tipos viejos salen errores fantasma (`bridgeStatus not found`).
 - Nombres QML explícitos con `cxx_name`, sin conversión snake→camel. Lo que QML
