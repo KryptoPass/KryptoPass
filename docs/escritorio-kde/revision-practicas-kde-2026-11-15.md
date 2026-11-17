@@ -219,6 +219,9 @@ La migración a KI18n merece un cambio aparte.
   `org.kryptopass.desktoprc`, con las claves en `src/native/settings.h`.
   `just dev-reset` también aparta ese archivo. Los valores antiguos de
   `QSettings` no se migran.
+- **KI18n (P1 §2): infraestructura lista.** `Messages.sh`, `po/<app id>.pot`,
+  `ki18n_install(po)` y las recetas `i18n-*`; el código aún no migra. Plan y
+  fases en [traducciones-ki18n.md](traducciones-ki18n.md).
 - **4. Hecho.** `build.rs` descubre los `.qml`, los `.cpp` y los `.h` con
   `Q_OBJECT`; los singletons se detectan por `pragma Singleton`.
 

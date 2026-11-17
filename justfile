@@ -173,7 +173,7 @@ _gate-rust-tail: _lint-qml _test-items test
 
 _gate-native: test-icons test-session-lock
 
-_gate-meta: test-packaging metadata distro-check translations-check licenses handbook
+_gate-meta: test-packaging metadata distro-check translations-check i18n-check licenses handbook
 
 # Puerta acotada a protocolo/Sync/owner; no formatea cambios QML de otros trabajos.
 [group('Puertas')]
@@ -265,6 +265,7 @@ prepare-synthetic-sync-fixture:
 # Textos y documentación
 #
 
+# Catálogo Qt actual (po/es.ts); se retira al terminar la migración a KI18n.
 [group('Textos y documentación')]
 translations:
     python3 packaging/translations.py update
@@ -272,6 +273,21 @@ translations:
 [group('Textos y documentación')]
 translations-check:
     python3 packaging/translations.py check
+
+# KI18n: regenera po/<app id>.pot con Messages.sh y fusiona po/<idioma>/<app id>.po.
+[group('Textos y documentación')]
+i18n-extract:
+    python3 tools/i18n.py extract
+
+# Falla si la plantilla gettext está vieja o algún catálogo no pasa msgfmt --check.
+[group('Textos y documentación')]
+i18n-check:
+    python3 tools/i18n.py check
+
+# Crea el catálogo gettext de un idioma (`just i18n-new-language en`).
+[group('Textos y documentación')]
+i18n-new-language language:
+    python3 tools/i18n.py new-language {{ language }}
 
 # Valida el manual DocBook con el DTD de KDocTools (paquete kdoctools).
 [group('Textos y documentación')]

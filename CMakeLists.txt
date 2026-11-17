@@ -11,6 +11,7 @@ include(FeatureSummary)
 
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 find_package(KF6DocTools REQUIRED)
+find_package(KF6I18n REQUIRED)
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
 
 # The identity lives in Cargo.toml; read it instead of repeating it here.
@@ -69,6 +70,8 @@ install(FILES packaging/gen/${KRYPTOPASS_APP_ID}.mime.xml
 install(FILES packaging/icons/${KRYPTOPASS_APP_ID}.svg
     DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 add_subdirectory(doc)
+# Compiles po/<language>/<app id>.po and installs the catalogs under KDE_INSTALL_LOCALEDIR.
+ki18n_install(po)
 
 # Packages refresh these caches with their own hooks; a direct install has none.
 install(CODE "
