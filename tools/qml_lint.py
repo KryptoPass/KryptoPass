@@ -60,7 +60,7 @@ def check_controller_calls(root: Path, module: Path, sources: set[str]) -> None:
 
 
 def run() -> int:
-    root = REPOSITORY_ROOT / "crates/kp-desktop"
+    root = REPOSITORY_ROOT
     sources = qml_sources(root)
     module_path = Path(*load_metadata()["app-id"].split("."))
     module = cargo_target_directory() / "cxxqt/qml_modules" / module_path

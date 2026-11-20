@@ -8,7 +8,7 @@ autorización de lectura y la invalidación. Vaciar propiedades QML no garantiza
 borrar todas las copias en memoria de Qt/JS.
 
 Los crates sin UI viven en el repo hermano `../kryptopass-core` (guía propia en
-su `AGENTS.md`); Desktop los usa por ruta y conserva solo `kp-desktop`: bridges
+su `AGENTS.md`); Desktop los usa por ruta y es un único paquete en la raíz (`kp-desktop`): bridges
 CXX-Qt, proyecciones a QML, i18n y C++ nativo. Un cambio en el core se verifica
 también compilando Desktop.
 
@@ -17,7 +17,7 @@ formato común está en `docs/sync/contrato.md`: cualquier cambio de formato se
 registra ahí antes de implementarlo en un lado. Lo pendiente está en
 `docs/pendientes.md`; el historial de peticiones, en `docs/historial-peticiones.md`.
 
-`experiments/` guarda prototipos. Ningún crate de `crates/` depende de ellos;
+`experiments/` guarda prototipos. Ningún código de la app depende de ellos;
 algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
 `experiments/README.md`.
 

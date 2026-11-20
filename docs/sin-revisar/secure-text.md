@@ -42,7 +42,7 @@ systemd-coredump.
 | Sin `RLIMIT_CORE=0`, un crash deja en disco el secreto y sus prefijos | systemd-coredump guardó el core en `/var/lib/systemd/coredump`, legible por el usuario |
 | Con `RLIMIT_CORE=0` o `dumpable=0`, el crash no deja core visible para el usuario | `coredumpctl`: `COREFILE none` o sin entrada |
 | `MADV_DONTDUMP` excluye una página del core, pero no de una lectura en vivo | `gcore`: página marcada ausente, página de control presente |
-| La app ya aplica `RLIMIT_CORE=0` antes de `QApplication` y `PR_SET_DUMPABLE=0` antes del motor QML | `crates/kp-desktop/src/main.rs`, `process_security.rs` |
+| La app ya aplica `RLIMIT_CORE=0` antes de `QApplication` y `PR_SET_DUMPABLE=0` antes del motor QML | `src/main.rs`, `process_security.rs` |
 
 ## Pasos
 

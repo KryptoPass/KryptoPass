@@ -17,8 +17,8 @@ sys.path.insert(0, str(ROOT / "packaging"))
 
 from metadata import cargo_target_directory
 
-NATIVE = ROOT / "crates/kp-desktop/src/native"
-BUILD_SCRIPT = ROOT / "crates/kp-desktop/build.rs"
+NATIVE = ROOT / "src/native"
+BUILD_SCRIPT = ROOT / "build.rs"
 
 
 def require(tool: str) -> None:

@@ -28,25 +28,25 @@ need_stdout = true
 command = ["just", "test-items"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop/ui/qml", "crates/kp-desktop/ui/tests", "crates/kp-desktop/build.rs"]
+watch = ["ui/qml", "ui/tests", "build.rs"]
 
 [jobs.cxx-tidy]
 command = ["just", "cxx-tidy"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/build.rs", ".clang-tidy", "tools/cxx_tidy.py"]
+watch = ["src/native", "build.rs", ".clang-tidy", "tools/cxx_tidy.py"]
 
 [jobs.test-icons]
 command = ["just", "test-icons"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop/src/native", "crates/kp-desktop/native-tests"]
+watch = ["src/native", "native-tests"]
 
 [jobs.test-session-lock]
 command = ["just", "test-session-lock"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop/src/native/session_lock.h", "crates/kp-desktop/src/native/session_lock.cpp", "crates/kp-desktop/native-tests"]
+watch = ["src/native/session_lock.h", "src/native/session_lock.cpp", "native-tests"]
 
 [jobs.run]
 command = ["just", "run"]
@@ -54,19 +54,19 @@ need_stdout = true
 default_watch = true
 background = false
 on_change_strategy = "kill_then_restart"
-watch = ["crates", ".cargo", "packaging", "tools", "justfile"]
+watch = ["src", "ui", "build.rs", ".cargo", "packaging", "tools", "justfile"]
 
 [jobs.qmllint]
 command = ["just", "lint"]
 need_stdout = true
 default_watch = false
-watch = ["crates", "tools/qml_lint.py", "packaging/metadata.py"]
+watch = ["src", "ui", "build.rs", "tools/qml_lint.py", "packaging/metadata.py"]
 
 [jobs.smoke]
 command = ["just", "smoke"]
 need_stdout = true
 default_watch = false
-watch = ["crates"]
+watch = ["src", "ui", "build.rs"]
 
 [keybindings]
 q = "job:qmllint"
@@ -93,13 +93,13 @@ watch = ["doc"]
 command = ["just", "i18n-check"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop/src", "crates/kp-desktop/ui/qml", "po", "Messages.sh", "tools/i18n.py"]
+watch = ["src", "ui/qml", "po", "Messages.sh", "tools/i18n.py"]
 
 [jobs.licenses]
 command = ["just", "licenses"]
 need_stdout = true
 default_watch = false
-watch = ["REUSE.toml", "LICENSES", "crates", "docs", "packaging", "tools"]
+watch = ["REUSE.toml", "LICENSES", "src", "ui", "native-tests", "docs", "packaging", "tools"]
 
 [jobs.test-packaging]
 command = ["just", "test-packaging"]
@@ -111,13 +111,13 @@ watch = ["tests", "packaging", "tools", "Cargo.toml"]
 command = ["just", "clean"]
 need_stdout = true
 default_watch = false
-watch = ["crates", "docs", "packaging", "tools", "tests"]
+watch = ["src", "ui", "build.rs", "native-tests", "docs", "packaging", "tools", "tests"]
 
 [jobs.screenshot]
 command = ["just", "screenshot"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
+watch = ["src", "ui", "build.rs", "packaging/capture_screenshot.py"]
 
 [jobs.browser]
 command = ["just", "browser-build"]
@@ -130,13 +130,13 @@ command = ["just", "qmlls"]
 need_stdout = true
 background = false
 default_watch = false
-watch = ["crates/kp-desktop", ".qmlls.ini"]
+watch = ["src", "ui", "build.rs", ".qmlls.ini"]
 
 [jobs.fmt]
 command = ["just", "fmt"]
 need_stdout = true
 default_watch = false
-watch = ["crates", "tools/source_format.py", ".clang-format", ".qmlformat.ini", ".editorconfig"]
+watch = ["src", "ui", "native-tests", "tools/source_format.py", ".clang-format", ".qmlformat.ini", ".editorconfig"]
 
 [jobs.prepare-synthetic-sync-fixture]
 command = ["just", "prepare-synthetic-sync-fixture"]

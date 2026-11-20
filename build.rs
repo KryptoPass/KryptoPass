@@ -6,11 +6,11 @@ use std::{
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=../../Cargo.toml");
-    println!("cargo:rerun-if-changed=../../packaging/gen_identity.py");
-    println!("cargo:rerun-if-changed=../../packaging/metadata.py");
-    println!("cargo:rerun-if-changed=../../packaging/icons");
-    println!("cargo:rerun-if-changed=../../po");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-changed=packaging/gen_identity.py");
+    println!("cargo:rerun-if-changed=packaging/metadata.py");
+    println!("cargo:rerun-if-changed=packaging/icons");
+    println!("cargo:rerun-if-changed=po");
     println!("cargo:rerun-if-env-changed=KP_SYNTHETIC_FIXTURE_DIR");
     println!("cargo:rerun-if-env-changed=XDG_CACHE_HOME");
     println!("cargo:rerun-if-env-changed=HOME");
@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         vec![generated.to_string_lossy().into_owned()],
     )] {
         if !Command::new("python3")
-            .arg(format!("../../packaging/{script}"))
+            .arg(format!("packaging/{script}"))
             .args(args)
             .status()?
             .success()
@@ -161,13 +161,13 @@ fn kde_compiler_settings(cc: &mut cc::Build) {
 /// so development builds find catalogs that are not installed. Installs use
 /// `ki18n_install(po)` instead.
 fn compile_catalogs(generated: &Path, app_id: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=../../po");
+    println!("cargo:rerun-if-changed=po");
     let locale = generated.join("locale");
     if locale.exists() {
         fs::remove_dir_all(&locale)?;
     }
     fs::create_dir_all(&locale)?;
-    for entry in fs::read_dir("../../po")? {
+    for entry in fs::read_dir("po")? {
         let entry = entry?;
         let catalog = entry.path().join(format!("{app_id}.po"));
         if !entry.file_type()?.is_dir() || !catalog.is_file() {

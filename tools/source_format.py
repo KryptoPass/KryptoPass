@@ -17,7 +17,7 @@ def main() -> int:
     parser.add_argument("language", choices=("cpp", "qml"))
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
-    desktop = ROOT / "crates/kp-desktop"
+    desktop = ROOT
     if args.language == "cpp":
         version = subprocess.check_output(["clang-format", "--version"], text=True)
         if not re.search(r"version 23\.", version):

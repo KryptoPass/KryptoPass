@@ -3,7 +3,7 @@
 #   just verify   -> puerta completa en paralelo (antes de commitear)
 #   just smoke    -> arranque offscreen, falla ante errores QML
 #   bacon         -> chequeo continuo en fondo (job check)
-#   bacon qmllint -> vigila crates/ y pasa qmllint en cada cambio
+#   bacon qmllint -> vigila src/ y ui/ y pasa qmllint en cada cambio
 #
 # Secciones: Desarrollo, Pruebas, Puertas, Dispositivos y P2P,
 #            Datos y perfiles, Textos y documentación, Empaquetado, Integraciones
@@ -102,23 +102,23 @@ test:
 # Contratos de formularios y detalles por tipo, con QML real y sin abrir la bóveda.
 [group('Pruebas')]
 test-items: check
-    python3 crates/kp-desktop/ui/tests/run_item_types.py
+    python3 ui/tests/run_item_types.py
 
 # Igual que test-items sin compilar: exige tipos frescos (clippy/check previo).
 _test-items:
-    python3 crates/kp-desktop/ui/tests/run_item_types.py
+    python3 ui/tests/run_item_types.py
 
 # Ciclo de favicons con transporte simulado, sin acceso a internet.
 [group('Pruebas')]
 test-icons:
-    cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
+    cmake -S native-tests -B {{ quote(target_dir / "native-tests") }}
     cmake --build {{ quote(target_dir / "native-tests") }} --parallel 2
     ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^favicon_service_tests$'
 
 # Bloqueo de sesión, suspensión e inactividad con eventos simulados.
 [group('Pruebas')]
 test-session-lock:
-    cmake -S crates/kp-desktop/native-tests -B {{ quote(target_dir / "native-tests") }}
+    cmake -S native-tests -B {{ quote(target_dir / "native-tests") }}
     cmake --build {{ quote(target_dir / "native-tests") }} --target session_lock_tests --parallel 2
     ctest --test-dir {{ quote(target_dir / "native-tests") }} --output-on-failure -R '^session_lock_tests$'
 

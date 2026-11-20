@@ -31,7 +31,7 @@ críticos de accesibilidad sin evidencia de interacción o medición.
 
 **Advertencia / P2 — integración y descubrimiento.**
 
-Evidencia: `crates/kp-desktop/ui/qml/Main.qml:662` contiene únicamente
+Evidencia: `ui/qml/Main.qml:662` contiene únicamente
 «Acerca de KryptoPass». `ShellController` solo expone el diálogo de la aplicación
 y la configuración de atajos como acciones de escritorio. No hay acción de
 documentación, F1, reporte de errores, cambio de idioma ni «Acerca de KDE».
@@ -176,7 +176,7 @@ C++ ni QML en `just verify` o CI. `.editorconfig:13` exige dos espacios para QML
 mientras los componentes revisados usan cuatro.
 
 Se compararon, sin modificar archivos, los 18 `.cpp`/`.h` de
-`crates/kp-desktop/src/native` con el estilo de ECM instalado mediante
+`src/native` con el estilo de ECM instalado mediante
 `clang-format --style=file:/usr/share/ECM/kde-modules/clang-format.cmake`:
 **18 de 18 difieren**. Las diferencias incluyen posición de llaves de namespace,
 orden de includes y división de líneas. Es evidencia de formato, no de bugs.

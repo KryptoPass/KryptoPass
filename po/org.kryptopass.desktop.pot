@@ -661,7 +661,7 @@ msgctxt "@action:button"
 msgid "Delete Permanently"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:225
+#: src/ui_adapters/secrets_controller/organize.rs:225
 #, kde-format
 msgid "The item could not be deleted."
 msgstr ""
@@ -680,7 +680,7 @@ msgctxt "@action:inmenu"
 msgid "Delete Folder"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:258
+#: src/ui_adapters/secrets_controller/organize.rs:258
 #, kde-format
 msgid "The folder could not be deleted."
 msgstr ""
@@ -2328,7 +2328,7 @@ msgctxt "@title"
 msgid "New Folder"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:59
+#: src/ui_adapters/secrets_controller/organize.rs:59
 #, kde-format
 msgid "The folder could not be saved."
 msgstr ""
@@ -2991,9 +2991,9 @@ msgstr ""
 msgid "Its UIDs changed since verification"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:108
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:109
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:127
+#: src/ui_adapters/keyring_projection.rs:108
+#: src/ui_adapters/keyring_projection.rs:109
+#: src/ui_adapters/keyring_projection.rs:127
 #, kde-format
 msgid "Not verified"
 msgstr ""
@@ -3507,7 +3507,7 @@ msgstr ""
 msgid "GnuPG error details"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:17
+#: src/ui_adapters/keyring_projection.rs:17
 #, kde-format
 msgid "No identity"
 msgstr ""
@@ -3633,7 +3633,7 @@ msgctxt "@item:inlistbox key material"
 msgid "Private only"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:100
+#: src/ui_adapters/keyring_projection.rs:100
 #, kde-format
 msgid "No name"
 msgstr ""
@@ -4290,7 +4290,7 @@ msgstr ""
 msgid "Wait for the current operation to finish before locking the vault."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:69
+#: src/ui_adapters/secrets_controller/lifecycle.rs:69
 #, kde-format
 msgid "Wait for the current operation to finish before switching vaults."
 msgstr ""
@@ -4569,7 +4569,7 @@ msgctxt "@title:window"
 msgid "Move Item"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:184
+#: src/ui_adapters/secrets_controller/organize.rs:184
 #, kde-format
 msgid "The item could not be moved."
 msgstr ""
@@ -5132,7 +5132,7 @@ msgstr ""
 msgid "Images (*.png *.jpg *.jpeg *.webp)"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:185
+#: src/ui_adapters/secrets_controller/editor.rs:185
 #, kde-format
 msgid "The item could not be saved."
 msgstr ""
@@ -5815,7 +5815,7 @@ msgctxt "@label:textbox"
 msgid "Network password"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/expanded.rs:191
+#: src/ui_adapters/secrets_projection/expanded.rs:191
 #, kde-format
 msgid ""
 "The connection QR code is available for open, WEP and WPA/WPA2 networks."
@@ -6174,7 +6174,7 @@ msgid "The expiration date exceeds the limit GnuPG can represent."
 msgstr ""
 
 #: ../kryptopass-core/crates/kp-backend/src/keyring/errors.rs:90
-#: crates/kp-desktop/src/keyring/online.rs:57
+#: src/keyring/online.rs:57
 msgid "Enter a valid URL with a host and without credentials or spaces."
 msgstr ""
 
@@ -6548,1227 +6548,1227 @@ msgid ""
 "and try again."
 msgstr ""
 
-#: crates/kp-desktop/src/keyring/online.rs:32
+#: src/keyring/online.rs:32
 msgid "You can configure up to 32 services or servers."
 msgstr ""
 
-#: crates/kp-desktop/src/keyring/online.rs:72
+#: src/keyring/online.rs:72
 msgid "Enter the full OpenPGP fingerprint."
 msgstr ""
 
-#: crates/kp-desktop/src/keyring/online.rs:88
+#: src/keyring/online.rs:88
 msgid "The template contains an unknown placeholder."
 msgstr ""
 
-#: crates/kp-desktop/src/markdown.rs:79
+#: src/markdown.rs:79
 msgid "The Markdown document exceeds the 256 KiB limit."
 msgstr ""
 
-#: crates/kp-desktop/src/markdown.rs:238
+#: src/markdown.rs:238
 msgid "[Image omitted]"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:85
+#: src/ui_adapters/backup_controller.rs:85
 msgid "The backup destination is not a valid local path."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:93
+#: src/ui_adapters/backup_controller.rs:93
 msgid "Select at least one valid key to protect the backup."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:102
+#: src/ui_adapters/backup_controller.rs:102
 msgid "Encrypting and saving the backup…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:117
+#: src/ui_adapters/backup_controller.rs:117
 msgid ""
 "The backup could not be saved. Check that you can write to the chosen folder "
 "and that the selected keys are still available."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:130
+#: src/ui_adapters/backup_controller.rs:130
 msgid ""
 "The private folder could not be prepared for the restore. Check the "
 "permissions and available space in the KryptoPass data folder."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:141
+#: src/ui_adapters/backup_controller.rs:141
 msgid "Select valid local files to restore."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:148
+#: src/ui_adapters/backup_controller.rs:148
 msgid "Decrypting and checking the backup…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:212
+#: src/ui_adapters/backup_controller.rs:212
 msgid "File saved successfully."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:216
+#: src/ui_adapters/backup_controller.rs:216
 msgid ""
 "The file was saved, but it could not be confirmed that all changes reached "
 "the disk. Keep the original backup."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:225
+#: src/ui_adapters/backup_controller.rs:225
 msgid ""
 "The backup could not be read. Select an accessible backup file; it may have "
 "been moved or exceed the allowed size."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:228
+#: src/ui_adapters/backup_controller.rs:228
 msgid ""
 "The new vault could not be created. Check the available space and try the "
 "restore again."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:231
+#: src/ui_adapters/backup_controller.rs:231
 msgid ""
 "The backup could not be decrypted. You need the private key of someone with "
 "access to it. Check that it is imported and try again; if GnuPG asks for a "
 "passphrase, enter it in its window. The file may also be damaged."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:234
+#: src/ui_adapters/backup_controller.rs:234
 msgid ""
 "The decrypted file is not a compatible KryptoPass backup or is damaged. "
 "Select another backup or try a newer version of KryptoPass."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/backup_controller.rs:237
+#: src/ui_adapters/backup_controller.rs:237
 msgid ""
 "The restore could not be completed. Check the available space and the "
 "permissions of the KryptoPass data folder."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/contacts_controller.rs:102
+#: src/ui_adapters/contacts_controller.rs:102
 msgid "KDE Contacts could not be opened. Check that KAddressBook is installed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/contacts_controller.rs:118
+#: src/ui_adapters/contacts_controller.rs:118
 msgid "The selected contact is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/contacts_controller.rs:130
+#: src/ui_adapters/contacts_controller.rs:130
 msgid "Only a full OpenPGP fingerprint can be linked."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/contacts_controller.rs:146
+#: src/ui_adapters/contacts_controller.rs:146
 msgid "The list of available fingerprints could not be read."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/contacts_controller.rs:195
+#: src/ui_adapters/contacts_controller.rs:195
 msgid ""
 "Refresh KDE Contacts. No contacts are linked to the valid keys available."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:107
+#: src/ui_adapters/import_controller.rs:107
 msgid "Select a local file from the chosen manager."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:113
+#: src/ui_adapters/import_controller.rs:113
 msgid "Select an import integration."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:120
+#: src/ui_adapters/import_controller.rs:120
 msgid "The current vault could not be accessed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:129
+#: src/ui_adapters/import_controller.rs:129
 msgid "Reading and reviewing the export…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:151
+#: src/ui_adapters/import_controller.rs:151
 msgid "Review the result and choose the keys for the items that will be added."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:153
+#: src/ui_adapters/import_controller.rs:153
 msgid "There are no compatible items to import."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:170
+#: src/ui_adapters/import_controller.rs:170
 msgid "Select at least one valid key to protect your data."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:185
+#: src/ui_adapters/import_controller.rs:185
 msgid "The active vault changed. Check the file again before importing."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:196
+#: src/ui_adapters/import_controller.rs:196
 msgid "Encrypting and adding the items to the current vault…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:205
+#: src/ui_adapters/import_controller.rs:205
 msgid "Import complete: %1 item added to the current vault."
 msgid_plural "Import complete: %1 items added to the current vault."
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/kp-desktop/src/ui_adapters/import_controller.rs:208
+#: src/ui_adapters/import_controller.rs:208
 msgid ""
 "The batch could not be added. The previous data was kept. Check the keys, "
 "permissions and available space; review the file again to retry."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:78
+#: src/ui_adapters/item_issues.rs:78
 msgid "The item is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:92
+#: src/ui_adapters/item_issues.rs:92
 msgid "“%1”"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:93
+#: src/ui_adapters/item_issues.rs:93
 msgid "a field"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:95
+#: src/ui_adapters/item_issues.rs:95
 msgid "the added field #%1"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:97
+#: src/ui_adapters/item_issues.rs:97
 msgid "the value #%1"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:99
+#: src/ui_adapters/item_issues.rs:99
 msgid "the section “%1”"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:100
+#: src/ui_adapters/item_issues.rs:100
 msgid "a section"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:101
+#: src/ui_adapters/item_issues.rs:101
 msgid "the item"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:109
+#: src/ui_adapters/item_issues.rs:109
 msgid "%1 is missing."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:110
+#: src/ui_adapters/item_issues.rs:110
 msgid "%1 exceeds the maximum of %2 bytes."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:111
+#: src/ui_adapters/item_issues.rs:111
 msgid "%1 accepts at most %2 values."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:112
+#: src/ui_adapters/item_issues.rs:112
 msgid "%1 does not contain a valid web address."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:114
+#: src/ui_adapters/item_issues.rs:114
 msgid "%1 does not contain a valid email address."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:117
+#: src/ui_adapters/item_issues.rs:117
 msgid "%1 does not contain a valid phone number."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:119
+#: src/ui_adapters/item_issues.rs:119
 msgid "%1 does not contain a valid number."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:121
+#: src/ui_adapters/item_issues.rs:121
 msgid "%1 does not contain a valid date; use YYYY-MM-DD."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:125
+#: src/ui_adapters/item_issues.rs:125
 msgid "%1 does not contain a valid TOTP seed (Base32 or otpauth://)."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:129
+#: src/ui_adapters/item_issues.rs:129
 msgid "%1 does not contain a valid card number."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:132
+#: src/ui_adapters/item_issues.rs:132
 msgid "%1 does not have the expected number of digits."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:135
+#: src/ui_adapters/item_issues.rs:135
 msgid "%1 has an option that does not exist."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:137
+#: src/ui_adapters/item_issues.rs:137
 msgid "%1 contains characters that are not allowed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:139
+#: src/ui_adapters/item_issues.rs:139
 msgid "%1 does not contain a valid SSH key."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:141
+#: src/ui_adapters/item_issues.rs:141
 msgid "%1 does not contain a valid Wi-Fi password."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:144
+#: src/ui_adapters/item_issues.rs:144
 msgid "%1 appears more than once."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/item_issues.rs:146
+#: src/ui_adapters/item_issues.rs:146
 msgid "%1 does not have a valid value."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:148
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:280
+#: src/ui_adapters/keyring_controller.rs:148
+#: src/ui_adapters/keyring_controller.rs:280
 msgid ""
 "The organization of your identities could not be read. The file will not be "
 "overwritten."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:160
+#: src/ui_adapters/keyring_controller.rs:160
 msgid "GPG identities not loaded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:193
+#: src/ui_adapters/keyring_controller.rs:193
 msgid "The selected SSH public key could not be exported."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:216
+#: src/ui_adapters/keyring_controller.rs:216
 msgid "Enable online services and select a configured server."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:296
+#: src/ui_adapters/keyring_controller.rs:296
 msgid "The online services settings could not be read."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:306
+#: src/ui_adapters/keyring_controller.rs:306
 msgid "The settings could not be saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:320
+#: src/ui_adapters/keyring_controller.rs:320
 msgid "The settings could not be read."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:323
+#: src/ui_adapters/keyring_controller.rs:323
 msgid "Online services are disabled."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:328
+#: src/ui_adapters/keyring_controller.rs:328
 msgid "Select an online service."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:332
+#: src/ui_adapters/keyring_controller.rs:332
 msgid "The default KDE browser could not be opened."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:353
+#: src/ui_adapters/keyring_controller.rs:353
 msgid "Loading GPG keys…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:373
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:503
+#: src/ui_adapters/keyring_controller.rs:373
+#: src/ui_adapters/keyring_controller.rs:503
 msgid "The organization of your identities could not be saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:385
+#: src/ui_adapters/keyring_controller.rs:385
 msgid "%1 GPG key loaded"
 msgid_plural "%1 GPG keys loaded"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:403
+#: src/ui_adapters/keyring_controller.rs:403
 msgid "Error loading GPG keys"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:420
+#: src/ui_adapters/keyring_controller.rs:420
 msgid "Waiting for the GPG agent…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:429
+#: src/ui_adapters/keyring_controller.rs:429
 msgid ""
 "Test signature completed; if the agent already had the passphrase cached, no "
 "dialog appeared"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:434
+#: src/ui_adapters/keyring_controller.rs:434
 msgid "GPG agent test failed: %1"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:466
+#: src/ui_adapters/keyring_controller.rs:466
 msgid "Online lookups are disabled."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:474
+#: src/ui_adapters/keyring_controller.rs:474
 msgid "Running OpenPGP operation…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:527
+#: src/ui_adapters/keyring_controller.rs:527
 msgid "The operation completed, but the key list could not be updated: %1"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:538
+#: src/ui_adapters/keyring_controller.rs:538
 msgid "The file was exported, but the date could not be saved in KryptoPass."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:550
+#: src/ui_adapters/keyring_controller.rs:550
 msgid "%1 Additionally, the key list could not be updated: %2"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:601
+#: src/ui_adapters/keyring_controller.rs:601
 msgid "The OpenPGP operation request exceeds the allowed size."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:607
+#: src/ui_adapters/keyring_controller.rs:607
 msgid "The OpenPGP operation request is not valid JSON."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:611
+#: src/ui_adapters/keyring_controller.rs:611
 msgid "The OpenPGP operation request does not have a valid format."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:624
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:629
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:653
+#: src/ui_adapters/keyring_controller.rs:624
+#: src/ui_adapters/keyring_controller.rs:629
+#: src/ui_adapters/keyring_controller.rs:653
 msgid "Select a valid local path for the operation."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:644
+#: src/ui_adapters/keyring_controller.rs:644
 msgid "Select a local file; remote URLs are not accepted."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_controller.rs:659
+#: src/ui_adapters/keyring_controller.rs:659
 msgid "The OpenPGP operation request could not be prepared."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:105
+#: src/ui_adapters/keyring_projection.rs:105
 msgid "Revoked identity"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:106
+#: src/ui_adapters/keyring_projection.rs:106
 msgid "Invalid identity"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:112
+#: src/ui_adapters/keyring_projection.rs:112
 msgid "Not valid according to GnuPG"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:116
+#: src/ui_adapters/keyring_projection.rs:116
 msgid "Marginal validity according to GnuPG"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:120
+#: src/ui_adapters/keyring_projection.rs:120
 msgid "Full validity according to GnuPG"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:124
+#: src/ui_adapters/keyring_projection.rs:124
 msgid "Ultimate validity according to GnuPG"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:169
+#: src/ui_adapters/keyring_projection.rs:169
 msgid "Encrypt"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:170
+#: src/ui_adapters/keyring_projection.rs:170
 msgid "Sign"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:171
+#: src/ui_adapters/keyring_projection.rs:171
 msgid "Certify"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:172
+#: src/ui_adapters/keyring_projection.rs:172
 msgid "Authenticate"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:194
+#: src/ui_adapters/keyring_projection.rs:194
 msgid "Revoked"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:199
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:281
+#: src/ui_adapters/keyring_projection.rs:199
+#: src/ui_adapters/keyring_projection.rs:281
 msgid "Expired"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:204
+#: src/ui_adapters/keyring_projection.rs:204
 msgid "Disabled"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:209
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:283
+#: src/ui_adapters/keyring_projection.rs:209
+#: src/ui_adapters/keyring_projection.rs:283
 msgid "Invalid"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:214
+#: src/ui_adapters/keyring_projection.rs:214
 msgid "Valid"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:279
+#: src/ui_adapters/keyring_projection.rs:279
 msgid "Revocation recorded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/keyring_projection.rs:285
+#: src/ui_adapters/keyring_projection.rs:285
 msgid "Certification recorded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/markdown_document.rs:184
+#: src/ui_adapters/markdown_document.rs:184
 msgid "The Markdown document could not be prepared."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:377
+#: src/ui_adapters/peers_controller.rs:377
 msgid "Ready for a local test with the emulator."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:465
+#: src/ui_adapters/peers_controller.rs:465
 msgid "Operation canceled."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:467
+#: src/ui_adapters/peers_controller.rs:467
 msgid "The invitation or connection expired. Generate another code."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:469
+#: src/ui_adapters/peers_controller.rs:469
 msgid "Pairing rejected. No trust was granted."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:471
+#: src/ui_adapters/peers_controller.rs:471
 msgid ""
 "The system keyring could not be accessed to open this computer's identity."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:474
+#: src/ui_adapters/peers_controller.rs:474
 msgid "This computer's pairing data could not be loaded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:477
+#: src/ui_adapters/peers_controller.rs:477
 msgid ""
 "The trust was saved, but the active session could not be opened. You can "
 "reconnect."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:480
+#: src/ui_adapters/peers_controller.rs:480
 msgid ""
 "The phone did not complete the network connection. Check its error and "
 "generate another invitation; no identities have been verified yet."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:483
+#: src/ui_adapters/peers_controller.rs:483
 msgid ""
 "The cryptographic verification was not completed. The device was not "
 "authorized. Generate a new invitation."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:487
+#: src/ui_adapters/peers_controller.rs:487
 msgid ""
 "It cannot be checked whether the Internet connection goes through a VPN on "
 "this system, so it was paused."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:491
+#: src/ui_adapters/peers_controller.rs:491
 msgid ""
 "You chose to use the Internet only through a VPN and no VPN is active now. "
 "Connect it to continue."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:495
+#: src/ui_adapters/peers_controller.rs:495
 msgid ""
 "The local network is off while a VPN is required. Turn it on in Privacy if "
 "you need it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:500
+#: src/ui_adapters/peers_controller.rs:500
 msgid ""
 "Hiding your IP address turns off the local network: everything goes through "
 "the relay server."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:505
+#: src/ui_adapters/peers_controller.rs:505
 msgid ""
 "The privacy policy changed. The operation was closed without reusing its "
 "previous route."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:509
+#: src/ui_adapters/peers_controller.rs:509
 msgid ""
 "The network route changed. The operation was closed and not retried over "
 "another interface."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:513
+#: src/ui_adapters/peers_controller.rs:513
 msgid "The system route could not be verified. The connection was blocked."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:564
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing/worker.rs:259
+#: src/ui_adapters/peers_controller.rs:564
+#: src/ui_adapters/peers_controller/pairing/worker.rs:259
 msgid "Trust saved. Opening the authenticated session…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:567
+#: src/ui_adapters/peers_controller.rs:567
 msgid "Waiting to recover the connection with the authorized device…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:570
+#: src/ui_adapters/peers_controller.rs:570
 msgid "Device connected. Authenticated session active."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:573
+#: src/ui_adapters/peers_controller.rs:573
 msgid "Device disconnected. The saved trust is kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller.rs:576
+#: src/ui_adapters/peers_controller.rs:576
 msgid ""
 "The session was interrupted. The saved trust is kept; you can reconnect."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:34
+#: src/ui_adapters/peers_controller/devices.rs:34
 msgid "The pairing data could not be located."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:43
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:198
+#: src/ui_adapters/peers_controller/devices.rs:43
+#: src/ui_adapters/peers_controller/pairing.rs:198
 msgid "The local recovery listener could not be started."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:60
+#: src/ui_adapters/peers_controller/devices.rs:60
 msgid "Loading paired devices…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:102
+#: src/ui_adapters/peers_controller/devices.rs:102
 msgid "The local names could not be loaded. The trust is kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:119
+#: src/ui_adapters/peers_controller/devices.rs:119
 msgid "There are no authorized devices. Create an invitation to pair Android."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:121
+#: src/ui_adapters/peers_controller/devices.rs:121
 msgid ""
 "Devices recovered. Select one and choose Reconnect; you do not need to "
 "repeat the emoji."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:228
+#: src/ui_adapters/peers_controller/devices.rs:228
 msgid "Closing the session. The saved trust is kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:275
+#: src/ui_adapters/peers_controller/devices.rs:275
 msgid "Wait for the connection operation to finish before renaming."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:282
+#: src/ui_adapters/peers_controller/devices.rs:282
 msgid "Select a paired device."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:294
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:326
+#: src/ui_adapters/peers_controller/devices.rs:294
+#: src/ui_adapters/peers_controller/devices.rs:326
 msgid "The device is no longer authorized."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:301
+#: src/ui_adapters/peers_controller/devices.rs:301
 msgid "The device profile could not be located."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:325
+#: src/ui_adapters/peers_controller/devices.rs:325
 msgid ""
 "Use up to 64 characters and 256 bytes, without control or line-break "
 "characters."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:327
+#: src/ui_adapters/peers_controller/devices.rs:327
 msgid "The name could not be saved. The identity and the trust are kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:372
+#: src/ui_adapters/peers_controller/devices.rs:372
 msgid ""
 "Wait for the synthetic vault operation to finish before changing the profile."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:378
+#: src/ui_adapters/peers_controller/devices.rs:378
 msgid "Cancel the pending pairing before deleting devices."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:403
+#: src/ui_adapters/peers_controller/devices.rs:403
 msgid "Closing the session and cleaning up the pairing profile…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:467
+#: src/ui_adapters/peers_controller/devices.rs:467
 msgid "Device forgotten on this computer. To pair it again, compare a new SAS."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:471
+#: src/ui_adapters/peers_controller/devices.rs:471
 msgid ""
 "Pairing profile deleted. Create an invitation to start from scratch. The "
 "vault and OpenPGP are kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:476
+#: src/ui_adapters/peers_controller/devices.rs:476
 msgid ""
 "The deletion was not completed. No other identity was created. You can retry "
 "the profile reset."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:498
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:109
+#: src/ui_adapters/peers_controller/devices.rs:498
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:109
 msgid "Device %1"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:510
+#: src/ui_adapters/peers_controller/devices.rs:510
 msgid "Checking…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/devices.rs:512
+#: src/ui_adapters/peers_controller/devices.rs:512
 msgid "Direct"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:125
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:125
 msgid "Reviewing the offered key…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:147
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:147
 msgid "Receiving the key from the phone…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:154
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:154
 msgid "Key received and verified (SHA-256). Importing into GnuPG…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:163
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:163
 msgid ""
 "Key imported into GnuPG and checked with the challenge. The phone received "
 "the confirmation."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:170
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:170
 msgid "Transfer rejected. Nothing was received."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:178
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:178
 msgid "The phone canceled the transfer. What was received was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:185
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:185
 msgid ""
 "The transfer expired (5 minutes after the offer). What was received was "
 "discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:196
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:196
 msgid ""
 "The transfer did not respect the announced order or size. What was received "
 "was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:199
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:199
 msgid "The received key does not match the offer (SHA-256). It was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:203
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:203
 msgid "The phone interrupted the transfer. What was received was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:208
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:208
 msgid ""
 "The connection was lost before finishing. What was received was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:213
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:213
 msgid ""
 "The key could not be imported or checked. What was received was discarded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:320
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:320
 msgid "Accepted. Waiting for the phone's key…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:322
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:322
 msgid "You rejected the transfer. Nothing will be received."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:344
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:344
 msgid ""
 "Your decision could not be sent: the session changed or the offer expired."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:386
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:386
 msgid ""
 "Key imported. Checking that it decrypts the challenge; GnuPG may ask for its "
 "passphrase…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:388
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:388
 msgid "Importing the key into GnuPG…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:422
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:422
 msgid "Key imported and checked. Sending the confirmation to the phone…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/inbound_key_transfer.rs:435
+#: src/ui_adapters/peers_controller/inbound_key_transfer.rs:435
 msgid "The session changed before importing. Nothing was imported."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:97
+#: src/ui_adapters/peers_controller/key_transfer.rs:97
 msgid "The phone cannot receive your key. Update KryptoPass on Android."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:101
+#: src/ui_adapters/peers_controller/key_transfer.rs:101
 msgid ""
 "Your key could not be exported: the passphrase was canceled or the key is "
 "not available. No private material was sent."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:114
+#: src/ui_adapters/peers_controller/key_transfer.rs:114
 msgid "The phone or the session does not support the synthetic transfer."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:117
+#: src/ui_adapters/peers_controller/key_transfer.rs:117
 msgid "A transfer has already been started in this session."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:120
+#: src/ui_adapters/peers_controller/key_transfer.rs:120
 msgid ""
 "The local synthetic key could not be prepared. No private material was sent."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:123
+#: src/ui_adapters/peers_controller/key_transfer.rs:123
 msgid "The transfer expired. Start the test again."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:126
+#: src/ui_adapters/peers_controller/key_transfer.rs:126
 msgid "The session or generation changed. Reconnect before trying again."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:174
+#: src/ui_adapters/peers_controller/key_transfer.rs:174
 msgid "The synthetic transfer is only available in Desktop debug builds."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:188
+#: src/ui_adapters/peers_controller/key_transfer.rs:188
 msgid "Select an authorized, connected phone."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:196
+#: src/ui_adapters/peers_controller/key_transfer.rs:196
 msgid "The session changed. Reopen the confirmation."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:217
+#: src/ui_adapters/peers_controller/key_transfer.rs:217
 msgid ""
 "The chosen key is not valid. Reopen the selection and check its fingerprint."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:242
+#: src/ui_adapters/peers_controller/key_transfer.rs:242
 msgid "The phone is no longer connected or cannot receive this key."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:249
+#: src/ui_adapters/peers_controller/key_transfer.rs:249
 msgid "The active session's owner could not be accessed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/key_transfer.rs:327
+#: src/ui_adapters/peers_controller/key_transfer.rs:327
 msgid ""
 "The session changed before the transfer was activated. No private material "
 "will be sent."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:55
+#: src/ui_adapters/peers_controller/network.rs:55
 msgid ""
 "The network privacy policy could not be read. Recovery connections are "
 "blocked until the settings are repaired."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:109
+#: src/ui_adapters/peers_controller/network.rs:109
 msgid "VPN / virtual"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:111
+#: src/ui_adapters/peers_controller/network.rs:111
 msgid "Network"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:140
+#: src/ui_adapters/peers_controller/network.rs:140
 msgid "Enter a valid WSS server, without credentials or parameters."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:168
+#: src/ui_adapters/peers_controller/network.rs:168
 msgid "The local network is not available with the chosen privacy."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:187
+#: src/ui_adapters/peers_controller/network.rs:187
 msgid ""
 "The selected LAN address could not be saved. A connection will not start "
 "with an unsaved policy."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:198
+#: src/ui_adapters/peers_controller/network.rs:198
 msgid ""
 "No LAN address is selected. Refresh the interfaces or use emulator mode."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:237
+#: src/ui_adapters/peers_controller/network.rs:237
 msgid "The network policy file could not be located. No changes were applied."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:254
+#: src/ui_adapters/peers_controller/network.rs:254
 msgid "The network policy could not be saved. No changes were applied."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/network.rs:276
+#: src/ui_adapters/peers_controller/network.rs:276
 msgid ""
 "The network policy changed. The operation is being closed and its previous "
 "route will not be reused."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:48
+#: src/ui_adapters/peers_controller/pairing.rs:48
 msgid "Preparing the LAN reconnection with this device…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:62
+#: src/ui_adapters/peers_controller/pairing.rs:62
 msgid ""
 "LAN listener ready. Open KryptoPass on Android and choose Reconnect for this "
 "Desktop."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:66
+#: src/ui_adapters/peers_controller/pairing.rs:66
 msgid "This device is no longer authorized on this computer."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:70
+#: src/ui_adapters/peers_controller/pairing.rs:70
 msgid "The LAN listener could not be started. Check the network and try again."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:74
+#: src/ui_adapters/peers_controller/pairing.rs:74
 msgid "The existing profile could not be opened. No new identity was created."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:127
+#: src/ui_adapters/peers_controller/pairing.rs:127
 msgid "Opening the identity protected by the system keyring…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:162
+#: src/ui_adapters/peers_controller/pairing.rs:162
 msgid ""
 "The network policy file could not be located. No connection was started."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:171
+#: src/ui_adapters/peers_controller/pairing.rs:171
 msgid ""
 "The network privacy policy could not be read. No connection was started."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:184
+#: src/ui_adapters/peers_controller/pairing.rs:184
 msgid "The network policy could not be saved. No connection was started."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:250
+#: src/ui_adapters/peers_controller/pairing.rs:250
 msgid "The Internet connection server could not be prepared."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:258
+#: src/ui_adapters/peers_controller/pairing.rs:258
 msgid "Select the Desktop's address on your local network."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:293
+#: src/ui_adapters/peers_controller/pairing.rs:293
 msgid "Waiting for the phone's confirmation…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:295
+#: src/ui_adapters/peers_controller/pairing.rs:295
 msgid "Rejecting…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing.rs:318
+#: src/ui_adapters/peers_controller/pairing.rs:318
 msgid "Operation canceled. The trust already saved is kept."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing/worker.rs:193
+#: src/ui_adapters/peers_controller/pairing/worker.rs:193
 msgid "Scan the QR code from Android or copy the connection code."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing/worker.rs:225
+#: src/ui_adapters/peers_controller/pairing/worker.rs:225
 msgid "Compare the seven emoji with Android and confirm on both screens."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/pairing/worker.rs:298
+#: src/ui_adapters/peers_controller/pairing/worker.rs:298
 msgid ""
 "The session did not pass the security check. The saved trust is kept, but "
 "the connection was stopped."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/resume.rs:156
+#: src/ui_adapters/peers_controller/resume.rs:156
 msgid "The saved devices could not be loaded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:6
+#: src/ui_adapters/peers_controller/vault_sync.rs:6
 msgid "This computer's Sync settings could not be accessed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:118
+#: src/ui_adapters/peers_controller/vault_sync.rs:118
 msgid ""
 "Sync enabled. If the phone does not have it enabled yet, enable it there: "
 "Devices → this Desktop → Sync my vault."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:120
+#: src/ui_adapters/peers_controller/vault_sync.rs:120
 msgid "Sync turned off. The vault did not change."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:180
+#: src/ui_adapters/peers_controller/vault_sync.rs:180
 msgid "Vault synced: %1 received."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:220
+#: src/ui_adapters/peers_controller/vault_sync.rs:220
 msgid "Key sent: its items now sync with the phone."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/peers_controller/vault_sync.rs:262
+#: src/ui_adapters/peers_controller/vault_sync.rs:262
 msgid "Key unlocked. Syncing will continue in a few seconds."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/search_controller.rs:213
+#: src/ui_adapters/search_controller.rs:213
 msgid "No folder"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:394
+#: src/ui_adapters/secrets_controller.rs:394
 msgid "Vault not loaded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:495
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:13
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:164
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:215
+#: src/ui_adapters/secrets_controller.rs:495
+#: src/ui_adapters/secrets_controller/conflicts.rs:13
+#: src/ui_adapters/secrets_controller/organize.rs:164
+#: src/ui_adapters/secrets_controller/organize.rs:215
 msgid "The selected item is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:500
+#: src/ui_adapters/secrets_controller.rs:500
 msgid "Updating item…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:502
+#: src/ui_adapters/secrets_controller.rs:502
 msgid "The item could not be updated."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:535
+#: src/ui_adapters/secrets_controller.rs:535
 msgid "Unlock the vault before modifying it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:573
+#: src/ui_adapters/secrets_controller.rs:573
 msgid "Changes saved"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:578
+#: src/ui_adapters/secrets_controller.rs:578
 msgid "Change saved; the list could not be updated. Reload it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:584
+#: src/ui_adapters/secrets_controller.rs:584
 msgid "Change saved; the list could not be updated."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:626
+#: src/ui_adapters/secrets_controller.rs:626
 msgid ""
 "The chosen item already has a link. Choose another one or remove its link "
 "first."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:630
+#: src/ui_adapters/secrets_controller.rs:630
 msgid ""
 "The linked item is no longer available. Choose another one or select No link."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:634
+#: src/ui_adapters/secrets_controller.rs:634
 msgid "The item is not valid. Check its fields."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller.rs:637
+#: src/ui_adapters/secrets_controller.rs:637
 msgid ""
 "This item changed while you were editing it. Open it again so you do not "
 "lose those changes."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:20
+#: src/ui_adapters/secrets_controller/conflicts.rs:20
 msgid "Opening both versions…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:36
+#: src/ui_adapters/secrets_controller/conflicts.rs:36
 msgid "Review the differences"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:41
+#: src/ui_adapters/secrets_controller/conflicts.rs:41
 msgid "This item no longer has conflicts."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:46
+#: src/ui_adapters/secrets_controller/conflicts.rs:46
 msgid ""
 "One of the versions uses a key that is not on this device. Resolve it from a "
 "device that has it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:49
+#: src/ui_adapters/secrets_controller/conflicts.rs:49
 msgid "The conflicting versions could not be opened."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:89
+#: src/ui_adapters/secrets_controller/conflicts.rs:89
 msgid "The combination selection is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:117
+#: src/ui_adapters/secrets_controller/conflicts.rs:117
 msgid "Saving the combination…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:119
+#: src/ui_adapters/secrets_controller/conflicts.rs:119
 msgid "The combination could not be saved. The conflict is still open."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:150
+#: src/ui_adapters/secrets_controller/conflicts.rs:150
 msgid "The conflicting versions could not be shown."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:210
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/expanded.rs:92
+#: src/ui_adapters/secrets_controller/conflicts.rs:210
+#: src/ui_adapters/secrets_projection/expanded.rs:92
 msgid "Yes"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:225
+#: src/ui_adapters/secrets_controller/conflicts.rs:225
 msgid "Chosen icon"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:251
+#: src/ui_adapters/secrets_controller/conflicts.rs:251
 msgid "Name"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:252
+#: src/ui_adapters/secrets_controller/conflicts.rs:252
 msgid "Folder"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:253
+#: src/ui_adapters/secrets_controller/conflicts.rs:253
 msgid "Favorite"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:254
+#: src/ui_adapters/secrets_controller/conflicts.rs:254
 msgid "In the trash"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/conflicts.rs:255
+#: src/ui_adapters/secrets_controller/conflicts.rs:255
 msgid "Icon"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:35
+#: src/ui_adapters/secrets_controller/detail.rs:35
 msgid "The selected item could not be opened."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:113
+#: src/ui_adapters/secrets_controller/detail.rs:113
 msgid "Item loaded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:118
+#: src/ui_adapters/secrets_controller/detail.rs:118
 msgid "The item's content could not be shown."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:128
+#: src/ui_adapters/secrets_controller/detail.rs:128
 msgid "This item is encrypted for a key that is not on this device."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:131
+#: src/ui_adapters/secrets_controller/detail.rs:131
 msgid "The item's content could not be opened."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/detail.rs:250
+#: src/ui_adapters/secrets_controller/detail.rs:250
 msgid ""
 "The QR code could not be generated. The content may exceed the code's "
 "capacity."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:21
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:85
+#: src/ui_adapters/secrets_controller/editor.rs:21
+#: src/ui_adapters/secrets_controller/editor.rs:85
 msgid "The item could not be prepared for editing."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:38
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:91
+#: src/ui_adapters/secrets_controller/editor.rs:38
+#: src/ui_adapters/secrets_controller/editor.rs:91
 msgid "The item could not be opened for editing."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:44
+#: src/ui_adapters/secrets_controller/editor.rs:44
 msgid "Opening item…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:80
+#: src/ui_adapters/secrets_controller/editor.rs:80
 msgid "Item ready to edit"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:101
+#: src/ui_adapters/secrets_controller/editor.rs:101
 msgid "Unlock the vault before saving an item."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:112
+#: src/ui_adapters/secrets_controller/editor.rs:112
 msgid "There is no open draft to save."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:122
+#: src/ui_adapters/secrets_controller/editor.rs:122
 msgid "The draft exceeds the allowed size."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:129
+#: src/ui_adapters/secrets_controller/editor.rs:129
 msgid "The item draft is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:136
+#: src/ui_adapters/secrets_controller/editor.rs:136
 msgid "The draft no longer matches the open item."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:152
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:161
+#: src/ui_adapters/secrets_controller/editor.rs:152
+#: src/ui_adapters/secrets_controller/editor.rs:161
 msgid "Import an SSH key before saving the item."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:173
+#: src/ui_adapters/secrets_controller/editor.rs:173
 msgid "Review the item's data and who has access."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:183
+#: src/ui_adapters/secrets_controller/editor.rs:183
 msgid "Saving item…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:252
+#: src/ui_adapters/secrets_controller/editor.rs:252
 msgid "Choose a local image."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:273
+#: src/ui_adapters/secrets_controller/editor.rs:273
 msgid ""
 "That image cannot be used. Choose a static PNG, JPEG or WebP of up to 4 MB, "
 "with sides of up to 4096 pixels and at most 4 million pixels."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:290
+#: src/ui_adapters/secrets_controller/editor.rs:290
 msgid "Select a local SSH private key file."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:344
+#: src/ui_adapters/secrets_controller/editor.rs:344
 msgid ""
 "The SSH key could not be imported. Use a valid OpenSSH private key and check "
 "its passphrase."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:361
+#: src/ui_adapters/secrets_controller/editor.rs:361
 msgid "Select a local image with the authenticator's QR code."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:396
+#: src/ui_adapters/secrets_controller/editor.rs:396
 msgid "The TOTP settings could not be prepared."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/editor.rs:402
+#: src/ui_adapters/secrets_controller/editor.rs:402
 msgid ""
 "The authenticator could not be read. Choose a PNG or JPEG image of up to 8 "
 "MB with a single valid TOTP QR code."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/generator.rs:17
+#: src/ui_adapters/secrets_controller/generator.rs:17
 msgid "Unlock the vault before generating a password."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/generator.rs:23
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/generator.rs:40
+#: src/ui_adapters/secrets_controller/generator.rs:23
+#: src/ui_adapters/secrets_controller/generator.rs:40
 msgid "The password could not be generated."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/history.rs:40
+#: src/ui_adapters/secrets_controller/history.rs:40
 msgid "That version of the item could not be opened."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/history.rs:169
+#: src/ui_adapters/secrets_controller/history.rs:169
 msgid ""
 "The activity file could not be generated. Check the available space and try "
 "again."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/history.rs:253
+#: src/ui_adapters/secrets_controller/history.rs:253
 msgid ""
 "KryptoPass activity\n"
 "Previous versions, from the most recent to the oldest.\n"
@@ -7776,235 +7776,235 @@ msgid ""
 "\n"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/history.rs:265
+#: src/ui_adapters/secrets_controller/history.rs:265
 msgid "%1  Data edited\n"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:19
+#: src/ui_adapters/secrets_controller/lifecycle.rs:19
 msgid "Loading vault…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:48
+#: src/ui_adapters/secrets_controller/lifecycle.rs:48
 msgid "Vault loaded"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:55
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:59
+#: src/ui_adapters/secrets_controller/lifecycle.rs:55
+#: src/ui_adapters/secrets_controller/lifecycle.rs:59
 msgid "The vault could not be loaded."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:76
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:82
+#: src/ui_adapters/secrets_controller/lifecycle.rs:76
+#: src/ui_adapters/secrets_controller/lifecycle.rs:82
 msgid "Select an existing local vault file."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:99
+#: src/ui_adapters/secrets_controller/lifecycle.rs:99
 msgid "Validating the restored vault…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:116
+#: src/ui_adapters/secrets_controller/lifecycle.rs:116
 msgid "Restored vault ready. Unlock it to access its secrets."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:120
+#: src/ui_adapters/secrets_controller/lifecycle.rs:120
 msgid "Vault selected, but the preference could not be confirmed as saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:127
+#: src/ui_adapters/secrets_controller/lifecycle.rs:127
 msgid ""
 "The restored vault could not be opened. The active vault did not change."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:137
+#: src/ui_adapters/secrets_controller/lifecycle.rs:137
 msgid "Wait for saving to finish before locking the vault."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:147
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:354
+#: src/ui_adapters/secrets_controller/lifecycle.rs:147
+#: src/ui_adapters/secrets_controller/lifecycle.rs:354
 msgid "Vault locked"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:154
+#: src/ui_adapters/secrets_controller/lifecycle.rs:154
 msgid "Unlock the desktop session before accessing the vault."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:160
+#: src/ui_adapters/secrets_controller/lifecycle.rs:160
 msgid "Wait for the operation to finish before accessing the vault."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:175
+#: src/ui_adapters/secrets_controller/lifecycle.rs:175
 msgid "Checking your OpenPGP key…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:199
+#: src/ui_adapters/secrets_controller/lifecycle.rs:199
 msgid "Vault available. Its content opens when you select it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:203
+#: src/ui_adapters/secrets_controller/lifecycle.rs:203
 msgid ""
 "This computer has no private key for this vault. Import your key to unlock "
 "it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:207
+#: src/ui_adapters/secrets_controller/lifecycle.rs:207
 msgid "Your key could not be verified. The vault is still locked."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:228
+#: src/ui_adapters/secrets_controller/lifecycle.rs:228
 msgid "The initial settings could not be saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:247
+#: src/ui_adapters/secrets_controller/lifecycle.rs:247
 msgid "The primary key preference could not be saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:261
+#: src/ui_adapters/secrets_controller/lifecycle.rs:261
 msgid "The key chosen for the vault is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/lifecycle.rs:271
+#: src/ui_adapters/secrets_controller/lifecycle.rs:271
 msgid "The vault's primary key could not be saved."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:26
+#: src/ui_adapters/secrets_controller/organize.rs:26
 msgid "The folder's icon or color is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:38
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:97
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:126
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:246
+#: src/ui_adapters/secrets_controller/organize.rs:38
+#: src/ui_adapters/secrets_controller/organize.rs:97
+#: src/ui_adapters/secrets_controller/organize.rs:126
+#: src/ui_adapters/secrets_controller/organize.rs:246
 msgid "The selected folder is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:50
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:141
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:175
+#: src/ui_adapters/secrets_controller/organize.rs:50
+#: src/ui_adapters/secrets_controller/organize.rs:141
+#: src/ui_adapters/secrets_controller/organize.rs:175
 msgid "The destination folder is not valid."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:57
+#: src/ui_adapters/secrets_controller/organize.rs:57
 msgid "Saving folder…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:101
+#: src/ui_adapters/secrets_controller/organize.rs:101
 msgid "Reordering folder…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:103
+#: src/ui_adapters/secrets_controller/organize.rs:103
 msgid "The folder's order could not be changed."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:145
+#: src/ui_adapters/secrets_controller/organize.rs:145
 msgid "Moving folder…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:146
+#: src/ui_adapters/secrets_controller/organize.rs:146
 msgid ""
 "The folder could not be moved. It cannot be placed inside itself or its "
 "descendants."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:182
+#: src/ui_adapters/secrets_controller/organize.rs:182
 msgid "Moving item…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:223
+#: src/ui_adapters/secrets_controller/organize.rs:223
 msgid "Deleting item…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_controller/organize.rs:256
+#: src/ui_adapters/secrets_controller/organize.rs:256
 msgid "Deleting folder…"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection.rs:176
-#: crates/kp-desktop/src/ui_adapters/secrets_projection.rs:216
+#: src/ui_adapters/secrets_projection.rs:176
+#: src/ui_adapters/secrets_projection.rs:216
 msgid "Text"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection.rs:208
+#: src/ui_adapters/secrets_projection.rs:208
 msgid "Pending to open"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection.rs:210
+#: src/ui_adapters/secrets_projection.rs:210
 msgid "Not readable on this device"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs:416
+#: src/ui_adapters/secrets_projection/content.rs:416
 msgid "Document type"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs:419
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs:429
+#: src/ui_adapters/secrets_projection/content.rs:419
+#: src/ui_adapters/secrets_projection/content.rs:429
 msgid "Document number"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs:420
+#: src/ui_adapters/secrets_projection/content.rs:420
 msgid "Country"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/content.rs:421
+#: src/ui_adapters/secrets_projection/content.rs:421
 msgid "Expiration"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/secrets_projection/expanded.rs:121
+#: src/ui_adapters/secrets_projection/expanded.rs:121
 msgid "Algorithm"
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/sensitive_clipboard.rs:82
+#: src/ui_adapters/sensitive_clipboard.rs:82
 msgid "The sensitive content could not be copied to the clipboard."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:171
+#: src/ui_adapters/synthetic_key_transfer.rs:171
 msgid ""
 "This is a key from your vault and it is not in GnuPG: it will be created "
 "when you import it."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:174
+#: src/ui_adapters/synthetic_key_transfer.rs:174
 msgid ""
 "This is a key from your vault. GnuPG only has its public part: the private "
 "part will be added."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:177
+#: src/ui_adapters/synthetic_key_transfer.rs:177
 msgid ""
 "This is a key from your vault and it is already in GnuPG: it will be merged "
 "(new identities, subkeys and signatures). Nothing is deleted."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:180
+#: src/ui_adapters/synthetic_key_transfer.rs:180
 msgid ""
 "This key is not the active vault's primary key and does not encrypt any of "
 "its items. It was rejected automatically."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:183
+#: src/ui_adapters/synthetic_key_transfer.rs:183
 msgid ""
 "There is no active vault to compare with. It was rejected automatically."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:186
+#: src/ui_adapters/synthetic_key_transfer.rs:186
 msgid ""
 "GnuPG could not be queried to review the key. It was rejected automatically."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:240
+#: src/ui_adapters/synthetic_key_transfer.rs:240
 msgid "The key no longer belongs to the active vault. Nothing was imported."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:243
+#: src/ui_adapters/synthetic_key_transfer.rs:243
 msgid ""
 "The received block is not a single passphrase-protected private key with the "
 "offered fingerprint. Nothing was imported."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:246
+#: src/ui_adapters/synthetic_key_transfer.rs:246
 msgid ""
 "GnuPG could not import the key. Check GnuPG and try again from the phone."
 msgstr ""
 
-#: crates/kp-desktop/src/ui_adapters/synthetic_key_transfer.rs:249
+#: src/ui_adapters/synthetic_key_transfer.rs:249
 msgid ""
 "The key was imported into GnuPG, but the challenge could not be decrypted "
 "(passphrase canceled or wrong?). The phone will not receive a confirmation."

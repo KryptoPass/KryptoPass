@@ -52,9 +52,9 @@ versión.
 
 #### 1. El C++ de la aplicación no compila con las puertas de calidad de KDE
 
-Evidencia: `cc_builder` en `crates/kp-desktop/build.rs` solo añade rutas de include al
+Evidencia: `cc_builder` en `build.rs` solo añade rutas de include al
 `cc::Build`. Las advertencias `-Wall -Wextra -Wpedantic -Werror` existen solo
-en las pruebas nativas (`crates/kp-desktop/native-tests/CMakeLists.txt`),
+en las pruebas nativas (`native-tests/CMakeLists.txt`),
 no en el C++ de la aplicación. Como ese C++ lo compila `cc` y no CMake,
 `KDECompilerSettings` no lo cubre.
 
@@ -79,7 +79,7 @@ Evidencia: QML usa `qsTr()`/`qsTranslate()`, C++ usa
 `QCoreApplication::translate()` y la extracción se hace con un script propio
 que inspecciona literales de Rust y genera `.ts`
 (`packaging/translations.py`). El runtime carga los `.qm` desde `:/i18n`
-con `QTranslator` (`crates/kp-desktop/src/native/desktop_integration.cpp:103-113`).
+con `QTranslator` (`src/native/desktop_integration.cpp:103-113`).
 El script decide qué literal es de interfaz con heurísticas (espacios, no ASCII,
 mayúscula inicial).
 
@@ -96,7 +96,7 @@ La lengua fuente pasa a inglés (ver «Decisiones»).
 #### 3. KCrash: decidido, queda fuera
 
 Evidencia: no hay ninguna referencia a `KCrash`. Es lo estándar en KDE, pero
-aquí choca con el hardening: `crates/kp-desktop/src/process_security.rs:9,23-30`
+aquí choca con el hardening: `src/process_security.rs:9,23-30`
 desactiva core dumps y `PR_SET_DUMPABLE` para que un crash no deje secretos
 en disco.
 
@@ -104,11 +104,11 @@ Decisión en «Decisiones»: no se añade.
 
 #### 4. Identidad y configuración repartidas
 
-Evidencia: `crates/kp-desktop/src/main.rs:36` fija `applicationName` al nombre
+Evidencia: `src/main.rs:36` fija `applicationName` al nombre
 visible; después `KAboutData::setApplicationData()` en
-`crates/kp-desktop/src/native/desktop_integration.cpp:128` vuelve a fijarlo al
+`src/native/desktop_integration.cpp:128` vuelve a fijarlo al
 `componentName` (comportamiento documentado de KCoreAddons). Para que el nombre
-del bus coincida con el desktop ID, `crates/kp-desktop/src/native/desktop_bus.cpp:46-67`
+del bus coincida con el desktop ID, `src/native/desktop_bus.cpp:46-67`
 muta temporalmente `KAboutData` global y lo restaura después.
 
 Funciona, pero es frágil. Propuesta: unificar en un solo sitio el nombre de
@@ -121,9 +121,9 @@ aislarlo en una función documentada y cubrirlo con una prueba de integración.
 
 Evidencia:
 
-- `crates/kp-desktop/src/native/sensitive_clipboard.cpp:224,232`
-- `crates/kp-desktop/src/native/session_lock.cpp:184,191`
-- `crates/kp-desktop/src/native/online_services.cpp:10,15`
+- `src/native/sensitive_clipboard.cpp:224,232`
+- `src/native/session_lock.cpp:184,191`
+- `src/native/online_services.cpp:10,15`
 
 Para un equipo KDE, `KSharedConfig`/`KConfigGroup` es lo idiomático y encaja
 con `KActionCollection` y `KWindowStateSaver`, que ya usan KConfig. También
@@ -149,12 +149,12 @@ los errores de uso se comportan como en el resto de KDE.
 
 - **D-Bus activation.** El `.desktop` no declara `DBusActivatable=true` y solo
   se conecta `KDBusService::activateRequested`
-  (`crates/kp-desktop/src/native/desktop_bus.cpp:74`). Hace falta la línea en
+  (`src/native/desktop_bus.cpp:74`). Hace falta la línea en
   el `.desktop`, un `.service` en `share/dbus-1/services/` y conectar
   `activateActionRequested`. Antes, decidir qué hacen NewEntry/Search si la
   app arranca por D-Bus con la bóveda bloqueada.
 - **Lanzar KAddressBook.** `QProcess::startDetached("kaddressbook")`
-  (`crates/kp-desktop/src/native/kde_contacts.cpp:566`) evita la integración
+  (`src/native/kde_contacts.cpp:566`) evita la integración
   KDE. Usar `KService` + `KIO::ApplicationLauncherJob` (KIO ya está enlazado).
 - **Listas manuales en `build.rs`.** Cada `.qml` y cada `.cpp` se lista a
   mano. `qml_lint` detecta el desfase de QML, pero no

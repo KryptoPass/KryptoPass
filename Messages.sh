@@ -8,11 +8,10 @@
 set -euo pipefail
 
 domain=$(python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["app-id"])')
-crate=crates/kp-desktop
 
 # --force-po writes the template even before any string is marked.
 # shellcheck disable=SC2046 # one argument per source file
-$XGETTEXT --force-po $(find "$crate/src/native" "$crate/ui/qml" \( -name '*.cpp' -o -name '*.h' -o -name '*.qml' \) | sort) \
+$XGETTEXT --force-po $(find "src/native" "ui/qml" \( -name '*.cpp' -o -name '*.h' -o -name '*.qml' \) | sort) \
     -o "$podir/$domain.pot"
 
 # The application description lives in Cargo.toml; extract it with the context that
@@ -36,5 +35,5 @@ $XGETTEXT --join-existing -L Rust \
     -ktr:1 -ktrf:1 -ktr_noop:1 -ktrp:1,2 \
     --flag=tr:1:kde-format --flag=trf:1:kde-format --flag=tr_noop:1:kde-format \
     --flag=trp:1:kde-format --flag=trp:2:kde-format \
-    $(find "$crate/src" "$core"/*/src -name '*.rs' -not -name '*_tests.rs' | sort) \
+    $(find "src" "$core"/*/src -name '*.rs' -not -name '*_tests.rs' | sort) \
     -o "$podir/$domain.pot"

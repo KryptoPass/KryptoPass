@@ -33,9 +33,9 @@ la restauración haya terminado. Reiniciar con una copia que contiene registros
 permite que `loadStore()` detecte sus datos; eso no resuelve el flujo de esa
 sesión ni la pérdida de configuración del hallazgo 02.
 
-**Evidencia:** [callback de activación](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:560),
-[pantalla y handlers de primera ejecución](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/Main.qml:1369),
-[resolución del primer uso](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:2638).
+**Evidencia:** [callback de activación](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:560),
+[pantalla y handlers de primera ejecución](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/Main.qml:1369),
+[resolución del primer uso](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:2638).
 
 **Corrección propuesta:** integrar la resolución del primer uso en la activación
 de una restauración y publicar un estado coherente antes de retirar la bienvenida.
@@ -63,10 +63,10 @@ la identidad y el mirror no tienen una clave principal configurada. Además,
 porque ya no encuentra esa configuración. Los registros conservan su cifrado
 y sus destinatarios originales.
 
-**Evidencia:** [formato del respaldo](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/backup/format/mod.rs:30),
-[snapshot exportado](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/storage/snapshots.rs:69),
-[persistencia de la clave principal](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/storage/primary_key.rs:10),
-[olvido al bloquear](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:741).
+**Evidencia:** [formato del respaldo](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/backup/format/mod.rs:30),
+[snapshot exportado](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/storage/snapshots.rs:69),
+[persistencia de la clave principal](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/storage/primary_key.rs:10),
+[olvido al bloquear](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:741).
 
 **Corrección propuesta:** versionar el respaldo para conservar esos ajustes y
 definir una recuperación explícita de los respaldos antiguos. La huella guardada
@@ -86,9 +86,9 @@ que está activo mientras `refreshKeys()` carga el llavero. La pantalla asigna
 este retorna sin emitir éxito ni fallo. La finalización de la carga de claves
 tampoco emite esas señales; `creating` queda activo y deshabilita la navegación.
 
-**Evidencia:** [guarda y envío del asistente](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/FirstRunScreen.qml:24),
-[rechazo silencioso del controlador](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/keyring_controller.rs:249),
-[cargas del arranque](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/Main.qml:318).
+**Evidencia:** [guarda y envío del asistente](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/FirstRunScreen.qml:24),
+[rechazo silencioso del controlador](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/keyring_controller.rs:249),
+[cargas del arranque](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/Main.qml:318).
 
 **Corrección propuesta:** incluir la carga del llavero en la guarda del asistente
 y establecer un contrato de aceptación o rechazo observable de la solicitud.
@@ -110,9 +110,9 @@ ejecución. En el paso de respaldo tampoco hay una presentación de ese error.
 El resultado visible puede ser que «Abrir la bóveda» no haga nada, aun cuando
 la clave principal ya se haya escrito en SQLite y solo haya fallado `setup.json`.
 
-**Evidencia:** [fallos de finalización](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:657),
-[origen del error de la bienvenida](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/FirstRunScreen.qml:50),
-[conexión con el controlador de bóveda](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/Main.qml:1377).
+**Evidencia:** [fallos de finalización](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:657),
+[origen del error de la bienvenida](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/FirstRunScreen.qml:50),
+[conexión con el controlador de bóveda](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/Main.qml:1377).
 
 **Corrección propuesta:** presentar el resultado de `completeSetup()` en el paso
 activo, mantener el reintento y aclarar el estado parcialmente persistido.
@@ -140,7 +140,7 @@ El proceso seguía vivo al vencer el plazo de observación y se terminó el grup
 de procesos de esa ejecución aislada. El nombre del estilo fue una inyección
 del fallo; no faltaba Kirigami en la máquina de revisión.
 
-**Evidencia:** [carga del motor y bucle de eventos](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/main.rs:98).
+**Evidencia:** [carga del motor y bucle de eventos](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/main.rs:98).
 
 **Corrección propuesta:** gestionar la creación fallida y salir con error cuando
 no hay objeto raíz. Mantener un diagnóstico visible para el empaquetado o el
@@ -166,10 +166,10 @@ el agente puede conservar su contraseña y esas lecturas todavía pueden tener
 y tampoco establece por sí solo la frontera de autorización de cada lectura.
 No se afirma haber observado una transferencia al teléfono después de bloquear.
 
-**Evidencia:** [timer](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/Main.qml:44),
-[worker independiente](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/pairing_lab_controller.rs:1264),
-[lectura del registro](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/vault_sync/mirror.rs:524),
-[lectura del ledger](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/vault_sync/mirror.rs:571).
+**Evidencia:** [timer](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/Main.qml:44),
+[worker independiente](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/pairing_lab_controller.rs:1264),
+[lectura del registro](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/vault_sync/mirror.rs:524),
+[lectura del ledger](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/vault_sync/mirror.rs:571).
 
 **Corrección propuesta:** fijar ruta e identidad de sesión antes del trabajo y
 revocar la autorización al bloquear o cambiar de bóveda. Diferenciar una
@@ -192,8 +192,8 @@ Es un estado parcial entre preferencia, UI y proveedor de navegador. En un
 perfil limpio también puede ocurrir durante la primera restauración si el
 guardado de la preferencia funciona y la escritura auxiliar posterior falla.
 
-**Evidencia:** [orden de activación](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:2669),
-[mensaje del callback](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:571),
+**Evidencia:** [orden de activación](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:2669),
+[mensaje del callback](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:571),
 [preparación falible del navegador](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-browser/src/access.rs:59).
 
 **Corrección propuesta:** preparar los componentes antes de confirmar la
@@ -217,8 +217,8 @@ quita la selección del peer; conserva el ledger y su estado. `enable()` vuelve
 a seleccionar ese mismo ledger sin migrar ni renegociar la ruta. Por tanto,
 seguir la indicación no elimina la condición que impide el mirror.
 
-**Evidencia:** [selección, desactivación y ejecución](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/vault_sync/mirror.rs:86),
-[rechazo de la ruta](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/vault_sync/mirror.rs:243),
+**Evidencia:** [selección, desactivación y ejecución](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/vault_sync/mirror.rs:86),
+[rechazo de la ruta](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/vault_sync/mirror.rs:243),
 [ruta del ledger derivada del vault ID](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-pairing-lab/src/vault_binding.rs:90).
 
 **Corrección propuesta:** definir una transición explícita de restauración o
@@ -238,9 +238,9 @@ antes de retornar. A continuación `loadNetworkAddresses()` ve ese estado y
 sale inmediatamente. La acción puede actualizar los dispositivos manteniendo
 las direcciones antiguas, especialmente en el perfil nuevo sin sesión activa.
 
-**Evidencia:** [orden del handler](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/ui/qml/DevicesWindow.qml:313),
-[guarda de redes](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/pairing_lab_controller.rs:601),
-[carga de dispositivos](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/pairing_lab_controller.rs:889).
+**Evidencia:** [orden del handler](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/ui/qml/DevicesWindow.qml:313),
+[guarda de redes](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/pairing_lab_controller.rs:601),
+[carga de dispositivos](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/pairing_lab_controller.rs:889).
 
 **Corrección propuesta:** actualizar las interfaces antes de activar esa guarda,
 o componer ambas cargas con estados de operación independientes.
@@ -262,10 +262,10 @@ otra, `VaultSearchSource` rechaza los registros que no la incluyan.
 La búsqueda por metadatos puede funcionar mientras la de nombres de usuario
 queda incompleta hasta bloquear y desbloquear de nuevo.
 
-**Evidencia:** [aplicación de la clave](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:726),
-[emisión del grant al cambiar bloqueo](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/ui_adapters/secrets_controller.rs:2453),
-[grant con clave fijada](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/search/access.rs:57),
-[filtro del lector privado](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/crates/kp-desktop/src/search/mod.rs:78).
+**Evidencia:** [aplicación de la clave](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:726),
+[emisión del grant al cambiar bloqueo](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/ui_adapters/secrets_controller.rs:2453),
+[grant con clave fijada](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/search/access.rs:57),
+[filtro del lector privado](/home/undead34/Projects/KryptoPass.org/kryptopass-desktop/src/search/mod.rs:78).
 
 **Corrección propuesta:** invalidar y reconstruir la autorización de búsqueda
 cuando cambie la clave principal de una sesión desbloqueada.
@@ -315,7 +315,7 @@ haber ejecutado todas sus combinaciones en una máquina nueva.
   ejercitar GPG si falta su variable especial. No se cuenta como evidencia de
   cifrado. Después se ejecutó el test padre correcto, que prepara el llavero,
   activa el helper y comprueba su resultado.
-- `python3 crates/kp-desktop/ui/tests/run_item_types.py`: **233 aprobados,
+- `python3 ui/tests/run_item_types.py`: **233 aprobados,
   cero fallos y cero omitidos**. El runner usa componentes QML y sustituye el
   bridge Rust; no prueba la integración de `Main.qml` con los QObjects reales.
 - Arranque aislado sin entradas, configuración inicial ni claves: bienvenida
