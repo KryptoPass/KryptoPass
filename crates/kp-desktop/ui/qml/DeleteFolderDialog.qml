@@ -101,7 +101,7 @@ Controls.Dialog {
             onClicked: deleteFolderDialog.close()
         }
         Controls.Button {
-            text: deleteFolderDialog.pending ? KI18n.i18n("Deleting…") : deleteContentsCheck.checked ? KI18n.i18nc("@action:button", "Delete Permanently") : KI18n.i18nc("@action:inmenu", "Delete Folder")
+            text: deleteFolderDialog.pending ? KI18n.i18nc("@info:progress", "Deleting…") : deleteContentsCheck.checked ? KI18n.i18nc("@action:button", "Delete Permanently") : KI18n.i18nc("@action:inmenu", "Delete Folder")
             icon.name: "edit-delete"
             enabled: !deleteFolderDialog.pending && !deleteFolderDialog.storeAdapter.controller.busy && !!deleteFolderDialog.folderId
             onClicked: deleteFolderDialog.submit()

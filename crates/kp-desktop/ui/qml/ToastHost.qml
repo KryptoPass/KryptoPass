@@ -134,7 +134,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 icon.name: "window-close"
                 display: Controls.AbstractButton.IconOnly
-                Accessible.name: KI18n.i18nc("@action:button", "Close notification")
+                Accessible.name: KI18n.i18nc("@action:button", "Close Notification")
                 onClicked: root.close()
             }
         }

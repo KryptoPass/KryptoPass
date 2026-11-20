@@ -130,7 +130,7 @@ Rectangle {
                 Accessible.name: KI18n.i18n("Importing key")
             }
             Controls.Label {
-                text: KI18n.i18n("Importing key…")
+                text: KI18n.i18nc("@info:progress", "Importing key…")
                 color: Kirigami.Theme.disabledTextColor
             }
         }
@@ -138,7 +138,7 @@ Rectangle {
             id: unlockButton
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Kirigami.Units.largeSpacing
-            text: root.unlocking ? KI18n.i18n("Unlocking…") : KI18n.i18nc("@action:button", "Unlock")
+            text: root.unlocking ? KI18n.i18nc("@info:progress", "Unlocking…") : KI18n.i18nc("@action:button", "Unlock")
             icon.name: "object-unlocked"
             highlighted: true
             enabled: root.unlockEnabled && !root.unlocking && !root.importing

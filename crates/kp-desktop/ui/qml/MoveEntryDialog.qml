@@ -102,7 +102,7 @@ Controls.Dialog {
             onClicked: moveDialog.close()
         }
         Controls.Button {
-            text: moveDialog.pending ? KI18n.i18n("Moving…") : KI18n.i18nc("@action:button", "Move")
+            text: moveDialog.pending ? KI18n.i18nc("@info:progress", "Moving…") : KI18n.i18nc("@action:button", "Move")
             icon.name: "folder-move"
             enabled: !moveDialog.pending && !moveDialog.storeAdapter.controller.busy && !!moveDialog.entryId
             onClicked: moveDialog.submit()

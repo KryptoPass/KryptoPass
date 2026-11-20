@@ -288,7 +288,7 @@ Controls.ApplicationWindow {
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
                 visible: dialog.exportMode && !dialog.completed && dialog.availableKeys.length === 0
-                text: dialog.keyStore.controller.busy ? KI18n.i18n("Looking for your keys…") : KI18n.i18n("There are no valid keys to encrypt with. Create or import a key from Keys and try again.")
+                text: dialog.keyStore.controller.busy ? KI18n.i18nc("@info:progress", "Looking for your keys…") : KI18n.i18n("There are no valid keys to encrypt with. Create or import a key from Keys and try again.")
                 wrapMode: Text.Wrap
                 color: Kirigami.Theme.disabledTextColor
             }

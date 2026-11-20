@@ -249,7 +249,7 @@ Controls.ScrollView {
                     }
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: deviceRow.host.controller.syntheticTransferPreparing ? KI18n.i18n("Preparing the key…") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
+                        text: deviceRow.host.controller.syntheticTransferPreparing ? KI18n.i18nc("@info:progress", "Preparing the key…") : deviceRow.host.keyTransferLabel(deviceRow.syntheticTransferPhase)
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }

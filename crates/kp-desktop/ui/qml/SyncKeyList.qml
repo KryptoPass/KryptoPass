@@ -71,7 +71,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Controls.Label {
             Layout.fillWidth: true
-            text: KI18n.i18nc("@title:group", "Keys in Sync (%1 of %2)", list.syncedKeys.length, list.syncKeyRows.length)
+            text: KI18n.i18nc("@title:group", "Keys in sync (%1 of %2)", list.syncedKeys.length, list.syncKeyRows.length)
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
         }

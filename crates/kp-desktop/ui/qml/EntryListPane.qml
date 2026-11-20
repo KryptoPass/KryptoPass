@@ -199,7 +199,7 @@ Controls.Pane {
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.smallSpacing
             visible: !root.keysMode && root.hasSearchQuery && !root.storeAdapter.controller.locked && (root.storeAdapter.searchController.queryRejected || root.storeAdapter.searchController.building || root.storeAdapter.searchController.incomplete)
-            text: root.storeAdapter.searchController.queryRejected ? KI18n.i18n("Search is not available for this query.") : root.storeAdapter.searchController.building ? KI18n.i18n("Preparing the user search…") : KI18n.i18n("The user search is incomplete.")
+            text: root.storeAdapter.searchController.queryRejected ? KI18n.i18n("Search is not available for this query.") : root.storeAdapter.searchController.building ? KI18n.i18nc("@info:progress", "Preparing the user search…") : KI18n.i18n("The user search is incomplete.")
             textFormat: Text.PlainText
             wrapMode: Text.WordWrap
             color: Kirigami.Theme.disabledTextColor
@@ -410,7 +410,7 @@ Controls.Pane {
         visible: entryList.count === 0
         helpfulAction: root.loadFailed || (root.hasSearchQuery && !root.loading) ? emptyListAction : !root.keysMode && !root.loading && !root.storeAdapter.controller.locked ? emptyCreateAction : null
         icon.name: root.keysMode && root.keyStore.controller.loadError ? "dialog-error" : root.hasSearchQuery ? "edit-find" : root.keysMode ? "view-certificate" : root.storeAdapter.controller.loadError ? "dialog-error" : "document-new"
-        text: root.keysMode ? (root.keyStore.controller.busy ? KI18n.i18n("Loading keys…") : root.keyStore.controller.loadError ? KI18n.i18nc("@title placeholder", "Keys unavailable") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "No keys in this view")) : root.storeAdapter.controller.busy ? KI18n.i18n("Updating items…") : root.storeAdapter.controller.loadError ? KI18n.i18nc("@title placeholder", "The vault could not be loaded") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "Empty folder")
+        text: root.keysMode ? (root.keyStore.controller.busy ? KI18n.i18nc("@info:progress", "Loading keys…") : root.keyStore.controller.loadError ? KI18n.i18nc("@title placeholder", "Keys unavailable") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "No keys in this view")) : root.storeAdapter.controller.busy ? KI18n.i18nc("@info:progress", "Updating items…") : root.storeAdapter.controller.loadError ? KI18n.i18nc("@title placeholder", "The vault could not be loaded") : root.hasSearchQuery ? KI18n.i18nc("@title placeholder", "No matches") : KI18n.i18nc("@title placeholder", "Empty folder")
         explanation: root.keysMode ? (root.keyStore.controller.loadError ? KI18n.i18n("Retry loading or check the error details.") : root.keyStore.controller.busy ? KI18n.i18n("Reading the local GnuPG keyring.") : root.hasSearchQuery ? KI18n.i18n("Try another name, email or fingerprint.") : KI18n.i18n("Keys from the local GnuPG keyring will appear here.")) : root.storeAdapter.controller.loadError ? root.storeAdapter.controller.loadError : root.storeAdapter.controller.busy ? KI18n.i18n("Reading the encrypted local storage.") : root.hasSearchQuery ? KI18n.i18n("Try another title, folder or type.") : KI18n.i18n("Create an item to get started.")
     }
     // Part of the placeholder, so it always sits below its text however long that is.

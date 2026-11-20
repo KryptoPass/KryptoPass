@@ -33,9 +33,9 @@ QtObject {
         else if (connected)
             stats = lastSyncMs > 0 ? KI18n.i18nc("@info %1 is a relative time such as 5 min ago", "Last synced %1", ago(lastSyncMs)) : KI18n.i18nc("@info connection status", "Connected");
         else if (raw === "reconnecting")
-            stats = KI18n.i18n("Reconnecting…");
+            stats = KI18n.i18nc("@info:status", "Reconnecting…");
         else if (raw === "connecting")
-            stats = KI18n.i18n("Connecting…");
+            stats = KI18n.i18nc("@info:status", "Connecting…");
         else if (raw === "failed")
             stats = KI18n.i18n("Connection failed");
         else
@@ -102,9 +102,9 @@ QtObject {
         case "error":
             return syncOn && controller.vaultSyncFailed && storeStatus.length === 0 ? KI18n.i18n("Sync error") : storeStatus;
         case "working":
-            return busy ? storeStatus : KI18n.i18n("Syncing…");
+            return busy ? storeStatus : KI18n.i18nc("@info:status", "Syncing…");
         case "connecting":
-            return KI18n.i18n("Connecting…");
+            return KI18n.i18nc("@info:status", "Connecting…");
         case "offline":
             return KI18n.i18n("Offline");
         case "setup":
@@ -123,7 +123,7 @@ QtObject {
         if (phase === "offline")
             return KI18n.i18n("No connection with %1. The vault syncs when it reconnects.", who);
         if (phase === "connecting")
-            return KI18n.i18n("Connecting to %1…", who);
+            return KI18n.i18nc("@info:progress", "Connecting to %1…", who);
         if (phase === "setup")
             return (link === "connected" ? KI18n.i18n("%1 is connected, but no key syncs with it.", who) : KI18n.i18n("No key syncs with %1.", who)) + " " + KI18n.i18n("Choose the keys in Devices.");
         if (phase === "idle" && label.length === 0)

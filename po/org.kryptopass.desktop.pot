@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: org.kryptopass.desktop 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/KryptoPass/KryptoPass/issues\n"
-"POT-Creation-Date: 2026-11-17 15:45-0400\n"
+"POT-Creation-Date: 2026-11-20 10:32-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -317,6 +317,7 @@ msgid "Encrypt with"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Looking for your keys…"
 msgstr ""
 
@@ -456,6 +457,7 @@ msgid "Select to see the username"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Loading username…"
 msgstr ""
 
@@ -667,6 +669,7 @@ msgid "Permanently delete “%1”? This action cannot be undone."
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Deleting…"
 msgstr ""
 
@@ -846,6 +849,7 @@ msgid "Wait for the current operation to finish."
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Preparing the key…"
 msgstr ""
 
@@ -971,6 +975,7 @@ msgid "Devices"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Reviewing the offered key…"
 msgstr ""
 
@@ -1006,7 +1011,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@info key transfer status"
-msgid "Cancelled by the phone"
+msgid "Canceled by the phone"
 msgstr ""
 
 #, kde-format
@@ -1111,7 +1116,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@info key transfer status"
-msgid "Transfer cancelled"
+msgid "Transfer canceled"
 msgstr ""
 
 #, kde-format
@@ -1135,6 +1140,7 @@ msgid "This session does not support the test"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Checking route…"
 msgstr ""
 
@@ -1197,7 +1203,7 @@ msgid "The pairing was rejected and no trust was granted."
 msgstr ""
 
 #, kde-format
-msgid "The operation was cancelled. The trust already saved is kept."
+msgid "The operation was canceled. The trust already saved is kept."
 msgstr ""
 
 #, kde-format
@@ -1458,6 +1464,7 @@ msgid "Authorized devices"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Loading authorized devices…"
 msgstr ""
 
@@ -1600,10 +1607,12 @@ msgid ""
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Exporting your key with GnuPG; enter its passphrase if asked…"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Preparing the test key in GnuPG…"
 msgstr ""
 
@@ -1613,10 +1622,12 @@ msgid "Confirm and Send"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Preparing…"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Sending…"
 msgstr ""
 
@@ -1679,6 +1690,7 @@ msgid "Remove Name"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Saving…"
 msgstr ""
 
@@ -1740,6 +1752,7 @@ msgid "The vault is locked. Unlock it to open this item."
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Decrypting the item's content…"
 msgstr ""
 
@@ -1851,6 +1864,7 @@ msgid "Search is not available for this query."
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Preparing the user search…"
 msgstr ""
 
@@ -1869,6 +1883,7 @@ msgid " · Linked"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Loading keys…"
 msgstr ""
 
@@ -1888,6 +1903,7 @@ msgid "No keys in this view"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Updating items…"
 msgstr ""
 
@@ -2049,7 +2065,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@action:button"
-msgid "Restore a Backup…"
+msgid "Restore Backup…"
 msgstr ""
 
 #, kde-format
@@ -2095,15 +2111,11 @@ msgstr ""
 
 #, kde-format
 msgctxt "@action:button"
-msgid "Import a Private Key…"
-msgstr ""
-
-#, kde-format
-msgctxt "@action:button"
 msgid "Back"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Creating the key…"
 msgstr ""
 
@@ -2145,7 +2157,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@action:button"
-msgid "Open the Vault"
+msgid "Open Vault"
 msgstr ""
 
 #, kde-format
@@ -3278,6 +3290,7 @@ msgid "Open KDE Contacts"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Reading KDE Contacts…"
 msgstr ""
 
@@ -3352,6 +3365,7 @@ msgid "New Contact"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Reading or updating KDE Contacts…"
 msgstr ""
 
@@ -3774,8 +3788,8 @@ msgid ""
 msgstr ""
 
 #, kde-format
-msgctxt "@info:placeholder"
-msgid "Name <email@example.org>"
+msgctxt "@info:placeholder %1 is an example email address"
+msgid "Name <%1>"
 msgstr ""
 
 #, kde-format
@@ -4057,10 +4071,12 @@ msgid "Importing key"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Importing key…"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Unlocking…"
 msgstr ""
 
@@ -4072,11 +4088,6 @@ msgstr ""
 #, kde-format
 msgctxt "@action:button"
 msgid "Review Key…"
-msgstr ""
-
-#, kde-format
-msgctxt "@action:button"
-msgid "Restore Backup…"
 msgstr ""
 
 #, kde-format
@@ -4561,6 +4572,7 @@ msgid "Destination folder"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Moving…"
 msgstr ""
 
@@ -4734,14 +4746,16 @@ msgstr ""
 
 #, kde-format
 msgctxt "@info:placeholder"
-msgid "E.g. 0O1l"
+msgid "For example: 0O1l"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Generating with the system's cryptographic generator…"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Generating…"
 msgstr ""
 
@@ -4860,6 +4874,7 @@ msgid "%1 · no valid key to encrypt with"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Reading OpenPGP keys…"
 msgstr ""
 
@@ -5058,6 +5073,7 @@ msgid "New Item"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Preparing image…"
 msgstr ""
 
@@ -5170,7 +5186,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@info:placeholder"
-msgid "E.g. Personal email"
+msgid "For example: Personal email"
 msgstr ""
 
 #, kde-format
@@ -5463,7 +5479,7 @@ msgstr ""
 
 #, kde-format
 msgctxt "@title:group"
-msgid "Keys in Sync (%1 of %2)"
+msgid "Keys in sync (%1 of %2)"
 msgstr ""
 
 #, kde-format
@@ -5536,10 +5552,12 @@ msgid "Last synced %1"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:status"
 msgid "Reconnecting…"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:status"
 msgid "Connecting…"
 msgstr ""
 
@@ -5560,6 +5578,7 @@ msgid "Sync error"
 msgstr ""
 
 #, kde-format
+msgctxt "@info:status"
 msgid "Syncing…"
 msgstr ""
 
@@ -5587,6 +5606,7 @@ msgid "No connection with %1. The vault syncs when it reconnects."
 msgstr ""
 
 #, kde-format
+msgctxt "@info:progress"
 msgid "Connecting to %1…"
 msgstr ""
 
@@ -5628,17 +5648,12 @@ msgstr ""
 
 #, kde-format
 msgctxt "@action:button"
-msgid "Pair a Device"
-msgstr ""
-
-#, kde-format
-msgctxt "@action:button"
 msgid "Choose Keys"
 msgstr ""
 
 #, kde-format
 msgctxt "@action:button"
-msgid "Close notification"
+msgid "Close Notification"
 msgstr ""
 
 #, kde-format

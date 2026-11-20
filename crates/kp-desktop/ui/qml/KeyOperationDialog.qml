@@ -473,7 +473,7 @@ Controls.Dialog {
                 Layout.fillWidth: true
                 visible: dialog.action === "create" || dialog.action === "addIdentity"
                 enabled: !dialog.controllerBusy
-                placeholderText: KI18n.i18nc("@info:placeholder", "Name <email@example.org>")
+                placeholderText: KI18n.i18nc("@info:placeholder %1 is an example email address", "Name <%1>", "email@example.org")
                 Accessible.name: KI18n.i18n("Name and email of the OpenPGP identity")
                 onAccepted: if (dialog.canSubmit)
                     dialog.submit()

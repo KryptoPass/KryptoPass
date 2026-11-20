@@ -189,7 +189,7 @@ Rectangle {
                 }
                 Controls.ToolButton {
                     Layout.alignment: Qt.AlignHCenter
-                    text: KI18n.i18nc("@action:button", "Restore a Backup…")
+                    text: KI18n.i18nc("@action:button", "Restore Backup…")
                     icon.name: "document-revert"
                     onClicked: root.restoreRequested()
                 }
@@ -334,7 +334,7 @@ Rectangle {
                             }
                             Controls.Button {
                                 Layout.alignment: Qt.AlignLeft
-                                text: KI18n.i18nc("@action:button", "Import a Private Key…")
+                                text: KI18n.i18nc("@action:button", "Import Private Key…")
                                 icon.name: "document-import"
                                 enabled: !root.busy
                                 onClicked: {
@@ -359,7 +359,7 @@ Rectangle {
                         Layout.fillWidth: true
                     }
                     Controls.Button {
-                        text: root.creating ? KI18n.i18n("Creating the key…") : KI18n.i18nc("@action:button", "Continue")
+                        text: root.creating ? KI18n.i18nc("@info:progress", "Creating the key…") : KI18n.i18nc("@action:button", "Continue")
                         icon.name: "go-next"
                         highlighted: true
                         enabled: !root.busy && (createChoice.checked || (existingChoice.checked && existingKeys.currentIndex >= 0 && root.ownKeys.length > 0))
@@ -425,7 +425,7 @@ Rectangle {
                 Controls.Button {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: root.backedUp ? Kirigami.Units.largeSpacing : 0
-                    text: root.backedUp ? KI18n.i18nc("@action:button", "Open the Vault") : KI18n.i18nc("@action:button", "Later")
+                    text: root.backedUp ? KI18n.i18nc("@action:button", "Open Vault") : KI18n.i18nc("@action:button", "Later")
                     icon.name: root.backedUp ? "go-next" : ""
                     highlighted: root.backedUp
                     flat: !root.backedUp

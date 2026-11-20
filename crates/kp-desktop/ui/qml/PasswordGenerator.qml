@@ -116,13 +116,13 @@ Controls.Dialog {
             id: excludedField
             Layout.fillWidth: true
             Accessible.name: KI18n.i18n("Excluded characters")
-            placeholderText: KI18n.i18nc("@info:placeholder", "E.g. 0O1l")
+            placeholderText: KI18n.i18nc("@info:placeholder", "For example: 0O1l")
         }
 
         Controls.Label {
             Layout.fillWidth: true
             visible: generator.generating
-            text: KI18n.i18n("Generating with the system's cryptographic generator…")
+            text: KI18n.i18nc("@info:progress", "Generating with the system's cryptographic generator…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -138,7 +138,7 @@ Controls.Dialog {
             Layout.fillWidth: true
         }
         Controls.Button {
-            text: generator.generating ? KI18n.i18n("Generating…") : KI18n.i18nc("@action:button", "Generate")
+            text: generator.generating ? KI18n.i18nc("@info:progress", "Generating…") : KI18n.i18nc("@action:button", "Generate")
             icon.name: "tools-wizard"
             enabled: !generator.generating && (lowercaseField.checked || uppercaseField.checked || digitsField.checked || symbolsField.checked)
             onClicked: {

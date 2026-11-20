@@ -43,7 +43,7 @@ Controls.Pane {
 
     readonly property bool saving: storeAdapter.controller.saving
     readonly property bool canSave: loaded && fieldsHost.ready && !saving && !savePending && !preparingSecretMaterial && !storeAdapter.controller.busy && !storeAdapter.controller.editorBusy && !storeAdapter.controller.iconBusy && titleField.text.trim().length > 0 && recipientChooser.eligibleSelection && (!entryId || dirty)
-    readonly property string iconStateText: storeAdapter.controller.iconBusy ? KI18n.i18n("Preparing image…") : draftIcon?.kind === "image" ? KI18n.i18nc("@label item icon", "Custom image") : draftIcon?.kind === "theme" ? draftIcon.name : KI18n.i18nc("@label item icon", "Automatic")
+    readonly property string iconStateText: storeAdapter.controller.iconBusy ? KI18n.i18nc("@info:progress", "Preparing image…") : draftIcon?.kind === "image" ? KI18n.i18nc("@label item icon", "Custom image") : draftIcon?.kind === "theme" ? draftIcon.name : KI18n.i18nc("@label item icon", "Automatic")
     readonly property string saveBlockReason: {
         if (!loaded)
             return "";
@@ -616,7 +616,7 @@ Controls.Pane {
                                     Layout.fillWidth: true
                                     Accessible.name: KI18n.i18n("Item name")
                                     Accessible.description: KI18n.i18n("Required. Identifies the item in the list.")
-                                    placeholderText: KI18n.i18nc("@info:placeholder", "E.g. Personal email")
+                                    placeholderText: KI18n.i18nc("@info:placeholder", "For example: Personal email")
                                     onTextEdited: editor.updateDirty()
                                 }
                             }
@@ -710,7 +710,7 @@ Controls.Pane {
                 }
                 Controls.Button {
                     objectName: "entrySaveButton"
-                    text: editor.saving ? KI18n.i18n("Saving…") : editor.entryId ? KI18n.i18nc("@action:button", "Save Changes") : KI18n.i18nc("@action:button", "Create Item")
+                    text: editor.saving ? KI18n.i18nc("@info:progress", "Saving…") : editor.entryId ? KI18n.i18nc("@action:button", "Save Changes") : KI18n.i18nc("@action:button", "Create Item")
                     icon.name: "document-save"
                     highlighted: true
                     enabled: editor.canSave

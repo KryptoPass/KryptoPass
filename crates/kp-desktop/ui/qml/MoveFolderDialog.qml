@@ -61,7 +61,7 @@ Controls.Dialog {
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.RejectRole
         }
         Controls.Button {
-            text: dialog.pending ? KI18n.i18n("Moving…") : KI18n.i18nc("@action:button", "Move")
+            text: dialog.pending ? KI18n.i18nc("@info:progress", "Moving…") : KI18n.i18nc("@action:button", "Move")
             enabled: !dialog.pending && !dialog.storeAdapter.busy
             Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.AcceptRole
         }

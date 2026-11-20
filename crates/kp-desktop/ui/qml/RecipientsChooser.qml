@@ -208,7 +208,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: chooser.contactsController.busy
-            text: KI18n.i18n("Reading or updating KDE Contacts…")
+            text: KI18n.i18nc("@info:progress", "Reading or updating KDE Contacts…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }
@@ -359,7 +359,7 @@ ColumnLayout {
         Controls.Label {
             Layout.fillWidth: true
             visible: chooser.keyStore.controller.busy && chooser.encryptableKeys.length === 0
-            text: KI18n.i18n("Reading OpenPGP keys…")
+            text: KI18n.i18nc("@info:progress", "Reading OpenPGP keys…")
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.Wrap
         }

@@ -89,7 +89,7 @@ Controls.Dialog {
             onClicked: deleteEntryDialog.close()
         }
         Controls.Button {
-            text: deleteEntryDialog.pending ? KI18n.i18n("Deleting…") : KI18n.i18nc("@action:button", "Delete Permanently")
+            text: deleteEntryDialog.pending ? KI18n.i18nc("@info:progress", "Deleting…") : KI18n.i18nc("@action:button", "Delete Permanently")
             icon.name: "edit-delete"
             enabled: !deleteEntryDialog.pending && !deleteEntryDialog.storeAdapter.controller.busy && !!deleteEntryDialog.entryId
             onClicked: deleteEntryDialog.submit()

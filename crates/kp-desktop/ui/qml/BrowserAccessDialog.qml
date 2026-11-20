@@ -39,7 +39,7 @@ EntryPickerDialog {
             folder: folder,
             icon: metadata ? metadata.icon || null : null,
             iconSource: metadata ? metadata.iconSource || "" : "",
-            subtitle: candidate.usernameState === "unloaded" ? KI18n.i18n("Select to see the username") : candidate.usernameState === "loading" ? KI18n.i18n("Loading username…") : candidate.usernameState === "error" ? KI18n.i18n("The username could not be read") : candidate.username || KI18n.i18n("No username")
+            subtitle: candidate.usernameState === "unloaded" ? KI18n.i18n("Select to see the username") : candidate.usernameState === "loading" ? KI18n.i18nc("@info:progress", "Loading username…") : candidate.usernameState === "error" ? KI18n.i18n("The username could not be read") : candidate.username || KI18n.i18n("No username")
         };
     })
 

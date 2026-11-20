@@ -71,6 +71,18 @@ cambie.
   y `LC_ALL`/`LC_MESSAGES` no pueden ser `C`: gettext ignora los catálogos en
   el locale C. Ejemplo: `LANG=es_ES.UTF-8 LANGUAGE=en_GB`.
 
+## Estilo del inglés fuente
+
+Revisado el 20 de noviembre de 2026 contra las convenciones de KDE:
+
+- Inglés de EE. UU. (`canceled`, `color`), como en el resto de KDE.
+- Botones y acciones en Title Case, sin artículo (`Restore Backup…`,
+  `Open Vault`); títulos de grupo y etiquetas en sentence case.
+- Ejemplos de campo como `For example: …`, no `E.g.`.
+- Textos de progreso con `@info:progress`; estados con `@info:status`.
+- Un correo de ejemplo nunca va dentro del texto traducible (xgettext lo
+  avisa): se pasa como argumento `%1`.
+
 ## Limitación: `en_US` es el idioma del código para KI18n
 
 KI18n da por hecho que el texto fuente está en `en_US`: nunca carga catálogos

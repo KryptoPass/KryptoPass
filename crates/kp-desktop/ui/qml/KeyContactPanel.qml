@@ -114,7 +114,7 @@ ColumnLayout {
     Controls.Label {
         Layout.fillWidth: true
         visible: root.contactsController.busy
-        text: KI18n.i18n("Reading or updating KDE Contacts…")
+        text: KI18n.i18nc("@info:progress", "Reading or updating KDE Contacts…")
         color: Kirigami.Theme.disabledTextColor
         wrapMode: Text.Wrap
     }

@@ -336,7 +336,7 @@ Controls.ApplicationWindow {
                 onClicked: folderEditor.requestClose()
             }
             Controls.Button {
-                text: folderEditor.pending ? KI18n.i18n("Saving…") : KI18n.i18nc("@action:button", "Save")
+                text: folderEditor.pending ? KI18n.i18nc("@info:progress", "Saving…") : KI18n.i18nc("@action:button", "Save")
                 icon.name: "document-save"
                 enabled: folderEditor.canSave
                 onClicked: folderEditor.submit()

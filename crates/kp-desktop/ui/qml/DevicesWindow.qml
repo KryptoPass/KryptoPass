@@ -92,7 +92,7 @@ Controls.ApplicationWindow {
     function inboundPhaseLabel(transfer) {
         switch (transfer.phase) {
         case "assessing":
-            return KI18n.i18n("Reviewing the offered key…");
+            return KI18n.i18nc("@info:progress", "Reviewing the offered key…");
         case "waiting_decision":
             return KI18n.i18nc("@info key transfer status", "Waiting for your decision");
         case "receiving":
@@ -106,7 +106,7 @@ Controls.ApplicationWindow {
         case "rejected":
             return KI18n.i18nc("@info key transfer status", "Rejected");
         case "cancelled":
-            return KI18n.i18nc("@info key transfer status", "Cancelled by the phone");
+            return KI18n.i18nc("@info key transfer status", "Canceled by the phone");
         case "expired":
             return KI18n.i18nc("@info key status", "Expired");
         case "failed":
@@ -208,7 +208,7 @@ Controls.ApplicationWindow {
         case "rejected":
             return KI18n.i18nc("@info key transfer status", "Android rejected the offer");
         case "cancelled":
-            return KI18n.i18nc("@info key transfer status", "Transfer cancelled");
+            return KI18n.i18nc("@info key transfer status", "Transfer canceled");
         case "expired":
             return KI18n.i18nc("@info key transfer status", "The transfer expired");
         case "uncertain":
@@ -226,7 +226,7 @@ Controls.ApplicationWindow {
                 ipv6: "IPv6",
                 mixed: "IPv4 / IPv6"
             })[device.addressFamily] || "";
-        const route = String(device.routeLabel || KI18n.i18n("Checking route…"));
+        const route = String(device.routeLabel || KI18n.i18nc("@info:progress", "Checking route…"));
         return family ? route + " · " + family : route;
     }
 
@@ -255,7 +255,7 @@ Controls.ApplicationWindow {
         case "rejected":
             return KI18n.i18n("The pairing was rejected and no trust was granted.");
         case "cancelled":
-            return KI18n.i18n("The operation was cancelled. The trust already saved is kept.");
+            return KI18n.i18n("The operation was canceled. The trust already saved is kept.");
         case "transport_error":
             return dialog.controller.internetEnabled ? KI18n.i18n("Check the Internet access and try again.") : KI18n.i18n("Check that both devices are on the same network and try again.");
         case "disconnected":
@@ -938,7 +938,7 @@ Controls.ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.largeSpacing
                 visible: dialog.devices.length === 0 && dialog.controller.busy
-                text: KI18n.i18n("Loading authorized devices…")
+                text: KI18n.i18nc("@info:progress", "Loading authorized devices…")
                 textFormat: Text.PlainText
                 color: Kirigami.Theme.disabledTextColor
             }
@@ -1284,7 +1284,7 @@ Controls.ApplicationWindow {
                 Controls.Label {
                     Layout.fillWidth: true
                     visible: syntheticTransferApproval.approved
-                    text: dialog.controller.syntheticTransferPreparing ? (syntheticTransferApproval.vaultIdentity ? KI18n.i18n("Exporting your key with GnuPG; enter its passphrase if asked…") : KI18n.i18n("Preparing the test key in GnuPG…")) : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
+                    text: dialog.controller.syntheticTransferPreparing ? (syntheticTransferApproval.vaultIdentity ? KI18n.i18nc("@info:progress", "Exporting your key with GnuPG; enter its passphrase if asked…") : KI18n.i18nc("@info:progress", "Preparing the test key in GnuPG…")) : (syntheticTransferApproval.vaultIdentity ? dialog.keyTransferLabel(syntheticTransferApproval.transferPhase) : dialog.syntheticTransferLabel(syntheticTransferApproval.transferPhase))
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                 }
@@ -1313,7 +1313,7 @@ Controls.ApplicationWindow {
             }
             Controls.Button {
                 enabled: syntheticTransferApproval.approved ? !syntheticTransferApproval.transferPending : syntheticTransferApproval.canConfirm
-                text: !syntheticTransferApproval.approved ? KI18n.i18nc("@action:button", "Confirm and Send") : dialog.controller.syntheticTransferPreparing ? KI18n.i18n("Preparing…") : syntheticTransferApproval.transferPending ? KI18n.i18n("Sending…") : syntheticTransferApproval.canConfirm ? KI18n.i18nc("@action:button", "Retry") : KI18n.i18nc("@action:button", "Back to Device")
+                text: !syntheticTransferApproval.approved ? KI18n.i18nc("@action:button", "Confirm and Send") : dialog.controller.syntheticTransferPreparing ? KI18n.i18nc("@info:progress", "Preparing…") : syntheticTransferApproval.transferPending ? KI18n.i18nc("@info:progress", "Sending…") : syntheticTransferApproval.canConfirm ? KI18n.i18nc("@action:button", "Retry") : KI18n.i18nc("@action:button", "Back to Device")
                 icon.name: syntheticTransferApproval.approved && !syntheticTransferApproval.transferPending ? (syntheticTransferApproval.canConfirm ? "view-refresh" : "go-previous") : "mail-send"
                 // ActionRole keeps the dialog open: AcceptRole would close it, and closing
                 // an approved, pending transfer cancels it in onClosed.
@@ -1502,7 +1502,7 @@ Controls.ApplicationWindow {
                 onClicked: aliasDialog.close()
             }
             Controls.Button {
-                text: dialog.controller.aliasBusy ? KI18n.i18n("Saving…") : KI18n.i18nc("@action:button", "Save")
+                text: dialog.controller.aliasBusy ? KI18n.i18nc("@info:progress", "Saving…") : KI18n.i18nc("@action:button", "Save")
                 enabled: !dialog.controller.aliasBusy
                 // Not AcceptRole: the dialog closes only after aliasSaved confirms the write.
                 Controls.DialogButtonBox.buttonRole: Controls.DialogButtonBox.ActionRole

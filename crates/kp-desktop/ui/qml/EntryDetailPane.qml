@@ -238,7 +238,7 @@ Controls.Pane {
                         Layout.margins: Kirigami.Units.largeSpacing
                         visible: !root.selectedDetail && root.storeAdapter.controller.detailBusy
                         type: Kirigami.MessageType.Information
-                        text: KI18n.i18n("Decrypting the item's content…")
+                        text: KI18n.i18nc("@info:progress", "Decrypting the item's content…")
                     }
 
                     Kirigami.InlineMessage {

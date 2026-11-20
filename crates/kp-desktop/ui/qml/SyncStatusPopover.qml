@@ -36,7 +36,7 @@ Controls.Popup {
         Controls.Button {
             visible: popup.model.devices.length === 0
             icon.name: "list-add"
-            text: KI18n.i18nc("@action:button", "Pair a Device")
+            text: KI18n.i18nc("@action:button", "Pair Device")
             onClicked: popup.openDevices("")
         }
         Repeater {
