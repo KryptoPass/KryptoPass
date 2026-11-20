@@ -20,6 +20,11 @@ pub fn set_up_catalogs() {
 }
 
 pub fn translate(source: &QString) -> QString {
+    // Clearing a message passes an empty text; KI18n would turn it into
+    // "(I18N_EMPTY_MESSAGE)", which is not empty and shows up as an error.
+    if source.is_empty() {
+        return QString::default();
+    }
     crate::ui_adapters::native_ffi::ffi::translate_ui(source)
 }
 
