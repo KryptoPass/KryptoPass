@@ -30,18 +30,18 @@ impl qobject::PeersController {
         let directory = match peers_directory() {
             Ok(path) => path,
             Err(()) => {
-                self.as_mut().set_status(QString::from(
-                    "No se pudieron localizar los datos de vinculación.",
-                ));
+                self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                    "The pairing data could not be located.",
+                )));
                 return;
             }
         };
         let Some(owner) = self.rust().resume_owner.clone() else {
             self.as_mut()
                 .set_status_code(QString::from("profile_error"));
-            self.as_mut().set_status(QString::from(
-                "No se pudo iniciar el listener de recuperación local.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "The local recovery listener could not be started.",
+            )));
             return;
         };
         let (cancel, cancelled) = watch::channel(false);
@@ -56,8 +56,9 @@ impl qobject::PeersController {
         });
         self.as_mut().set_busy(true);
         self.as_mut().set_status_code(QString::from("loading"));
-        self.as_mut()
-            .set_status(QString::from("Cargando dispositivos vinculados…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Loading paired devices…",
+        )));
         let thread = self.qt_thread();
         std::thread::spawn(move || {
             let _completed = WorkerCompletion(worker_completed);
@@ -98,7 +99,7 @@ impl qobject::PeersController {
                         let (ready, aliases) = loaded.map_or_else(|| (None, Ok(BTreeMap::new())), |(ready, aliases)| (Some(ready), aliases));
                         match aliases {
                             Ok(aliases) => { object.as_mut().rust_mut().aliases = aliases; object.as_mut().set_alias_error(QString::default()); },
-                            Err(_) => { object.as_mut().rust_mut().aliases.clear(); object.as_mut().set_alias_error(QString::from("No se pudieron cargar los nombres locales. La confianza se conserva.")); },
+                            Err(_) => { object.as_mut().rust_mut().aliases.clear(); object.as_mut().set_alias_error(QString::from(crate::i18n::tr_noop("The local names could not be loaded. The trust is kept."))); },
                         }
                         let empty = ready.as_ref().is_none_or(|ready| ready.trusted_peers.is_empty());
                         if let Some(ready) = ready {
@@ -115,9 +116,9 @@ impl qobject::PeersController {
                             object.as_mut().apply_devices_snapshot(&devices.snapshot());
                         }
                         object.as_mut().set_status(QString::from(if empty {
-                            "No hay dispositivos autorizados. Crea una invitación para vincular Android."
+                            crate::i18n::tr_noop("There are no authorized devices. Create an invitation to pair Android.")
                         } else {
-                            "Dispositivos recuperados. Selecciona uno y pulsa Reconectar; no necesitas repetir los emojis."
+                            crate::i18n::tr_noop("Devices recovered. Select one and choose Reconnect; you do not need to repeat the emoji.")
                         }));
                     }
                     Err(error) => {
@@ -223,9 +224,9 @@ impl qobject::PeersController {
             let _ = owner.cancel.send(true);
             self.as_mut().rust_mut().draining_worker = Some(owner.completed.clone());
             self.as_mut().set_status_code(QString::from("closing"));
-            self.as_mut().set_status(QString::from(
-                "Cerrando la sesión. La confianza guardada se conserva.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "Closing the session. The saved trust is kept.",
+            )));
         }
     }
 
@@ -269,14 +270,17 @@ impl qobject::PeersController {
         }
         self.as_mut().set_alias_error(QString::default());
         if self.rust().busy {
-            self.as_mut().set_alias_error(QString::from(
-                "Espera a que termine la operación de conexión antes de cambiar el nombre.",
-            ));
+            self.as_mut()
+                .set_alias_error(QString::from(crate::i18n::tr_noop(
+                    "Wait for the connection operation to finish before renaming.",
+                )));
             return;
         }
         let Some(id) = parse_device_id(&device_id.to_string()) else {
             self.as_mut()
-                .set_alias_error(QString::from("Selecciona un dispositivo emparejado."));
+                .set_alias_error(QString::from(crate::i18n::tr_noop(
+                    "Select a paired device.",
+                )));
             return;
         };
         if !self
@@ -286,13 +290,16 @@ impl qobject::PeersController {
             .any(|peer| peer.device_id == id)
         {
             self.as_mut()
-                .set_alias_error(QString::from("El dispositivo ya no está autorizado."));
+                .set_alias_error(QString::from(crate::i18n::tr_noop(
+                    "The device is no longer authorized.",
+                )));
             return;
         }
         let Ok(directory) = peers_directory() else {
-            self.as_mut().set_alias_error(QString::from(
-                "No se pudo localizar el perfil de dispositivos.",
-            ));
+            self.as_mut()
+                .set_alias_error(QString::from(crate::i18n::tr_noop(
+                    "The device profile could not be located.",
+                )));
             return;
         };
         let value = alias.to_string();
@@ -315,9 +322,9 @@ impl qobject::PeersController {
                     },
                     Err(error) => {
                         let message = match error {
-                            kryptopass_peers::AliasError::InvalidName => "Usa hasta 64 caracteres y 256 bytes, sin controles ni saltos de línea.",
-                            kryptopass_peers::AliasError::UnknownDevice => "El dispositivo ya no está autorizado.",
-                            _ => "No se pudo guardar el nombre. La identidad y la confianza se conservan.",
+                            kryptopass_peers::AliasError::InvalidName => crate::i18n::tr_noop("Use up to 64 characters and 256 bytes, without control or line-break characters."),
+                            kryptopass_peers::AliasError::UnknownDevice => crate::i18n::tr_noop("The device is no longer authorized."),
+                            _ => crate::i18n::tr_noop("The name could not be saved. The identity and the trust are kept."),
                         };
                         object.as_mut().set_alias_error(QString::from(message));
                     }
@@ -361,15 +368,15 @@ impl qobject::PeersController {
             return;
         }
         if self.rust().sync_busy {
-            self.as_mut().set_status(QString::from(
-                "Espera a que termine la operación de la bóveda sintética antes de cambiar el perfil.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "Wait for the synthetic vault operation to finish before changing the profile.",
+            )));
             return;
         }
         if self.rust().busy {
-            self.as_mut().set_status(QString::from(
-                "Cancela la vinculación pendiente antes de borrar dispositivos.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "Cancel the pending pairing before deleting devices.",
+            )));
             return;
         }
         let Ok(directory) = peers_directory() else {
@@ -392,9 +399,9 @@ impl qobject::PeersController {
         self.as_mut().set_maintenance_busy(true);
         self.as_mut().set_busy(true);
         self.as_mut().set_status_code(QString::from("closing"));
-        self.as_mut().set_status(QString::from(
-            "Cerrando la sesión y limpiando el perfil de vinculación…",
-        ));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Closing the session and cleaning up the pairing profile…",
+        )));
         self.as_mut().set_bootstrap(QString::default());
         self.as_mut().set_sas(QString::default());
         self.as_mut().set_sas_emojis(QString::from("[]"));
@@ -457,16 +464,16 @@ impl qobject::PeersController {
                         object.as_mut().apply_devices_snapshot(&devices.snapshot());
                         object.as_mut().rust_mut().devices = Some(devices);
                         object.as_mut().set_status_code(QString::from("disconnected"));
-                        object.as_mut().set_status(QString::from("Dispositivo olvidado en este equipo. Para volver a vincularlo, compara un SAS nuevo."));
+                        object.as_mut().set_status(QString::from(crate::i18n::tr_noop("Device forgotten on this computer. To pair it again, compare a new SAS.")));
                     }
                     Ok(None) => {
                         object.as_mut().set_status_code(QString::from("idle"));
-                        object.as_mut().set_status(QString::from("Perfil de vinculación eliminado. Crea una invitación para empezar de cero. La bóveda y OpenPGP se conservan."));
+                        object.as_mut().set_status(QString::from(crate::i18n::tr_noop("Pairing profile deleted. Create an invitation to start from scratch. The vault and OpenPGP are kept.")));
                     }
                     Err(error) => {
                         tracing::warn!(reason = error_code(&error), "Pairing profile maintenance failed");
                         object.as_mut().set_status_code(QString::from("profile_error"));
-                        object.as_mut().set_status(QString::from("No se completó el borrado. No se creó otra identidad. Puedes reintentar el reinicio del perfil."));
+                        object.as_mut().set_status(QString::from(crate::i18n::tr_noop("The deletion was not completed. No other identity was created. You can retry the profile reset.")));
                     }
                 }
                 object.as_mut().start_resume_owner();
@@ -488,7 +495,7 @@ impl qobject::PeersController {
             .map(|device| {
                 let alias = self.rust().aliases.get(&device.identity.device_id).cloned().unwrap_or_default();
                 let id = device.identity.device_id.to_string();
-                let name = if alias.is_empty() { format!("Dispositivo {}", &id[..12]) } else { alias.clone() };
+                let name = if alias.is_empty() { crate::i18n::trf("Device %1", &[id[..12].to_owned()]) } else { alias.clone() };
                 let info = device.connection_info;
                 let route = match info.route {
                     kryptopass_devices::ConnectionRoute::Unknown => "unknown",
@@ -500,9 +507,9 @@ impl qobject::PeersController {
                     String::new()
                 } else {
                     match info.route {
-                        kryptopass_devices::ConnectionRoute::Unknown => "Comprobando…",
+                        kryptopass_devices::ConnectionRoute::Unknown => crate::i18n::tr_noop("Checking…"),
                         kryptopass_devices::ConnectionRoute::Local => "LAN",
-                        kryptopass_devices::ConnectionRoute::Direct => "Directo",
+                        kryptopass_devices::ConnectionRoute::Direct => crate::i18n::tr_noop("Direct"),
                         kryptopass_devices::ConnectionRoute::Turn => "TURN",
                     }.to_owned()
                 };

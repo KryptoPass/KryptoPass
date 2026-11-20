@@ -52,7 +52,7 @@ impl qobject::PeersController {
                 self.as_mut()
                     .set_status_code(QString::from("network_policy_blocked"));
                 self.as_mut().set_status(QString::from(
-                    "No se pudo leer la política de privacidad de red. Las conexiones de recuperación quedan bloqueadas hasta reparar la configuración.",
+                    crate::i18n::tr_noop("The network privacy policy could not be read. Recovery connections are blocked until the settings are repaired."),
                 ));
                 return;
             }
@@ -106,9 +106,9 @@ impl qobject::PeersController {
                 let label = match interface.kind {
                     InterfaceKind::Wifi => "Wi-Fi",
                     InterfaceKind::Ethernet => "Ethernet",
-                    InterfaceKind::Virtual => "VPN / virtual",
+                    InterfaceKind::Virtual => crate::i18n::tr_noop("VPN / virtual"),
                     InterfaceKind::Loopback => "Local",
-                    InterfaceKind::Other => "Red",
+                    InterfaceKind::Other => crate::i18n::tr_noop("Network"),
                 };
                 QString::from(format!(
                     "{label} · {} — {}",
@@ -136,9 +136,9 @@ impl qobject::PeersController {
             if kryptopass_lan::RelayRoute::new(origin.trim(), [1; 32]).is_err() {
                 self.as_mut()
                     .set_status_code(QString::from("network_error"));
-                self.as_mut().set_status(QString::from(
-                    "Introduce un servidor WSS válido, sin credenciales ni parámetros.",
-                ));
+                self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                    "Enter a valid WSS server, without credentials or parameters.",
+                )));
                 return;
             }
             self.as_mut().set_relay_origin(QString::from(origin.trim()));
@@ -164,9 +164,9 @@ impl qobject::PeersController {
         ) {
             self.as_mut()
                 .set_status_code(QString::from("network_policy_blocked"));
-            self.as_mut().set_status(QString::from(
-                "La red local no está disponible con la privacidad elegida.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "The local network is not available with the chosen privacy.",
+            )));
             return;
         }
         if usize::try_from(index)
@@ -184,7 +184,7 @@ impl qobject::PeersController {
                 self.as_mut()
                     .set_status_code(QString::from("network_policy_blocked"));
                 self.as_mut().set_status(QString::from(
-                    "No se pudo guardar la dirección LAN seleccionada. No se iniciará una conexión con una política sin guardar.",
+                    crate::i18n::tr_noop("The selected LAN address could not be saved. A connection will not start with an unsaved policy."),
                 ));
                 return;
             }
@@ -194,7 +194,9 @@ impl qobject::PeersController {
                 owner.refresh_network_policy();
             }
         } else {
-            self.as_mut().set_status(QString::from("No hay una dirección LAN seleccionada. Actualiza las interfaces o usa el modo emulador."));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "No LAN address is selected. Refresh the interfaces or use emulator mode.",
+            )));
         }
     }
 
@@ -231,9 +233,9 @@ impl qobject::PeersController {
             Err(()) => {
                 self.as_mut()
                     .set_status_code(QString::from("network_policy_blocked"));
-                self.as_mut().set_status(QString::from(
-                    "No se pudo localizar el archivo de política de red. No se aplicaron cambios.",
-                ));
+                self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                    "The network policy file could not be located. No changes were applied.",
+                )));
                 return;
             }
         };
@@ -248,9 +250,9 @@ impl qobject::PeersController {
         {
             self.as_mut()
                 .set_status_code(QString::from("network_policy_blocked"));
-            self.as_mut().set_status(QString::from(
-                "No se pudo guardar la política de red. No se aplicaron cambios.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "The network policy could not be saved. No changes were applied.",
+            )));
             return;
         }
 
@@ -271,7 +273,7 @@ impl qobject::PeersController {
             self.as_mut()
                 .set_status_code(QString::from("network_policy_changed"));
             self.as_mut().set_status(QString::from(
-                "La política de red cambió. Se está cerrando la operación y no se reutilizará su ruta anterior.",
+                crate::i18n::tr_noop("The network policy changed. The operation is being closed and its previous route will not be reused."),
             ));
         }
     }

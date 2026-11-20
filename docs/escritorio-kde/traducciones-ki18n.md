@@ -1,10 +1,10 @@
 # Traducciones con KI18n
 
-Estado al 17 de noviembre de 2026: todo el QML y el C++ nativo usan KI18n con
-la fuente en inglés, y `po/es/` tiene sus 1212 mensajes traducidos. Solo las
-cadenas que Rust manda a la interfaz siguen pasando por el catálogo Qt
-(`translate_ui`, `translate_plural`, `po/es.ts`). Este documento describe el
-flujo, el mismo que siguen las aplicaciones KDE.
+Estado al 20 de noviembre de 2026: QML, C++ nativo y Rust usan KI18n con la
+fuente en inglés, y `po/es/` tiene todos sus mensajes traducidos. El catálogo Qt
+(`po/es.ts`, `packaging/translations.py`, `translate_ui` con `QCoreApplication`)
+ya no existe. Este documento describe el flujo, el mismo que siguen las
+aplicaciones KDE.
 
 ## Cómo lo hace KDE
 
@@ -90,17 +90,23 @@ para `en_US` y convierte `LANGUAGE=en` en `en_US`. Con la fuente en español,
 un usuario con el sistema en `en_US` vería siempre español. Comprobado el 17
 de noviembre con KI18n 6.31; por eso la fuente pasa a inglés.
 
-## Fases pendientes
+## Textos desde Rust
 
-Cada cadena se escribe en inglés y su texto en español actual entra en `po/es/`
-en el mismo cambio, así la interfaz en español nunca queda a medias. QML y C++
-quedaron hechos el 17 de noviembre.
+El backend (`kryptopass-core/kp-backend`) no depende de KDE: devuelve textos en
+inglés y la UI instala al arrancar su traductor (`i18n::set_translator`), que
+llama a `KLocalizedString` con el msgid en tiempo de ejecución.
 
-1. **Rust.** Marcar cada cadena donde nace con `i18n`/`i18nc`. Unas 900 del
-   catálogo actual solo las encuentra la regex de `packaging/translations.py`
-   (errores que se traducen lejos de donde se escriben).
-2. **Retirar el sistema Qt.** Borrar `po/es.ts`, `packaging/translations.py`,
-   las recetas `translations*` y el `QTranslator` de `initialize_desktop`.
+- `tr("…")`, `trf("… %1", &[args])`, `trp(singular, plural, n)` y `tr_noop("…")`
+  son los nombres que `Messages.sh` extrae, en `kp-desktop` y en `kp-backend`
+  (`crate::i18n::…`). `tr_noop` marca un texto que se traduce después, donde se
+  muestra (errores, etiquetas en tablas).
+- Los argumentos van como `%1` y se sustituyen después de traducir; nunca con
+  `format!` sobre el msgid, porque entonces el catálogo no lo encuentra.
+- xgettext no ve llamadas dentro de macros invocadas con ruta (`anyhow::anyhow!`);
+  guarda el resultado en una variable antes.
+- Los textos de registro (`tracing::*`, `.context(…)`) se quedan en inglés sin
+  marcar: no se muestran a las personas.
+- Sin contexto (`@…`) por ahora; las cadenas de backend aún no lo llevan.
 
 Fuera de alcance por ahora: las traducciones del `.desktop` y del metainfo,
 que KDE inyecta con scripty directamente en esos archivos (su fuente ya es

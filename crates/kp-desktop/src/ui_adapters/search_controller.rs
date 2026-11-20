@@ -210,7 +210,7 @@ fn catalog(
                     folders
                         .get(&record.folder)
                         .cloned()
-                        .unwrap_or_else(|| crate::i18n::text("Sin carpeta")),
+                        .unwrap_or_else(|| crate::i18n::tr("No folder")),
                     kinds
                         .get(&record.kind)
                         .cloned()

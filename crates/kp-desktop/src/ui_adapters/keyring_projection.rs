@@ -14,7 +14,7 @@ pub(super) fn key_summaries(keys: Vec<KeyInfo>) -> (QStringList, i32) {
                 .user_ids
                 .first()
                 .map(|user_id| user_id.id.as_str())
-                .unwrap_or("Sin identidad");
+                .unwrap_or(crate::i18n::tr_noop("No identity"));
 
             QString::from(format!("{identity}\n{}", key.fingerprint))
         })
@@ -42,7 +42,7 @@ fn key_record(key: &KeyInfo) -> Value {
 
     json!({
         "id": key.fingerprint.as_str(),
-        "title": identity.and_then(|uid| uid.name.as_deref()).filter(|name| !name.is_empty()).map(str::to_owned).unwrap_or_else(|| crate::i18n::text(identity_title(identity))),
+        "title": identity.and_then(|uid| uid.name.as_deref()).filter(|name| !name.is_empty()).map(str::to_owned).unwrap_or_else(|| crate::i18n::tr(identity_title(identity))),
         "email": identity.and_then(|uid| uid.email.as_deref()).unwrap_or(""),
         "hasSecret": key.has_secret,
         "ownerTrust": owner_trust_code(key.owner_trust),
@@ -52,9 +52,9 @@ fn key_record(key: &KeyInfo) -> Value {
         "canEncrypt": can_encrypt,
         "canCertify": can_certify,
         "capabilities": capabilities(can_encrypt, can_sign, can_certify, can_authenticate),
-        "validity": crate::i18n::text(validity_label),
+        "validity": crate::i18n::tr(validity_label),
         "validityCode": validity_code,
-        "status": crate::i18n::text(status.label),
+        "status": crate::i18n::tr(status.label),
         "statusCode": status.code,
         "identities": identity_records(key),
         "subkeys": subkey_records(key),
@@ -97,22 +97,34 @@ fn identity_title(identity: Option<&UserIdInfo>) -> &str {
     identity
         .and_then(|user_id| user_id.name.as_deref())
         .filter(|name| !name.is_empty())
-        .unwrap_or("Sin nombre")
+        .unwrap_or(crate::i18n::tr_noop("No name"))
 }
 
 fn validity_presentation(identity: Option<&UserIdInfo>) -> (&'static str, &'static str) {
     match identity {
-        Some(user_id) if user_id.revoked => ("revoked", "Identidad revocada"),
-        Some(user_id) if user_id.invalid => ("invalid", "Identidad inválida"),
+        Some(user_id) if user_id.revoked => ("revoked", crate::i18n::tr_noop("Revoked identity")),
+        Some(user_id) if user_id.invalid => ("invalid", crate::i18n::tr_noop("Invalid identity")),
         Some(user_id) => match user_id.validity {
-            Validity::Unknown => ("unknown", "Sin verificar"),
-            Validity::Undefined => ("undefined", "Sin verificar"),
-            Validity::Never => ("never", "No válida según GnuPG"),
-            Validity::Marginal => ("marginal", "Validez marginal según GnuPG"),
-            Validity::Full => ("full", "Validez plena según GnuPG"),
-            Validity::Ultimate => ("ultimate", "Validez absoluta según GnuPG"),
+            Validity::Unknown => ("unknown", crate::i18n::tr_noop("Not verified")),
+            Validity::Undefined => ("undefined", crate::i18n::tr_noop("Not verified")),
+            Validity::Never => (
+                "never",
+                crate::i18n::tr_noop("Not valid according to GnuPG"),
+            ),
+            Validity::Marginal => (
+                "marginal",
+                crate::i18n::tr_noop("Marginal validity according to GnuPG"),
+            ),
+            Validity::Full => (
+                "full",
+                crate::i18n::tr_noop("Full validity according to GnuPG"),
+            ),
+            Validity::Ultimate => (
+                "ultimate",
+                crate::i18n::tr_noop("Ultimate validity according to GnuPG"),
+            ),
         },
-        None => ("unknown", "Sin verificar"),
+        None => ("unknown", crate::i18n::tr_noop("Not verified")),
     }
 }
 
@@ -147,21 +159,21 @@ fn subkey_record(subkey: &SubkeyInfo, is_primary: bool) -> Value {
             subkey.can_certify,
             subkey.can_authenticate,
         ),
-        "status": crate::i18n::text(status.label),
+        "status": crate::i18n::tr(status.label),
         "statusCode": status.code,
     })
 }
 
 fn capabilities(encrypt: bool, sign: bool, certify: bool, authenticate: bool) -> Vec<String> {
     [
-        (encrypt, "Cifrar"),
-        (sign, "Firmar"),
-        (certify, "Certificar"),
-        (authenticate, "Autenticar"),
+        (encrypt, crate::i18n::tr_noop("Encrypt")),
+        (sign, crate::i18n::tr_noop("Sign")),
+        (certify, crate::i18n::tr_noop("Certify")),
+        (authenticate, crate::i18n::tr_noop("Authenticate")),
     ]
     .into_iter()
     .filter(|(enabled, _)| *enabled)
-    .map(|(_, name)| crate::i18n::text(name))
+    .map(|(_, name)| crate::i18n::tr(name))
     .collect()
 }
 
@@ -179,27 +191,27 @@ fn status_presentation(
 ) -> StatusPresentation {
     if revoked {
         StatusPresentation {
-            label: "Revocada",
+            label: crate::i18n::tr_noop("Revoked"),
             code: "revoked",
         }
     } else if expired {
         StatusPresentation {
-            label: "Caducada",
+            label: crate::i18n::tr_noop("Expired"),
             code: "expired",
         }
     } else if disabled {
         StatusPresentation {
-            label: "Deshabilitada",
+            label: crate::i18n::tr_noop("Disabled"),
             code: "disabled",
         }
     } else if invalid {
         StatusPresentation {
-            label: "Inválida",
+            label: crate::i18n::tr_noop("Invalid"),
             code: "invalid",
         }
     } else {
         StatusPresentation {
-            label: "Vigente",
+            label: crate::i18n::tr_noop("Valid"),
             code: "valid",
         }
     }
@@ -225,7 +237,7 @@ fn identity_record(identity: &UserIdInfo, primary: bool) -> Value {
         "primary": primary,
         "revoked": identity.revoked,
         "invalid": identity.invalid,
-        "validity": crate::i18n::text(label),
+        "validity": crate::i18n::tr(label),
         "validityCode": code,
     })
 }
@@ -258,19 +270,19 @@ fn signature_record(
         "identity": identity.id,
         "signer": signature.signer,
         "keyId": signature.signer_key_id,
-        "status": crate::i18n::text(signature_status_label(signature)),
+        "status": crate::i18n::tr(signature_status_label(signature)),
     }))
 }
 
 fn signature_status_label(signature: &CertificationInfo) -> &'static str {
     if signature.revocation {
-        "Revocación registrada"
+        crate::i18n::tr_noop("Revocation recorded")
     } else if signature.expired {
-        "Caducada"
+        crate::i18n::tr_noop("Expired")
     } else if signature.invalid {
-        "Inválida"
+        crate::i18n::tr_noop("Invalid")
     } else {
-        "Certificación registrada"
+        crate::i18n::tr_noop("Certification recorded")
     }
 }
 

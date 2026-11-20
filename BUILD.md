@@ -83,7 +83,7 @@ regenerar los archivos no cambia su contenido cada día.
 
 Se necesitan también los headers de KDE Contacts, Akonadi Contact Widgets,
 KCoreAddons, KXmlGui, KConfig, KIdleTime y KIO (KIOGui), además del módulo Qt DBus.
-Las comprobaciones de distribución usan Qt Linguist (`lupdate`, `lrelease`),
+Las comprobaciones de distribución usan
 Python 3.11+, `reuse`, `appstreamcli` y `desktop-file-validate`; las ejecuta
 `just verify`. El workflow de release solo instala las dependencias necesarias
 para compilar y empaquetar.
@@ -138,14 +138,14 @@ configura CMake y valida lo que instalaría sin compilar; forma parte de
 
 ## Traducciones
 
-La lengua fuente actual es español. `just translations` extrae los textos
-QML, los diálogos nativos y los mensajes de presentación Rust a `po/es.ts`
-y actualiza los demás catálogos existentes sin borrar sus traducciones.
-`just translations-check` detecta catálogos obsoletos y forma parte de verify.
-Qt Linguist permite crear otros catálogos `po/<locale>.ts`; el build los
-compila con `lrelease` y los incorpora al binario como recursos. Qt selecciona
-el idioma del sistema y utiliza español cuando aún no existe ese catálogo.
-Los controles Qt cargan además las traducciones del sistema.
+La lengua fuente es el inglés y las traducciones usan KI18n (gettext), como las
+aplicaciones de KDE. `just i18n-extract` regenera `po/org.kryptopass.desktop.pot`
+con `Messages.sh` (QML, C++ nativo y Rust de este repo y de `kryptopass-core`) y
+fusiona `po/<idioma>/` sin perder traducciones; `just i18n-check` detecta
+plantillas obsoletas y catálogos inválidos y forma parte de verify. Un idioma
+nuevo se crea con `just i18n-new-language <idioma>`. Los controles Qt cargan
+además las traducciones del sistema. Detalles en
+`docs/escritorio-kde/traducciones-ki18n.md`.
 
 `just screenshot` genera `packaging/screenshots/vault.png` con una bóveda
 vacía y un perfil temporal. La URL de AppStream apunta a ese archivo en la

@@ -412,18 +412,21 @@ impl DraftContent {
                 if let Some(section) = section_for_custom(template) {
                     for document in std::mem::take(&mut draft.documents) {
                         for (label, value) in [
-                            ("Tipo de documento", &document.document_type),
-                            ("Número de documento", &document.number),
-                            ("País", &document.country),
-                            ("Vencimiento", &document.expires),
+                            (
+                                crate::i18n::tr_noop("Document type"),
+                                &document.document_type,
+                            ),
+                            (crate::i18n::tr_noop("Document number"), &document.number),
+                            (crate::i18n::tr_noop("Country"), &document.country),
+                            (crate::i18n::tr_noop("Expiration"), &document.expires),
                         ] {
                             if !value.is_empty() {
                                 let mut custom = CustomValue::new(
                                     section.clone(),
-                                    crate::i18n::text(label).into(),
+                                    crate::i18n::tr(label).into(),
                                     value.clone(),
                                 );
-                                custom.concealed = label == "Número de documento";
+                                custom.concealed = label == crate::i18n::tr_noop("Document number");
                                 content.add_custom(custom);
                             }
                         }

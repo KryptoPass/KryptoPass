@@ -75,7 +75,7 @@ fn describe(issues: &ItemIssues, template: &str) -> String {
         }
     }
     if sentences.is_empty() {
-        return "El elemento no es válido.".to_owned();
+        return crate::i18n::tr_noop("The item is not valid.").to_owned();
     }
     sentences.join(" ")
 }
@@ -89,39 +89,61 @@ fn sentence(
     // «Sitio web» read the same way.
     let subject = match &issue.target {
         IssueTarget::Field(id) => field_label(id.as_str())
-            .map(|label| format!("«{label}»"))
-            .unwrap_or_else(|| "un campo".to_owned()),
-        IssueTarget::Custom(index) => format!("el campo añadido n.º {}", index + 1),
-        IssueTarget::Value(index) => format!("el valor n.º {}", index + 1),
+            .map(|label| crate::i18n::trf("“%1”", &[label]))
+            .unwrap_or_else(|| crate::i18n::tr("a field")),
+        IssueTarget::Custom(index) => {
+            crate::i18n::trf("the added field #%1", &[(index + 1).to_string()])
+        }
+        IssueTarget::Value(index) => crate::i18n::trf("the value #%1", &[(index + 1).to_string()]),
         IssueTarget::Section(id) => section_title(id.as_str())
-            .map(|title| format!("la sección «{title}»"))
-            .unwrap_or_else(|| "una sección".to_owned()),
-        IssueTarget::Item => "el elemento".to_owned(),
+            .map(|title| crate::i18n::trf("the section “%1”", &[title]))
+            .unwrap_or_else(|| crate::i18n::tr("a section")),
+        IssueTarget::Item => crate::i18n::tr("the item"),
     };
     let limit = issue
         .limit
         .map(|limit| limit.to_string())
         .unwrap_or_default();
+    let arguments = [subject, limit];
     let text = match issue.code.as_str() {
-        "required" => format!("Falta {subject}."),
-        "too-long" => format!("{subject} supera el máximo de {limit} bytes."),
-        "too-many" => format!("{subject} admite como máximo {limit} valores."),
-        "invalid-url" => format!("{subject} no contiene una dirección web válida."),
-        "invalid-email" => format!("{subject} no contiene un correo válido."),
-        "invalid-phone" => format!("{subject} no contiene un teléfono válido."),
-        "invalid-number" => format!("{subject} no contiene un número válido."),
-        "invalid-date" => format!("{subject} no contiene una fecha válida; usa AAAA-MM-DD."),
-        "invalid-totp" => {
-            format!("{subject} no contiene una semilla TOTP válida (Base32 u otpauth://).")
+        "required" => crate::i18n::trf("%1 is missing.", &arguments),
+        "too-long" => crate::i18n::trf("%1 exceeds the maximum of %2 bytes.", &arguments),
+        "too-many" => crate::i18n::trf("%1 accepts at most %2 values.", &arguments),
+        "invalid-url" => crate::i18n::trf("%1 does not contain a valid web address.", &arguments),
+        "invalid-email" => {
+            crate::i18n::trf("%1 does not contain a valid email address.", &arguments)
         }
-        "invalid-card-number" => format!("{subject} no contiene un número de tarjeta válido."),
-        "invalid-digits" => format!("{subject} no tiene la cantidad de dígitos esperada."),
-        "invalid-choice" => format!("{subject} tiene una opción que no existe."),
-        "invalid-characters" => format!("{subject} contiene caracteres no permitidos."),
-        "invalid-ssh-key" => format!("{subject} no contiene una clave SSH válida."),
-        "invalid-wifi-password" => format!("{subject} no contiene una contraseña Wi-Fi válida."),
-        "duplicate-field" | "duplicate-custom-id" => format!("{subject} aparece más de una vez."),
-        _ => format!("{subject} no tiene un valor válido."),
+        "invalid-phone" => {
+            crate::i18n::trf("%1 does not contain a valid phone number.", &arguments)
+        }
+        "invalid-number" => crate::i18n::trf("%1 does not contain a valid number.", &arguments),
+        "invalid-date" => crate::i18n::trf(
+            "%1 does not contain a valid date; use YYYY-MM-DD.",
+            &arguments,
+        ),
+        "invalid-totp" => crate::i18n::trf(
+            "%1 does not contain a valid TOTP seed (Base32 or otpauth://).",
+            &arguments,
+        ),
+        "invalid-card-number" => {
+            crate::i18n::trf("%1 does not contain a valid card number.", &arguments)
+        }
+        "invalid-digits" => crate::i18n::trf(
+            "%1 does not have the expected number of digits.",
+            &arguments,
+        ),
+        "invalid-choice" => crate::i18n::trf("%1 has an option that does not exist.", &arguments),
+        "invalid-characters" => {
+            crate::i18n::trf("%1 contains characters that are not allowed.", &arguments)
+        }
+        "invalid-ssh-key" => crate::i18n::trf("%1 does not contain a valid SSH key.", &arguments),
+        "invalid-wifi-password" => {
+            crate::i18n::trf("%1 does not contain a valid Wi-Fi password.", &arguments)
+        }
+        "duplicate-field" | "duplicate-custom-id" => {
+            crate::i18n::trf("%1 appears more than once.", &arguments)
+        }
+        _ => crate::i18n::trf("%1 does not have a valid value.", &arguments),
     };
     capitalized(text)
 }

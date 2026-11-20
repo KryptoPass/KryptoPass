@@ -15,7 +15,8 @@ impl qobject::SecretsController {
         };
         self.as_mut().clear_error();
         self.as_mut().set_busy(true);
-        self.as_mut().set_status(QString::from("Cargando bóveda…"));
+        self.as_mut()
+            .set_status(QString::from(crate::i18n::tr_noop("Loading vault…")));
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
@@ -44,14 +45,18 @@ impl qobject::SecretsController {
                         controller.as_mut().set_load_error(QString::default());
                         controller
                             .as_mut()
-                            .set_status(QString::from("Bóveda cargada"));
+                            .set_status(QString::from(crate::i18n::tr_noop("Vault loaded")));
                     }
                     Err(error) => {
                         tracing::warn!(error = %format!("{error:#}"), "the vault did not load");
                         controller
                             .as_mut()
-                            .set_load_error(QString::from("No se pudo cargar la bóveda."));
-                        controller.as_mut().fail("No se pudo cargar la bóveda.");
+                            .set_load_error(QString::from(crate::i18n::tr_noop(
+                                "The vault could not be loaded.",
+                            )));
+                        controller
+                            .as_mut()
+                            .fail(crate::i18n::tr_noop("The vault could not be loaded."));
                     }
                 }
             },
@@ -60,20 +65,21 @@ impl qobject::SecretsController {
 
     pub fn set_active_vault(mut self: Pin<&mut Self>, path: &QUrl) {
         if *self.busy() || *self.saving() {
-            self.as_mut()
-                .fail("Espera a que termine la operación actual antes de cambiar de bóveda.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Wait for the current operation to finish before switching vaults.",
+            ));
             return;
         }
 
         let Some(local_path) = path.to_local_file() else {
             self.as_mut()
-                .fail("Selecciona un archivo local de bóveda existente.");
+                .fail(crate::i18n::tr_noop("Select an existing local vault file."));
             return;
         };
         let path = std::path::PathBuf::from(local_path.to_string());
         if !path.is_absolute() {
             self.as_mut()
-                .fail("Selecciona un archivo local de bóveda existente.");
+                .fail(crate::i18n::tr_noop("Select an existing local vault file."));
             return;
         }
 
@@ -89,8 +95,9 @@ impl qobject::SecretsController {
         self.as_mut().vault_locked();
         self.as_mut().clear_error();
         self.as_mut().set_busy(true);
-        self.as_mut()
-            .set_status(QString::from("Validando la bóveda restaurada…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Validating the restored vault…",
+        )));
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
@@ -105,16 +112,20 @@ impl qobject::SecretsController {
                         controller.as_mut().apply_primary_key(primary);
                         controller.as_mut().publish_snapshot(snapshot);
                         let status = if durable {
-                            "Bóveda restaurada lista. Desbloquéala para acceder a sus secretos."
+                            crate::i18n::tr_noop(
+                                "Restored vault ready. Unlock it to access its secrets.",
+                            )
                         } else {
-                            "Bóveda seleccionada, pero no se pudo confirmar la persistencia de la preferencia."
+                            crate::i18n::tr_noop(
+                                "Vault selected, but the preference could not be confirmed as saved.",
+                            )
                         };
                         controller.as_mut().set_status(QString::from(status));
                         controller.as_mut().vault_activated();
                     }
-                    Err(_) => controller
-                        .as_mut()
-                        .fail("No se pudo abrir la bóveda restaurada. La bóveda activa no cambió."),
+                    Err(_) => controller.as_mut().fail(crate::i18n::tr_noop(
+                        "The restored vault could not be opened. The active vault did not change.",
+                    )),
                 }
             },
         );
@@ -122,8 +133,9 @@ impl qobject::SecretsController {
 
     pub fn lock_vault(mut self: Pin<&mut Self>) {
         if *self.busy() || *self.saving() {
-            self.as_mut()
-                .fail("Espera a que termine el guardado antes de bloquear la bóveda.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Wait for saving to finish before locking the vault.",
+            ));
             return;
         }
         self.as_mut().cancel_unlock();
@@ -131,19 +143,22 @@ impl qobject::SecretsController {
         self.as_mut().clear_error();
         self.as_mut().set_locked(true);
         self.as_mut().forget_primary_passphrase();
-        self.as_mut().set_status(QString::from("Bóveda bloqueada"));
+        self.as_mut()
+            .set_status(QString::from(crate::i18n::tr_noop("Vault locked")));
         self.as_mut().vault_locked();
     }
 
     pub fn unlock_vault(mut self: Pin<&mut Self>) {
         if self.as_ref().rust().session_blocked {
-            self.as_mut()
-                .fail("Desbloquea la sesión del escritorio antes de acceder a la bóveda.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Unlock the desktop session before accessing the vault.",
+            ));
             return;
         }
         if *self.busy() || *self.saving() {
-            self.as_mut()
-                .fail("Espera a que termine la operación antes de acceder a la bóveda.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Wait for the operation to finish before accessing the vault.",
+            ));
             return;
         }
         if !*self.locked() || *self.unlocking() {
@@ -156,8 +171,9 @@ impl qobject::SecretsController {
             state.unlock_operation
         };
         self.as_mut().set_unlocking(true);
-        self.as_mut()
-            .set_status(QString::from("Comprobando tu clave OpenPGP…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Checking your OpenPGP key…",
+        )));
         let primary = self
             .as_ref()
             .rust()
@@ -180,15 +196,15 @@ impl qobject::SecretsController {
                     Ok(()) => {
                         controller.as_mut().set_locked(false);
                         controller.as_mut().set_status(QString::from(
-                            "Bóveda disponible. El contenido se abrirá al seleccionarlo.",
+                            crate::i18n::tr_noop("Vault available. Its content opens when you select it."),
                         ));
                     }
                     Err(error) if error.is::<NoUnlockKey>() => controller.as_mut().fail(
-                        "No hay en este equipo una clave privada de esta bóveda. Importa tu clave para desbloquearla.",
+                        crate::i18n::tr_noop("This computer has no private key for this vault. Import your key to unlock it."),
                     ),
                     Err(_) => controller
                         .as_mut()
-                        .fail("No se pudo verificar tu clave. La bóveda sigue bloqueada."),
+                        .fail(crate::i18n::tr_noop("Your key could not be verified. The vault is still locked.")),
                 }
             },
         );
@@ -208,8 +224,9 @@ impl qobject::SecretsController {
             version: SETUP_VERSION,
         };
         if app_paths::save_setup_state(crate::app_info::APP.desktop_file_id, &state).is_err() {
-            self.as_mut()
-                .fail("No se pudo guardar la configuración inicial.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The initial settings could not be saved.",
+            ));
             return;
         }
         self.apply_setup_state(true);
@@ -226,8 +243,9 @@ impl qobject::SecretsController {
         };
         key.forget_on_lock = enabled;
         if write_primary_key(&key).is_err() {
-            self.as_mut()
-                .fail("No se pudo guardar la preferencia de la clave principal.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The primary key preference could not be saved.",
+            ));
             return;
         }
         self.apply_primary_key(Some(key));
@@ -239,8 +257,9 @@ impl qobject::SecretsController {
         forget_on_lock: bool,
     ) -> bool {
         let Ok(fingerprint) = KeyFingerprint::parse(&primary_key.to_string()) else {
-            self.as_mut()
-                .fail("La clave elegida para la bóveda no es válida.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The key chosen for the vault is not valid.",
+            ));
             return false;
         };
         let key = PrimaryKey {
@@ -248,8 +267,9 @@ impl qobject::SecretsController {
             forget_on_lock,
         };
         if write_primary_key(&key).is_err() {
-            self.as_mut()
-                .fail("No se pudo guardar la clave principal de la bóveda.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The vault's primary key could not be saved.",
+            ));
             return false;
         }
         self.apply_primary_key(Some(key));
@@ -330,7 +350,8 @@ impl qobject::SecretsController {
         self.as_mut().clear_sensitive_state_contents();
         unsafe { super::super::native_ffi::ffi::clear_owned() };
         self.as_mut().clear_error();
-        self.as_mut().set_status(QString::from("Bóveda bloqueada"));
+        self.as_mut()
+            .set_status(QString::from(crate::i18n::tr_noop("Vault locked")));
         self.as_mut().vault_locked();
     }
 

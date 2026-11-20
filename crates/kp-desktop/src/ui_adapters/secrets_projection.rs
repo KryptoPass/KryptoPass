@@ -173,7 +173,7 @@ pub(super) fn store_snapshot(
                 "title": state.title,
                 "relatedEntryId": companions.get(&item.id).map_or_else(String::new, |id| id.0.to_string()),
                 "kind": kind_of(state.template.as_str()),
-                "format": "Texto",
+                "format": crate::i18n::tr_noop("Text"),
                 "iconSource": crate::infrastructure::entry_icons::source_for(display_icon),
                 "icon": state.icon,
                 "revision": item.revision,
@@ -204,16 +204,16 @@ pub(super) fn store_snapshot(
         json!({
             "id": item.id.0.to_string(),
             "folder": "",
-            "title": crate::i18n::text(if ours {
-                "Pendiente de abrir"
+            "title": crate::i18n::tr(if ours {
+                crate::i18n::tr_noop("Pending to open")
             } else {
-                "No legible en este dispositivo"
+                crate::i18n::tr_noop("Not readable on this device")
             }),
             // "foreign": no recipient key is here. "pending": one is, but it is not open yet.
             "unreadableReason": if ours { "pending" } else { "foreign" },
             "relatedEntryId": "",
             "kind": "custom",
-            "format": "Texto",
+            "format": crate::i18n::tr_noop("Text"),
             "iconSource": "",
             "icon": null,
             "revision": 0,

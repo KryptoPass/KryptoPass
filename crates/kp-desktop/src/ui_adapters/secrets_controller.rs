@@ -391,7 +391,7 @@ impl Default for SecretsControllerRust {
             editor_error_field: QString::default(),
             load_error: QString::default(),
             operation_error_active: false,
-            status: QString::from(crate::i18n::text("Bóveda no cargada")),
+            status: QString::from(crate::i18n::tr("Vault not loaded")),
             busy: false,
             detail_busy: false,
             editor_busy: false,
@@ -491,14 +491,15 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_secret_id(&id.to_string()) else {
-            self.as_mut().fail("El elemento seleccionado no es válido.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected item is not valid."));
             return;
         };
 
         self.as_mut().start_mutation(
-            "Actualizando elemento…",
+            crate::i18n::tr_noop("Updating item…"),
             false,
-            "No se pudo actualizar el elemento.",
+            crate::i18n::tr_noop("The item could not be updated."),
             move || {
                 let mut session = open_session()?;
                 let before_revision = item_meta(&session, id)?.revision;
@@ -530,8 +531,9 @@ impl qobject::SecretsController {
         Work: FnOnce() -> anyhow::Result<MutationResult> + Send + 'static,
     {
         if *self.locked() {
-            self.as_mut()
-                .fail("Desbloquea la bóveda antes de modificarla.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Unlock the vault before modifying it.",
+            ));
             return;
         }
         if *self.busy() {
@@ -568,15 +570,19 @@ impl qobject::SecretsController {
                             controller.as_mut().publish_snapshot(snapshot);
                             controller
                                 .as_mut()
-                                .set_status(QString::from("Cambios guardados"));
+                                .set_status(QString::from(crate::i18n::tr_noop("Changes saved")));
                         }
                         Err(()) => {
                             controller.as_mut().set_operation_error(QString::from(
-                                "Cambio guardado; no se pudo actualizar la lista. Vuelve a cargarla.",
+                                crate::i18n::tr_noop(
+                                    "Change saved; the list could not be updated. Reload it.",
+                                ),
                             ));
-                            controller.as_mut().set_status(QString::from(
-                                "Cambio guardado; no se pudo actualizar la lista.",
-                            ));
+                            controller
+                                .as_mut()
+                                .set_status(QString::from(crate::i18n::tr_noop(
+                                    "Change saved; the list could not be updated.",
+                                )));
                         }
                     }
                     match result.signal {
@@ -616,18 +622,20 @@ impl qobject::SecretsController {
                     }
                     let vault_error = error.downcast_ref::<VaultError>();
                     let message = match vault_error {
-                        Some(VaultError::Link(SecretLinkError::Occupied)) => {
-                            "El elemento elegido ya tiene un vínculo. Elige otro o quita su vínculo primero."
-                        }
+                        Some(VaultError::Link(SecretLinkError::Occupied)) => crate::i18n::tr_noop(
+                            "The chosen item already has a link. Choose another one or remove its link first.",
+                        ),
                         Some(VaultError::Link(SecretLinkError::InvalidTarget)) => {
-                            "El elemento vinculado ya no está disponible. Elige otro o selecciona Sin vínculo."
+                            crate::i18n::tr_noop(
+                                "The linked item is no longer available. Choose another one or select No link.",
+                            )
                         }
                         Some(VaultError::Invalid(_)) => {
-                            "El elemento no es válido. Revisa sus campos."
+                            crate::i18n::tr_noop("The item is not valid. Check its fields.")
                         }
-                        Some(VaultError::StaleRevision) => {
-                            "Este elemento cambió mientras lo editabas. Ábrelo de nuevo para no perder esos cambios."
-                        }
+                        Some(VaultError::StaleRevision) => crate::i18n::tr_noop(
+                            "This item changed while you were editing it. Open it again so you do not lose those changes.",
+                        ),
                         _ => failure_message,
                     };
                     controller.as_mut().fail(message);

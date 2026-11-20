@@ -117,7 +117,7 @@ impl Default for ShellControllerRust {
         Self {
             app_version: QString::from(crate::app_info::APP.version),
             app_name: QString::from(crate::app_info::APP.display_name),
-            app_description: QString::from(crate::i18n::text(crate::app_info::APP.description)),
+            app_description: QString::from(crate::i18n::tr(crate::app_info::APP.description)),
             app_license: QString::from(crate::app_info::APP.license),
             app_authors: QString::from(crate::app_info::APP.authors),
             app_copyright: QString::from(crate::app_info::APP.copyright),

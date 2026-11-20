@@ -97,9 +97,10 @@ impl qobject::ContactsController {
     pub fn open_contacts(mut self: Pin<&mut Self>) {
         let opened = unsafe { native_ffi::open_contacts() };
         if !opened {
-            self.as_mut().set_error_message(QString::from(
-                "No se pudo abrir KDE Contacts. Comprueba que KAddressBook está instalado.",
-            ));
+            self.as_mut()
+                .set_error_message(QString::from(crate::i18n::tr_noop(
+                    "KDE Contacts could not be opened. Check that KAddressBook is installed.",
+                )));
         }
     }
 
@@ -113,7 +114,9 @@ impl qobject::ContactsController {
     pub fn edit_contact(mut self: Pin<&mut Self>, uid: &QString) {
         if uid.is_empty() {
             self.as_mut()
-                .set_error_message(QString::from("El contacto seleccionado no es válido."));
+                .set_error_message(QString::from(crate::i18n::tr_noop(
+                    "The selected contact is not valid.",
+                )));
             return;
         }
         self.as_mut().begin_operation();
@@ -122,9 +125,10 @@ impl qobject::ContactsController {
 
     pub fn choose_contact_for_key(mut self: Pin<&mut Self>, fingerprint: &QString) {
         if !is_full_fingerprint(&String::from(fingerprint)) {
-            self.as_mut().set_error_message(QString::from(
-                "Solo se puede vincular una huella OpenPGP completa.",
-            ));
+            self.as_mut()
+                .set_error_message(QString::from(crate::i18n::tr_noop(
+                    "Only a full OpenPGP fingerprint can be linked.",
+                )));
             return;
         }
         self.as_mut().begin_operation();
@@ -137,9 +141,10 @@ impl qobject::ContactsController {
         let fingerprints: Vec<String> = match serde_json::from_str(&fingerprints_json) {
             Ok(fingerprints) => fingerprints,
             Err(_) => {
-                self.as_mut().set_error_message(QString::from(
-                    "No se pudo leer la lista de huellas disponibles.",
-                ));
+                self.as_mut()
+                    .set_error_message(QString::from(crate::i18n::tr_noop(
+                        "The list of available fingerprints could not be read.",
+                    )));
                 return;
             }
         };
@@ -185,9 +190,10 @@ impl qobject::ContactsController {
             }
         }
         if candidates.is_empty() {
-            self.as_mut().set_error_message(QString::from(
-                "Actualiza KDE Contacts. No hay contactos vinculados a las claves válidas disponibles.",
-            ));
+            self.as_mut()
+                .set_error_message(QString::from(crate::i18n::tr_noop(
+                    "Refresh KDE Contacts. No contacts are linked to the valid keys available.",
+                )));
             return;
         }
         self.as_mut().set_error_message(QString::default());

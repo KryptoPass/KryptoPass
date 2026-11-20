@@ -144,8 +144,8 @@ impl Default for KeyringControllerRust {
             Ok(catalog) => (catalog, String::new()),
             Err(_) => (
                 "{}".into(),
-                crate::i18n::text(
-                    "No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.",
+                crate::i18n::tr(
+                    "The organization of your identities could not be read. The file will not be overwritten.",
                 ),
             ),
         };
@@ -157,7 +157,7 @@ impl Default for KeyringControllerRust {
             catalog_error: QString::from(catalog_error),
             metadata_search: kryptopass_core::search::MetadataSearch::default(),
             online_settings: QString::from(serde_json::to_string(&settings).unwrap_or_default()),
-            status: QString::from(crate::i18n::text("Identidades GPG no cargadas")),
+            status: QString::from(crate::i18n::tr("GPG identities not loaded")),
             busy: false,
             operation_busy: false,
             key_summaries: QStringList::default(),
@@ -190,7 +190,8 @@ impl qobject::KeyringController {
                 match result {
                     Ok(public_key) => controller.ssh_public_key_ready(&QString::from(public_key)),
                     Err(_) => controller.fail_operation(
-                        "No se pudo exportar la clave pública SSH seleccionada.".into(),
+                        crate::i18n::tr_noop("The selected SSH public key could not be exported.")
+                            .into(),
                     ),
                 }
             },
@@ -212,7 +213,8 @@ impl qobject::KeyringController {
             .is_ok_and(|settings| settings.enabled && settings.keyservers.contains(&server));
         if !allowed {
             self.fail_operation(
-                "Activa los servicios online y selecciona un servidor configurado.".into(),
+                crate::i18n::tr_noop("Enable online services and select a configured server.")
+                    .into(),
             );
             return;
         }
@@ -274,8 +276,8 @@ impl qobject::KeyringController {
                 self.as_mut().rust_mut().catalog_error = QString::default();
             }
             Err(_) => {
-                self.as_mut().rust_mut().catalog_error = QString::from(crate::i18n::text(
-                    "No se pudo leer la organización de tus identidades. No se sobrescribirá el archivo.",
+                self.as_mut().rust_mut().catalog_error = QString::from(crate::i18n::tr(
+                    "The organization of your identities could not be read. The file will not be overwritten.",
                 ))
             }
         }
@@ -290,7 +292,9 @@ impl qobject::KeyringController {
 
     pub fn save_online_settings(mut self: Pin<&mut Self>, json: &QString) -> bool {
         let result = serde_json::from_str::<OnlineSettings>(&String::from(json))
-            .map_err(|_| "No se pudo leer la configuración de servicios online.".to_owned())
+            .map_err(|_| {
+                crate::i18n::tr_noop("The online services settings could not be read.").to_owned()
+            })
             .and_then(|settings| settings.validate());
         if let Err(error) = result {
             self.as_mut().set_operation_error(QString::from(error));
@@ -298,7 +302,9 @@ impl qobject::KeyringController {
         }
         if !unsafe { native_ffi::save_online_settings(json) } {
             self.as_mut()
-                .set_operation_error(QString::from("No se pudo guardar la configuración."));
+                .set_operation_error(QString::from(crate::i18n::tr_noop(
+                    "The settings could not be saved.",
+                )));
             return false;
         }
         self.as_mut().rust_mut().online_settings = json.clone();
@@ -310,18 +316,21 @@ impl qobject::KeyringController {
     pub fn open_online_service(mut self: Pin<&mut Self>, index: i32, fingerprint: &QString) {
         let result = (|| {
             let settings: OnlineSettings =
-                serde_json::from_str(&String::from(self.online_settings()))
-                    .map_err(|_| "No se pudo leer la configuración.".to_owned())?;
+                serde_json::from_str(&String::from(self.online_settings())).map_err(|_| {
+                    crate::i18n::tr_noop("The settings could not be read.").to_owned()
+                })?;
             if !settings.enabled {
-                return Err("Los servicios online están desactivados.".to_owned());
+                return Err(crate::i18n::tr_noop("Online services are disabled.").to_owned());
             }
             let template = usize::try_from(index)
                 .ok()
                 .and_then(|index| settings.services.get(index))
-                .ok_or_else(|| "Selecciona un servicio online.".to_owned())?;
+                .ok_or_else(|| crate::i18n::tr_noop("Select an online service.").to_owned())?;
             let url = service_url(template, &String::from(fingerprint))?;
             if !unsafe { native_ffi::open_online_url(&QString::from(url)) } {
-                return Err("No se pudo abrir el navegador predeterminado de KDE.".to_owned());
+                return Err(
+                    crate::i18n::tr_noop("The default KDE browser could not be opened.").to_owned(),
+                );
             }
             Ok(())
         })();
@@ -341,7 +350,7 @@ impl qobject::KeyringController {
         }
         self.as_mut().set_busy(true);
         self.as_mut()
-            .set_status(QString::from("Cargando claves GPG…"));
+            .set_status(QString::from(crate::i18n::tr_noop("Loading GPG keys…")));
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
@@ -360,9 +369,9 @@ impl qobject::KeyringController {
                 controller.as_mut().rust_mut().keys = result.clone().unwrap_or_default();
                 controller.as_mut().reload_catalog();
                 if observation.is_some_and(|result| result.is_err()) {
-                    controller.as_mut().rust_mut().catalog_error = QString::from(
-                        crate::i18n::text("No se pudo guardar la organización de tus identidades."),
-                    );
+                    controller.as_mut().rust_mut().catalog_error = QString::from(crate::i18n::tr(
+                        "The organization of your identities could not be saved.",
+                    ));
                     controller.as_mut().catalog_error_changed();
                 }
                 match result {
@@ -372,8 +381,9 @@ impl qobject::KeyringController {
                         let (summaries, count) = key_summaries(keys);
                         controller.as_mut().set_key_summaries(summaries);
                         controller.as_mut().set_key_count(count);
-                        controller.as_mut().set_status(crate::i18n::plural(
-                            "%n clave GPG cargada",
+                        controller.as_mut().set_status(crate::i18n::trp(
+                            "%1 GPG key loaded",
+                            "%1 GPG keys loaded",
                             count as usize,
                         ));
                     }
@@ -389,7 +399,9 @@ impl qobject::KeyringController {
                         controller.as_mut().set_key_count(0);
                         controller
                             .as_mut()
-                            .set_status(QString::from("Error al cargar claves GPG"));
+                            .set_status(QString::from(crate::i18n::tr_noop(
+                                "Error loading GPG keys",
+                            )));
                     }
                 }
 
@@ -404,21 +416,22 @@ impl qobject::KeyringController {
         }
 
         self.as_mut().set_busy(true);
-        self.as_mut()
-            .set_status(QString::from("Esperando al agente GPG…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Waiting for the GPG agent…",
+        )));
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             crate::keyring::commands::probe_agent,
             |controller, result| {
                 let status = match result {
-                    Ok(()) => {
-                        "Firma de prueba completada; si el agente ya tenía la passphrase en caché, no apareció diálogo"
-                    }
+                    Ok(()) => crate::i18n::tr_noop(
+                        "Test signature completed; if the agent already had the passphrase cached, no dialog appeared",
+                    ),
                     Err(error) => {
                         return controller_done(
                             controller,
-                            format!("Prueba del agente GPG falló: {error}"),
+                            crate::i18n::trf("GPG agent test failed: %1", &[error.to_string()]),
                         );
                     }
                 };
@@ -450,15 +463,16 @@ impl qobject::KeyringController {
                     .is_ok_and(|settings| settings.enabled);
             if !enabled {
                 self.as_mut()
-                    .fail_operation("Las consultas online están desactivadas.".into());
+                    .fail_operation(crate::i18n::tr_noop("Online lookups are disabled.").into());
                 return;
             }
         }
 
         self.as_mut().set_operation_busy(true);
         self.as_mut().set_busy(true);
-        self.as_mut()
-            .set_status(QString::from("Ejecutando operación OpenPGP…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Running OpenPGP operation…",
+        )));
 
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
@@ -485,8 +499,8 @@ impl qobject::KeyringController {
                 if observation.is_some_and(|result| result.is_err()) {
                     controller
                         .as_mut()
-                        .set_operation_error(QString::from(crate::i18n::text(
-                            "No se pudo guardar la organización de tus identidades.",
+                        .set_operation_error(QString::from(crate::i18n::tr(
+                            "The organization of your identities could not be saved.",
                         )));
                 }
                 let reload_error = match keys {
@@ -510,7 +524,7 @@ impl qobject::KeyringController {
                         let fingerprint =
                             QString::from(outcome.selected_fingerprint.unwrap_or_default());
                         if let Some(error) = reload_error {
-                            controller.as_mut().set_operation_error(QString::from(crate::i18n::format("La operación se completó, pero no se pudo actualizar la lista de claves: %1", &[error.to_string()])));
+                            controller.as_mut().set_operation_error(QString::from(crate::i18n::trf("The operation completed, but the key list could not be updated: %1", &[error.to_string()])));
                         }
                         if action == "copyPublic"
                             && let Some(armored) = outcome.public_key
@@ -521,7 +535,7 @@ impl qobject::KeyringController {
                         if crate::keyring::catalog::record_export(&fingerprint.to_string(), &action)
                             .is_err()
                         {
-                            controller.as_mut().set_operation_error(QString::from(crate::i18n::text("El archivo se exportó, pero no se pudo guardar la fecha en KryptoPass.")));
+                            controller.as_mut().set_operation_error(QString::from(crate::i18n::tr("The file was exported, but the date could not be saved in KryptoPass.")));
                         }
                         controller.as_mut().reload_catalog();
                         let message = QString::from(outcome.message);
@@ -532,8 +546,8 @@ impl qobject::KeyringController {
                     }
                     Err(message) => {
                         let message = match reload_error {
-                            Some(error) => crate::i18n::format(
-                                "%1 Además, no se pudo actualizar la lista de claves: %2",
+                            Some(error) => crate::i18n::trf(
+                                "%1 Additionally, the key list could not be updated: %2",
                                 &[message.to_string(), error.to_string()],
                             ),
                             None => message,
@@ -583,13 +597,20 @@ impl qobject::KeyringController {
 
 fn normalize_operation_request(request_json: &str) -> Result<(String, String), String> {
     if request_json.len() > 64 * 1024 {
-        return Err("La solicitud de operación OpenPGP supera el tamaño permitido.".to_owned());
+        return Err(crate::i18n::tr_noop(
+            "The OpenPGP operation request exceeds the allowed size.",
+        )
+        .to_owned());
     }
 
-    let mut request: Value = serde_json::from_str(request_json)
-        .map_err(|_| "La solicitud de operación OpenPGP no es JSON válido.".to_owned())?;
+    let mut request: Value = serde_json::from_str(request_json).map_err(|_| {
+        crate::i18n::tr_noop("The OpenPGP operation request is not valid JSON.").to_owned()
+    })?;
     let Some(fields) = request.as_object_mut() else {
-        return Err("La solicitud de operación OpenPGP no tiene un formato válido.".to_owned());
+        return Err(crate::i18n::tr_noop(
+            "The OpenPGP operation request does not have a valid format.",
+        )
+        .to_owned());
     };
     let action = fields
         .get("action")
@@ -599,10 +620,14 @@ fn normalize_operation_request(request_json: &str) -> Result<(String, String), S
 
     if let Some(path) = fields.get_mut("path") {
         let Value::String(path_value) = path else {
-            return Err("Selecciona una ruta local válida para la operación.".to_owned());
+            return Err(
+                crate::i18n::tr_noop("Select a valid local path for the operation.").to_owned(),
+            );
         };
         if path_value.trim().is_empty() {
-            return Err("Selecciona una ruta local válida para la operación.".to_owned());
+            return Err(
+                crate::i18n::tr_noop("Select a valid local path for the operation.").to_owned(),
+            );
         }
         let path_url = if path_value.starts_with('/') {
             QUrl::from_local_file(&QString::from(path_value.as_str()))
@@ -615,18 +640,24 @@ fn normalize_operation_request(request_json: &str) -> Result<(String, String), S
             || path_url.has_fragment()
             || !path_url.host_or_default().is_empty()
         {
-            return Err("Selecciona un archivo local; no se aceptan URL remotas.".to_owned());
+            return Err(
+                crate::i18n::tr_noop("Select a local file; remote URLs are not accepted.")
+                    .to_owned(),
+            );
         }
         let local_path = path_url
             .to_local_file()
             .map(|local_path| String::from(&local_path))
             .filter(|local_path| !local_path.is_empty())
-            .ok_or_else(|| "Selecciona una ruta local válida para la operación.".to_owned())?;
+            .ok_or_else(|| {
+                crate::i18n::tr_noop("Select a valid local path for the operation.").to_owned()
+            })?;
         *path = Value::String(local_path);
     }
 
-    let request_json = serde_json::to_string(&request)
-        .map_err(|_| "No se pudo preparar la solicitud de operación OpenPGP.".to_owned())?;
+    let request_json = serde_json::to_string(&request).map_err(|_| {
+        crate::i18n::tr_noop("The OpenPGP operation request could not be prepared.").to_owned()
+    })?;
     Ok((request_json, action))
 }
 

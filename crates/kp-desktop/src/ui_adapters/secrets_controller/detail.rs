@@ -31,8 +31,9 @@ impl qobject::SecretsController {
         let Some(secret_id) = parse_secret_id(&id) else {
             self.as_mut().rust_mut().pending_selection = None;
             self.as_mut().set_detail_busy(false);
-            self.as_mut()
-                .fail_detail("No se pudo abrir el elemento seleccionado.");
+            self.as_mut().fail_detail(crate::i18n::tr_noop(
+                "The selected item could not be opened.",
+            ));
             return;
         };
         self.as_mut().rust_mut().selected_entry = Some(secret_id);
@@ -109,13 +110,13 @@ impl qobject::SecretsController {
                                     .set_detail_json(QString::from(detail.as_str()));
                                 controller
                                     .as_mut()
-                                    .set_status(QString::from("Elemento cargado"));
+                                    .set_status(QString::from(crate::i18n::tr_noop("Item loaded")));
                             }
                             Err(error) => {
                                 tracing::warn!(error = %format!("{error:#}"), "item detail projection failed");
-                                controller
-                                    .as_mut()
-                                    .fail_detail("No se pudo mostrar el contenido del elemento.");
+                                controller.as_mut().fail_detail(crate::i18n::tr_noop(
+                                    "The item's content could not be shown.",
+                                ));
                             }
                         }
                     }
@@ -123,9 +124,11 @@ impl qobject::SecretsController {
                     Err(error) => {
                         tracing::warn!(error = %format!("{error:#}"), "item did not open");
                         let message = if is_unreadable(&error) {
-                            "Este elemento está cifrado para una clave que no está en este dispositivo."
+                            crate::i18n::tr_noop(
+                                "This item is encrypted for a key that is not on this device.",
+                            )
                         } else {
-                            "No se pudo abrir el contenido del elemento."
+                            crate::i18n::tr_noop("The item's content could not be opened.")
                         };
                         controller.as_mut().fail_detail(message);
                     }
@@ -243,9 +246,9 @@ impl qobject::SecretsController {
                 self.as_mut().rust_mut().qr_source = Some(source);
                 self.publish_detail();
             }
-            Err(_) => self.as_mut().fail(
-                "No se pudo generar el QR. El contenido puede superar la capacidad del código.",
-            ),
+            Err(_) => self.as_mut().fail(crate::i18n::tr_noop(
+                "The QR code could not be generated. The content may exceed the code's capacity.",
+            )),
         }
     }
 }

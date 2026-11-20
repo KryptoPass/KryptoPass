@@ -167,22 +167,24 @@ impl InboundAssessment {
 
     pub(crate) const fn message(self) -> &'static str {
         match self {
-            Self::New => "Es una clave de tu bóveda y no está en GnuPG: se creará al importarla.",
-            Self::AddSecret => {
-                "Es una clave de tu bóveda. GnuPG solo tiene su parte pública: se añadirá la parte privada."
-            }
-            Self::Merge => {
-                "Es una clave de tu bóveda y ya está en GnuPG: se combinará (identidades, subclaves y firmas nuevas). No se borra nada."
-            }
-            Self::VaultMismatch => {
-                "Esta clave no es la principal de la bóveda activa ni cifra ninguno de sus elementos. Se rechazó automáticamente."
-            }
-            Self::NoVault => {
-                "No hay una bóveda activa con la que comparar. Se rechazó automáticamente."
-            }
-            Self::Unavailable => {
-                "No se pudo consultar GnuPG para revisar la clave. Se rechazó automáticamente."
-            }
+            Self::New => crate::i18n::tr_noop(
+                "This is a key from your vault and it is not in GnuPG: it will be created when you import it.",
+            ),
+            Self::AddSecret => crate::i18n::tr_noop(
+                "This is a key from your vault. GnuPG only has its public part: the private part will be added.",
+            ),
+            Self::Merge => crate::i18n::tr_noop(
+                "This is a key from your vault and it is already in GnuPG: it will be merged (new identities, subkeys and signatures). Nothing is deleted.",
+            ),
+            Self::VaultMismatch => crate::i18n::tr_noop(
+                "This key is not the active vault's primary key and does not encrypt any of its items. It was rejected automatically.",
+            ),
+            Self::NoVault => crate::i18n::tr_noop(
+                "There is no active vault to compare with. It was rejected automatically.",
+            ),
+            Self::Unavailable => crate::i18n::tr_noop(
+                "GnuPG could not be queried to review the key. It was rejected automatically.",
+            ),
         }
     }
 }
@@ -234,16 +236,18 @@ pub(crate) struct InboundImportFailure {
 impl InboundImportFailure {
     pub(crate) const fn message(self) -> &'static str {
         match self.stage.as_bytes() {
-            b"vault" => "La clave ya no pertenece a la bóveda activa. No se importó nada.",
-            b"validate" => {
-                "El bloque recibido no es una única clave privada protegida con contraseña con la huella ofrecida. No se importó nada."
-            }
-            b"import" => {
-                "GnuPG no pudo importar la clave. Revisa GnuPG y vuelve a intentarlo desde el teléfono."
-            }
-            _ => {
-                "La clave se importó en GnuPG, pero no se pudo descifrar el desafío (¿contraseña cancelada o incorrecta?). El teléfono no recibirá confirmación."
-            }
+            b"vault" => crate::i18n::tr_noop(
+                "The key no longer belongs to the active vault. Nothing was imported.",
+            ),
+            b"validate" => crate::i18n::tr_noop(
+                "The received block is not a single passphrase-protected private key with the offered fingerprint. Nothing was imported.",
+            ),
+            b"import" => crate::i18n::tr_noop(
+                "GnuPG could not import the key. Check GnuPG and try again from the phone.",
+            ),
+            _ => crate::i18n::tr_noop(
+                "The key was imported into GnuPG, but the challenge could not be decrypted (passphrase canceled or wrong?). The phone will not receive a confirmation.",
+            ),
         }
     }
 }

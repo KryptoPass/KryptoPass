@@ -75,7 +75,9 @@ impl Document {
     pub fn load(&mut self, source: &str) -> Result<(), &'static str> {
         self.clear();
         if source.len() > MAX_SOURCE_BYTES {
-            return Err("El documento Markdown supera el límite de 256 KiB.");
+            return Err(crate::i18n::tr_noop(
+                "The Markdown document exceeds the 256 KiB limit.",
+            ));
         }
         self.source.push_str(source);
         Ok(())
@@ -233,7 +235,8 @@ create_formatter!(QtFormatter<RenderState>, {
     },
     NodeValue::Image(_) => |context, entering| {
         if entering {
-            context.write_str("[Imagen omitida]")?;
+            let omitted = crate::i18n::tr("[Image omitted]");
+            context.write_str(&omitted)?;
             // Alt text can contain spoiler descendants: never flatten it into the view.
             return Ok(ChildRendering::Skip);
         }

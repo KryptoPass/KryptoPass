@@ -36,9 +36,9 @@ impl qobject::SecretsController {
                     Ok(item) => item,
                     Err(error) => {
                         tracing::warn!(error = %format!("{error:#}"), "item version did not open");
-                        controller
-                            .as_mut()
-                            .fail_detail("No se pudo abrir esa versión del elemento.");
+                        controller.as_mut().fail_detail(crate::i18n::tr_noop(
+                            "That version of the item could not be opened.",
+                        ));
                         return;
                     }
                 };
@@ -166,7 +166,7 @@ impl qobject::SecretsController {
         let report = activity_report(&self.as_ref().rust().detail_versions);
         match report.and_then(|report| write_activity_report(&report)) {
             Ok(path) => self.activity_exported(&QUrl::from_local_file(&QString::from(path.to_string_lossy().as_ref()))),
-            Err(_) => self.fail("No se pudo generar el archivo de actividad. Comprueba el espacio disponible e inténtalo de nuevo."),
+            Err(_) => self.fail(crate::i18n::tr_noop("The activity file could not be generated. Check the available space and try again.")),
         }
     }
 }
@@ -249,9 +249,9 @@ pub(super) fn activity_report(versions: &[(VersionId, u64)]) -> anyhow::Result<S
     let zone = zone
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("local time zone unavailable"))?;
-    let mut report = String::from(
-        "Actividad en KryptoPass\nVersiones anteriores, de la más reciente a la más antigua.\nNo incluye contraseñas ni valores de credenciales.\n\n",
-    );
+    let mut report = String::from(crate::i18n::tr_noop(
+        "KryptoPass activity\nPrevious versions, from the most recent to the oldest.\nIt does not include passwords or credential values.\n\n",
+    ));
     for (_, at) in versions {
         let date = i64::try_from(*at)
             .ok()
@@ -262,7 +262,7 @@ pub(super) fn activity_report(versions: &[(VersionId, u64)]) -> anyhow::Result<S
                     .to_string()
             })
             .unwrap_or_else(|| format!("Unix {at}"));
-        report.push_str(&format!("{date}  Datos editados\n"));
+        report.push_str(&crate::i18n::trf("%1  Data edited\n", &[date]));
     }
     Ok(report)
 }

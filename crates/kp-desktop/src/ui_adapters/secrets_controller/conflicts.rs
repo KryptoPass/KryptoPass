@@ -9,14 +9,16 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_secret_id(&id.to_string()) else {
-            self.as_mut().fail("El elemento seleccionado no es válido.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected item is not valid."));
             return;
         };
         self.as_mut().close_conflict();
         self.as_mut().clear_error();
         self.as_mut().set_busy(true);
-        self.as_mut()
-            .set_status(QString::from("Abriendo las dos versiones…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Opening both versions…",
+        )));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || -> anyhow::Result<Option<Conflict>> {
@@ -30,18 +32,22 @@ impl qobject::SecretsController {
                         controller.as_mut().publish_conflict();
                         controller
                             .as_mut()
-                            .set_status(QString::from("Revisa las diferencias"));
+                            .set_status(QString::from(crate::i18n::tr_noop(
+                                "Review the differences",
+                            )));
                     }
                     Ok(None) => controller
                         .as_mut()
-                        .fail("Este elemento ya no tiene conflictos."),
+                        .fail(crate::i18n::tr_noop("This item no longer has conflicts.")),
                     Err(error) => {
                         tracing::warn!(error = %format!("{error:#}"), "conflict did not open");
                         let message = match error.downcast_ref::<VaultError>() {
-                            Some(VaultError::ConflictUnreadable) => {
-                                "Una de las versiones usa una clave que no está en este dispositivo. Resuélvelo desde un dispositivo que la tenga."
-                            }
-                            _ => "No se pudieron abrir las versiones en conflicto.",
+                            Some(VaultError::ConflictUnreadable) => crate::i18n::tr_noop(
+                                "One of the versions uses a key that is not on this device. Resolve it from a device that has it.",
+                            ),
+                            _ => crate::i18n::tr_noop(
+                                "The conflicting versions could not be opened.",
+                            ),
                         };
                         controller.as_mut().fail(message);
                     }
@@ -79,8 +85,9 @@ impl qobject::SecretsController {
         let Ok(picked) = serde_json::from_str::<std::collections::HashMap<String, String>>(
             &choices_json.to_string(),
         ) else {
-            self.as_mut()
-                .fail("La selección de la combinación no es válida.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The combination selection is not valid.",
+            ));
             return;
         };
         let choices = {
@@ -107,9 +114,9 @@ impl qobject::SecretsController {
         let operation = self.as_ref().rust().editor_operation;
         self.as_mut().set_conflict_json(QString::default());
         self.as_mut().start_mutation(
-            "Guardando la combinación…",
+            crate::i18n::tr_noop("Saving the combination…"),
             true,
-            "No se pudo guardar la combinación. El conflicto sigue abierto.",
+            crate::i18n::tr_noop("The combination could not be saved. The conflict is still open."),
             move || {
                 let meta = open_session()?
                     .vault_mut()
@@ -139,8 +146,9 @@ impl qobject::SecretsController {
             Some(Err(error)) => {
                 tracing::warn!(error = %format!("{error:#}"), "conflict projection failed");
                 self.as_mut().rust_mut().conflict = None;
-                self.as_mut()
-                    .fail("No se pudieron mostrar las versiones en conflicto.");
+                self.as_mut().fail(crate::i18n::tr_noop(
+                    "The conflicting versions could not be shown.",
+                ));
             }
             None => {}
         }
@@ -197,7 +205,13 @@ pub(super) fn conflict_projection(
         template,
         &crate::vault_access::language(),
     );
-    let yes_no = |value: bool| crate::i18n::text(if value { "Sí" } else { "No" });
+    let yes_no = |value: bool| {
+        crate::i18n::tr(if value {
+            crate::i18n::tr_noop("Yes")
+        } else {
+            "No"
+        })
+    };
     let value_of = |item: &Item, target: &DiffTarget| -> SensitiveText {
         let state = &item.meta.state;
         match target {
@@ -208,7 +222,7 @@ pub(super) fn conflict_projection(
                 .into(),
             DiffTarget::Favorite => yes_no(state.favorite).into(),
             DiffTarget::Trashed => yes_no(state.trashed).into(),
-            DiffTarget::Icon => crate::i18n::text("Icono elegido").into(),
+            DiffTarget::Icon => crate::i18n::tr("Chosen icon").into(),
             DiffTarget::Field(field) => {
                 let mut text = SensitiveText::new();
                 let values = item
@@ -234,11 +248,11 @@ pub(super) fn conflict_projection(
     };
     let label_of = |target: &DiffTarget| -> SensitiveText {
         match target {
-            DiffTarget::Title => crate::i18n::text("Nombre").into(),
-            DiffTarget::Folder => crate::i18n::text("Carpeta").into(),
-            DiffTarget::Favorite => crate::i18n::text("Favorito").into(),
-            DiffTarget::Trashed => crate::i18n::text("En la papelera").into(),
-            DiffTarget::Icon => crate::i18n::text("Icono").into(),
+            DiffTarget::Title => crate::i18n::tr("Name").into(),
+            DiffTarget::Folder => crate::i18n::tr("Folder").into(),
+            DiffTarget::Favorite => crate::i18n::tr("Favorite").into(),
+            DiffTarget::Trashed => crate::i18n::tr("In the trash").into(),
+            DiffTarget::Icon => crate::i18n::tr("Icon").into(),
             DiffTarget::Field(field) => form
                 .sections
                 .iter()

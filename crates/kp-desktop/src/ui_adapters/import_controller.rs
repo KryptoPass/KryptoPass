@@ -103,26 +103,31 @@ impl qobject::ImportController {
         }
         self.as_mut().reset();
         let Some(input) = local_path(input) else {
-            self.fail("Selecciona un archivo local del gestor elegido.");
+            self.fail(crate::i18n::tr_noop(
+                "Select a local file from the chosen manager.",
+            ));
             return;
         };
         let importer_id = importer_id.to_string();
         if importer_id.is_empty() {
-            self.fail("Selecciona una integración de importación.");
+            self.fail(crate::i18n::tr_noop("Select an import integration."));
             return;
         }
         let destination = match app_paths::database_path(crate::app_info::APP.desktop_file_id) {
             Ok(path) => path,
             Err(_) => {
-                self.fail("No se pudo acceder a la bóveda actual.");
+                self.fail(crate::i18n::tr_noop(
+                    "The current vault could not be accessed.",
+                ));
                 return;
             }
         };
         self.as_mut().rust_mut().destination = Some(destination);
         let operation = self.as_ref().rust().review_operation;
         self.as_mut().set_busy(true);
-        self.as_mut()
-            .set_status(QString::from("Leyendo y revisando la exportación…"));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Reading and reviewing the export…",
+        )));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || review_export(&input, &importer_id),
@@ -143,9 +148,9 @@ impl qobject::ImportController {
                         controller.as_mut().rust_mut().plan = Some(plan);
                         controller.as_mut().set_reviewed(has_items);
                         controller.set_status(QString::from(if has_items {
-                            "Revisa el resultado y elige las claves para los elementos que se añadirán."
+                            crate::i18n::tr_noop("Review the result and choose the keys for the items that will be added.")
                         } else {
-                            "No hay elementos compatibles para importar."
+                            crate::i18n::tr_noop("There are no compatible items to import.")
                         }));
                     }
                     Err(error) => controller.fail(presentation::review_error(&error)),
@@ -161,7 +166,9 @@ impl qobject::ImportController {
         let recipients = match parse_selected_recipients(&recipients_json.to_string()) {
             Ok(value) => value,
             Err(_) => {
-                self.fail("Selecciona al menos una clave válida para proteger tus datos.");
+                self.fail(crate::i18n::tr_noop(
+                    "Select at least one valid key to protect your data.",
+                ));
                 return;
             }
         };
@@ -174,7 +181,9 @@ impl qobject::ImportController {
             != Some(&destination)
         {
             self.as_mut().reset();
-            self.fail("La bóveda activa cambió. Vuelve a revisar el archivo antes de importar.");
+            self.fail(crate::i18n::tr_noop(
+                "The active vault changed. Check the file again before importing.",
+            ));
             return;
         }
         let Some(plan) = self.as_mut().rust_mut().plan.take() else {
@@ -183,9 +192,9 @@ impl qobject::ImportController {
         self.as_mut().set_reviewed(false);
         self.as_mut().set_busy(true);
         self.as_mut().set_error_message(QString::default());
-        self.as_mut().set_status(QString::from(
-            "Cifrando y añadiendo los elementos a la bóveda actual…",
-        ));
+        self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+            "Encrypting and adding the items to the current vault…",
+        )));
         crate::qt::jobs::run_blocking(
             self.qt_thread(),
             move || receive_import(plan.batch, recipients),
@@ -193,10 +202,10 @@ impl qobject::ImportController {
                 controller.as_mut().set_busy(false);
                 match result {
                     Ok(receipt) => {
-                        controller.as_mut().set_status(crate::i18n::plural("Importación completada: %n elemento añadido a la bóveda actual.", receipt.items.len()));
+                        controller.as_mut().set_status(crate::i18n::trp("Import complete: %1 item added to the current vault.", "Import complete: %1 items added to the current vault.", receipt.items.len()));
                         controller.import_completed();
                     }
-                    Err(_) => controller.fail("No se pudo añadir el lote. Los datos anteriores se conservaron. Comprueba las claves, los permisos y el espacio disponible; vuelve a revisar el archivo para reintentar."),
+                    Err(_) => controller.fail(crate::i18n::tr_noop("The batch could not be added. The previous data was kept. Check the keys, permissions and available space; review the file again to retry.")),
                 }
             },
         );

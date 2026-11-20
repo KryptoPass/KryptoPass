@@ -11,25 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../packaging/metadata.py");
     println!("cargo:rerun-if-changed=../../packaging/icons");
     println!("cargo:rerun-if-changed=../../po");
-    println!("cargo:rerun-if-changed=../../packaging/translations.py");
     println!("cargo:rerun-if-env-changed=KP_SYNTHETIC_FIXTURE_DIR");
     println!("cargo:rerun-if-env-changed=XDG_CACHE_HOME");
     println!("cargo:rerun-if-env-changed=HOME");
     let generated = PathBuf::from(env::var_os("OUT_DIR").ok_or("Cargo OUT_DIR is missing")?);
-    for (script, args) in [
-        (
-            "gen_identity.py",
-            vec![generated.to_string_lossy().into_owned()],
-        ),
-        (
-            "translations.py",
-            vec![
-                "compile".into(),
-                "--output".into(),
-                generated.to_string_lossy().into_owned(),
-            ],
-        ),
-    ] {
+    for (script, args) in [(
+        "gen_identity.py",
+        vec![generated.to_string_lossy().into_owned()],
+    )] {
         if !Command::new("python3")
             .arg(format!("../../packaging/{script}"))
             .args(args)
@@ -95,7 +84,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "src/ui_adapters/native_ffi.rs",
             "src/ui_adapters/application.rs",
         ])
-        .qrc(generated.join("translations.qrc"))
         .qrc(generated.join("app_resources.qrc"))
         .cpp_files(native_cpp_files()?);
     // Adds include paths and KDE compiler settings; generated CXX-Qt settings remain intact.

@@ -13,12 +13,14 @@ impl qobject::SecretsController {
         excluded: &QString,
     ) {
         if *self.locked() {
-            self.as_mut()
-                .fail("Desbloquea la bóveda antes de generar una contraseña.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Unlock the vault before generating a password.",
+            ));
             return;
         }
         let Ok(length) = usize::try_from(length) else {
-            self.as_mut().fail("No se pudo generar la contraseña.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The password could not be generated."));
             return;
         };
         match generate_password_value(
@@ -33,7 +35,9 @@ impl qobject::SecretsController {
                 let password = QString::from(password.as_str());
                 self.password_generated(&password);
             }
-            Err(_) => self.as_mut().fail("No se pudo generar la contraseña."),
+            Err(_) => self
+                .as_mut()
+                .fail(crate::i18n::tr_noop("The password could not be generated.")),
         }
     }
 }

@@ -2,7 +2,8 @@
 
 use super::*;
 
-const SYNC_PROFILE_MESSAGE: &str = "No se pudo acceder a la configuración de Sync de este equipo.";
+const SYNC_PROFILE_MESSAGE: &str =
+    crate::i18n::tr_noop("This computer's Sync settings could not be accessed.");
 
 /// The Sync binding of `peer`: the vault's store and the keys chosen for it.
 /// `None` runs the session without Sync, as it does for a peer without keys.
@@ -114,9 +115,9 @@ impl qobject::PeersController {
                 object.as_mut().set_vault_sync_failed(failed);
                 object.as_mut().set_vault_sync_message(match result {
                     Ok(()) if enabled => QString::from(
-                        "Sincronización activada. Si el teléfono aún no la tiene activada, actívala allí: Dispositivos → este Desktop → Sincronizar mi bóveda.",
+                        crate::i18n::tr_noop("Sync enabled. If the phone does not have it enabled yet, enable it there: Devices → this Desktop → Sync my vault."),
                     ),
-                    Ok(()) => QString::from("Sincronización desactivada. La bóveda no cambió."),
+                    Ok(()) => QString::from(crate::i18n::tr_noop("Sync turned off. The vault did not change.")),
                     Err(message) => QString::from(message),
                 });
                 object.as_mut().refresh_vault_sync_peers();
@@ -175,8 +176,9 @@ impl qobject::PeersController {
                             object.as_mut().vault_mirror_pulled();
                             let activity = object.rust().vault_sync_activity.wrapping_add(1);
                             object.as_mut().set_vault_sync_activity(activity);
-                            object.as_mut().set_vault_sync_message(QString::from(format!(
-                                "Bóveda sincronizada: {indexed} recibidos."
+                            object.as_mut().set_vault_sync_message(QString::from(crate::i18n::trf(
+                                "Vault synced: %1 received.",
+                                &[indexed.to_string()],
                             )));
                         }
                     }
@@ -211,13 +213,14 @@ impl qobject::PeersController {
             let result = SyncSelection::in_profile(&directory).add(&peer.to_string(), key.as_str());
             tracing::info!(added = ?result.as_ref().ok(), failed = result.is_err(), "Vault sync: key added after sending it to the phone");
             if let Ok(true) = result {
-                let _ = thread.queue(move |mut object| {
-                    object.as_mut().set_vault_sync_failed(false);
-                    object.as_mut().set_vault_sync_message(QString::from(
-                        "Clave enviada: sus elementos ya se sincronizan con el teléfono.",
-                    ));
-                    object.as_mut().refresh_vault_sync_peers();
-                });
+                let _ =
+                    thread.queue(move |mut object| {
+                        object.as_mut().set_vault_sync_failed(false);
+                        object.as_mut().set_vault_sync_message(QString::from(
+                            crate::i18n::tr_noop("Key sent: its items now sync with the phone."),
+                        ));
+                        object.as_mut().refresh_vault_sync_peers();
+                    });
             }
         });
     }
@@ -255,7 +258,9 @@ impl qobject::PeersController {
                         .as_mut()
                         .set_vault_sync_locked_key(QString::default());
                     controller.as_mut().set_vault_sync_message(QString::from(
-                        "Clave desbloqueada. La sincronización continuará en unos segundos.",
+                        crate::i18n::tr_noop(
+                            "Key unlocked. Syncing will continue in a few seconds.",
+                        ),
                     ));
                 }
                 Err(error) => {

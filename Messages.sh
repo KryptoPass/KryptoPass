@@ -24,10 +24,17 @@ $XGETTEXT --join-existing --no-location "$snippet" -o "$podir/$domain.pot"
 
 # Same keywords; -L Rust overrides the C++ language that $XGETTEXT selects.
 # KI18n placeholders (%1) are the same in Rust, so msgfmt checks them too.
+# Besides i18n() calls, the Rust code marks the texts it hands to the interface with
+# tr(), trf(), trp() and tr_noop() (crate::i18n); the backend in the sibling
+# kryptopass-core repository uses the same names.
+core=../kryptopass-core/crates
 # shellcheck disable=SC2046
 $XGETTEXT --join-existing -L Rust \
     --flag=i18n:1:kde-format --flag=i18nc:2:kde-format \
     --flag=i18np:1:kde-format --flag=i18np:2:kde-format \
     --flag=i18ncp:2:kde-format --flag=i18ncp:3:kde-format \
-    $(find "$crate/src" -name '*.rs' | sort) \
+    -ktr:1 -ktrf:1 -ktr_noop:1 -ktrp:1,2 \
+    --flag=tr:1:kde-format --flag=trf:1:kde-format --flag=tr_noop:1:kde-format \
+    --flag=trp:1:kde-format --flag=trp:2:kde-format \
+    $(find "$crate/src" "$core"/*/src -name '*.rs' -not -name '*_tests.rs' | sort) \
     -o "$podir/$domain.pot"

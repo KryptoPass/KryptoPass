@@ -190,7 +190,7 @@ fn show_host_event(mut object: Controller<'_>, event: HostEvent) {
             object.as_mut().set_bootstrap(QString::from(code));
             object.show(
                 "waiting_peer",
-                "Escanea el QR desde Android o copia el código de conexión.",
+                crate::i18n::tr_noop("Scan the QR code from Android or copy the connection code."),
             );
         }
         HostEvent::Sas(sas) => {
@@ -221,7 +221,9 @@ fn show_host_event(mut object: Controller<'_>, event: HostEvent) {
             object.as_mut().set_bootstrap(QString::default());
             object.show(
                 "awaiting_sas",
-                "Compara los siete emojis con Android y confirma en ambas pantallas.",
+                crate::i18n::tr_noop(
+                    "Compare the seven emoji with Android and confirm on both screens.",
+                ),
             );
         }
     }
@@ -254,7 +256,7 @@ fn show_session_opened(
     object.as_mut().apply_devices_snapshot(&devices.snapshot());
     object.show(
         "connecting",
-        "Confianza guardada. Abriendo la sesión autenticada…",
+        crate::i18n::tr_noop("Trust saved. Opening the authenticated session…"),
     );
 }
 
@@ -293,7 +295,7 @@ fn show_closed_session(mut object: Controller<'_>, ended: &Ended) {
         ) {
             object.show(
                 "authentication_error",
-                "La sesión no superó la comprobación de seguridad. La confianza guardada se conserva, pero la conexión se detuvo.",
+                crate::i18n::tr_noop("The session did not pass the security check. The saved trust is kept, but the connection was stopped."),
             );
         }
     }

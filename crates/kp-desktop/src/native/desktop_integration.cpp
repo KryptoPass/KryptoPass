@@ -20,6 +20,7 @@
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QTimer>
 #include <QTranslator>
 #include <QUrl>
@@ -94,17 +95,13 @@ namespace kryptopass::desktop::native
 void initialize_desktop()
 {
     using namespace kryptopass::identity;
-    const auto install = [](const QString &name, const QString &directory) {
-        auto *translator = new QTranslator(qApp);
-        if (translator->load(QLocale(), name, QStringLiteral("_"), directory)
-            || (directory == QStringLiteral(":/i18n") && translator->load(QLocale(QStringLiteral("es")), name, QStringLiteral("_"), directory))) {
-            QCoreApplication::installTranslator(translator);
-        } else {
-            delete translator;
-        }
-    };
-    install(QStringLiteral("qt"), QLibraryInfo::path(QLibraryInfo::TranslationsPath));
-    install(QString::fromUtf8(desktop_file_id), QStringLiteral(":/i18n"));
+    // Qt's own texts (standard buttons, file dialogs). The application's come from KI18n.
+    auto *qtTranslator = new QTranslator(qApp);
+    if (qtTranslator->load(QLocale(), QStringLiteral("qt"), QStringLiteral("_"), QLibraryInfo::path(QLibraryInfo::TranslationsPath))) {
+        QCoreApplication::installTranslator(qtTranslator);
+    } else {
+        delete qtTranslator;
+    }
 
     KAboutData about(QString::fromUtf8(desktop_file_id), QString::fromUtf8(display_name), QString::fromUtf8(version));
     // Messages.sh extracts the description from Cargo.toml with this context.
@@ -164,14 +161,26 @@ void set_action_enabled(const QString &id, bool enabled)
 
 QString translate_ui(const QString &source)
 {
+    // The msgid is only known at run time, so it goes straight to KLocalizedString. Each
+    // %N is substituted by itself: the Rust caller fills the placeholders afterwards.
     const auto bytes = source.toUtf8();
-    return QCoreApplication::translate("Backend", bytes.constData());
+    auto message = ki18n(bytes.constData());
+    static const QRegularExpression placeholder(QStringLiteral("%(\\d+)"));
+    int highest = 0;
+    for (auto it = placeholder.globalMatch(source); it.hasNext();) {
+        highest = qMax(highest, it.next().captured(1).toInt());
+    }
+    for (int index = 1; index <= highest; ++index) {
+        message = message.subs(QStringLiteral("%%1").arg(index));
+    }
+    return message.toString();
 }
 
-QString translate_plural(const QString &source, int count)
+QString translate_plural(const QString &singular, const QString &plural, int count)
 {
-    const auto bytes = source.toUtf8();
-    return QCoreApplication::translate("Backend", bytes.constData(), nullptr, count);
+    const auto singularBytes = singular.toUtf8();
+    const auto pluralBytes = plural.toUtf8();
+    return ki18np(singularBytes.constData(), pluralBytes.constData()).subs(count).toString();
 }
 
 QString desktop_actions()

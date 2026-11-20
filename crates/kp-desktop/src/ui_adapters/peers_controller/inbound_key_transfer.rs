@@ -105,7 +105,9 @@ impl qobject::PeersController {
                     .get(peer)
                     .filter(|alias| !alias.is_empty())
                     .cloned()
-                    .unwrap_or_else(|| format!("Dispositivo {}", &id[..12.min(id.len())]));
+                    .unwrap_or_else(|| {
+                        crate::i18n::trf("Device %1", &[id[..12.min(id.len())].to_owned()])
+                    });
                 tracing::info!(
                     total_size = inbound.total_size,
                     "Inbound key transfer: offer shown to the user, assessing"
@@ -120,7 +122,7 @@ impl qobject::PeersController {
                     phase: "assessing",
                     received: 0,
                     total: inbound.total_size,
-                    message: String::from("Revisando la clave ofrecida…"),
+                    message: String::from(crate::i18n::tr_noop("Reviewing the offered key…")),
                     error: false,
                     decision_sent: false,
                     import_started: false,
@@ -141,45 +143,47 @@ impl qobject::PeersController {
                     InboundTransferPhase::AwaitingDecision => {}
                     InboundTransferPhase::Receiving => {
                         ui.phase = "receiving";
-                        ui.message = String::from("Recibiendo la clave del teléfono…");
+                        ui.message =
+                            String::from(crate::i18n::tr_noop("Receiving the key from the phone…"));
                     }
                     InboundTransferPhase::Importing => {
                         if !ui.import_started {
                             ui.import_started = true;
                             ui.phase = "importing";
-                            ui.message = String::from(
-                                "Clave recibida y verificada (SHA-256). Importando en GnuPG…",
-                            );
+                            ui.message = String::from(crate::i18n::tr_noop(
+                                "Key received and verified (SHA-256). Importing into GnuPG…",
+                            ));
                             start_import = true;
                         }
                     }
                     InboundTransferPhase::Complete => {
                         ui.phase = "complete";
                         ui.error = false;
-                        ui.message = String::from(
-                            "Clave importada en GnuPG y comprobada con el desafío. El teléfono recibió la confirmación.",
-                        );
+                        ui.message = String::from(crate::i18n::tr_noop(
+                            "Key imported into GnuPG and checked with the challenge. The phone received the confirmation.",
+                        ));
                     }
                     InboundTransferPhase::Rejected => {
                         ui.phase = "rejected";
                         if ui.message.is_empty() || !ui.error {
-                            ui.message =
-                                String::from("Transferencia rechazada. No se recibió nada.");
+                            ui.message = String::from(crate::i18n::tr_noop(
+                                "Transfer rejected. Nothing was received.",
+                            ));
                         }
                     }
                     InboundTransferPhase::Cancelled => {
                         ui.phase = "cancelled";
                         ui.error = true;
-                        ui.message = String::from(
-                            "El teléfono canceló la transferencia. Se descartó lo recibido.",
-                        );
+                        ui.message = String::from(crate::i18n::tr_noop(
+                            "The phone canceled the transfer. What was received was discarded.",
+                        ));
                     }
                     InboundTransferPhase::Expired => {
                         ui.phase = "expired";
                         ui.error = true;
-                        ui.message = String::from(
-                            "La transferencia caducó (5 minutos desde la oferta). Se descartó lo recibido.",
-                        );
+                        ui.message = String::from(crate::i18n::tr_noop(
+                            "The transfer expired (5 minutes after the offer). What was received was discarded.",
+                        ));
                     }
                     InboundTransferPhase::Failed => {
                         if previous != "failed" {
@@ -188,20 +192,26 @@ impl qobject::PeersController {
                             if !ui.error {
                                 ui.error = true;
                                 ui.message = String::from(match inbound.failure {
-                                    Some(InboundTransferFailure::Protocol) => {
-                                        "La transferencia no respetó el orden o el tamaño anunciado. Se descartó lo recibido."
-                                    }
-                                    Some(InboundTransferFailure::Digest) => {
-                                        "La clave recibida no coincide con la oferta (SHA-256). Se descartó."
-                                    }
+                                    Some(InboundTransferFailure::Protocol) => crate::i18n::tr_noop(
+                                        "The transfer did not respect the announced order or size. What was received was discarded.",
+                                    ),
+                                    Some(InboundTransferFailure::Digest) => crate::i18n::tr_noop(
+                                        "The received key does not match the offer (SHA-256). It was discarded.",
+                                    ),
                                     Some(InboundTransferFailure::Remote(_)) => {
-                                        "El teléfono interrumpió la transferencia. Se descartó lo recibido."
+                                        crate::i18n::tr_noop(
+                                            "The phone interrupted the transfer. What was received was discarded.",
+                                        )
                                     }
                                     Some(InboundTransferFailure::Disconnected) => {
-                                        "Se perdió la conexión antes de terminar. Se descartó lo recibido."
+                                        crate::i18n::tr_noop(
+                                            "The connection was lost before finishing. What was received was discarded.",
+                                        )
                                     }
                                     Some(InboundTransferFailure::Local) | None => {
-                                        "No se pudo importar o comprobar la clave. Se descartó lo recibido."
+                                        crate::i18n::tr_noop(
+                                            "The key could not be imported or checked. What was received was discarded.",
+                                        )
                                     }
                                 });
                             }
@@ -307,9 +317,9 @@ impl qobject::PeersController {
             ui.decision_sent = true;
             ui.error = false;
             ui.message = String::from(if accepted {
-                "Aceptada. Esperando la clave del teléfono…"
+                crate::i18n::tr_noop("Accepted. Waiting for the phone's key…")
             } else {
-                "Rechazaste la transferencia. No se recibirá nada."
+                crate::i18n::tr_noop("You rejected the transfer. Nothing will be received.")
             });
         }
         tracing::info!(accepted, "Inbound key transfer: local decision");
@@ -331,7 +341,7 @@ impl qobject::PeersController {
                 object.as_mut().update_inbound(transfer_id, |ui| {
                     ui.error = true;
                     ui.message = String::from(
-                        "No se pudo enviar tu decisión: la sesión cambió o la oferta caducó.",
+                        crate::i18n::tr_noop("Your decision could not be sent: the session changed or the offer expired."),
                     );
                 });
             });
@@ -373,9 +383,9 @@ impl qobject::PeersController {
                             }
                             ui.phase = stage;
                             ui.message = String::from(if stage == "verifying" {
-                                "Clave importada. Comprobando que descifra el desafío; GnuPG puede pedir su contraseña…"
+                                crate::i18n::tr_noop("Key imported. Checking that it decrypts the challenge; GnuPG may ask for its passphrase…")
                             } else {
-                                "Importando la clave en GnuPG…"
+                                crate::i18n::tr_noop("Importing the key into GnuPG…")
                             });
                         });
                     });
@@ -409,7 +419,7 @@ impl qobject::PeersController {
                     Some(Ok(())) => {
                         if ui.phase != "complete" {
                             ui.message = String::from(
-                                "Clave importada y comprobada. Enviando la confirmación al teléfono…",
+                                crate::i18n::tr_noop("Key imported and checked. Sending the confirmation to the phone…"),
                             );
                         }
                     }
@@ -422,7 +432,7 @@ impl qobject::PeersController {
                         ui.phase = "failed";
                         ui.error = true;
                         ui.message = String::from(
-                            "La sesión cambió antes de importar. No se importó nada.",
+                            crate::i18n::tr_noop("The session changed before importing. Nothing was imported."),
                         );
                     }
                 });

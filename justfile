@@ -165,7 +165,7 @@ _gate-rust-tail: _lint-qml _test-items test
 
 _gate-native: test-icons test-session-lock
 
-_gate-meta: test-packaging metadata distro-check translations-check i18n-check licenses handbook
+_gate-meta: test-packaging metadata distro-check i18n-check licenses handbook
 
 # Incluye archivos nuevos que todavía no están en el índice.
 [group('Puertas')]
@@ -244,15 +244,6 @@ prepare-synthetic-sync-fixture:
 #
 # Textos y documentación
 #
-
-# Catálogo Qt actual (po/es.ts); se retira al terminar la migración a KI18n.
-[group('Textos y documentación')]
-translations:
-    python3 packaging/translations.py update
-
-[group('Textos y documentación')]
-translations-check:
-    python3 packaging/translations.py check
 
 # KI18n: regenera po/<app id>.pot con Messages.sh y fusiona po/<idioma>/<app id>.po.
 [group('Textos y documentación')]

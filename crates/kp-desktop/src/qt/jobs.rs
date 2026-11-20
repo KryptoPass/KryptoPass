@@ -17,7 +17,7 @@ where
         if let Err(error) = target.queue(move |object| {
             publish(object, result);
         }) {
-            tracing::warn!(?error, "No se pudo publicar el resultado en el hilo de Qt");
+            tracing::warn!(?error, "The result could not be published to the Qt thread");
         }
     });
 }

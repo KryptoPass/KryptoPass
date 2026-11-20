@@ -45,7 +45,7 @@ impl qobject::PeersController {
         self.as_mut().clear_pairing_display();
         self.as_mut().show(
             "preparing_reconnect",
-            "Preparando la reconexión LAN con este dispositivo…",
+            crate::i18n::tr_noop("Preparing the LAN reconnection with this device…"),
         );
 
         let thread = self.qt_thread();
@@ -59,19 +59,19 @@ impl qobject::PeersController {
                 let (code, text) = match result {
                     Ok(()) => (
                         "resume_ready",
-                        "Listener LAN listo. Abre KryptoPass en Android y pulsa Reconectar para este Desktop.",
+                        crate::i18n::tr_noop("LAN listener ready. Open KryptoPass on Android and choose Reconnect for this Desktop."),
                     ),
                     Err(kryptopass_peers::PeerError::Authentication) => (
                         "peer_not_authorized",
-                        "Este dispositivo ya no está autorizado en este equipo.",
+                        crate::i18n::tr_noop("This device is no longer authorized on this computer."),
                     ),
                     Err(kryptopass_peers::PeerError::Link) => (
                         "lan_error",
-                        "No se pudo iniciar el listener LAN. Revisa la red e inténtalo de nuevo.",
+                        crate::i18n::tr_noop("The LAN listener could not be started. Check the network and try again."),
                     ),
                     Err(_) => (
                         "profile_error",
-                        "No se pudo abrir el perfil existente. No se creó una identidad nueva.",
+                        crate::i18n::tr_noop("The existing profile could not be opened. No new identity was created."),
                     ),
                 };
                 object.show(code, text);
@@ -124,7 +124,7 @@ impl qobject::PeersController {
         self.as_mut().clear_pairing_display();
         self.as_mut().show(
             "connecting",
-            "Abriendo identidad protegida por el llavero del sistema…",
+            crate::i18n::tr_noop("Opening the identity protected by the system keyring…"),
         );
 
         let job = PairingJob {
@@ -158,14 +158,18 @@ impl qobject::PeersController {
         let Ok(directory) = peers_directory() else {
             self.show(
                 "network_policy_blocked",
-                "No se pudo localizar el archivo de política de red. No se inició una conexión.",
+                crate::i18n::tr_noop(
+                    "The network policy file could not be located. No connection was started.",
+                ),
             );
             return None;
         };
         let Ok(stored) = load_network_privacy_settings(&directory) else {
             self.show(
                 "network_policy_blocked",
-                "No se pudo leer la política de privacidad de red. No se inició una conexión.",
+                crate::i18n::tr_noop(
+                    "The network privacy policy could not be read. No connection was started.",
+                ),
             );
             return None;
         };
@@ -176,7 +180,9 @@ impl qobject::PeersController {
         if save_network_privacy_settings(&directory, settings).is_err() {
             self.as_mut().show(
                 "network_policy_blocked",
-                "No se pudo guardar la política de red. No se inició una conexión.",
+                crate::i18n::tr_noop(
+                    "The network policy could not be saved. No connection was started.",
+                ),
             );
             return None;
         }
@@ -189,7 +195,7 @@ impl qobject::PeersController {
         if owner.is_none() {
             self.show(
                 "profile_error",
-                "No se pudo iniciar el listener de recuperación local.",
+                crate::i18n::tr_noop("The local recovery listener could not be started."),
             );
         }
         owner
@@ -241,16 +247,16 @@ impl qobject::PeersController {
             if network.is_none() {
                 self.show(
                     "network_error",
-                    "No se pudo preparar el servidor de conexión por Internet.",
+                    crate::i18n::tr_noop("The Internet connection server could not be prepared."),
                 );
             }
             return network;
         }
         if *self.lan_enabled() {
             let Some(bind_ip) = self.chosen_lan_address() else {
-                self.as_mut().set_status(QString::from(
-                    "Selecciona la dirección de Desktop en tu red local.",
-                ));
+                self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                    "Select the Desktop's address on your local network.",
+                )));
                 return None;
             };
             return Some(PeerNetwork::Lan { bind_ip });
@@ -284,9 +290,9 @@ impl qobject::PeersController {
             }
         }
         self.as_mut().set_status(QString::from(if accepted {
-            "Esperando la confirmación del teléfono…"
+            crate::i18n::tr_noop("Waiting for the phone's confirmation…")
         } else {
-            "Rechazando…"
+            crate::i18n::tr_noop("Rejecting…")
         }));
         self.as_mut().set_status_code(QString::from(if accepted {
             "confirming"
@@ -308,9 +314,9 @@ impl qobject::PeersController {
             self.as_mut().rust_mut().generation = generation;
             self.as_mut().set_busy(false);
             self.as_mut().set_status_code(QString::from("cancelled"));
-            self.as_mut().set_status(QString::from(
-                "Operación cancelada. La confianza ya guardada se conserva.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "Operation canceled. The trust already saved is kept.",
+            )));
         }
         self.as_mut().set_awaiting(false);
         self.as_mut().set_bootstrap(QString::default());

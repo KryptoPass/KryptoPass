@@ -17,8 +17,9 @@ impl qobject::SecretsController {
             let draft = match new_editor_projection() {
                 Ok(draft) => draft,
                 Err(_) => {
-                    self.as_mut()
-                        .fail_detail("No se pudo preparar el elemento para editarlo.");
+                    self.as_mut().fail_detail(crate::i18n::tr_noop(
+                        "The item could not be prepared for editing.",
+                    ));
                     return;
                 }
             };
@@ -33,13 +34,14 @@ impl qobject::SecretsController {
         }
 
         let Some(secret_id) = parse_secret_id(&id) else {
-            self.as_mut()
-                .fail_detail("No se pudo abrir el elemento para editarlo.");
+            self.as_mut().fail_detail(crate::i18n::tr_noop(
+                "The item could not be opened for editing.",
+            ));
             return;
         };
         self.as_mut().set_editor_busy(true);
         self.as_mut()
-            .set_status(QString::from("Abriendo elemento…"));
+            .set_status(QString::from(crate::i18n::tr_noop("Opening item…")));
 
         let cancel_epoch = self.as_ref().rust().editor_cancel_epoch.clone();
         crate::qt::jobs::run_blocking(
@@ -74,20 +76,20 @@ impl qobject::SecretsController {
                                 controller
                                     .as_mut()
                                     .set_editor_json(QString::from(draft.as_str()));
-                                controller
-                                    .as_mut()
-                                    .set_status(QString::from("Elemento listo para editar"));
+                                controller.as_mut().set_status(QString::from(
+                                    crate::i18n::tr_noop("Item ready to edit"),
+                                ));
                                 controller.as_mut().editor_ready();
                             }
-                            Err(_) => controller
-                                .as_mut()
-                                .fail_detail("No se pudo preparar el elemento para editarlo."),
+                            Err(_) => controller.as_mut().fail_detail(crate::i18n::tr_noop(
+                                "The item could not be prepared for editing.",
+                            )),
                         }
                     }
                     Ok(None) => (),
-                    Err(_) => controller
-                        .as_mut()
-                        .fail_detail("No se pudo abrir el elemento para editarlo."),
+                    Err(_) => controller.as_mut().fail_detail(crate::i18n::tr_noop(
+                        "The item could not be opened for editing.",
+                    )),
                 }
             },
         );
@@ -95,8 +97,9 @@ impl qobject::SecretsController {
 
     pub fn save_entry(mut self: Pin<&mut Self>, draft_json: &QString) {
         if *self.locked() {
-            self.as_mut()
-                .fail("Desbloquea la bóveda antes de guardar un elemento.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Unlock the vault before saving an item.",
+            ));
             return;
         }
         if *self.busy() {
@@ -106,7 +109,7 @@ impl qobject::SecretsController {
 
         let Some(session) = self.as_ref().rust().editor_session else {
             self.as_mut()
-                .fail("No hay un borrador abierto para guardar.");
+                .fail(crate::i18n::tr_noop("There is no open draft to save."));
             return;
         };
         if *self.editor_busy() || *self.icon_busy() {
@@ -116,20 +119,22 @@ impl qobject::SecretsController {
         let draft_json = SensitiveText::from(draft_json.to_string());
         if draft_json.len() > kryptopass_core::MAX_CONTENT_BYTES {
             self.as_mut()
-                .fail("El borrador supera el tamaño permitido.");
+                .fail(crate::i18n::tr_noop("The draft exceeds the allowed size."));
             return;
         }
         let mut draft: EntryDraft = match serde_json::from_str(draft_json.as_str()) {
             Ok(draft) => draft,
             Err(_) => {
-                self.as_mut().fail("El borrador del elemento no es válido.");
+                self.as_mut()
+                    .fail(crate::i18n::tr_noop("The item draft is not valid."));
                 return;
             }
         };
 
         if !draft_matches_session(&draft, session.id, session.revision) {
-            self.as_mut()
-                .fail("El borrador ya no corresponde al elemento abierto.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "The draft no longer matches the open item.",
+            ));
             return;
         }
 
@@ -143,16 +148,18 @@ impl qobject::SecretsController {
                 .map(|(_, key)| key.clone());
             let has_saved_key = state.editor_content.is_some();
             if token.is_empty() && !has_saved_key {
-                self.as_mut()
-                    .fail("Importa una clave SSH antes de guardar el elemento.");
+                self.as_mut().fail(crate::i18n::tr_noop(
+                    "Import an SSH key before saving the item.",
+                ));
                 return;
             }
             match staged {
                 Some(key) => draft.attach_ssh(key),
                 None if token.is_empty() => {}
                 None => {
-                    self.as_mut()
-                        .fail("Importa una clave SSH antes de guardar el elemento.");
+                    self.as_mut().fail(crate::i18n::tr_noop(
+                        "Import an SSH key before saving the item.",
+                    ));
                     return;
                 }
             }
@@ -162,8 +169,9 @@ impl qobject::SecretsController {
             Ok(prepared) => prepared,
             Err(error) => {
                 tracing::debug!(error = %format!("{error:#}"), "draft refused before saving");
-                self.as_mut()
-                    .fail("Revisa los datos del elemento y quién tiene acceso.");
+                self.as_mut().fail(crate::i18n::tr_noop(
+                    "Review the item's data and who has access.",
+                ));
                 return;
             }
         };
@@ -172,9 +180,9 @@ impl qobject::SecretsController {
         // A refusal for the item's fields is explained with this template's labels.
         let template = prepared.content.template().as_str().to_owned();
         self.as_mut().start_mutation(
-            "Guardando elemento…",
+            crate::i18n::tr_noop("Saving item…"),
             true,
-            "No se pudo guardar el elemento.",
+            crate::i18n::tr_noop("The item could not be saved."),
             move || {
                 let mut session = open_session()?;
                 let vault = session.vault_mut();
@@ -240,7 +248,8 @@ impl qobject::SecretsController {
             return;
         }
         let Some(path) = path.to_local_file() else {
-            self.as_mut().fail("Elige una imagen local.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("Choose a local image."));
             return;
         };
         let operation = self.as_ref().rust().editor_operation;
@@ -261,7 +270,7 @@ impl qobject::SecretsController {
                         controller.as_mut().rust_mut().staged_icon = Some(asset);
                         controller.as_mut().icon_prepared(&QString::from(json));
                     }
-                    Err(_) => controller.as_mut().fail("No se pudo usar esa imagen. Elige un PNG, JPEG o WebP estático de hasta 4 MB, con lados de hasta 4096 píxeles y un máximo de 4 millones de píxeles."),
+                    Err(_) => controller.as_mut().fail(crate::i18n::tr_noop("That image cannot be used. Choose a static PNG, JPEG or WebP of up to 4 MB, with sides of up to 4096 pixels and at most 4 million pixels.")),
                 }
             });
         });
@@ -278,7 +287,7 @@ impl qobject::SecretsController {
         }
         let Some(path) = path.to_local_file() else {
             self.as_mut()
-                .fail("Selecciona un archivo local de clave privada SSH.");
+                .fail(crate::i18n::tr_noop("Select a local SSH private key file."));
             return;
         };
         let path = std::path::PathBuf::from(path.to_string());
@@ -332,7 +341,7 @@ impl qobject::SecretsController {
                     controller.as_mut().rust_mut().staged_ssh = Some((token, key));
                     controller.as_mut().ssh_key_prepared(&QString::from(json));
                 }
-                Err(_) => controller.as_mut().fail("No se pudo importar la clave SSH. Usa una clave privada OpenSSH válida y revisa su frase de contraseña."),
+                Err(_) => controller.as_mut().fail(crate::i18n::tr_noop("The SSH key could not be imported. Use a valid OpenSSH private key and check its passphrase.")),
             }
             },
         );
@@ -348,8 +357,9 @@ impl qobject::SecretsController {
             return;
         }
         let Some(path) = path.to_local_file() else {
-            self.as_mut()
-                .fail("Selecciona una imagen local con el QR del autenticador.");
+            self.as_mut().fail(crate::i18n::tr_noop(
+                "Select a local image with the authenticator's QR code.",
+            ));
             return;
         };
         let path = std::path::PathBuf::from(path.to_string());
@@ -383,13 +393,13 @@ impl qobject::SecretsController {
                     }
                     let prepared = PreparedTotp { totp_input: uri.as_str() };
                     let Ok(json) = super::super::secrets_projection::sensitive_json(&prepared) else {
-                        controller.as_mut().fail("No se pudo preparar la configuración TOTP.");
+                        controller.as_mut().fail(crate::i18n::tr_noop("The TOTP settings could not be prepared."));
                         return;
                     };
 
                     controller.as_mut().totp_qr_prepared(&QString::from(json.as_str()));
                 }
-                Err(_) => controller.as_mut().fail("No se pudo leer el autenticador. Elige una imagen PNG o JPEG de hasta 8 MB con un único QR TOTP válido."),
+                Err(_) => controller.as_mut().fail(crate::i18n::tr_noop("The authenticator could not be read. Choose a PNG or JPEG image of up to 8 MB with a single valid TOTP QR code.")),
             }
             },
         );

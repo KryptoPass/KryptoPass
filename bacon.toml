@@ -89,12 +89,6 @@ need_stdout = true
 default_watch = false
 watch = ["doc"]
 
-[jobs.translations]
-command = ["just", "translations-check"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-desktop", "po", "packaging/translations.py"]
-
 [jobs.i18n]
 command = ["just", "i18n-check"]
 need_stdout = true

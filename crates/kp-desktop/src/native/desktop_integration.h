@@ -4,7 +4,7 @@ namespace kryptopass::desktop::native
 {
 void initialize_desktop();
 QString translate_ui(const QString &source);
-QString translate_plural(const QString &source, int count);
+QString translate_plural(const QString &singular, const QString &plural, int count);
 QString desktop_actions();
 void set_action_enabled(const QString &id, bool enabled);
 void show_about_application_dialog();

@@ -28,7 +28,9 @@ impl Default for OnlineSettings {
 impl OnlineSettings {
     pub fn validate(&self) -> Result<(), String> {
         if self.services.len() > 32 || self.keyservers.len() > 32 {
-            return Err("Puedes configurar hasta 32 servicios o servidores.".into());
+            return Err(
+                crate::i18n::tr_noop("You can configure up to 32 services or servers.").into(),
+            );
         }
         for service in &self.services {
             service_url(service, "0123456789ABCDEF0123456789ABCDEF01234567")?;
@@ -51,7 +53,10 @@ fn validate_url(value: &str, schemes: &[&str]) -> Result<(), String> {
         || !url.user_name_or_default().is_empty()
         || !url.password_or_default().is_empty()
     {
-        return Err("Indica una URL válida con servidor y sin credenciales ni espacios.".into());
+        return Err(crate::i18n::tr_noop(
+            "Enter a valid URL with a host and without credentials or spaces.",
+        )
+        .into());
     }
     Ok(())
 }
@@ -64,7 +69,7 @@ pub fn service_url(template: &str, fingerprint: &str) -> Result<String, String> 
     let fingerprint: String = fingerprint.chars().filter(|c| !c.is_whitespace()).collect();
     if !matches!(fingerprint.len(), 40 | 64) || !fingerprint.bytes().all(|b| b.is_ascii_hexdigit())
     {
-        return Err("Indica la huella OpenPGP completa.".into());
+        return Err(crate::i18n::tr_noop("Enter the full OpenPGP fingerprint.").into());
     }
     let upper = fingerprint.to_ascii_uppercase();
     let lower = fingerprint.to_ascii_lowercase();
@@ -80,7 +85,7 @@ pub fn service_url(template: &str, fingerprint: &str) -> Result<String, String> 
         url = url.replace(token, value);
     }
     if url.contains("$$") {
-        return Err("La plantilla contiene un marcador desconocido.".into());
+        return Err(crate::i18n::tr_noop("The template contains an unknown placeholder.").into());
     }
     validate_url(&url, &["http", "https"])?;
     Ok(url)

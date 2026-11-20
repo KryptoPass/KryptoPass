@@ -78,7 +78,9 @@ impl qobject::SensitiveClipboard {
         let error = if copied {
             QString::default()
         } else {
-            QString::from("No se pudo copiar el contenido sensible al portapapeles.")
+            QString::from(crate::i18n::tr_noop(
+                "The sensitive content could not be copied to the clipboard.",
+            ))
         };
         self.set_error_message(error);
         copied

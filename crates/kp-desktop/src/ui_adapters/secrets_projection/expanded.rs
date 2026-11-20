@@ -88,9 +88,12 @@ fn rows(content: &ItemContent) -> Result<Vec<DetailRow>> {
             .cloned()
             .unwrap_or_default();
         let shown: SensitiveText = match field.field_type {
-            FieldType::Boolean => {
-                crate::i18n::text(if text.as_str() == "true" { "Sí" } else { "No" }).into()
-            }
+            FieldType::Boolean => crate::i18n::tr(if text.as_str() == "true" {
+                crate::i18n::tr_noop("Yes")
+            } else {
+                "No"
+            })
+            .into(),
             FieldType::Choice => field
                 .choices
                 .iter()
@@ -115,7 +118,7 @@ fn rows(content: &ItemContent) -> Result<Vec<DetailRow>> {
         ) {
             result.push(row(
                 "algorithm".to_owned(),
-                crate::i18n::text("Algoritmo").into(),
+                crate::i18n::tr("Algorithm").into(),
                 info.algorithm.into(),
                 false,
                 false,
@@ -184,8 +187,8 @@ pub(super) fn detail<'a>(
         totp,
         qr_source: view.qr_source,
         qr_unavailable_reason: wpa3.then(|| {
-            crate::i18n::text(
-                "El QR de conexión está disponible para redes abiertas, WEP y WPA/WPA2.",
+            crate::i18n::tr(
+                "The connection QR code is available for open, WEP and WPA/WPA2 networks.",
             )
         }),
     })

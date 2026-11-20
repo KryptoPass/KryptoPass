@@ -22,8 +22,9 @@ impl qobject::SecretsController {
         let appearance = match FolderAppearance::new(icon, color) {
             Ok(appearance) => appearance,
             Err(_) => {
-                self.as_mut()
-                    .fail("El icono o el color de la carpeta no son válidos.");
+                self.as_mut().fail(crate::i18n::tr_noop(
+                    "The folder's icon or color is not valid.",
+                ));
                 return;
             }
         };
@@ -33,7 +34,8 @@ impl qobject::SecretsController {
             match parse_folder_id(&id) {
                 Some(id) => Some(id),
                 None => {
-                    self.as_mut().fail("La carpeta seleccionada no es válida.");
+                    self.as_mut()
+                        .fail(crate::i18n::tr_noop("The selected folder is not valid."));
                     return;
                 }
             }
@@ -44,16 +46,17 @@ impl qobject::SecretsController {
             match parse_folder_id(&parent_id) {
                 Some(id) => Some(id),
                 None => {
-                    self.as_mut().fail("La carpeta de destino no es válida.");
+                    self.as_mut()
+                        .fail(crate::i18n::tr_noop("The destination folder is not valid."));
                     return;
                 }
             }
         };
 
         self.as_mut().start_mutation(
-            "Guardando carpeta…",
+            crate::i18n::tr_noop("Saving folder…"),
             false,
-            "No se pudo guardar la carpeta.",
+            crate::i18n::tr_noop("The folder could not be saved."),
             move || {
                 let mut session = open_session()?;
                 let vault = session.vault_mut();
@@ -90,13 +93,14 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_folder_id(&id.to_string()) else {
-            self.as_mut().fail("La carpeta seleccionada no es válida.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected folder is not valid."));
             return;
         };
         self.as_mut().start_mutation(
-            "Ordenando carpeta…",
+            crate::i18n::tr_noop("Reordering folder…"),
             false,
-            "No se pudo cambiar el orden de la carpeta.",
+            crate::i18n::tr_noop("The folder's order could not be changed."),
             move || {
                 step_folder(&mut open_session()?, id, direction)?;
                 Ok(MutationResult {
@@ -118,7 +122,8 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_folder_id(&id.to_string()) else {
-            self.as_mut().fail("La carpeta seleccionada no es válida.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected folder is not valid."));
             return;
         };
         let optional_id = |value: &QString| -> anyhow::Result<Option<FolderId>> {
@@ -132,12 +137,13 @@ impl qobject::SecretsController {
             }
         };
         let (Ok(parent), Ok(before)) = (optional_id(parent_id), optional_id(before_id)) else {
-            self.as_mut().fail("La carpeta de destino no es válida.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The destination folder is not valid."));
             return;
         };
         self.as_mut().start_mutation(
-            "Moviendo carpeta…", false,
-            "No se pudo mover la carpeta. No puede colocarse dentro de sí misma ni de sus descendientes.",
+            crate::i18n::tr_noop("Moving folder…"), false,
+            crate::i18n::tr_noop("The folder could not be moved. It cannot be placed inside itself or its descendants."),
             move || {
                 open_session()?.vault_mut().move_folder(id, parent, before)?;
                 Ok(MutationResult {
@@ -154,7 +160,8 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_secret_id(&id.to_string()) else {
-            self.as_mut().fail("El elemento seleccionado no es válido.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected item is not valid."));
             return;
         };
         let folder_id = folder_id.to_string();
@@ -164,16 +171,17 @@ impl qobject::SecretsController {
             match parse_folder_id(&folder_id) {
                 Some(id) => Some(id),
                 None => {
-                    self.as_mut().fail("La carpeta de destino no es válida.");
+                    self.as_mut()
+                        .fail(crate::i18n::tr_noop("The destination folder is not valid."));
                     return;
                 }
             }
         };
 
         self.as_mut().start_mutation(
-            "Moviendo elemento…",
+            crate::i18n::tr_noop("Moving item…"),
             false,
-            "No se pudo mover el elemento.",
+            crate::i18n::tr_noop("The item could not be moved."),
             move || {
                 let mut session = open_session()?;
                 let before_revision = item_meta(&session, id)?.revision;
@@ -203,7 +211,8 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_secret_id(&id.to_string()) else {
-            self.as_mut().fail("El elemento seleccionado no es válido.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected item is not valid."));
             return;
         };
 
@@ -211,9 +220,9 @@ impl qobject::SecretsController {
         // for the mutation callback to remove its plaintext projection.
         self.as_mut().invalidate_selection();
         self.as_mut().start_mutation(
-            "Eliminando elemento…",
+            crate::i18n::tr_noop("Deleting item…"),
             false,
-            "No se pudo eliminar el elemento.",
+            crate::i18n::tr_noop("The item could not be deleted."),
             move || {
                 let mut session = open_session()?;
                 let revision = item_meta(&session, id)?.revision;
@@ -233,7 +242,8 @@ impl qobject::SecretsController {
             return;
         }
         let Some(id) = parse_folder_id(&id.to_string()) else {
-            self.as_mut().fail("La carpeta seleccionada no es válida.");
+            self.as_mut()
+                .fail(crate::i18n::tr_noop("The selected folder is not valid."));
             return;
         };
 
@@ -243,9 +253,9 @@ impl qobject::SecretsController {
             self.as_mut().invalidate_selection();
         }
         self.as_mut().start_mutation(
-            "Eliminando carpeta…",
+            crate::i18n::tr_noop("Deleting folder…"),
             false,
-            "No se pudo eliminar la carpeta.",
+            crate::i18n::tr_noop("The folder could not be deleted."),
             move || {
                 let mut session = open_session()?;
                 let affected_selection =

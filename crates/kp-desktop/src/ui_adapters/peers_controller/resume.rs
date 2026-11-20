@@ -152,9 +152,9 @@ impl qobject::PeersController {
         } else if state.profile_error && !self.rust().busy && !self.rust().maintenance_busy {
             self.as_mut()
                 .set_status_code(QString::from("profile_error"));
-            self.as_mut().set_status(QString::from(
-                "No se pudieron cargar los dispositivos guardados.",
-            ));
+            self.as_mut().set_status(QString::from(crate::i18n::tr_noop(
+                "The saved devices could not be loaded.",
+            )));
         }
     }
 }

@@ -94,10 +94,12 @@ fn synthetic_transfer_error_message(
     use kryptopass_devices::SyntheticTransferError;
     match (purpose, error) {
         (KeyTransferPurpose::VaultIdentity, SyntheticTransferError::Unsupported) => {
-            "El teléfono no admite recibir tu clave. Actualiza KryptoPass en Android."
+            crate::i18n::tr_noop("The phone cannot receive your key. Update KryptoPass on Android.")
         }
         (KeyTransferPurpose::VaultIdentity, SyntheticTransferError::Invalid) => {
-            "No se pudo exportar tu clave: se canceló la contraseña o la clave no está disponible. No se envió material privado."
+            crate::i18n::tr_noop(
+                "Your key could not be exported: the passphrase was canceled or the key is not available. No private material was sent.",
+            )
         }
         (_, error) => synthetic_transfer_fallback_message(error),
     }
@@ -108,17 +110,21 @@ fn synthetic_transfer_fallback_message(
 ) -> &'static str {
     use kryptopass_devices::SyntheticTransferError;
     match error {
-        SyntheticTransferError::Unsupported => {
-            "El teléfono o la sesión no admite la transferencia sintética."
+        SyntheticTransferError::Unsupported => crate::i18n::tr_noop(
+            "The phone or the session does not support the synthetic transfer.",
+        ),
+        SyntheticTransferError::Busy => {
+            crate::i18n::tr_noop("A transfer has already been started in this session.")
         }
-        SyntheticTransferError::Busy => "Ya se inició una transferencia en esta sesión.",
-        SyntheticTransferError::Invalid => {
-            "No se pudo preparar la clave sintética local. No se envió material privado."
+        SyntheticTransferError::Invalid => crate::i18n::tr_noop(
+            "The local synthetic key could not be prepared. No private material was sent.",
+        ),
+        SyntheticTransferError::Expired => {
+            crate::i18n::tr_noop("The transfer expired. Start the test again.")
         }
-        SyntheticTransferError::Expired => "La transferencia caducó. Vuelve a iniciar la prueba.",
-        SyntheticTransferError::WrongSession => {
-            "La sesión o la generación cambió. Vuelve a conectar antes de intentarlo."
-        }
+        SyntheticTransferError::WrongSession => crate::i18n::tr_noop(
+            "The session or generation changed. Reconnect before trying again.",
+        ),
     }
 }
 
@@ -163,9 +169,10 @@ impl qobject::PeersController {
         approved_fingerprint: QString,
     ) {
         if !cfg!(debug_assertions) && matches!(purpose, KeyTransferPurpose::SyntheticFixture) {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "La transferencia sintética solo está disponible en Desktop debug.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "The synthetic transfer is only available in Desktop debug builds.",
+                )));
             return;
         }
         if self.rust().synthetic_transfer_preparing
@@ -176,16 +183,18 @@ impl qobject::PeersController {
             return;
         }
         let Some(peer) = parse_device_id(&device_id.to_string()) else {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "Selecciona un teléfono autorizado y conectado.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "Select an authorized, connected phone.",
+                )));
             return;
         };
         let Some(expected_generation) = connection_generation.to_string().parse::<u64>().ok()
         else {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "La sesión cambió. Vuelve a abrir la confirmación.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "The session changed. Reopen the confirmation.",
+                )));
             return;
         };
         let approved_fingerprint = approved_fingerprint.to_string();
@@ -203,9 +212,10 @@ impl qobject::PeersController {
             ),
         };
         if !valid_approval {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "La clave elegida no es válida. Vuelve a abrir la selección y revisa su huella.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "The chosen key is not valid. Reopen the selection and check its fingerprint.",
+                )));
             return;
         }
         if matches!(purpose, KeyTransferPurpose::VaultIdentity) {
@@ -227,15 +237,17 @@ impl qobject::PeersController {
                     && progress.version >= minimum_version
             });
         if !connected || !ready {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "El teléfono ya no está conectado o no admite recibir esta clave.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "The phone is no longer connected or cannot receive this key.",
+                )));
             return;
         }
         let Some(owner) = self.rust().resume_owner.clone() else {
-            self.as_mut().set_synthetic_transfer_error(QString::from(
-                "No se pudo acceder al dueño de la sesión activa.",
-            ));
+            self.as_mut()
+                .set_synthetic_transfer_error(QString::from(crate::i18n::tr_noop(
+                    "The active session's owner could not be accessed.",
+                )));
             return;
         };
 
@@ -312,7 +324,7 @@ impl qobject::PeersController {
                     object.as_mut().rust_mut().synthetic_transfer_preparing_peer = None;
                     object.as_mut().set_synthetic_transfer_preparing(false);
                     object.as_mut().set_synthetic_transfer_error(QString::from(
-                        "La sesión cambió antes de activar la transferencia. No se enviará material privado.",
+                        crate::i18n::tr_noop("The session changed before the transfer was activated. No private material will be sent."),
                     ));
                     return;
                 }

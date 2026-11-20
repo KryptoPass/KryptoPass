@@ -40,7 +40,7 @@ pub(crate) mod ffi {
         #[namespace = "kryptopass::desktop::native"]
         fn translate_ui(source: &QString) -> QString;
         #[namespace = "kryptopass::desktop::native"]
-        fn translate_plural(source: &QString, count: i32) -> QString;
+        fn translate_plural(singular: &QString, plural: &QString, count: i32) -> QString;
         #[namespace = "kryptopass::desktop::native"]
         fn desktop_actions() -> QString;
         #[namespace = "kryptopass::desktop::native"]

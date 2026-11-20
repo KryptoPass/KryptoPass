@@ -373,7 +373,9 @@ impl Default for PeersControllerRust {
             network_addresses: QStringList::default(),
             network_index: -1,
             network_ips: Vec::new(),
-            status: QString::from("Listo para una prueba local con el emulador."),
+            status: QString::from(crate::i18n::tr_noop(
+                "Ready for a local test with the emulator.",
+            )),
             bootstrap: QString::default(),
             sas: QString::default(),
             peer: QString::default(),
@@ -460,42 +462,56 @@ impl PeersControllerRust {
 fn error_status(error: &kryptopass_peers::PeerError) -> &'static str {
     use kryptopass_peers::PeerError;
     match error {
-        PeerError::Cancelled => "Operación cancelada.",
-        PeerError::Expired => "La invitación o conexión caducó. Genera otro código.",
-        PeerError::Rejected => "Emparejamiento rechazado. No se concedió confianza.",
-        PeerError::KeyStore => {
-            "No se pudo acceder al llavero del sistema para abrir la identidad de este equipo."
+        PeerError::Cancelled => crate::i18n::tr_noop("Operation canceled."),
+        PeerError::Expired => {
+            crate::i18n::tr_noop("The invitation or connection expired. Generate another code.")
         }
-        PeerError::Profile => "No se pudieron cargar los datos de vinculación de este equipo.",
-        PeerError::Session => {
-            "La confianza se guardó, pero no se pudo abrir la sesión activa. Puedes reconectar."
+        PeerError::Rejected => crate::i18n::tr_noop("Pairing rejected. No trust was granted."),
+        PeerError::KeyStore => crate::i18n::tr_noop(
+            "The system keyring could not be accessed to open this computer's identity.",
+        ),
+        PeerError::Profile => {
+            crate::i18n::tr_noop("This computer's pairing data could not be loaded.")
         }
-        PeerError::Link => {
-            "El teléfono no completó la conexión de red. Comprueba su error y genera otra invitación; todavía no se verificaron identidades."
-        }
-        PeerError::Authentication => {
-            "La verificación criptográfica no se completó. No se autorizó el dispositivo. Genera una invitación nueva."
-        }
+        PeerError::Session => crate::i18n::tr_noop(
+            "The trust was saved, but the active session could not be opened. You can reconnect.",
+        ),
+        PeerError::Link => crate::i18n::tr_noop(
+            "The phone did not complete the network connection. Check its error and generate another invitation; no identities have been verified yet.",
+        ),
+        PeerError::Authentication => crate::i18n::tr_noop(
+            "The cryptographic verification was not completed. The device was not authorized. Generate a new invitation.",
+        ),
         PeerError::NetworkPrivacyBlocked(NetworkPolicyError::VpnUnverifiable) => {
-            "No se puede comprobar si la conexión a Internet pasa por una VPN en este sistema, así que quedó en pausa."
+            crate::i18n::tr_noop(
+                "It cannot be checked whether the Internet connection goes through a VPN on this system, so it was paused.",
+            )
         }
-        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::VpnInactive) => {
-            "Elegiste usar Internet solo a través de VPN y ahora no hay una VPN activa. Conéctala para continuar."
-        }
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::VpnInactive) => crate::i18n::tr_noop(
+            "You chose to use the Internet only through a VPN and no VPN is active now. Connect it to continue.",
+        ),
         PeerError::NetworkPrivacyBlocked(NetworkPolicyError::LanExceptionRequired) => {
-            "La red local está desactivada mientras se exige VPN. Actívala en Privacidad si la necesitas."
+            crate::i18n::tr_noop(
+                "The local network is off while a VPN is required. Turn it on in Privacy if you need it.",
+            )
         }
         PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RelayRequired) => {
-            "Ocultar tu dirección IP desactiva la red local: todo pasa por el servidor de retransmisión."
+            crate::i18n::tr_noop(
+                "Hiding your IP address turns off the local network: everything goes through the relay server.",
+            )
         }
         PeerError::NetworkPrivacyBlocked(NetworkPolicyError::PolicyChanged) => {
-            "La política de privacidad cambió. La operación se cerró sin reutilizar su ruta anterior."
+            crate::i18n::tr_noop(
+                "The privacy policy changed. The operation was closed without reusing its previous route.",
+            )
         }
-        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RouteChanged) => {
-            "La ruta de red cambió. La operación se cerró y no se reintentó por otra interfaz."
-        }
+        PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RouteChanged) => crate::i18n::tr_noop(
+            "The network route changed. The operation was closed and not retried over another interface.",
+        ),
         PeerError::NetworkPrivacyBlocked(NetworkPolicyError::RouteSnapshotUnavailable) => {
-            "No se pudo verificar la ruta del sistema. La conexión quedó bloqueada."
+            crate::i18n::tr_noop(
+                "The system route could not be verified. The connection was blocked.",
+            )
         }
     }
 }
@@ -544,17 +560,21 @@ fn parse_device_id(value: &str) -> Option<DeviceId> {
 
 fn connection_status(state: ConnectionState) -> &'static str {
     match state {
-        ConnectionState::Connecting => "Confianza guardada. Abriendo la sesión autenticada…",
+        ConnectionState::Connecting => {
+            crate::i18n::tr_noop("Trust saved. Opening the authenticated session…")
+        }
         ConnectionState::Reconnecting => {
-            "Esperando recuperar la conexión con el dispositivo autorizado…"
+            crate::i18n::tr_noop("Waiting to recover the connection with the authorized device…")
         }
-        ConnectionState::Connected => "Dispositivo conectado. Sesión autenticada activa.",
+        ConnectionState::Connected => {
+            crate::i18n::tr_noop("Device connected. Authenticated session active.")
+        }
         ConnectionState::Disconnected => {
-            "Dispositivo desconectado. La confianza guardada se conserva."
+            crate::i18n::tr_noop("Device disconnected. The saved trust is kept.")
         }
-        ConnectionState::Failed => {
-            "La sesión se interrumpió. La confianza guardada se conserva; puedes reconectar."
-        }
+        ConnectionState::Failed => crate::i18n::tr_noop(
+            "The session was interrupted. The saved trust is kept; you can reconnect.",
+        ),
     }
 }
 

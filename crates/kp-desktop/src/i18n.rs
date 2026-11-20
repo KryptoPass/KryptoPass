@@ -1,4 +1,7 @@
 //! Translation at the boundary between backend messages and Qt presentation.
+//!
+//! Source texts are English msgids that KI18n looks up at run time. `tr`, `trf`,
+//! `trp` and `tr_noop` are the names `Messages.sh` extracts.
 use cxx_kde_frameworks::ki18n::KLocalizedString;
 use cxx_qt_lib::{QByteArray, QString};
 
@@ -13,22 +16,24 @@ pub fn set_up_catalogs() {
         KLocalizedString::add_domain_locale_dir(&domain, &QString::from(env!("KP_LOCALE_DIR")));
     }
     // The backend still produces texts for people; they go through this catalog.
-    kryptopass_backend::i18n::set_translator(text);
+    kryptopass_backend::i18n::set_translator(tr);
 }
 
 pub fn translate(source: &QString) -> QString {
     crate::ui_adapters::native_ffi::ffi::translate_ui(source)
 }
 
-pub fn text(source: &str) -> String {
+pub fn tr(source: &str) -> String {
     translate(&QString::from(source)).to_string()
 }
 
-pub use kryptopass_backend::i18n::format;
+pub use kryptopass_backend::i18n::{tr_noop, trf};
 
-pub fn plural(source: &str, count: usize) -> QString {
+/// The plural form for `count`; `%1` in either form is the count.
+pub fn trp(singular: &str, plural: &str, count: usize) -> QString {
     crate::ui_adapters::native_ffi::ffi::translate_plural(
-        &QString::from(source),
+        &QString::from(singular),
+        &QString::from(plural),
         i32::try_from(count).unwrap_or(i32::MAX),
     )
 }

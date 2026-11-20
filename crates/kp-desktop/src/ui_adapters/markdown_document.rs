@@ -180,7 +180,9 @@ impl qobject::MarkdownDocument {
             }
             Err(_) => {
                 self.as_mut().clear();
-                self.set_error(QString::from("No se pudo preparar el documento Markdown."));
+                self.set_error(QString::from(crate::i18n::tr_noop(
+                    "The Markdown document could not be prepared.",
+                )));
             }
         }
     }

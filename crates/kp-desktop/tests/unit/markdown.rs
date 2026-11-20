@@ -550,7 +550,7 @@ fn spoiler_inside_image_never_leaks_alt_url_title_or_actions() -> TestResult {
         "||VISIBLE_SECRET||"
     ))?;
     let hidden = document.render()?;
-    assert!(hidden.html.contains("[Imagen omitida]"));
+    assert!(hidden.html.contains("[Image omitted]"));
     assert_eq!(hidden.actions.len(), 1);
     assert_absent(
         &hidden,
@@ -603,7 +603,7 @@ fn images_and_reference_images_omit_every_resource_scheme() -> TestResult {
             document.load(&source)?;
             let rendered = document.render()?;
             assert!(rendered.html.contains("PUBLIC"));
-            assert!(rendered.html.contains("[Imagen omitida]"));
+            assert!(rendered.html.contains("[Image omitted]"));
             assert!(rendered.actions.is_empty());
             assert_absent(
                 &rendered,
