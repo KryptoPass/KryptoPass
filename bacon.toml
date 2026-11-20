@@ -30,24 +30,6 @@ need_stdout = true
 default_watch = false
 watch = ["crates/kp-desktop/ui/qml", "crates/kp-desktop/ui/tests", "crates/kp-desktop/build.rs"]
 
-[jobs.test-dev-reset]
-command = ["just", "test-dev-reset"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-peers", "justfile", "Cargo.toml", "Cargo.lock"]
-
-[jobs.p2p-demo]
-command = ["just", "p2p-demo"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-protocol", "crates/kp-transport", "crates/kp-identity", "crates/kp-pairing", "Cargo.toml", "Cargo.lock"]
-
-[jobs.verify-sync-session]
-command = ["just", "verify-sync-session"]
-need_stdout = true
-allow_warnings = false
-watch = ["crates/kp-sync", "crates/kp-devices", "crates/kp-protocol", "crates/kp-pairing", "crates/kp-transport", "Cargo.toml", "Cargo.lock"]
-
 [jobs.cxx-tidy]
 command = ["just", "cxx-tidy"]
 need_stdout = true
@@ -85,12 +67,6 @@ command = ["just", "smoke"]
 need_stdout = true
 default_watch = false
 watch = ["crates"]
-
-[jobs.turn-smoke]
-command = ["just", "turn-smoke"]
-need_stdout = true
-default_watch = false
-watch = ["crates/kp-lan", "justfile", "bacon.toml"]
 
 [keybindings]
 q = "job:qmllint"
@@ -153,7 +129,7 @@ watch = ["crates/kp-desktop", "packaging/capture_screenshot.py"]
 command = ["just", "browser-build"]
 need_stdout = true
 default_watch = false
-watch = ["crates/kp-browser", "tools/browser_integration.py", "packaging/metadata.py", "Cargo.toml"]
+watch = ["../kryptopass-core/crates/kp-browser", "../kryptopass-core/crates/kp-pinentry", "tools/browser_integration.py", "packaging/metadata.py", "Cargo.toml"]
 
 [jobs.qmlls]
 command = ["just", "qmlls"]

@@ -1,18 +1,16 @@
 mod app_info;
-mod backup;
 mod i18n;
-mod import;
-mod infrastructure;
 mod keyring;
 mod launch;
 mod markdown;
-mod process_security;
 mod qt;
-mod search;
-mod storage;
-mod transport_diagnostics;
 mod ui_adapters;
-mod vault_access;
+
+// The backend without UI, under the paths the adapters already use.
+use kryptopass_backend::{
+    backup, import, infrastructure, process_security, search, storage, transport_diagnostics,
+    vault_access,
+};
 
 use app_info::APP;
 use cxx_qt::casting::Upcast;
@@ -34,6 +32,9 @@ fn main() {
     };
 
     i18n::set_up_catalogs();
+    infrastructure::entry_icons::set_icon_normalizer(
+        ui_adapters::native_ffi::ffi::normalize_entry_icon,
+    );
     // Registers KAboutData, which sets the application identity in one place.
     ui_adapters::native_ffi::ffi::initialize_desktop();
     let options = launch::process();

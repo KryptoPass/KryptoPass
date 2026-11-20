@@ -31,12 +31,18 @@ set(KRYPTOPASS_CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/cargo CACHE PATH
 set(KRYPTOPASS_BINARY_PATH ${KRYPTOPASS_CARGO_TARGET_DIR}/release/${KRYPTOPASS_BINARY})
 # Pinentry for gpg-agent that lets a paired phone answer (docs/aprobacion-desde-telefono.md).
 set(KRYPTOPASS_PINENTRY_PATH ${KRYPTOPASS_CARGO_TARGET_DIR}/release/kryptopass-pinentry)
+# Crates without UI, in the sibling kryptopass-core checkout; the pinentry is built from there.
+set(KRYPTOPASS_CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../kryptopass-core CACHE PATH
+    "Checkout of kryptopass-core")
 separate_arguments(KRYPTOPASS_CARGO_ARGS_LIST UNIX_COMMAND "${KRYPTOPASS_CARGO_ARGS}")
 
 # Cargo tracks its own inputs, so the target always runs and rebuilds incrementally.
 add_custom_target(kryptopass-desktop ALL
     COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${KRYPTOPASS_CARGO_TARGET_DIR}
-            ${CARGO_EXECUTABLE} build --release -p kp-desktop -p kp-pinentry ${KRYPTOPASS_CARGO_ARGS_LIST}
+            ${CARGO_EXECUTABLE} build --release -p kp-desktop ${KRYPTOPASS_CARGO_ARGS_LIST}
+    COMMAND ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${KRYPTOPASS_CARGO_TARGET_DIR}
+            ${CARGO_EXECUTABLE} build --release --manifest-path ${KRYPTOPASS_CORE_DIR}/Cargo.toml
+            -p kp-pinentry ${KRYPTOPASS_CARGO_ARGS_LIST}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS ${KRYPTOPASS_BINARY_PATH} ${KRYPTOPASS_PINENTRY_PATH}
     USES_TERMINAL

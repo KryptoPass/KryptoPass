@@ -689,12 +689,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core_detect"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2022,10 +2016,8 @@ dependencies = [
  "kp-keyring",
  "kp-search",
  "kp-store",
- "kp-sync",
  "kp-template",
  "serde_json",
- "tempfile",
  "thiserror 2.0.21",
  "tracing",
  "uuid",
@@ -2036,6 +2028,39 @@ name = "kp-approval"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "zeroize",
+]
+
+[[package]]
+name = "kp-backend"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "getrandom 0.3.4",
+ "gpgme",
+ "kp-app",
+ "kp-approval",
+ "kp-browser",
+ "kp-core",
+ "kp-devices",
+ "kp-identity",
+ "kp-import",
+ "kp-keyring",
+ "kp-memsec",
+ "kp-peers",
+ "kp-search",
+ "kp-store",
+ "libc",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+ "url",
+ "uuid",
  "zeroize",
 ]
 
@@ -2100,6 +2125,7 @@ dependencies = [
  "image",
  "kp-app",
  "kp-approval",
+ "kp-backend",
  "kp-browser",
  "kp-core",
  "kp-devices",
@@ -2138,12 +2164,10 @@ dependencies = [
 name = "kp-devices"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "getrandom 0.3.4",
  "kp-identity",
  "kp-pairing",
  "kp-protocol",
- "kp-store",
  "kp-sync",
  "kp-transport",
  "prost",
@@ -2172,8 +2196,6 @@ dependencies = [
  "getrandom 0.3.4",
  "keyring",
  "kp-memsec",
- "kp-store",
- "rusqlite",
  "rustix",
  "sha2",
  "thiserror 2.0.21",
@@ -2257,7 +2279,6 @@ dependencies = [
  "libc",
  "memsec",
  "serde",
- "serde_json",
  "windows-sys 0.59.0",
  "zeroize",
 ]
@@ -2271,12 +2292,8 @@ dependencies = [
  "hkdf",
  "kp-identity",
  "kp-protocol",
- "kp-store",
  "kp-transport",
- "proptest",
  "prost",
- "rusqlite",
- "serde_json",
  "sha2",
  "snow",
  "thiserror 2.0.21",
@@ -2304,15 +2321,6 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "zeroize",
-]
-
-[[package]]
-name = "kp-pinentry"
-version = "0.1.0"
-dependencies = [
- "kp-approval",
- "libc",
  "zeroize",
 ]
 
@@ -2361,13 +2369,8 @@ dependencies = [
  "getrandom 0.3.4",
  "kp-identity",
  "kp-protocol",
- "kp-store",
- "kp-transport",
- "proptest",
  "prost",
- "serde_json",
  "sha2",
- "tokio",
  "tracing",
 ]
 
@@ -3070,22 +3073,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proptest"
-version = "1.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8530004ccb15eae51c7e40009fbe317f341f804db54dc033eec1c50be28cfa0"
-dependencies = [
- "bitflags 2.13.2",
- "chacha20 0.10.2",
- "core_detect",
- "num-traits",
- "rand 0.10.3",
- "rand_xorshift",
- "regex-syntax",
- "unarray",
-]
-
-[[package]]
 name = "prost"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3406,15 +3393,6 @@ name = "rand_pcg"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a"
-dependencies = [
- "rand_core 0.10.1",
-]
-
-[[package]]
-name = "rand_xorshift"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60aa6af80be32871323012e02e6e65f8a7cc7890931ae421d217ad8fe0df2ccf"
 dependencies = [
  "rand_core 0.10.1",
 ]
@@ -4833,12 +4811,6 @@ dependencies = [
  "tempfile",
  "windows-sys 0.61.2",
 ]
-
-[[package]]
-name = "unarray"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
 
 [[package]]
 name = "unicase"

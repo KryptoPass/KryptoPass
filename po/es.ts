@@ -3111,6 +3111,10 @@ No incluye contraseñas ni valores de credenciales.
       <translation>no absolute application data directory is available</translation>
     </message>
     <message>
+      <source>no icon normalizer is installed</source>
+      <translation>no icon normalizer is installed</translation>
+    </message>
+    <message>
       <source>no icon store</source>
       <translation>no icon store</translation>
     </message>

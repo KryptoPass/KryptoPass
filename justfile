@@ -17,6 +17,8 @@ desktop_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from
 app_id := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["app-id"])'`
 app_binary := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["binary"])'`
 app_org := `python3 -c 'import sys; sys.path.insert(0, "packaging"); from metadata import load_metadata; print(load_metadata()["organization"])'`
+# Crates sin UI (kryptopass-core, repo hermano); sus pruebas y demos viven en su justfile.
+core_dir := justfile_directory() / ".." / "kryptopass-core"
 qml_tools := `"${QMAKE:-qmake6}" -query QT_HOST_BINS`
 
 _default:
@@ -124,16 +126,6 @@ test-session-lock:
 test-packaging:
     python3 -m unittest discover -s tests -v
 
-# Reset explícito con Secret Service separado y archivos temporales, sin datos del usuario.
-[group('Pruebas')]
-test-dev-reset:
-    cargo test -p kp-peers --test profile_reset dev_reset -- --ignored --nocapture
-
-# TURN dataplane real opt-in: pipea un bundle temporal en stdin; no consulta el broker.
-[group('Pruebas')]
-turn-smoke:
-    KP_TURN_SMOKE=1 cargo test -p kp-lan --test turn_smoke -- --ignored --nocapture
-
 # Smoke offscreen: arranca y falla si el log trae errores QML.
 [group('Pruebas')]
 smoke: build
@@ -175,13 +167,6 @@ _gate-native: test-icons test-session-lock
 
 _gate-meta: test-packaging metadata distro-check translations-check i18n-check licenses handbook
 
-# Puerta acotada a protocolo/Sync/owner; no formatea cambios QML de otros trabajos.
-[group('Puertas')]
-verify-sync-session:
-    cargo fmt -p kp-protocol -p kp-sync -p kp-devices --check
-    cargo clippy -p kp-protocol -p kp-sync -p kp-devices --all-targets -- -D warnings
-    cargo test -p kp-protocol -p kp-sync -p kp-devices -p kp-pairing -p kp-transport
-
 # Incluye archivos nuevos que todavía no están en el índice.
 [group('Puertas')]
 clean:
@@ -204,11 +189,6 @@ devices-profile profile: build
         test -d "$directory"
     done
     XDG_DATA_HOME={{ quote(profile / "data") }} XDG_CONFIG_HOME={{ quote(profile / "config") }} XDG_CACHE_HOME={{ quote(profile / "cache") }} GNUPGHOME={{ quote(profile / "gnupg") }} {{ quote(desktop_binary) }} --devices --new-instance
-
-# Dos perfiles temporales, aprobación SAS simulada y reconexión; sin GPG ni red.
-[group('Dispositivos y P2P')]
-p2p-demo:
-    cargo run -p kp-pairing --example pairing_demo
 
 #
 # Datos y perfiles
@@ -351,7 +331,7 @@ uninstall:
 # Construye el proxy de navegador sin enlazar Qt.
 [group('Integraciones')]
 browser-build:
-    cargo build -p kp-browser --bin kryptopass-browser-proxy
+    cargo build --manifest-path {{ quote(core_dir / "Cargo.toml") }} --target-dir {{ quote(target_dir) }} -p kp-browser --bin kryptopass-browser-proxy
 
 # Adapta el checkout local de KeePassXC-Browser a la identidad de Cargo.toml.
 [group('Integraciones')]
@@ -366,7 +346,7 @@ browser-install-dev *args: browser-build
 # Construye el pinentry de aprobaciones (docs/aprobacion-desde-telefono.md).
 [group('Integraciones')]
 pinentry-build:
-    cargo build -p kp-pinentry --bin kryptopass-pinentry
+    cargo build --manifest-path {{ quote(core_dir / "Cargo.toml") }} --target-dir {{ quote(target_dir) }} -p kp-pinentry --bin kryptopass-pinentry
 
 # Servidor QML con la ubicación del build que informa Cargo.
 [group('Integraciones')]

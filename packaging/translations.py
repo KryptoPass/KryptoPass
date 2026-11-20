@@ -24,7 +24,9 @@ SPANISH_PLURALS = {
 
 def backend_messages():
     messages = set()
-    for path in sorted((ROOT / "crates/kp-desktop/src").rglob("*.rs")):
+    # kp-backend (kryptopass-core) still returns texts that this catalog translates.
+    sources = [ROOT / "crates/kp-desktop/src", ROOT.parent / "kryptopass-core/crates/kp-backend/src"]
+    for path in sorted(path for source in sources for path in source.rglob("*.rs")):
         if "test" in path.name:
             continue
         for match in re.finditer(r'"((?:[^"\\]|\\.)*)"', path.read_text()):

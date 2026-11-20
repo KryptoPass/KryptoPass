@@ -7,6 +7,11 @@ secretos en modelos globales. Rust controla el cifrado, la persistencia, la
 autorización de lectura y la invalidación. Vaciar propiedades QML no garantiza
 borrar todas las copias en memoria de Qt/JS.
 
+Los crates sin UI viven en el repo hermano `../kryptopass-core` (guía propia en
+su `AGENTS.md`); Desktop los usa por ruta y conserva solo `kp-desktop`: bridges
+CXX-Qt, proyecciones a QML, i18n y C++ nativo. Un cambio en el core se verifica
+también compilando Desktop.
+
 Android (`../kryptopass-android`) es un igual de Desktop, no su cliente. El
 formato común está en `docs/sync/contrato.md`: cualquier cambio de formato se
 registra ahí antes de implementarlo en un lado. Lo pendiente está en
@@ -97,7 +102,7 @@ algo se pasa a la app solo con un plan aprobado. Lo aprendido, en
   dispositivo ya confiable, recibida por su sesión autenticada, más aprobación
   local en ambos lados y comprobación de la identidad con Noise. Nunca automática.
 - La identidad del dispositivo se crea al abrir la bóveda en un equipo sin perfil
-  (`src/vault_access.rs`). Nunca se regenera una identidad existente o corrupta.
+  (`../kryptopass-core/crates/kp-backend/src/vault_access.rs`). Nunca se regenera una identidad existente o corrupta.
   Si falta el trust de una identidad existente, puede recrearse vacío (no
   autoriza a nadie) registrándolo en el log. El marcador de `just dev-reset`
   permite crear trust vacío con la misma identidad desde «Vincular dispositivo».

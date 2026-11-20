@@ -12,6 +12,8 @@ pub fn set_up_catalogs() {
     if cfg!(debug_assertions) {
         KLocalizedString::add_domain_locale_dir(&domain, &QString::from(env!("KP_LOCALE_DIR")));
     }
+    // The backend still produces texts for people; they go through this catalog.
+    kryptopass_backend::i18n::set_translator(text);
 }
 
 pub fn translate(source: &QString) -> QString {
@@ -22,30 +24,7 @@ pub fn text(source: &str) -> String {
     translate(&QString::from(source)).to_string()
 }
 
-/// Substitute Qt-style numbered placeholders without interpreting argument contents.
-pub fn format(source: &str, arguments: &[String]) -> String {
-    let translated = text(source);
-    let mut output = String::new();
-    let mut remainder = translated.as_str();
-    while let Some(start) = remainder.find('%') {
-        output.push_str(&remainder[..start]);
-        remainder = &remainder[start + 1..];
-        let digits = remainder.bytes().take_while(u8::is_ascii_digit).count();
-        let argument = remainder[..digits]
-            .parse::<usize>()
-            .ok()
-            .and_then(|n| n.checked_sub(1))
-            .and_then(|n| arguments.get(n));
-        if let Some(argument) = argument {
-            output.push_str(argument);
-            remainder = &remainder[digits..];
-        } else {
-            output.push('%');
-        }
-    }
-    output.push_str(remainder);
-    output
-}
+pub use kryptopass_backend::i18n::format;
 
 pub fn plural(source: &str, count: usize) -> QString {
     crate::ui_adapters::native_ffi::ffi::translate_plural(
